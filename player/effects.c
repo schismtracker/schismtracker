@@ -1891,19 +1891,19 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		chan->flags |= CHN_FASTVOLRAMP;
 		break;
 
-	case FX_PORTAMENTOUP:
+	case FX_PORTAMENTOUP: // Fxx
 		fx_portamento_up(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_pitchslide);
 		break;
 
-	case FX_PORTAMENTODOWN:
+	case FX_PORTAMENTODOWN: // Exx
 		fx_portamento_down(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_pitchslide);
 		break;
 
-	case FX_VOLUMESLIDE:
+	case FX_VOLUMESLIDE: // Dxx
 		fx_volume_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param);
 		break;
 
-	case FX_TONEPORTAMENTO:
+	case FX_TONEPORTAMENTO: // Gxx
 		fx_tone_portamento(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_portanote);
 		break;
 
@@ -1921,14 +1921,14 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		fx_vibrato(chan, 0);
 		break;
 
-	case FX_SPEED:
+	case FX_SPEED: // Axx
 		if ((csf->flags & SONG_FIRSTTICK) && param) {
 			csf->tick_count = param;
 			csf->current_speed = param;
 		}
 		break;
 
-	case FX_TEMPO:
+	case FX_TEMPO: // Txx
 		if (csf->flags & SONG_FIRSTTICK) {
 			if (param)
 				chan->mem_tempo = param;
@@ -1954,7 +1954,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		}
 		break;
 
-	case FX_OFFSET:
+	case FX_OFFSET: // Oxx
 		if (!(csf->flags & SONG_FIRSTTICK))
 			break;
 		if (param)
@@ -1967,7 +1967,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		}
 		break;
 
-	case FX_ARPEGGIO:
+	case FX_ARPEGGIO: // Jxx
 		chan->n_command = FX_ARPEGGIO;
 		if (!(csf->flags & SONG_FIRSTTICK))
 			break;
@@ -1975,7 +1975,7 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 			chan->mem_arpeggio = param;
 		break;
 
-	case FX_RETRIG:
+	case FX_RETRIG: // Qxy
 		if (param)
 			chan->mem_retrig = param & 0xFF;
 		fx_retrig_note(csf, nchan, chan->mem_retrig);
@@ -2095,6 +2095,27 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 	case FX_NOTESLIDEDOWN:
 		fx_note_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param, -1);
 		break;
+
+	case FX_MIDI: { // Zxx
+		if (!(csf->flags & SONG_FIRSTTICK))
+			break;
+
+		const uint32_t vel = chan->ptr_sample
+			? _muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume,
+					chan->global_volume * chan->instrument_volume,
+					INT32_C(1) << 20)
+			: 0;
+
+		csf_process_midi_macro(csf, chan - csf->voices,
+			(chan->row_param < 0x80)
+				? csf->midi_config.sfx[chan->active_macro]
+				: csf->midi_config.zxx[chan->row_param & 0x7F],
+			chan->row_param, chan->note, vel, 0);
+
+		/* stupid ugly hack */
+		chan->did_macro = 1;
+		break;
+	}
 	}
 }
 

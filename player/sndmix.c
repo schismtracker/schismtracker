@@ -365,13 +365,18 @@ static inline void rn_process_midi_macro(song_t *csf, song_voice_t *chan)
 	 * OpenMPT also doesn't entirely support IT's version of this macro, which is
 	 * just another demotivator for actually implementing it correctly *sigh* */
 
+	if (chan->did_macro)
+		return;
+
 	if (chan->row_effect == FX_MIDI && (csf->flags & SONG_FIRSTTICK)) {
 		const uint32_t vel = chan->ptr_sample ?
 			_muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume, chan->global_volume * chan->instrument_volume, INT32_C(1) << 20)
 			: 0;
 
 		csf_process_midi_macro(csf, chan - csf->voices,
-			(chan->row_param < 0x80) ? csf->midi_config.sfx[chan->active_macro] : csf->midi_config.zxx[chan->row_param & 0x7F],
+			(chan->row_param < 0x80)
+				? csf->midi_config.sfx[chan->active_macro]
+				: csf->midi_config.zxx[chan->row_param & 0x7F],
 			chan->row_param, chan->note, vel, 0);
 	}
 }

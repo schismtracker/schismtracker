@@ -466,6 +466,8 @@ typedef struct song_voice {
 	uint32_t row_voleffect, row_volparam;
 	uint32_t row_effect, row_param;
 	uint32_t active_macro, last_instrument;
+
+	int did_macro; /* stupid hack to get Zxx kinda working */
 } song_voice_t;
 
 typedef struct song_channel {
