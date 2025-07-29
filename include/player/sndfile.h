@@ -742,6 +742,7 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, i
 
 void fx_note_cut(song_t *csf, uint32_t chan, int clear_note);
 void fx_key_off(song_t *csf, uint32_t chan);
+void fx_midi_zxx(song_t *csf, song_voice_t *chan);
 void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_t chan, int fake);
 void csf_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note);
 void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, uint32_t param,

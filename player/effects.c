@@ -166,6 +166,20 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 		chan->flags |= CHN_NOTEFADE;
 }
 
+void fx_midi_zxx(song_t *csf, song_voice_t *chan)
+{
+	const uint32_t vel = chan->ptr_sample
+		? _muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume,
+				chan->global_volume * chan->instrument_volume,
+				INT32_C(1) << 20)
+		: 0;
+
+	csf_process_midi_macro(csf, chan - csf->voices,
+		(chan->row_param < 0x80)
+			? csf->midi_config.sfx[chan->active_macro]
+			: csf->midi_config.zxx[chan->row_param & 0x7F],
+		chan->row_param, chan->note, vel, 0);
+}
 
 // negative value for slide = down, positive = up
 int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int is_tone_portamento)
@@ -2097,23 +2111,9 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_MIDI: { // Zxx
-		if (!(csf->flags & SONG_FIRSTTICK))
-			break;
-
-		const uint32_t vel = chan->ptr_sample
-			? _muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume,
-					chan->global_volume * chan->instrument_volume,
-					INT32_C(1) << 20)
-			: 0;
-
-		csf_process_midi_macro(csf, chan - csf->voices,
-			(chan->row_param < 0x80)
-				? csf->midi_config.sfx[chan->active_macro]
-				: csf->midi_config.zxx[chan->row_param & 0x7F],
-			chan->row_param, chan->note, vel, 0);
-
-		/* stupid ugly hack */
-		chan->did_macro = 1;
+		/* note: we ignore this and process it later if there's a playing note. */
+		if ((csf->flags & SONG_FIRSTTICK) && !(chan->length && chan->frequency))
+			fx_midi_zxx(csf, chan);
 		break;
 	}
 	}
