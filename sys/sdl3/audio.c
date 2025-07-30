@@ -37,6 +37,11 @@ struct schism_audio_device {
 	mt_mutex_t *mutex;
 
 	void (*callback)(uint8_t *stream, int len);
+
+	/* heap-allocated buffer, grows if SDL requests more
+	 * space than we have space allocated */
+	uint8_t *buf;
+	int buflen;
 };
 
 static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
@@ -156,15 +161,16 @@ static void SDLCALL sdl3_audio_callback(void *userdata, SDL_AudioStream *stream,
 	SCHISM_RUNTIME_ASSERT(dev->stream == stream, "streams should never differ");
 
 	if (additional_amount > 0) {
-		SCHISM_VLA_ALLOC(uint8_t, data, additional_amount);
+		if (additional_amount > dev->buflen) {
+			dev->buf = mem_realloc(dev->buf, additional_amount);
+			dev->buflen = additional_amount;
+		}
 
 		mt_mutex_lock(dev->mutex);
-		dev->callback(data, additional_amount);
+		dev->callback(dev->buf, additional_amount);
 		mt_mutex_unlock(dev->mutex);
 
-		sdl3_PutAudioStreamData(stream, data, additional_amount);
-
-		SCHISM_VLA_FREE(data);
+		sdl3_PutAudioStreamData(stream, dev->buf, additional_amount);
 	}
 }
 
@@ -227,6 +233,11 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 	}
 	obtained->samples = samples;
 
+	/* before we hop into the callback, allocate an estimate of what SDL
+	 * is going to want */
+	dev->buflen = obtained->samples * obtained->channels * (obtained->bits / 8);
+	dev->buf = mem_alloc(dev->buflen);
+
 	return dev;
 
 fail:
@@ -246,6 +257,8 @@ static void sdl3_audio_close_device(schism_audio_device_t *dev)
 
 	if (dev->mutex)
 		mt_mutex_delete(dev->mutex);
+
+	free(dev->buf);
 
 	free(dev);
 }

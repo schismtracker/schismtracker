@@ -1957,26 +1957,34 @@ static void selection_wipe_effect(void)
 enum roll_dir { ROLL_DOWN = -1, ROLL_UP = +1 };
 static void selection_roll(enum roll_dir direction)
 {
+	/* removed VLA crap, stuff might break  --paper */
+	song_note_t temp[MAX_CHANNELS];
 	song_note_t *pattern, *seldata;
 	int row, sel_rows, sel_chans, total_rows, copy_bytes, n;
 
-	if (!SELECTION_EXISTS) { return; }
+	if (!SELECTION_EXISTS)
+		return;
+
 	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows) { selection.last_row = total_rows - 1; }
-	if (selection.first_row > selection.last_row) { selection.first_row = selection.last_row; }
+
+	if (selection.last_row >= total_rows)
+		selection.last_row = total_rows - 1;
+
+	selection.first_row = MIN(selection.first_row, selection.last_row);
+
 	sel_rows = selection.last_row - selection.first_row + 1;
 	sel_chans = selection.last_channel - selection.first_channel + 1;
-	if (sel_rows < 2) { return; }
+	if (sel_rows < 2)
+		return;
+
 	seldata = pattern + MAX_CHANNELS * selection.first_row + selection.first_channel - 1;
 
-	SCHISM_VLA_ALLOC(song_note_t, temp, sel_chans);
-	copy_bytes = sizeof(temp);
+	copy_bytes = (sel_chans * sizeof(song_note_t));
 	row = (direction == ROLL_DOWN ? sel_rows - 1 : 0);
 	memcpy(temp, seldata + MAX_CHANNELS * row, copy_bytes);
 	for (n = 1; n < sel_rows; n++, row += direction)
 		memcpy(seldata + MAX_CHANNELS * row, seldata + MAX_CHANNELS * (row + direction), copy_bytes);
 	memcpy(seldata + MAX_CHANNELS * row, temp, copy_bytes);
-	SCHISM_VLA_FREE(temp);
 
 	status.flags |= SONG_NEEDS_SAVE;
 }
