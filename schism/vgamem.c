@@ -299,6 +299,37 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 	}
 }
 
+void vgamem_ovl_drawtext_halfwidth(struct vgamem_overlay *n, char *text, int x, int y, int colour)
+{
+	while (text[0]) {
+		uint8_t c0 = text[0] ? text[0] : 32;
+		uint8_t c1 = text[1] ? text[1] : 32;
+
+		int o0 = c0 * 4;
+		int o1 = c1 * 4;
+
+		for (int yy = 0; yy < 8; yy++) {
+			int b = yy / 2;
+			int s = 4 - (yy & 1) * 4;
+
+			const uint_fast8_t dg1 = 0xF & (font_half_data[o0 + b] >> s);
+			const uint_fast8_t dg2 = 0xF & (font_half_data[o1 + b] >> s);
+
+			const uint_fast8_t dg = dg1 << 4 | dg2;
+
+			for (int xx = 0, xb = 128; xx < 8; xx++, xb >>= 1)
+				if (dg & xb)
+					vgamem_ovl_drawpixel(n, x + xx, y + yy, colour);
+		}
+
+		if (!text[1])
+			break;
+
+		text += 2;
+		x += 8;
+	}
+}
+
 /* unknown character (basically an inverted '?') */
 static const uint8_t uFFFD[] = {
 	0x42, /* .X....X. */
@@ -768,7 +799,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 
 /* --------------------------------------------------------------------- */
 /* sample drawing
- * 
+ *
  * output channels = number of oscis
  * input channels = number of channels in data
 */

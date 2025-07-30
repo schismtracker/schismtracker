@@ -132,6 +132,7 @@ song_t *csf_allocate(void)
 {
 	song_t *csf = mem_calloc(1, sizeof(song_t));
 	_csf_reset(csf);
+	csf->recent_sample_buffer = mem_calloc(MAX_VOICES + 2, NATIVE_SCREEN_WIDTH);
 	return csf;
 }
 
@@ -208,6 +209,8 @@ void csf_destroy(song_t *csf)
 			csf->instruments[i] = NULL;
 		}
 	}
+
+	free(csf->recent_sample_buffer);
 
 	_csf_reset(csf);
 }
@@ -825,7 +828,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		SCHISM_FALLTHROUGH;
 	case SF(8,M,LE,PCMS):
 	case SF(8,M,LE,PCMU):
-	case SF(8,M,LE,PCMD): 
+	case SF(8,M,LE,PCMD):
 	case SF(8,M,BE,PCMS):
 	case SF(8,M,BE,PCMU):
 	case SF(8,M,BE,PCMD): {
@@ -852,7 +855,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	// 8-bit stereo samples
 	case SF(8,SS,LE,PCMS):
 	case SF(8,SS,LE,PCMU):
-	case SF(8,SS,LE,PCMD): 
+	case SF(8,SS,LE,PCMD):
 	case SF(8,SS,BE,PCMS):
 	case SF(8,SS,BE,PCMU):
 	case SF(8,SS,BE,PCMD): {

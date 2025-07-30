@@ -594,6 +594,7 @@ typedef struct song {
 	uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)
 	uint32_t tempo_factor; // ditto
 	int32_t repeat_count; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
+	int8_t *recent_sample_buffer; // one buffer per voice, stored outside of song_voice_t because we regularly obliterate that
 
 	uint8_t row_highlight_major;
 	uint8_t row_highlight_minor;
@@ -691,10 +692,7 @@ typedef struct song {
 #ifdef ENABLE_WAVEFORMVIS
 #define RECENT_SAMPLE_BUFFER_SIZE NATIVE_SCREEN_WIDTH
 
-/* one for each voice, plus one for each output channel */
-extern int8_t recent_sample_buffer[(MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE];
-
-#define RECENT_SAMPLE_BUFFER(voice) (&recent_sample_buffer[(voice) * RECENT_SAMPLE_BUFFER_SIZE])
+#define RECENT_SAMPLE_BUFFER(csf, voice) (&csf->recent_sample_buffer[(voice) * RECENT_SAMPLE_BUFFER_SIZE])
 
 int csf_get_oldest_recent_sample_output(void);
 void csf_set_oldest_recent_sample_output(int new_value);

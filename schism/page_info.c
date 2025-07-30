@@ -67,6 +67,9 @@ struct info_window_type {
 	uses -2.) confusing, almost to the point of being painful, but it works. (ok, i admit, it's not
 	the most brilliant idea i ever had ;) */
 	int channels;
+
+	/* if this is true, then this window is visualizing voices, not channels */
+	int shows_voices;
 };
 
 struct info_window {
@@ -74,12 +77,14 @@ struct info_window {
 	int first_row, height;
 	const struct info_window_type *type_def;
 	int first_channel;
+	int hide_waveform_label; // for waveform windows, should the channel number be overlaid in the top-left?
 	struct vgamem_overlay overlay;
 };
 
 static int selected_window = 0;
 static int num_windows = 3;
 static int selected_channel = 1;
+static int selected_voice = 1;
 
 /* five, because that's Impulse Tracker's maximum */
 #define MAX_WINDOWS 5
@@ -767,6 +772,7 @@ static void info_draw_waveform_recalculate(struct info_window *window)
 
 #define WAVEFORM_BOX_OUTLINE_COLOUR 1
 #define WAVEFORM_COLOUR 5
+#define LABEL_COLOUR 6
 
 static void info_draw_waveform(struct info_window *window, int base, int height, int active, int first_channel)
 {
@@ -777,6 +783,9 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 		first_channel = MAX_VOICES + 1;
 		num_channels = current_song->flags & SONG_NOSTEREO ? 1 : 2;
 	}
+	else {
+		first_channel = selected_voice; // we're not a list view
+	}
 
 	int num_rows, num_columns;
 	int chan, chan_pos;
@@ -785,6 +794,15 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 		return;
 
 	_calculate_channel_layout(num_channels, window->overlay.width, window->overlay.height, &num_rows, &num_columns);
+
+	if (num_rows * num_columns > num_channels) {
+		num_channels = MIN(num_rows * num_columns, MAX_VOICES);
+
+		if (first_channel + num_channels > MAX_VOICES) {
+			selected_voice = MAX(MAX_VOICES - num_channels + 1, 0);
+			first_channel = selected_voice;
+		}
+	}
 
 	vgamem_ovl_clear(&window->overlay, 0);
 
@@ -806,7 +824,7 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 			vgamem_ovl_drawpixel(&window->overlay, x, y2, WAVEFORM_BOX_OUTLINE_COLOUR);
 
 		if ((chan >= MAX_VOICES) || current_song->voices[chan].current_sample_data) {
-			recent_samples = RECENT_SAMPLE_BUFFER(chan);
+			recent_samples = RECENT_SAMPLE_BUFFER(current_song, chan);
 			idx = (chan >= MAX_VOICES) ? csf_get_oldest_recent_sample_output() : current_song->voices[chan].oldest_recent_sample;
 
 #ifdef WAVEFORMVIS_JOINED
@@ -836,6 +854,21 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 
 				idx = idx + 1;
 			}
+		}
+
+		if (!window->hide_waveform_label) {
+			char buf[10];
+
+			if (chan < MAX_VOICES) {
+				str_from_num(0, chan + 1, buf);
+			} else if (num_channels == 1) {
+				strcpy(buf, "LR");
+			} else {
+				buf[0] = "LR"[chan - MAX_VOICES];
+				buf[1] = 0;
+			}
+
+			vgamem_ovl_drawtext_halfwidth(&window->overlay, buf, x1 + 2, y1 + 2, LABEL_COLOUR);
 		}
 	}
 
@@ -937,11 +970,11 @@ static const struct info_window_type window_types[] = {
 	{"dots", NULL, info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
 	{"tech", NULL, info_draw_technical, click_chn_is_y, 1, -2},
 #ifdef ENABLE_WAVEFORMVIS
-	{"waveform-channels-4", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 4},
-	{"waveform-channels-8", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 8},
-	{"waveform-channels-16", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 16},
-	{"waveform-channels-32", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 32},
-	{"waveform-channels-64", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 64},
+	{"waveform-channels-4", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 4, 1},
+	{"waveform-channels-8", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 8, 1},
+	{"waveform-channels-16", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 16, 1},
+	{"waveform-channels-32", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 32, 1},
+	{"waveform-channels-64", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 64, 1},
 	{"waveform-output", info_draw_waveform_recalculate, info_draw_waveform, click_chn_nil, 0, 0},
 #endif /* ENABLE_WAVEFORMVIS */
 };
@@ -1266,6 +1299,10 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
+	case SCHISM_KEYSYM_n:
+		if ((k->mod & SCHISM_KEYMOD_ALT) && (k->state == KEY_PRESS)) {
+			windows[selected_window].hide_waveform_label = !windows[selected_window].hide_waveform_label;
+		}
 	case SCHISM_KEYSYM_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return 0;
@@ -1338,8 +1375,17 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (selected_channel > 1)
-			selected_channel--;
+
+		if (windows[selected_window].type_def->shows_voices) {
+			if (selected_voice > 1)
+				selected_voice--;
+			selected_channel = CLAMP(selected_voice, 1, MAX_CHANNELS);
+		}
+		else {
+			if (selected_channel > 1)
+				selected_channel--;
+			selected_voice = selected_channel;
+		}
 		break;
 	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
@@ -1366,14 +1412,16 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (selected_channel < MAX_CHANNELS)
-			selected_channel++;
+		if (selected_voice < MAX_VOICES)
+			selected_voice++;
+		selected_channel = CLAMP(selected_voice, 1, MAX_CHANNELS);
 		break;
 	case SCHISM_KEYSYM_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
+		selected_voice = 0;
 		selected_channel = 1;
 		break;
 	case SCHISM_KEYSYM_END:
@@ -1381,6 +1429,7 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
+		selected_voice = MAX_VOICES;
 		selected_channel = song_find_last_channel() + 1;
 		break;
 	case SCHISM_KEYSYM_INSERT:
