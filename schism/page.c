@@ -41,6 +41,7 @@
 #include "mem.h"
 #include "str.h"
 #include "config.h"
+#include "keybinds.h"
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -406,6 +407,19 @@ void handle_text_input(const char* text_input) {
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+static inline int kb_set_page(int bind, int page)
+{
+	if (!keybinds_handled(KEYBIND_SECTION_GLOBAL, bind))
+		return 0;
+
+	_mp_finish(NULL);
+
+	if (keybinds_pressed(KEYBIND_SECTION_GLOBAL, bind))
+		set_page(page);
+
+	return 1;
+}
+
 /* returns 1 if the key was handled */
 static int handle_key_global(struct key_event * k)
 {
@@ -561,6 +575,38 @@ static int handle_key_global(struct key_event * k)
 	/* next, if there's no dialog, check the rest of the keys */
 	if (status.flags & DISKWRITER_ACTIVE) return 0;
 
+	/* meh */
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_HELP, PAGE_HELP))
+		return 1;
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_MIDI, status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI))
+		return 1;
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_SYSTEM_CONFIGURE, PAGE_CONFIG))
+		return 1;
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_PATTERN_EDIT, PAGE_PATTERN_EDITOR))
+		return 1;
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_SAMPLE_LIST, PAGE_SAMPLE_LIST))
+		return 1;
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_SAMPLE_LIBRARY, PAGE_LIBRARY_SAMPLE))
+		return 1;
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_INSTRUMENT_LIST, PAGE_INSTRUMENT_LIST))
+		return 1;
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_INSTRUMENT_LIBRARY, PAGE_LIBRARY_INSTRUMENT))
+		return 1;
+	if (kb_set_page(KEYBIND_BIND_GLOBAL_PLAY_INFORMATION_OR_PLAY_SONG, PAGE_INFO))
+		return 1;
+	if (0){//keybinds_pressed(KEYBIND_SECTION_PATTERN_EDITOR, KEYBIND_BIND_PATTERN_EDITOR_SET_PATTERN_LENGTH)) {
+		if (status.current_page == PAGE_PATTERN_EDITOR) {
+			_mp_finish(NULL);
+			if (k->state == KEY_PRESS && status.dialog_type == DIALOG_NONE) {
+				pattern_editor_length_edit();
+			}
+			return 1;
+		}
+		/* ??? */
+		if (status.dialog_type != DIALOG_NONE)
+			return 0;
+	}
+
 	switch (k->sym) {
 	case SCHISM_KEYSYM_q:
 		if (status.dialog_type != DIALOG_NONE)
@@ -605,25 +651,6 @@ static int handle_key_global(struct key_event * k)
 			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_F1:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (k->mod & SCHISM_KEYMOD_CTRL) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_CONFIG);
-		} else if (k->mod & SCHISM_KEYMOD_SHIFT) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(status.current_page == PAGE_MIDI ? PAGE_MIDI_OUTPUT : PAGE_MIDI);
-		} else if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_HELP);
-		} else {
-			break;
-		}
-		return 1;
 	case SCHISM_KEYSYM_F2:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (status.current_page == PAGE_PATTERN_EDITOR) {
@@ -635,57 +662,8 @@ static int handle_key_global(struct key_event * k)
 			}
 			if (status.dialog_type != DIALOG_NONE)
 				return 0;
-		} else if (NO_MODIFIER(k->mod)) {
-			if (status.current_page == PAGE_PATTERN_EDITOR) {
-				if (k->state == KEY_PRESS) {
-					if (status.dialog_type & DIALOG_MENU) {
-						return 0;
-					} else if (status.dialog_type != DIALOG_NONE) {
-						dialog_yes_NULL();
-						status.flags |= NEED_UPDATE;
-					} else {
-						_mp_finish(NULL);
-						pattern_editor_display_options();
-					}
-				}
-			} else {
-				if (status.dialog_type != DIALOG_NONE)
-					return 0;
-				_mp_finish(NULL);
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_PATTERN_EDITOR);
-			}
-			return 1;
 		}
 		break;
-	case SCHISM_KEYSYM_F3:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (NO_MODIFIER(k->mod)) {
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_SAMPLE_LIST);
-		} else {
-			_mp_finish(NULL);
-			if (k->mod & SCHISM_KEYMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
-			break;
-		}
-		return 1;
-	case SCHISM_KEYSYM_F4:
-		if (status.dialog_type != DIALOG_NONE)
-			return 0;
-		if (NO_MODIFIER(k->mod)) {
-			if (status.current_page == PAGE_INSTRUMENT_LIST) return 0;
-			_mp_finish(NULL);
-			if (k->state == KEY_PRESS)
-				set_page(PAGE_INSTRUMENT_LIST);
-		} else {
-			if (k->mod & SCHISM_KEYMOD_SHIFT) return 0;
-			_mp_finish(NULL);
-			if (k->mod & SCHISM_KEYMOD_CTRL) set_page(PAGE_LIBRARY_INSTRUMENT);
-			break;
-		}
-		return 1;
 	case SCHISM_KEYSYM_F5:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);

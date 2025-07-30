@@ -251,12 +251,7 @@ static void sdl3_pump_events(void)
 			schism_event.key.scancode = e.key.scancode;
 			schism_event.key.mod = sdl3_modkey_trans(e.key.mod); // except this one!
 
-			//if (!sdl3_TextInputActive()) {
-				// push it NOW
-			//	events_push_event(&schism_event);
-			//} else {
-				push_pending_keydown(&schism_event);
-			//}
+			push_pending_keydown(&schism_event);
 
 			break;
 		case SDL_EVENT_KEY_UP:

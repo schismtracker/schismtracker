@@ -587,7 +587,7 @@ schismtracker_SOURCES = \
 	schism/ieee-float.c     \
 	schism/itf.c			\
 	schism/keybinds.c		\
-	schism/keybinds_codes.c	\
+	schism/keybinds-codes.c	\
 	schism/keyboard.c		\
 	schism/loadso.c         \
 	schism/main.c			\
