@@ -64,6 +64,7 @@ void vgamem_ovl_apply(struct vgamem_overlay *n);
 void vgamem_ovl_clear(struct vgamem_overlay *n, int color);
 void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color);
 void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color);
+void vgamem_ovl_drawtext_halfwidth(struct vgamem_overlay *n, char *text, int x, int y, int color);
 
 /* --------------------------------------------------------------------- */
 /* character drawing routines */

@@ -260,14 +260,14 @@
 
 #define SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
 	uint32_t vol_avg = bavgu32(babs32(vol_lx), babs32(vol_rx)); \
-	if (max < vol_avg) max = vol_avg; \
-	CAPTURE_RECENT_SAMPLE
+	if (max < vol_avg) max = vol_avg;
 
 // FIXME why are these backwards? what?
 #define SNDMIX_STOREMONOVOL \
 	int32_t vol_lx = vol * chan->right_volume; \
 	int32_t vol_rx = vol * chan->left_volume; \
 	SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
+	CAPTURE_RECENT_SAMPLE \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
 	pvol += 2;
@@ -276,6 +276,7 @@
 	int32_t vol_lx = vol_l * chan->right_volume; \
 	int32_t vol_rx = vol_r * chan->left_volume; \
 	SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
+	CAPTURE_RECENT_SAMPLE \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
 	pvol += 2;
@@ -286,6 +287,7 @@
 	int32_t vol_lx = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
+	CAPTURE_RECENT_SAMPLE \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
 	pvol += 2;
@@ -296,6 +298,7 @@
 	int32_t vol_lx = vol_l * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
 	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
 	SNDMIX_STOREVUMETER_AND_RECENT_SAMPLE \
+	CAPTURE_RECENT_SAMPLE \
 	pvol[0] += vol_lx; \
 	pvol[1] += vol_rx; \
 	pvol += 2;
@@ -901,7 +904,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				channel->lofs = -*(pbufmax - 1);
 
 #ifdef ENABLE_WAVEFORMVIS
-				mix_func(channel, pbuffer, pbufmax, RECENT_SAMPLE_BUFFER(nchan));
+				mix_func(channel, pbuffer, pbufmax, RECENT_SAMPLE_BUFFER(csf, nchan));
 #else
 				mix_func(channel, pbuffer, pbufmax);
 #endif
@@ -910,14 +913,16 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 #ifdef ENABLE_WAVEFORMVIS
 				int oldest_recent_output_sample = csf_get_oldest_recent_sample_output();
+				int8_t *recent_sample_buffer_l = RECENT_SAMPLE_BUFFER(csf, MAX_VOICES);
+				int8_t *recent_sample_buffer_r = RECENT_SAMPLE_BUFFER(csf, MAX_VOICES + 1);
 
 				while (pbuffer < pbufmax) {
 					if (oldest_recent_output_sample >= RECENT_SAMPLE_BUFFER_SIZE) {
 						oldest_recent_output_sample = 0;
 					}
-					RECENT_SAMPLE_BUFFER(MAX_VOICES)[oldest_recent_output_sample] = CONVERT_SAMPLE(*pbuffer);
+					recent_sample_buffer_l[oldest_recent_output_sample] = CONVERT_SAMPLE(*pbuffer);
 					pbuffer++;
-					RECENT_SAMPLE_BUFFER(MAX_VOICES + 1)[oldest_recent_output_sample] = CONVERT_SAMPLE(*pbuffer);
+					recent_sample_buffer_r[oldest_recent_output_sample] = CONVERT_SAMPLE(*pbuffer);
 					pbuffer++;
 					oldest_recent_output_sample++;
 				}
