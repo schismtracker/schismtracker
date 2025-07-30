@@ -53,18 +53,6 @@
 # error "The current value of OPLSOURCE isn't supported! Check build-config.h."
 #endif
 
-/* This just forwards to OPLUpdateMulti now */
-static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_t vu_max[OPL_CHANNELS])
-{
-	int32_t *buffers[OPL_CHANNELS];
-	int i;
-
-	for (i = 0; i < OPL_CHANNELS; i++)
-		buffers[i] = buffer;
-
-	OPLUpdateMulti(chip, buffers, length, vu_max);
-}
-
 /* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
 fmopl works in 16bits, although tested output used to range +-10000 instead of
 	+-20000 from adlibtracker/screamtracker in dosbox. So we need 11 bits + 1 extra bit.
@@ -239,7 +227,8 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 {
 	uint32_t sz;
 	uint32_t vu_max[OPL_CHANNELS];
-	uint32_t i;
+	uint32_t i, j;
+	int32_t *buffers[OPL_CHANNELS] = {0};
 
 	if (!csf->opl_fm_active)
 		return;
@@ -264,47 +253,100 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
 	// and do the panning here.
-	{
-		uint32_t j;
-		int32_t *buffers[OPL_CHANNELS] = {0};
+	SCHISM_VLA_ALLOC(int32_t, buf, OPL_CHANNELS * sz);
 
-		if (csf->multi_write) {
-			for (i = 0; i < OPL_CHANNELS; i++) {
-				int32_t opl_v = csf->opl_to_chan[i];
-				if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
-					continue;
+	if (csf->multi_write) {
+		for (i = 0; i < OPL_CHANNELS; i++) {
+			int32_t opl_v = csf->opl_to_chan[i];
+			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
+				continue;
 
-				buffers[i] = csf->multi_write[opl_v].buffer;
-			}
-		} else {
-			/* updated this to be able to work with the mixing buffer
-			* directly  --paper */
-			for (i = 0; i < ARRAY_SIZE(buffers); i++) {
-				int32_t opl_v = csf->opl_to_chan[i];
-				if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
-					continue;
-
-				buffers[i] = (csf->voices[opl_v].flags & CHN_MUTE) ? NULL : csf->mix_buffer;
-			}
+			buffers[i] = csf->multi_write[opl_v].buffer;
 		}
+	}
+	else {
+		memset(buf, 0, OPL_CHANNELS * sz * sizeof(int32_t));
 
-		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
+		for (i = 0; i < OPL_CHANNELS; i++)
+			buffers[i] = &buf[i * sz];
+	}
 
-		for (i = 0; i < ARRAY_SIZE(buffers); i++) {
-			if (!buffers[i]) continue;
+	OPLUpdateMulti(csf->opl, buffers, count, vu_max);
 
-			for (j = 0; j < sz; j++)
-				buffers[i][j] *= OPL_VOLUME;
-		}
+	for (i = 0; i < OPL_CHANNELS; i++) {
+		if (!buffers[i]) continue;
+
+		for (uint32_t j = 0; j < sz; j++)
+			buffers[i][j] *= OPL_VOLUME;
 	}
 
 	for (i = 0; i < OPL_CHANNELS; i++) {
 		int32_t opl_v = csf->opl_to_chan[i];
+		int32_t *buf;
+		song_voice_t *voice;
+		int8_t *recent_sample_buffer;
+		int oldest_recent_sample;
+
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
 
-		csf->voices[opl_v].vu_meter = (vu_max[i] * OPL_VOLUME) >> 16;
+		voice = &csf->voices[opl_v];
+
+		voice->vu_meter = (vu_max[i] * OPL_VOLUME) >> 16;
+
+		recent_sample_buffer = RECENT_SAMPLE_BUFFER(csf, opl_v);
+
+		oldest_recent_sample = voice->oldest_recent_sample;
+
+#define MERGE_SAMPLE(l, r) ((l >> 1) + (r >> 1))
+#define CONVERT_SAMPLE(x) ((x) >> 17)
+
+		buf = buffers[i];
+
+		if (csf->multi_write) {
+			for (int j = 0; j < sz; j += 2) {
+				if (oldest_recent_sample > RECENT_SAMPLE_BUFFER_SIZE)
+					oldest_recent_sample = 0;
+
+				recent_sample_buffer[oldest_recent_sample] = CONVERT_SAMPLE(MERGE_SAMPLE(buf[j], buf[j + 1])) ^ 0x80;
+
+				oldest_recent_sample++;
+			}
+		} else {
+			/* we need the sample data to be a part of the common mixing buffer */
+			for (int j = 0; j < sz; j += 2) {
+				if (oldest_recent_sample > RECENT_SAMPLE_BUFFER_SIZE)
+					oldest_recent_sample = 0;
+
+				recent_sample_buffer[oldest_recent_sample] = CONVERT_SAMPLE(MERGE_SAMPLE(buf[j], buf[j + 1])) ^ 0x80;
+
+				csf->mix_buffer[j] += buf[j];
+				csf->mix_buffer[j + 1] += buf[j + 1];
+
+				oldest_recent_sample++;
+			}
+		}
+
+		voice->oldest_recent_sample = oldest_recent_sample;
 	}
+
+	SCHISM_VLA_FREE(buf);
+
+	/* main output recent samples */
+	int oldest_recent_output_sample = csf_get_oldest_recent_sample_output();
+	int8_t *recent_sample_buffer_l = RECENT_SAMPLE_BUFFER(csf, MAX_VOICES);
+	int8_t *recent_sample_buffer_r = RECENT_SAMPLE_BUFFER(csf, MAX_VOICES + 1);
+
+	for (int i = 0, l = sz * 2; i < sz; i += 2) {
+		if (oldest_recent_output_sample >= RECENT_SAMPLE_BUFFER_SIZE) {
+			oldest_recent_output_sample = 0;
+		}
+		recent_sample_buffer_l[oldest_recent_output_sample] = CONVERT_SAMPLE(csf->mix_buffer[i]) ^ 0x80;
+		recent_sample_buffer_r[oldest_recent_output_sample] = CONVERT_SAMPLE(csf->mix_buffer[i + 1]) ^ 0x80;
+		oldest_recent_output_sample++;
+	}
+
+	csf_set_oldest_recent_sample_output(oldest_recent_output_sample);
 }
 
 
