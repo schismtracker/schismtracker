@@ -1685,10 +1685,26 @@ void main_song_changed_cb(void)
 /* --------------------------------------------------------------------- */
 /* not sure where else to toss this crap */
 
+static int savecheck_handle_key(struct key_event *k)
+{
+	/* HACK: ignore F5,F6, to work around a bug where pressing
+	 * F5 causes an unusable environment */
+	switch (k->sym) {
+	case SCHISM_KEYSYM_F5:
+	case SCHISM_KEYSYM_F6:
+		return 1;
+	}
+
+	return 0;
+}
+
 static void savecheck(void (*ok)(void *data), void (*cancel)(void *data), void *data)
 {
 	if (status.flags & SONG_NEEDS_SAVE) {
-		dialog_create(DIALOG_OK_CANCEL, "Current module not saved. Proceed?", ok, cancel, 1, data);
+		struct dialog *d = dialog_create(DIALOG_OK_CANCEL,
+			"Current module not saved. Proceed?", ok, cancel, 1, data);
+
+		d->handle_key = savecheck_handle_key;
 	} else {
 		ok(data);
 	}
