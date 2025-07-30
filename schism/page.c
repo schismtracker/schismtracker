@@ -1521,9 +1521,7 @@ void redraw_screen(void)
 
 		draw_top_info_const();
 		redraw_top_info();
-	}
 
-	if (!ACTIVE_PAGE.draw_full) {
 		draw_vis();
 		draw_time();
 		draw_text(str_from_num(3, song_get_current_speed(), buf), 50, 4, 5, 0);
