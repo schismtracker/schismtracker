@@ -815,6 +815,7 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 		int x2 = (col + 1) * window->overlay.width / num_columns - 1;
 		int y2 = (row + 1) * window->overlay.height / num_rows - 1;
 
+		song_voice_t *voice = NULL;
 		uint8_t *recent_samples;
 		int idx;
 
@@ -823,10 +824,14 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 		for (int x = x1 | 1; x <= x2; x += 2)
 			vgamem_ovl_drawpixel(&window->overlay, x, y2, WAVEFORM_BOX_OUTLINE_COLOUR);
 
+		if (chan < MAX_VOICES)
+			voice = &current_song->voices[chan];
+
 		if ((chan >= MAX_VOICES)
-		 || (voice->current_sample_data && (voice->left_volume || voice->right_volume)))
+		 || (voice->current_sample_data && (voice->left_volume || voice->right_volume)) /* PCM */
+		 || (current_song->opl_from_chan[chan] >= 0)) /* FM */ {
 			recent_samples = RECENT_SAMPLE_BUFFER(current_song, chan);
-			idx = (chan >= MAX_VOICES) ? csf_get_oldest_recent_sample_output() : current_song->voices[chan].oldest_recent_sample;
+			idx = (chan >= MAX_VOICES) ? csf_get_oldest_recent_sample_output() : voice->oldest_recent_sample;
 
 #ifdef WAVEFORMVIS_JOINED
 			int ly = -1;
@@ -858,7 +863,7 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 		}
 
 		if (!window->hide_waveform_label) {
-			char buf[10];
+			char buf[11];
 
 			if (chan < MAX_VOICES) {
 				str_from_num(0, chan + 1, buf);
