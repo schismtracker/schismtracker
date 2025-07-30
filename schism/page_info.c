@@ -823,7 +823,8 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 		for (int x = x1 | 1; x <= x2; x += 2)
 			vgamem_ovl_drawpixel(&window->overlay, x, y2, WAVEFORM_BOX_OUTLINE_COLOUR);
 
-		if ((chan >= MAX_VOICES) || current_song->voices[chan].current_sample_data) {
+		if ((chan >= MAX_VOICES)
+		 || (voice->current_sample_data && (voice->left_volume || voice->right_volume)))
 			recent_samples = RECENT_SAMPLE_BUFFER(current_song, chan);
 			idx = (chan >= MAX_VOICES) ? csf_get_oldest_recent_sample_output() : current_song->voices[chan].oldest_recent_sample;
 
