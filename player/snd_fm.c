@@ -65,13 +65,6 @@ static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_
 	OPLUpdateMulti(chip, buffers, length, vu_max);
 }
 
-/* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
-fmopl works in 16bits, although tested output used to range +-10000 instead of 
-	+-20000 from adlibtracker/screamtracker in dosbox. So we need 11 bits + 1 extra bit.
-Also note when comparing volumes, that Screamtracker output on mono with PCM samples is not reduced by half.
-*/
-#define OPL_VOLUME 2274
-
 /*
 The documentation in this file regarding the output ports,
 including the comment "Don't ask me why", are attributed
@@ -277,20 +270,10 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		}
 
 		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
-
-		for (i = 0; i < ARRAY_SIZE(buffers); i++) {
-			if (!buffers[i]) continue;
-
-			for (j = 0; j < sz; j++)
-				buffers[i][j] *= OPL_VOLUME;
-		}
 	} else {
 		/* updated this to be able to work with the mixing buffer
 		 * directly  --paper */
 		OPLUpdateOne(csf->opl, csf->mix_buffer, count, vu_max);
-
-		for (i = 0; i < sz; i++)
-			csf->mix_buffer[i] *= OPL_VOLUME;
 	}
 
 	for (i = 0; i < 9 /*18*/; i++) {
