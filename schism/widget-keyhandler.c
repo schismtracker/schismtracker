@@ -1044,6 +1044,7 @@ int widget_handle_key(struct key_event * k)
 		/* weird hack ? */
 		if (widget->d.numentry.handle_unknown_key)
 			return widget->d.numentry.handle_unknown_key(k);
+		break;
 	default:
 		break;
 	}
