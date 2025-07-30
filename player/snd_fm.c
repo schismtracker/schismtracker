@@ -54,16 +54,23 @@
 #endif
 
 /* This just forwards to OPLUpdateMulti now */
-static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_t vu_max[9])
+static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_t vu_max[FM_CHANNELS])
 {
-	int32_t *buffers[18];
+	int32_t *buffers[FM_CHANNELS];
 	int i;
 
-	for (i = 0; i < 18; i++)
+	for (i = 0; i < FM_CHANNELS; i++)
 		buffers[i] = buffer;
 
 	OPLUpdateMulti(chip, buffers, length, vu_max);
 }
+
+/* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
+fmopl works in 16bits, although tested output used to range +-10000 instead of
+	+-20000 from adlibtracker/screamtracker in dosbox. So we need 11 bits + 1 extra bit.
+Also note when comparing volumes, that Screamtracker output on mono with PCM samples is not reduced by half.
+*/
+#define OPL_VOLUME 2274
 
 /*
 The documentation in this file regarding the output ports,
@@ -231,7 +238,7 @@ void Fmdrv_Init(song_t *csf, int32_t mixfreq)
 void Fmdrv_Mix(song_t *csf, uint32_t count)
 {
 	uint32_t sz;
-	uint32_t vu_max[18];
+	uint32_t vu_max[FM_CHANNELS];
 	uint32_t i;
 
 	if (!csf->opl_fm_active)
@@ -247,7 +254,7 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	*/
 
 	/* first, fill in the VU meters */
-	for (i = 0; i < 9 /*18*/; i++) {
+	for (i = 0; i < FM_CHANNELS; i++) {
 		int32_t opl_v = csf->opl_to_chan[i];
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
@@ -259,9 +266,9 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	// and do the panning here.
 	if (csf->multi_write) {
 		uint32_t j;
-		int32_t *buffers[18] = {0};
+		int32_t *buffers[FM_CHANNELS] = {0};
 
-		for (i = 0; i < 9; i++) {
+		for (i = 0; i < FM_CHANNELS; i++) {
 			int32_t opl_v = csf->opl_to_chan[i];
 			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 				continue;
@@ -270,13 +277,23 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		}
 
 		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
+
+		for (i = 0; i < ARRAY_SIZE(buffers); i++) {
+			if (!buffers[i]) continue;
+
+			for (j = 0; j < sz; j++)
+				buffers[i][j] *= OPL_VOLUME;
+		}
 	} else {
 		/* updated this to be able to work with the mixing buffer
 		 * directly  --paper */
 		OPLUpdateOne(csf->opl, csf->mix_buffer, count, vu_max);
+
+		for (i = 0; i < sz; i++)
+			csf->mix_buffer[i] *= OPL_VOLUME;
 	}
 
-	for (i = 0; i < 9 /*18*/; i++) {
+	for (i = 0; i < FM_CHANNELS; i++) {
 		int32_t opl_v = csf->opl_to_chan[i];
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
@@ -288,7 +305,8 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 
 /***************************************/
 
-static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
+// YMF262 supports 18 channels
+static const char PortBases[18] = {0, 1, 2, 8, 9, 10, 16, 17, 18, 24, 25, 26, 32, 33, 34, 40, 41, 42};
 
 static int32_t GetVoice(song_t *csf, int32_t c)
 {
@@ -302,7 +320,7 @@ static int32_t SetVoice(song_t *csf, int32_t c)
 	if (csf->opl_from_chan[c] == -1) {
 		// Search for unused chans
 
-		for (a = 0; a < 9; a++) {
+		for (a = 0; a < FM_CHANNELS; a++) {
 			if (csf->opl_to_chan[a] == -1) {
 				csf->opl_to_chan[a] = c;
 				csf->opl_from_chan[c] = a;
@@ -312,7 +330,7 @@ static int32_t SetVoice(song_t *csf, int32_t c)
 
 		if (csf->opl_from_chan[c] == -1) {
 			// Search for note-released chans
-			for (a = 0; a < 9; a++) {
+			for (a = 0; a < FM_CHANNELS; a++) {
 				if ((csf->opl_keyontab[a]&KEYON_BIT) == 0) {
 					csf->opl_from_chan[csf->opl_to_chan[a]] = -1;
 					csf->opl_to_chan[a] = c;
@@ -491,7 +509,7 @@ void OPL_Pan(song_t *csf, int32_t c, int32_t val)
 	const unsigned char *D = csf->opl_dtab[oplc];
 
 	/* feedback, additive synthesis and Panning... */
-	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc, 
+	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc,
 		(D[10] & ~STEREO_BITS)
 		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
 			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
@@ -522,7 +540,7 @@ void OPL_Patch(song_t *csf, int32_t c, const unsigned char *D)
 	OPL_Byte(csf, WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
 
 	/* feedback, additive synthesis and Panning... */
-	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc, 
+	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc,
 		(D[10] & ~STEREO_BITS)
 		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
 			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
@@ -543,7 +561,7 @@ void OPL_Reset(song_t *csf)
 	for(a = 0; a < MAX_VOICES; ++a) {
 		csf->opl_from_chan[a]=-1;
 	}
-	for(a = 0; a < 9; ++a) {
+	for(a = 0; a < FM_CHANNELS; ++a) {
 		csf->opl_to_chan[a]= -1;
 		csf->opl_dtab[a] = NULL;
 	}

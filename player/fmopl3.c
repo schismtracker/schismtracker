@@ -2536,8 +2536,8 @@ void ymf262_update_multi(void *_chip, int32_t **buffers, int length, uint32_t vu
 		/* accumulator register set #1 */
 		for (j = 0, k = 0; j < 18; j++) {
 			if (buffers[j]) {
-				buffers[j][i*2+0] += (chanout[j] & chip->pan[k++]) * OPL_VOLUME;
-				buffers[j][i*2+1] += (chanout[j] & chip->pan[k++]) * OPL_VOLUME;
+				buffers[j][i*2+0] += chanout[j] & chip->pan[k++];
+				buffers[j][i*2+1] += chanout[j] & chip->pan[k++];
 				k += 2; // skip next two pans
 			} else {
 				k += 4;

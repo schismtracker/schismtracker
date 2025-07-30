@@ -630,11 +630,11 @@ typedef struct song {
 	uint32_t oplregno;
 	uint32_t opl_fm_active;
 
-	const unsigned char *opl_dtab[9];
-	unsigned char opl_keyontab[9];
+	const unsigned char *opl_dtab[FM_CHANNELS];
+	unsigned char opl_keyontab[FM_CHANNELS];
 	int32_t opl_pans[MAX_VOICES];
 
-	int32_t opl_to_chan[9];
+	int32_t opl_to_chan[FM_CHANNELS];
 	int32_t opl_from_chan[MAX_VOICES];
 	// -----------------------------------------------------------------------
 
