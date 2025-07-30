@@ -738,7 +738,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 			memset(csf->multi_write[nchan].buffer, 0, sizeof(csf->multi_write[nchan].buffer));
 
 	for (uint32_t nchan = 0; nchan < csf->num_voices; nchan++) {
-		song_voice_t *const channel = &csf->voices[csf->voice_mix[nchan]];
+		int real_voice = csf->voice_mix[nchan];
+		song_voice_t *const channel = &csf->voices[real_voice];
 		uint32_t flags;
 		uint32_t nrampsamples;
 		int32_t smpcount;
@@ -777,8 +778,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		nsamples = count;
 
 		if (csf->multi_write) {
-			int32_t master = (csf->voice_mix[nchan] < MAX_CHANNELS)
-				? csf->voice_mix[nchan]
+			int32_t master = (real_voice < MAX_CHANNELS)
+				? real_voice
 				: (channel->master_channel - 1);
 			pbuffer = csf->multi_write[master].buffer;
 			csf->multi_write[master].used = 1;
@@ -906,7 +907,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				channel->lofs = -*(pbufmax - 1);
 
 #ifdef ENABLE_WAVEFORMVIS
-				mix_func(channel, pbuffer, pbufmax, RECENT_SAMPLE_BUFFER(csf, nchan));
+				mix_func(channel, pbuffer, pbufmax, RECENT_SAMPLE_BUFFER(csf, real_voice));
 #else
 				mix_func(channel, pbuffer, pbufmax);
 #endif
