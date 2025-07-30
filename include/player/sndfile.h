@@ -821,6 +821,10 @@ typedef struct song {
 
 	int32_t opl_to_chan[OPL_CHANNELS];
 	int32_t opl_from_chan[MAX_VOICES];
+
+	// up to MIXBUFFERSIZE stereo samples on each of OPL_CHANNELS channels
+	// allocated on-demand in snd_fm.c
+	int32_t *opl_buffer_data; // up to MIXBUFFERSIZE samples on each of OPL_CHANNELS channels
 	// -----------------------------------------------------------------------
 
 	// MIDI stuff ------------------------------------------------------------

@@ -114,9 +114,12 @@ static void _csf_reset(song_t *csf)
 	OPL_Close(csf);
 	GM_Reset(csf, 1);
 
+
 	/* all zeroes should be the default playing configuration,
 	 * anything else increases complexity unfortunately */
 	BITARRAY_FILL(csf->quirks);
+
+	csf->opl_buffer_data = NULL;
 
 	memset(csf->midi_note_tracker, 0, sizeof(csf->midi_note_tracker));
 	memset(csf->midi_vol_tracker, 0, sizeof(csf->midi_vol_tracker));
@@ -215,6 +218,7 @@ void csf_destroy(song_t *csf)
 	}
 
 	free(csf->recent_sample_buffer);
+	free(csf->opl_buffer_data);
 
 	_csf_reset(csf);
 }

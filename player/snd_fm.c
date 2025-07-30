@@ -28,6 +28,7 @@
 #include "player/sndfile.h"
 #include "log.h"
 #include "util.h" /* for clamp */
+#include "mem.h"
 
 #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
 
@@ -253,7 +254,6 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
 	// and do the panning here.
-	SCHISM_VLA_ALLOC(int32_t, buf, OPL_CHANNELS * sz);
 
 	if (csf->multi_write) {
 		for (i = 0; i < OPL_CHANNELS; i++) {
@@ -265,10 +265,15 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		}
 	}
 	else {
-		memset(buf, 0, OPL_CHANNELS * sz * sizeof(int32_t));
+		if (!csf->opl_buffer_data) {
+			SCHISM_RUNTIME_ASSERT(sz <= MIXBUFFERSIZE * 2, "Fmdrv_Mix can only process up to MIXBUFFERSIZE samples at a time, caller requested more");
+			csf->opl_buffer_data = mem_calloc(OPL_CHANNELS, MIXBUFFERSIZE * 2 * sizeof(int32_t));
+		}
+
+		memset(csf->opl_buffer_data, 0, OPL_CHANNELS * sz * sizeof(int32_t));
 
 		for (i = 0; i < OPL_CHANNELS; i++)
-			buffers[i] = &buf[i * sz];
+			buffers[i] = &csf->opl_buffer_data[i * sz];
 	}
 
 	OPLUpdateMulti(csf->opl, buffers, count, vu_max);
@@ -329,8 +334,6 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 
 		voice->oldest_recent_sample = oldest_recent_sample;
 	}
-
-	SCHISM_VLA_FREE(buf);
 
 	/* main output recent samples */
 	int oldest_recent_output_sample = csf_get_oldest_recent_sample_output();
