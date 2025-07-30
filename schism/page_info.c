@@ -834,7 +834,7 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 			for (int x = x1, h = y2 - y1; x < x2; x++) {
 				int y;
 
-				if (idx >= NATIVE_SCREEN_WIDTH)
+				if (idx >= RECENT_SAMPLE_BUFFER_SIZE)
 					idx = 0;
 
 				y = y1 + (255 - recent_samples[idx]) * h / 255;
