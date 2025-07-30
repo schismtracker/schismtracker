@@ -33,7 +33,7 @@
 #include "config-parser.h"
 #include "keyboard.h"
 #include "str.h"
-#include "sndfile.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 

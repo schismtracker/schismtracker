@@ -29,7 +29,6 @@
 #include "player/cmixer.h"
 #include "bshift.h"
 #include "util.h"   // for CLAMP
-#include "sndfile.h"
 
 #define NATIVE_SCREEN_WIDTH 640
 
