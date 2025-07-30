@@ -1040,7 +1040,10 @@ int widget_handle_key(struct key_event * k)
 		if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0 &&
 			k->text && widget_numentry_handle_text(widget, k->text))
 			return 1;
-		break;
+
+		/* weird hack ? */
+		if (widget->d.numentry.handle_unknown_key)
+			return widget->d.numentry.handle_unknown_key(k);
 	default:
 		break;
 	}
