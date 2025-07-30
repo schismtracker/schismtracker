@@ -78,20 +78,70 @@ struct keybind {
 	uint16_t repeats_needed;
 };
 
-struct keybind_section {
-	/* FIXME find a better way to get the upper limit of binds?
-	 * maybe we should put a static assertion under each definition, and just make
-	 * it all public? idk  --paper */
-	struct keybinds {
-		struct keybind b[5];
+struct keybinds {
+	/* XXX we should be able to make as many binds as we want */
+	struct keybind b[5];
 
-		uint8_t n;
-	} binds[MAX(KEYBIND_BIND_GLOBAL_MAX_, KEYBIND_BIND_PATTERN_EDITOR_MAX_)];
+	uint8_t n;
+};
+
+struct keybind_section {
+	struct keybinds *binds;
+
+	size_t max_binds;
 
 	size_t num_binds;
 };
 
-static struct keybind_section keybind_sections[KEYBIND_SECTION_MAX_] = {0};
+static struct keybinds keybinds_midi[KEYBIND_BIND_MIDI_MAX_];
+static struct keybinds keybinds_load_sample[KEYBIND_BIND_LOAD_SAMPLE_MAX_];
+static struct keybinds keybinds_load_stereo_sample[KEYBIND_BIND_LOAD_STEREO_SAMPLE_MAX_];
+static struct keybinds keybinds_message_editor[KEYBIND_BIND_MESSAGE_EDITOR_MAX_];
+static struct keybinds keybinds_waterfall[KEYBIND_BIND_WATERFALL_MAX_];
+static struct keybinds keybinds_time_information[KEYBIND_BIND_TIME_INFORMATION_MAX_];
+static struct keybinds keybinds_load_module[KEYBIND_BIND_LOAD_MODULE_MAX_];
+static struct keybinds keybinds_palette_editor[KEYBIND_BIND_PALETTE_EDITOR_MAX_];
+static struct keybinds keybinds_order_list[KEYBIND_BIND_ORDER_LIST_MAX_];
+static struct keybinds keybinds_order_list_pan[KEYBIND_BIND_ORDER_LIST_PAN_MAX_];
+static struct keybinds keybinds_info_page[KEYBIND_BIND_INFO_PAGE_MAX_];
+static struct keybinds keybinds_instrument_list[KEYBIND_BIND_INSTRUMENT_LIST_MAX_];
+static struct keybinds keybinds_instrument_note_translation[KEYBIND_BIND_INSTRUMENT_NOTE_TRANSLATION_MAX_];
+static struct keybinds keybinds_instrument_envelope[KEYBIND_BIND_INSTRUMENT_ENVELOPE_MAX_];
+static struct keybinds keybinds_sample_list[KEYBIND_BIND_SAMPLE_LIST_MAX_];
+static struct keybinds keybinds_pattern_editor[KEYBIND_BIND_PATTERN_EDITOR_MAX_];
+static struct keybinds keybinds_track_view[KEYBIND_BIND_TRACK_VIEW_MAX_];
+static struct keybinds keybinds_block_functions[KEYBIND_BIND_BLOCK_FUNCTIONS_MAX_];
+static struct keybinds keybinds_playback_functions[KEYBIND_BIND_PLAYBACK_FUNCTIONS_MAX_];
+static struct keybinds keybinds_file_list[KEYBIND_BIND_FILE_LIST_MAX_];
+static struct keybinds keybinds_global[KEYBIND_BIND_GLOBAL_MAX_];
+static struct keybinds keybinds_dialog[KEYBIND_BIND_DIALOG_MAX_];
+static struct keybinds keybinds_notes[KEYBIND_BIND_NOTES_MAX_];
+
+static struct keybind_section keybind_sections[KEYBIND_SECTION_MAX_] = {
+	{keybinds_midi, KEYBIND_BIND_MIDI_MAX_},
+	{keybinds_load_sample, KEYBIND_BIND_LOAD_SAMPLE_MAX_},
+	{keybinds_load_stereo_sample, KEYBIND_BIND_LOAD_STEREO_SAMPLE_MAX_},
+	{keybinds_message_editor, KEYBIND_BIND_MESSAGE_EDITOR_MAX_},
+	{keybinds_waterfall, KEYBIND_BIND_WATERFALL_MAX_},
+	{keybinds_time_information, KEYBIND_BIND_TIME_INFORMATION_MAX_},
+	{keybinds_load_module, KEYBIND_BIND_LOAD_MODULE_MAX_},
+	{keybinds_palette_editor, KEYBIND_BIND_PALETTE_EDITOR_MAX_},
+	{keybinds_order_list, KEYBIND_BIND_ORDER_LIST_MAX_},
+	{keybinds_order_list_pan, KEYBIND_BIND_ORDER_LIST_PAN_MAX_},
+	{keybinds_info_page, KEYBIND_BIND_INFO_PAGE_MAX_},
+	{keybinds_instrument_list, KEYBIND_BIND_INSTRUMENT_LIST_MAX_},
+	{keybinds_instrument_note_translation, KEYBIND_BIND_INSTRUMENT_NOTE_TRANSLATION_MAX_},
+	{keybinds_instrument_envelope, KEYBIND_BIND_INSTRUMENT_ENVELOPE_MAX_},
+	{keybinds_sample_list, KEYBIND_BIND_SAMPLE_LIST_MAX_},
+	{keybinds_pattern_editor, KEYBIND_BIND_PATTERN_EDITOR_MAX_},
+	{keybinds_track_view, KEYBIND_BIND_TRACK_VIEW_MAX_},
+	{keybinds_block_functions, KEYBIND_BIND_BLOCK_FUNCTIONS_MAX_},
+	{keybinds_playback_functions, KEYBIND_BIND_PLAYBACK_FUNCTIONS_MAX_},
+	{keybinds_file_list, KEYBIND_BIND_FILE_LIST_MAX_},
+	{keybinds_global, KEYBIND_BIND_GLOBAL_MAX_},
+	{keybinds_dialog, KEYBIND_BIND_DIALOG_MAX_},
+	{keybinds_notes, KEYBIND_BIND_NOTES_MAX_},
+};
 
 /* ------------------------------------------------------------------------ */
 /* initialization code */
@@ -172,7 +222,7 @@ static const struct keybind_bind_info keybind_bind_global_info[KEYBIND_BIND_GLOB
 	[KEYBIND_BIND_GLOBAL_MOUSE] = {"Toggle mouse cursor", "Ctrl+M"},
 	[KEYBIND_BIND_GLOBAL_NEW_SONG] = {"New song", "Ctrl+N"},
 	[KEYBIND_BIND_GLOBAL_CALCULATE_SONG_LENGTH] = {"Calculate approximate song length", "Ctrl+P"},
-	[KEYBIND_BIND_GLOBAL_QUIT] = {"Quit schism tracker", "Ctrl+Q"},
+	[KEYBIND_BIND_GLOBAL_QUIT] = {"Quit Schism Tracker", "Ctrl+Q"},
 	[KEYBIND_BIND_GLOBAL_QUIT_NO_CONFIRM] = {"Quit without confirmation", "Ctrl+Shift+Q"},
 	[KEYBIND_BIND_GLOBAL_SAVE] = {"Save current song", "Ctrl+S"},
 	[KEYBIND_BIND_GLOBAL_PREVIOUS_ORDER] = {"Previous order (while playing, not on pattern edit)", "Ctrl+LEFT"},
@@ -263,7 +313,9 @@ static const char *keybinds_get_bind_name(int section, int bind)
 
 static int keybinds_parse_bind(const char *str, struct keybind *b)
 {
-	/* '+' and '-' are both treated as valid delimiters */
+	/* '+' and '-' are both treated as valid delimiters, because
+	 * both are used within Schism ('+' is used for the menu bars,
+	 * while '-' is used in the program itself) */
 	static const char *delims = "+-";
 	static const char *whitespace = " \t";
 	const char *last_pch, *pch;
@@ -286,12 +338,8 @@ static int keybinds_parse_bind(const char *str, struct keybind *b)
 		} else {
 			/* we're on a keycode/scancode?
 			 *
-			 * note: we should always return in this branch; modifiers
-			 * are required to be in front of the key
-			 *
-			 * another note: we also need to be able to parse repeat
-			 * values, such as "Ctrl-A x2", so maybe we shouldn't
-			 * return here :) */
+			 * note: we should always return (or goto the x2 parsing branch),
+			 * modifiers are required to be in front of the keycode/scancode */
 			if (keybinds_parse_keycode(trimmed, &b->code.key)) {
 				b->type = KEYBIND_TYPE_KEYCODE;
 				free(trimmed);
@@ -385,6 +433,8 @@ static int keybinds_handle_cfg_entry(cfg_file_t *cfg, int section, int bind)
 		"keybinds must be parsed in order as in keybinds.h");
 	SCHISM_RUNTIME_ASSERT(keybind_sections_info[section].binds[bind].def,
 		"a default keybind is required");
+	SCHISM_RUNTIME_ASSERT(bind < keybind_sections[section].max_binds,
+		"keybinds bind is out of bounds");
 
 	b = &keybind_sections[section].binds[bind];
 	def = keybind_sections_info[section].binds[bind].def;
@@ -401,7 +451,7 @@ static int keybinds_handle_cfg_entry(cfg_file_t *cfg, int section, int bind)
 		len = strlen(bind_name);
 		ss = strn_dup(bind_name, len);
 
-		/* convert to lowercase, and replace any non-numeric characters with underscores */
+		/* convert to lowercase, and replace any non-alphanumeric characters with underscores */
 		for (i = 0; i < len; i++)
 			ss[i] = (!isalnum(ss[i])) ? '_' : tolower(ss[i]);
 
@@ -437,10 +487,6 @@ static int keybinds_handle_cfg_entry(cfg_file_t *cfg, int section, int bind)
 
 int keybinds_init(void)
 {
-	/* Ok, here's the big one. A couple things of note:
-	 *  1. Keybinds are expected to be passed in order as they appear within
-	 *     the enumeration in keybinds.h. This is checked by assertions.
-	 *  2. */
 	char *ptr;
 	cfg_file_t cfg;
 	int i, j;
@@ -449,6 +495,8 @@ int keybinds_init(void)
 	cfg_init(&cfg, ptr);
 	free(ptr);
 
+	/* keybinds are always parsed in the order they are defined.
+	 * this is by design, and changing it will probably break everything. */
 	for (i = 0; i < ARRAY_SIZE(keybind_sections_info); i++)
 		for (j = 0; j < keybind_sections_info[i].num_binds; j++)
 			keybinds_handle_cfg_entry(&cfg, i, j);
