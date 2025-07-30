@@ -30,8 +30,6 @@
 #include "bits.h"
 #include "util.h"   // for CLAMP
 
-#define NATIVE_SCREEN_WIDTH 640
-
 // For pingpong loops that work like most of Impulse Tracker's drivers
 // (including SB16, SBPro, and the disk writer) -- as well as XMPlay, use 1
 // To make them sound like the GUS driver, use 0.
@@ -251,7 +249,7 @@
 # define MERGE_SAMPLE(l, r) ((l >> 1) + (r >> 1))
 # define CONVERT_SAMPLE(s) ((int8_t)(((s) >> 18)) ^ 128);
 # define CAPTURE_RECENT_SAMPLE \
-	if (oldest_recent_sample >= NATIVE_SCREEN_WIDTH) \
+	if (oldest_recent_sample >= RECENT_SAMPLE_BUFFER_SIZE) \
 		oldest_recent_sample = 0; \
 	recent[oldest_recent_sample++] = CONVERT_SAMPLE(MERGE_SAMPLE(vol_lx, vol_rx));
 #else
