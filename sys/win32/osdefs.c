@@ -1655,11 +1655,15 @@ int win32_exec(int *status, const char *dir, const char *name, ...)
 
 int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
+	/* in order of preference */
+	static const char *extensions[] = {
+		"bat", /* prioritize .bat for legacy */
+		"cmd"  /* because steel is heavier than feathers */
+	};
+	size_t i;
 	int st;
-	char *bat_name;
+	char *bat_name = NULL; /* yes, this is necessary */
 	char *cmd;
-	char *full;
-	struct stat dummy;
 
 	/* obey COMSPEC */
 	SCHISM_ANSI_UNICODE({
@@ -1672,32 +1676,39 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 			return 0;
 	})
 
-	/* prioritize .bat for legacy */
-	if (asprintf(&bat_name, "%s.bat", name) < 0) {
+	for (i = 0; i < ARRAY_SIZE(extensions); i++) {
+		struct stat dummy;
+		char *full;
+		int r;
+
+		/* BUT THEY'RE BOTH A KILOGRAMME */
+		if (asprintf(&bat_name, "%s.%s", name, extensions[i]) < 0) {
+			/* out of memory error that we probably can't recover from. */
+			free(cmd);
+			return 0;
+		}
+
+		full = dmoz_path_concat(dir, bat_name);
+		r = win32_stat(full, &dummy);
+		free(full);
+		if (r == -1) {
+			free(bat_name);
+			/* don't remove this or else the logic falls flat */
+			bat_name = NULL;
+			continue;
+		}
+
+		break;
+	}
+
+	if (!bat_name) {
+		/* nope */
 		free(cmd);
 		return 0;
 	}
 
-	full = dmoz_path_concat(dir, bat_name);
-
-	if (win32_stat(full, &dummy) == -1) {
-		/* try .cmd in case we're in europe */
-		strcpy(bat_name + strlen(bat_name) - 4, ".cmd");
-		strcpy(full + strlen(full) - 4, ".cmd");
-
-		if (win32_stat(full, &dummy) == -1) {
-			free(full);
-			free(bat_name);
-			free(cmd);
-			return 0;
-		}
-	}
-
-	free(full);
-
-	if (!win32_exec(&st, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL)) {
+	if (!win32_exec(&st, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL))
 		st = !0; /* because the status ... is NOT quo */
-	}
 
 	free(bat_name);
 	free(cmd);
