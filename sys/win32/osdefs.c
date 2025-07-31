@@ -1561,19 +1561,18 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 }
 
 /* ------------------------------------------------------------------------------- */
-/* exec
- *
- * XXX this is completely untested :) */
+/* exec */
 
 #define WIN32_EXEC_IMPL(SUFFIX, CHARSET, CHAR_TYPE, SPAWNVP, CHDIR, STRDUP, GETCWD) \
 	static inline SCHISM_ALWAYS_INLINE \
 	int win32_exec_##SUFFIX(int *status, const char *dir, const char *name, va_list ap) \
 	{ \
 		CHAR_TYPE *argv[256]; \
-		int i, r; \
+		int i; \
+		int r = 0; \
 	\
 		if (charset_iconv(name, &argv[0], CHARSET_UTF8, CHARSET, SIZE_MAX)) \
-			return 0; \
+			goto cleanup; \
 	\
 		for (i = 1; i < 255; i++) { \
 			const char *arg = va_arg(ap, const char *); \
@@ -1582,8 +1581,10 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 	\
 			/* lol what */ \
 			if (charset_iconv(arg, &argv[i], CHARSET_UTF8, CHARSET, SIZE_MAX)) \
-				return 0; \
+				goto cleanup; \
 		} \
+	\
+		argv[i] = NULL; \
 	\
 		{ \
 			intptr_t st; \
@@ -1597,27 +1598,34 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 	\
 				wdir = charset_iconv_easy(dir, CHARSET_UTF8, CHARSET); \
 				if (!wdir) \
-					/* oops.. memleak here */ \
-					return 0; \
+					goto cleanup; \
 	\
-				if (CHDIR(wdir) == -1) \
-					/* and here too */ \
-					return 0; \
+				if (CHDIR(wdir) == -1) { \
+					free(wdir); \
+					goto cleanup; \
+				} \
 	\
 				free(wdir); \
 			} \
 	\
 			/* standard C is weird and needs an ugly cast */ \
 			st = SPAWNVP(_P_WAIT, argv[0], (const CHAR_TYPE *const *)argv); \
+			if (st == -1) \
+				goto cleanup; \
+	\
 			if (status) *status = st; \
 	\
+			/* hope this works? */ \
 			if (dir) CHDIR(old_wdir); \
 		} \
 	\
+		r = 1; \
+	\
+cleanup: \
 		for (i = 0; argv[i]; i++) \
 			free(argv[i]); \
 	\
-		return 1; \
+		return r; \
 	}
 
 WIN32_EXEC_IMPL(A, CHARSET_ANSI, CHAR, _spawnvp, _chdir, _strdup, _getcwd);
@@ -1650,6 +1658,8 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 	int st;
 	char *bat_name;
 	char *cmd;
+	char *full;
+	struct stat dummy;
 
 	/* obey COMSPEC */
 	SCHISM_ANSI_UNICODE({
@@ -1666,6 +1676,15 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 		free(cmd);
 		return 0;
 	}
+
+	full = dmoz_path_concat(dir, bat_name);
+	if (win32_stat(full, &dummy) == -1) {
+		free(full);
+		free(cmd);
+		return 0;
+	}
+
+	free(full);
 
 	if (!win32_exec(&st, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL)) {
 		free(bat_name);
