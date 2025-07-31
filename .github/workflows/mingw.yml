@@ -373,9 +373,11 @@ jobs:
           cp "$HOME/prefix/bin/SDL2.dll" .
           cp "$HOME/prefix/bin/libFLAC-14.dll" .
           cp "$HOME/prefix/bin/libogg-0.dll" .
+          cp "$HOME/prefix/bin/libwinpthread-1.dll" .
           "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
           "$TARGET-w64-$SYS-strip" -g "libFLAC-14.dll"
           "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
+          "$TARGET-w64-$SYS-strip" -g "libwinpthread-1.dll"
           cp schism/docs/configuration.md schism/README.md schism/COPYING .
           wget https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph
           unix2dos COPYING.Xiph COPYING README.md configuration.md
@@ -389,6 +391,7 @@ jobs:
             SDL2.dll
             libFLAC-14.dll
             libogg-0.dll
+            libwinpthread-1.dll
             COPYING
             COPYING.Xiph
             README.md
