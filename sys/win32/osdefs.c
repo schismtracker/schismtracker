@@ -1585,6 +1585,8 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 				return 0; \
 		} \
 	\
+		argv[i] = NULL; \
+	\
 		{ \
 			intptr_t st; \
 			CHAR_TYPE old_wdir[MAX_PATH]; \
