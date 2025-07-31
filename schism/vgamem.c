@@ -819,6 +819,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 		SIGN_FLIP_DEF \
 \
 		int ly = -1; \
+		int yy; \
 \
 		int walk = 0; \
 \
@@ -897,7 +898,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 				} \
 				break; \
 			case SAMPLE_DRAW_STYLE_FILLED: \
-				int yy = (int)min - min_value; \
+				yy = (int)min - min_value; \
 				yy = y1 + (range - yy) * h / range; \
 				vgamem_ovl_drawline(r, x, y, x, yy, colour); \
 				break; \
