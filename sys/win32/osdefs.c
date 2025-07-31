@@ -675,7 +675,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 		LRESULT result;
 		HDC hdc;
 		HBRUSH hbr;
-	
+
 		result = DefWindowProc(hwnd, msg, wparam, lparam);
 
 		/* Create a RECT one pixel above the client area: note that we
@@ -702,7 +702,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 	case WM_MENUBAR_DRAWMENU: {
 		/* Erase the menu bar background using custom brush. */
 		struct MenuBarDrawMenu *drawmenu = (struct MenuBarDrawMenu *)lparam;
-		
+
 		if (drawmenu) {
 			MENUBARINFO mbi;
 			RECT rcWindow;
@@ -986,11 +986,11 @@ static void win32_exception_log_cb(FILE *log, void *userdata)
 	addr = DBGHELP_SymGetModuleBase64(process, (DWORD64)p->ExceptionRecord->ExceptionAddress);
 	PSAPI_GetModuleBaseNameA(process, (HMODULE)addr, module_name, sizeof(module_name));
 
-	fprintf(log, "Exception code: 0x%08X\n", 
-		(uint32_t)p->ExceptionRecord->ExceptionCode);  
+	fprintf(log, "Exception code: 0x%08X\n",
+		(uint32_t)p->ExceptionRecord->ExceptionCode);
 	fprintf(log, "Exception address: 0x%p (%s+0x%llX)\n\n",
 		p->ExceptionRecord->ExceptionAddress, module_name,
-		(uint64_t)p->ExceptionRecord->ExceptionAddress - addr);  
+		(uint64_t)p->ExceptionRecord->ExceptionAddress - addr);
 
 	fprintf(log, "General purpose and control registers:\n");
 #if defined(__i386__) || defined(_M_IX86)
@@ -1672,24 +1672,31 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 			return 0;
 	})
 
+	/* prioritize .bat for legacy */
 	if (asprintf(&bat_name, "%s.bat", name) < 0) {
 		free(cmd);
 		return 0;
 	}
 
 	full = dmoz_path_concat(dir, bat_name);
+
 	if (win32_stat(full, &dummy) == -1) {
-		free(full);
-		free(cmd);
-		return 0;
+		/* try .cmd in case we're in europe */
+		strcpy(bat_name + strlen(bat_name) - 4, ".cmd");
+		strcpy(full + strlen(full) - 4, ".cmd");
+
+		if (win32_stat(full, &dummy) == -1) {
+			free(full);
+			free(bat_name);
+			free(cmd);
+			return 0;
+		}
 	}
 
 	free(full);
 
 	if (!win32_exec(&st, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL)) {
-		free(bat_name);
-		free(cmd);
-		return 0; /* what? */
+		st = !0; /* because the status ... is NOT quo */
 	}
 
 	free(bat_name);
