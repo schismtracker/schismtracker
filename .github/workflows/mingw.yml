@@ -373,7 +373,7 @@ jobs:
           cp "$HOME/prefix/bin/SDL2.dll" .
           cp "$HOME/prefix/bin/libFLAC-14.dll" .
           cp "$HOME/prefix/bin/libogg-0.dll" .
-          cp "$HOME/prefix/bin/libwinpthread-1.dll" .
+          cp "$HOME/llvm-mingw/$TARGET-w64-$SYS/bin/libwinpthread-1.dll" .
           "$TARGET-w64-$SYS-strip" -g "SDL2.dll"
           "$TARGET-w64-$SYS-strip" -g "libFLAC-14.dll"
           "$TARGET-w64-$SYS-strip" -g "libogg-0.dll"
