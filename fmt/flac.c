@@ -133,8 +133,6 @@ static void read_on_meta(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, const
 
 		read_data->bits = ceil_pow2_32(read_data->stream_bits);
 
-		read_data->data = malloc(read_data->smp->length * read_data->channels * (read_data->bits / 8));
-
 		break;
 	}
 	case FLAC__METADATA_TYPE_VORBIS_COMMENT: {
@@ -283,9 +281,15 @@ static FLAC__StreamDecoderWriteStatus read_on_write(const FLAC__StreamDecoder *d
 	 * is less than the max sample constant thing */
 	if (!read_data->smp->length || read_data->smp->length > MAX_SAMPLE_LENGTH
 		|| read_data->channels > 2
-		|| read_data->bits > 32
-		|| !read_data->data)
+		|| read_data->bits > 32)
 		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
+
+	if (!frame->header.number.sample_number) {
+		/* allocate */
+		read_data->data = malloc(read_data->smp->length * read_data->channels * (read_data->bits / 8));
+		if (!read_data->data)
+			return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
+	}
 
 	block_size = MIN(frame->header.blocksize, read_data->smp->length - frame->header.number.sample_number);
 	block_size = MIN(block_size, read_data->smp->length - read_data->offset);
