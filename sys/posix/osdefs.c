@@ -111,6 +111,11 @@ int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 	int st;
 	char *bat_name;
 
+	if (access(name, X_OK) != 0) {
+		// file does not exist or cannot be executed, go no further
+		return 0;
+	}
+
 	if (asprintf(&bat_name, "./%s", name) < 0)
 		return 0;
 

@@ -1561,9 +1561,7 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 }
 
 /* ------------------------------------------------------------------------------- */
-/* exec
- *
- * XXX this is completely untested :) */
+/* exec */
 
 #define WIN32_EXEC_IMPL(SUFFIX, CHARSET, CHAR_TYPE, SPAWNVP, CHDIR, STRDUP, GETCWD) \
 	static inline SCHISM_ALWAYS_INLINE \
@@ -1641,6 +1639,50 @@ int win32_exec(int *status, const char *dir, const char *name, ...)
 	return r;
 }
 
+#define WIN32_FILE_EXISTS_IMPL(SUFFIX, CHARSET, CHAR_TYPE) \
+	static inline SCHISM_ALWAYS_INLINE \
+	int win32_file_exists_##SUFFIX(const char *path) \
+	{ \
+		CHAR_TYPE *tpath; \
+		int exists; \
+	\
+		if (charset_iconv(path, &tpath, CHARSET_UTF8, CHARSET, SIZE_MAX)) \
+			return 0; \
+	\
+		exists = (GetFileAttributes##SUFFIX(tpath) != INVALID_FILE_ATTRIBUTES); \
+	\
+		free(tpath); \
+	\
+		return exists; \
+	}
+
+WIN32_FILE_EXISTS_IMPL(A, CHARSET_ANSI, CHAR);
+WIN32_FILE_EXISTS_IMPL(W, CHARSET_WCHAR_T, WCHAR);
+
+static int _win32_file_exists(const char *name, const char *dir)
+{
+	const char *full_path;
+	int exists, full_path_alloc = 0;
+
+	if (dir == NULL) {
+		full_path = name;
+	} else {
+		full_path = dmoz_path_concat(dir, name);
+		full_path_alloc = 1;
+	}
+
+	SCHISM_ANSI_UNICODE({
+		exists = win32_file_exists_A(full_path);
+	},{
+		exists = win32_file_exists_W(full_path);
+	});
+
+	if (full_path_alloc)
+		free((void *)full_path);
+
+	return exists;
+}
+
 /* ------------------------------------------------------------------------------- */
 /* hooks. in a perfect world we could implement this as the same thing everywhere,
  * but we don't live in a perfect world :) */
@@ -1664,6 +1706,11 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 
 	if (asprintf(&bat_name, "%s.bat", name) < 0) {
 		free(cmd);
+		return 0;
+	}
+
+	if (!_win32_file_exists(bat_name, dir)) {
+		free(bat_name);
 		return 0;
 	}
 
