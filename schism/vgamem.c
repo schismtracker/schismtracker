@@ -1092,66 +1092,6 @@ void draw_sample_data_ex_8(struct vgamem_overlay *r, int x1, int y1, int x2, int
 	}
 }
 
-/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug
- *
- * TODO: vectorized sample drawing. */
-#define DRAW_SAMPLE_DATA_VARIANT(bits, doublebits) \
-	static void _draw_sample_data_##bits(struct vgamem_overlay *r, \
-		int##bits##_t *data, uint32_t length, unsigned int inputchans, unsigned int outputchans) \
-	{ \
-		const int32_t nh = r->height / outputchans; \
-		int32_t np = r->height - nh / 2; \
-		uint32_t cc; \
-		uint64_t step; \
-	\
-		length /= inputchans; \
-		step = ((uint64_t)length << 32) / r->width; \
-	\
-		for (cc = 0; cc < outputchans; cc++) { \
-			int x; \
-			uint64_t poshi = 0, poslo = 0; \
-	\
-			for (x = 0; x < r->width; x++) { \
-				uint32_t scanlength, i; \
-				int##bits##_t min = INT##bits##_MAX, max = INT##bits##_MIN; \
-	\
-				poslo += step; \
-				scanlength = ((poslo + UINT32_C(0xFFFFFFFF)) >> 32); \
-				if (poshi >= length) poshi = length - 1; \
-				if (poshi + scanlength > length) scanlength = length - poshi; \
-				scanlength = MAX(scanlength, 1); \
-	\
-				for (i = 0; i < scanlength; i++) { \
-					uint32_t co = 0; \
-	\
-					do { \
-						int##bits##_t s = data[((poshi + i) * inputchans) + cc + co]; \
-						if (s < min) min = s; \
-						if (s > max) max = s; \
-					} while (co++ < inputchans - outputchans); \
-				} \
-	\
-				/* XXX is doing this with integers faster than say, floating point?
-				 * I mean, it sure is a bit more ~accurate~ at least, and it'll work the same everywhere. */ \
-				min = rshift_signed((int##doublebits##_t)min * nh, bits); \
-				max = rshift_signed((int##doublebits##_t)max * nh, bits); \
-	\
-				vgamem_ovl_drawline(r, x, np - 1 - max, x, np - 1 - min, SAMPLE_DATA_COLOR); \
-	\
-				poshi += (poslo >> 32); \
-				poslo &= UINT32_C(0xFFFFFFFF); \
-			} \
-	\
-			np -= nh; \
-		} \
-	}
-
-DRAW_SAMPLE_DATA_VARIANT(8, 16)
-DRAW_SAMPLE_DATA_VARIANT(16, 32)
-DRAW_SAMPLE_DATA_VARIANT(32, 64)
-
-#undef DRAW_SAMPLE_DATA_VARIANT
-
 /* --------------------------------------------------------------------- */
 /* these functions assume the screen is locked! */
 
@@ -1327,23 +1267,71 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 void draw_sample_data_rect_32(struct vgamem_overlay *r, int32_t *data,
 	int length, unsigned int inputchans, unsigned int outputchans)
 {
+	int advance = _muldiv(length, 256, r->width);
+	int chn;
+
 	vgamem_ovl_clear(r, 0);
-	_draw_sample_data_32(r, data, length, inputchans, outputchans);
+
+	for (chn = 0; chn < outputchans; chn++)
+	{
+		int y1 = chn * r->height / outputchans;
+		int y2 = (chn + 1) * r->height / outputchans - 1;
+
+		draw_sample_data_ex_32(
+			r,
+			0, y1, r->width, y2,
+			data, chn, outputchans, advance, length,
+			INT32_MIN, INT32_MAX,
+			SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
+	}
+
 	vgamem_ovl_apply(r);
 }
 
 void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data,
 	int length, unsigned int inputchans, unsigned int outputchans)
 {
+	int advance = _muldiv(length, 256, r->width);
+	int chn;
+
 	vgamem_ovl_clear(r, 0);
-	_draw_sample_data_16(r, data, length, inputchans, outputchans);
+
+	for (chn = 0; chn < outputchans; chn++)
+	{
+		int y1 = chn * r->height / outputchans;
+		int y2 = (chn + 1) * r->height / outputchans - 1;
+
+		draw_sample_data_ex_16(
+			r,
+			0, y1, r->width, y2,
+			data, chn, outputchans, advance, length,
+			INT16_MIN, INT16_MAX,
+			SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
+	}
+
 	vgamem_ovl_apply(r);
 }
 
 void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data,
 	int length, unsigned int inputchans, unsigned int outputchans)
 {
+	int advance = _muldiv(length, 256, r->width);
+	int chn;
+
 	vgamem_ovl_clear(r, 0);
-	_draw_sample_data_8(r, data, length, inputchans, outputchans);
+
+	for (chn = 0; chn < outputchans; chn++)
+	{
+		int y1 = chn * r->height / outputchans;
+		int y2 = (chn + 1) * r->height / outputchans - 1;
+
+		draw_sample_data_ex_8(
+			r,
+			0, y1, r->width, y2,
+			data, chn, outputchans, advance, length, 1,
+			INT8_MIN, INT8_MAX,
+			SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
+	}
+
 	vgamem_ovl_apply(r);
 }
