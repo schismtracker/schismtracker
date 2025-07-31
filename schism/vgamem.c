@@ -1264,74 +1264,34 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 	vgamem_ovl_apply(r);
 }
 
-void draw_sample_data_rect_32(struct vgamem_overlay *r, int32_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
-{
-	int advance = _muldiv(length, 256, r->width);
-	int chn;
-
-	vgamem_ovl_clear(r, 0);
-
-	for (chn = 0; chn < outputchans; chn++)
-	{
-		int y1 = chn * r->height / outputchans;
-		int y2 = (chn + 1) * r->height / outputchans - 1;
-
-		draw_sample_data_ex_32(
-			r,
-			0, y1, r->width, y2,
-			data, chn, outputchans, advance, length,
-			INT32_MIN, INT32_MAX,
-			SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
+#define DRAW_SAMPLE_DATA_RECT_VARIANT(BITS, SIGNARG) \
+	void draw_sample_data_rect_##BITS(struct vgamem_overlay *r, int##BITS##_t *data, \
+		int length, unsigned int inputchans, unsigned int outputchans) \
+	{ \
+		int advance = _muldiv(length, 256, r->width); \
+		int chn; \
+\
+		vgamem_ovl_clear(r, 0); \
+\
+		for (chn = 0; chn < outputchans; chn++) \
+		{ \
+			int y1 = chn * r->height / outputchans; \
+			int y2 = (chn + 1) * r->height / outputchans - 1; \
+\
+			draw_sample_data_ex_##BITS( \
+				r, \
+				0, y1, r->width, y2, \
+				data, chn, outputchans, advance, length, SIGNARG \
+				INT##BITS##_MIN, INT##BITS##_MAX, \
+				SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED); \
+		} \
+\
+		vgamem_ovl_apply(r); \
 	}
 
-	vgamem_ovl_apply(r);
-}
+#define SIGNARG_8B 1,
+#define SIGNARG_NONE
 
-void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
-{
-	int advance = _muldiv(length, 256, r->width);
-	int chn;
-
-	vgamem_ovl_clear(r, 0);
-
-	for (chn = 0; chn < outputchans; chn++)
-	{
-		int y1 = chn * r->height / outputchans;
-		int y2 = (chn + 1) * r->height / outputchans - 1;
-
-		draw_sample_data_ex_16(
-			r,
-			0, y1, r->width, y2,
-			data, chn, outputchans, advance, length,
-			INT16_MIN, INT16_MAX,
-			SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
-	}
-
-	vgamem_ovl_apply(r);
-}
-
-void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
-{
-	int advance = _muldiv(length, 256, r->width);
-	int chn;
-
-	vgamem_ovl_clear(r, 0);
-
-	for (chn = 0; chn < outputchans; chn++)
-	{
-		int y1 = chn * r->height / outputchans;
-		int y2 = (chn + 1) * r->height / outputchans - 1;
-
-		draw_sample_data_ex_8(
-			r,
-			0, y1, r->width, y2,
-			data, chn, outputchans, advance, length, 1,
-			INT8_MIN, INT8_MAX,
-			SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
-	}
-
-	vgamem_ovl_apply(r);
-}
+DRAW_SAMPLE_DATA_RECT_VARIANT(32, SIGNARG_NONE)
+DRAW_SAMPLE_DATA_RECT_VARIANT(16, SIGNARG_NONE)
+DRAW_SAMPLE_DATA_RECT_VARIANT(8, SIGNARG_8B)
