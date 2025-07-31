@@ -757,7 +757,7 @@ typedef struct song {
 	uint32_t flags;                                 // Song flags SONG_XXXX
 	uint32_t pan_separation;
 	uint32_t num_voices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
-	uint32_t mix_stat; // number of channels being mixed (not really used)
+	uint32_t mix_stat; // number of channels being mixed
 	uint32_t buffer_count; // number of samples to mix per tick
 	uint32_t tick_count;
 	uint32_t frame_delay;

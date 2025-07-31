@@ -133,6 +133,32 @@ void draw_box(int xs, int ys, int xe, int ye, uint32_t flags);
 struct song_sample;
 void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
 
+typedef enum {
+  SAMPLE_DRAW_STYLE_DOTS,
+	SAMPLE_DRAW_STYLE_LINE,
+	SAMPLE_DRAW_STYLE_FILLED,
+} sample_draw_style_t;
+
+/* when you need all of the control :-) most notably, the sample doesn't need
+ * to fill the overlay.
+ * - advances by advance samples in the buffer for every pixel drawn
+ * - advance is fixed-point, scaled by 256
+ * - samples are stride indices apart (to allow for interleaved stereo)
+ * - if the offset passes length, it wraps around (ringbuffer semantics)
+ * - (x1, y1)-(x2, y2) are pixel coordinates relative to the top/left of the
+ *   overlay
+ * - assumes you've already cleared the background
+ */
+void draw_sample_data_ex_32(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
+	int32_t *data, int offset, int stride, int advance, int length,
+	int32_t min_value, int32_t max_value, int colour, sample_draw_style_t draw_style);
+void draw_sample_data_ex_16(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
+	int16_t *data, int offset, int stride, int advance, int length,
+	int16_t min_value, int16_t max_value, int colour, sample_draw_style_t draw_style);
+void draw_sample_data_ex_8(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
+	int8_t *data, int offset, int stride, int advance, int length, int signed_data,
+	int8_t min_value, int8_t max_value, int colour, sample_draw_style_t draw_style);
+
 /* this works like draw_sample_data, just without having to allocate a
  * song_sample structure, and without caching the waveform.
  * mostly it's just for the oscilloscope view. */

@@ -802,7 +802,295 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
  *
  * output channels = number of oscis
  * input channels = number of channels in data
-*/
+ */
+
+void draw_sample_data_ex_32(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
+	int32_t *data, int offset, int stride, int advance, int length,
+	int32_t min_value, int32_t max_value, int colour, sample_draw_style_t draw_style)
+{
+	// To avoid needing a 64-bit intermediate, all samples are scaled
+	// and the 16-bit values are then processed.
+
+	int32_t mid = ((min_value >> 8) + (max_value >> 8)) >> 9;
+
+	max_value >>= 16;
+	min_value >>= 16;
+
+	int32_t range = (int)max_value - min_value;
+
+	int ly = -1;
+
+	int walk = 0;
+
+	for (int x = x1, h = y2 - y1 + 1; x < x2; x++) {
+		int y;
+
+		int32_t min, max, max_mag = 0;
+
+		if (draw_style == SAMPLE_DRAW_STYLE_FILLED) {
+			min = INT32_MAX;
+			max = INT32_MIN;
+
+			while (walk < advance) {
+				int scaled, magnitude;
+
+				if (offset >= length)
+					offset -= length;
+
+				scaled = data[offset] >> 16;
+
+				if (scaled < min)
+					min = scaled;
+				if (scaled > max)
+					max = scaled;
+
+				offset += stride;
+
+				walk += 256;
+			}
+
+			walk -= advance;
+		}
+		else {
+			max = 0;
+
+			for (int i = 0; i < advance; i++) {
+				int scaled, magnitude;
+
+				if (offset >= length)
+					offset -= length;
+
+				scaled = data[offset] >> 16;
+				magnitude = scaled - mid;
+
+				if (magnitude < 0)
+					magnitude = -magnitude;
+
+				if (magnitude > max_mag) {
+					max = scaled;
+					max_mag = magnitude;
+				}
+
+				offset += stride;
+			}
+		}
+
+		y = (int)max - min_value;
+		y = y1 + (range - y) * h / range;
+
+		switch (draw_style) {
+		case SAMPLE_DRAW_STYLE_DOTS:
+			vgamem_ovl_drawpixel(r, x, y, colour);
+			break;
+		case SAMPLE_DRAW_STYLE_LINE:
+			if (ly < 0) {
+				vgamem_ovl_drawpixel(r, x, y, colour);
+				ly = y;
+			}
+			else {
+				vgamem_ovl_drawline(r, x, ly + (y > ly ? 1 : 0), x, y, colour);
+				ly = y;
+			}
+			break;
+		case SAMPLE_DRAW_STYLE_FILLED:
+			int yy = (int)min - min_value;
+			yy = y1 + (range - yy) * h / range;
+			vgamem_ovl_drawline(r, x, y, x, yy, colour);
+			break;
+		}
+	}
+}
+
+void draw_sample_data_ex_16(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
+	int16_t *data, int offset, int stride, int advance, int length,
+	int16_t min_value, int16_t max_value, int colour, sample_draw_style_t draw_style)
+{
+	int32_t mid = (min_value + max_value) >> 1;
+	int32_t range = (int)max_value - min_value;
+
+	int ly = -1;
+
+	int walk = 0;
+
+	for (int x = x1, h = y2 - y1 + 1; x < x2; x++) {
+		int y;
+
+		int32_t min, max, max_mag = 0;
+
+		if (draw_style == SAMPLE_DRAW_STYLE_FILLED) {
+			min = INT32_MAX;
+			max = INT32_MIN;
+
+			while (walk < advance) {
+				int value;
+
+				if (offset >= length)
+					offset -= length;
+
+				value = data[offset];
+
+				if (value < min)
+					min = value;
+				if (value > max)
+					max = value;
+
+				offset += stride;
+
+				walk += 256;
+			}
+
+			walk -= advance;
+		}
+		else {
+			max = 0;
+
+			while (walk < advance) {
+				int magnitude;
+
+				if (offset >= length)
+					offset -= length;
+
+				magnitude = data[offset] - mid;
+
+				if (magnitude < 0)
+					magnitude = -magnitude;
+
+				if (magnitude > max_mag) {
+					max = data[offset];
+					max_mag = magnitude;
+				}
+
+				offset += stride;
+
+				walk += 256;
+			}
+
+			walk -= advance;
+		}
+
+		y = (int)max - min_value;
+		y = y1 + (range - y) * h / range;
+
+		switch (draw_style) {
+		case SAMPLE_DRAW_STYLE_DOTS:
+			vgamem_ovl_drawpixel(r, x, y, colour);
+			break;
+		case SAMPLE_DRAW_STYLE_LINE:
+			if (ly < 0) {
+				vgamem_ovl_drawpixel(r, x, y, colour);
+				ly = y;
+			}
+			else {
+				vgamem_ovl_drawline(r, x, ly + (y > ly ? 1 : 0), x, y, colour);
+				ly = y;
+			}
+			break;
+		case SAMPLE_DRAW_STYLE_FILLED:
+			int yy = (int)min - min_value;
+			yy = y1 + (range - yy) * h / range;
+			vgamem_ovl_drawline(r, x, y, x, yy, colour);
+			break;
+		}
+	}
+}
+
+void draw_sample_data_ex_8(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
+	int8_t *data, int offset, int stride, int advance, int length, int signed_data,
+	int8_t min_value, int8_t max_value, int colour, sample_draw_style_t draw_style)
+{
+	int32_t mid = (min_value + max_value) >> 1;
+	int32_t range = (int)max_value - min_value;
+	int8_t sign_flip;
+
+	sign_flip = signed_data ? 0 : 0x80;
+
+	int ly = -1;
+
+	int walk = 0;
+
+	for (int x = x1, h = y2 - y1 + 1; x < x2; x++) {
+		int y;
+
+		int32_t min, max, max_mag = 0;
+
+		if (draw_style == SAMPLE_DRAW_STYLE_FILLED) {
+			min = INT32_MAX;
+			max = INT32_MIN;
+
+			while (walk < advance) {
+				int value;
+
+				if (offset >= length)
+					offset -= length;
+
+				value = (data[offset] ^ sign_flip) - mid;
+
+				if (value < min)
+					min = value;
+				if (value > max)
+					max = value;
+
+				offset += stride;
+
+				walk += 256;
+			}
+
+			walk -= advance;
+		}
+		else {
+			max = 0;
+
+			while (walk < advance) {
+				int value;
+				int magnitude;
+
+				if (offset >= length)
+					offset -= length;
+
+				value = data[offset] ^ sign_flip;
+				magnitude = value - mid;
+
+				if (magnitude < 0)
+					magnitude = -magnitude;
+
+				if (magnitude > max_mag) {
+					max = value;
+					max_mag = magnitude;
+				}
+
+				offset += stride;
+
+				walk += 256;
+			}
+
+			walk -= advance;
+		}
+
+		y = (int)max - min_value;
+		y = y1 + (range - y) * h / range;
+
+		switch (draw_style) {
+		case SAMPLE_DRAW_STYLE_DOTS:
+			vgamem_ovl_drawpixel(r, x, y, colour);
+			break;
+		case SAMPLE_DRAW_STYLE_LINE:
+			if (ly < 0) {
+				vgamem_ovl_drawpixel(r, x, y, colour);
+				ly = y;
+			}
+			else {
+				vgamem_ovl_drawline(r, x, ly + (y > ly ? 1 : 0), x, y, colour);
+				ly = y;
+			}
+			break;
+		case SAMPLE_DRAW_STYLE_FILLED:
+			int yy = (int)min - min_value;
+			yy = y1 + (range - yy) * h / range;
+			vgamem_ovl_drawline(r, x, y, x, yy, colour);
+			break;
+		}
+	}
+}
 
 /* somewhat heavily based on CViewSample::DrawSampleData2 in modplug
  *
@@ -953,6 +1241,9 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t * sa
 /* --------------------------------------------------------------------- */
 /* meat! */
 
+// limit CPU usage on hugemongous samples
+#define MAX_SAMPLES_PER_PIXEL 100
+
 void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 {
 	vgamem_ovl_clear(r, 0);
@@ -996,14 +1287,35 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 
 	/* do the actual drawing */
 	int chans = sample->flags & CHN_STEREO ? 2 : 1;
-	if (sample->flags & CHN_16BIT)
-		_draw_sample_data_16(r, (signed short *) sample->data,
-				sample->length * chans,
-				chans, chans);
-	else
-		_draw_sample_data_8(r, sample->data,
-				sample->length * chans,
-				chans, chans);
+	int stride = chans;
+
+	int samples_per_pixel = sample->length / r->width;
+
+	if (samples_per_pixel > MAX_SAMPLES_PER_PIXEL) {
+		stride *= (1 + samples_per_pixel / MAX_SAMPLES_PER_PIXEL);
+	}
+
+	for (int chan = 0; chan < chans; chan++)
+	{
+		int fy1 = chan * r->height / chans;
+		int fy2 = (chan + 1) * r->height / chans - 1;
+		int advance = _muldiv(sample->length * chans, 256, r->width * stride);
+
+		if (sample->flags & CHN_16BIT)
+			draw_sample_data_ex_16(
+				r,
+				0, fy1, r->width, fy2,
+				(int16_t *)sample->data, chan, stride, advance, sample->length,
+				INT16_MIN, INT16_MAX,
+				SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
+		else
+			draw_sample_data_ex_8(
+				r,
+				0, fy1, r->width, fy2,
+				(int8_t *)sample->data, chan, stride, advance, sample->length, 1,
+				INT8_MIN, INT8_MAX,
+				SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
+	}
 
 	if ((status.flags & CLASSIC_MODE) == 0)
 		_draw_sample_play_marks(r, sample);
