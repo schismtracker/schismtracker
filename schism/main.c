@@ -53,6 +53,7 @@
 #include "timer.h"
 #include "mt.h"
 #include "mem.h"
+#include "update.h"
 
 #include "osdefs.h"
 
@@ -820,6 +821,9 @@ SCHISM_NORETURN static void event_loop(void)
 			}
 		}
 
+		/* check on the update thread and clean it up if needed */
+		update_cleanup();
+
 		{
 			/* This takes a LOT of time if we just base it on files.
 			 * So here I've just based it on how LONG we've spent.
@@ -1058,6 +1062,11 @@ int schism_main(int argc, char** argv)
 	if (startup_flags & SF_HEADLESS)
 		status.flags |= STATUS_IS_HEADLESS; // for the log
 
+	SCHISM_RUNTIME_ASSERT(mt_init(), "Failed to initialize a multithreading backend!");
+
+	/* log depends on multithreading to guard the variables */
+	log_init();
+
 	/* Eh. */
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
@@ -1072,15 +1081,14 @@ int schism_main(int argc, char** argv)
 	cfg_init_dir();
 #endif
 
+	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
+
 #if ENABLE_HOOKS
 	if (startup_flags & SF_HOOKS) {
 		run_startup_hook();
 		shutdown_process |= EXIT_HOOK;
 	}
 #endif
-
-	SCHISM_RUNTIME_ASSERT(mt_init(), "Failed to initialize a multithreading backend!");
-	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
 
 #ifndef HAVE_LOCALTIME_R
 	SCHISM_RUNTIME_ASSERT(localtime_r_init(), "Failed to initialize localtime_r replacement!");
@@ -1223,6 +1231,10 @@ int schism_main(int argc, char** argv)
 #endif
 	/* poll once */
 	midi_engine_poll_ports();
+
+	/* now, launch the update thread. */
+	if (cfg_check_for_updates)
+		update_check();
 
 	event_loop();
 

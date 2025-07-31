@@ -246,7 +246,7 @@ static struct cfg_section *_free_section(struct cfg_section *section)
 /* --------------------------------------------------------------------------------------------------------- */
 /* public functions */
 
-static int cfg_read_receive_impl(const void *data, SCHISM_UNUSED size_t size, void *userdata)
+int cfg_read_mem(const void *data, SCHISM_UNUSED size_t size, void *userdata)
 {
 	size_t len; /* how far away the end of the token is from the start */
 	struct cfg_section *cur_section = NULL;
@@ -313,7 +313,7 @@ int cfg_read(cfg_file_t *cfg)
 	if (slurp(&fp, cfg->filename, NULL, 0) < 0)
 		return -1;
 
-	slurp_receive(&fp, cfg_read_receive_impl, slurp_length(&fp) + 1, cfg);
+	slurp_receive(&fp, cfg_read_mem, slurp_length(&fp) + 1, cfg);
 
 	cfg->dirty = 0;
 

@@ -48,6 +48,8 @@ extern char *cfg_font;
 extern int cfg_str_date_format;
 extern int cfg_str_time_format;
 
+extern int cfg_check_for_updates;
+
 extern char cfg_module_pattern[SCHISM_PATH_MAX + 1];
 extern char cfg_export_pattern[SCHISM_PATH_MAX + 1];
 

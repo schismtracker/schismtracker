@@ -64,6 +64,9 @@ int cfg_kbd_repeat_rate = 0;
 int cfg_str_date_format = STR_DATE_FORMAT_DEFAULT;
 int cfg_str_time_format = STR_TIME_FORMAT_DEFAULT;
 
+// check for updates on startup by default
+int cfg_check_for_updates = 1;
+
 /* --------------------------------------------------------------------- */
 
 static const char *schism_dotfolders[] = {
@@ -266,6 +269,8 @@ void cfg_load(void)
 			cfg_str_time_format = STR_TIME_FORMAT_24HR;
 		}
 	}
+
+	cfg_check_for_updates = cfg_get_number(&cfg, "General", "check_for_updates", 1);
 
 	// Poll the system if it's available
 	if (cfg_str_date_format == STR_DATE_FORMAT_DEFAULT || cfg_str_time_format == STR_TIME_FORMAT_DEFAULT) {

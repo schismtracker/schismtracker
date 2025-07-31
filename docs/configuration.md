@@ -101,6 +101,14 @@ and save to `font.cfg`.
 If zero, loading a song when another one is playing will start playing the new
 song after it is loaded.
 
+#### Update checking
+
+    [General]
+    check_for_updates=1
+
+If non-zero, Schism will remotely check if an update is available on startup,
+if HTTP support is implemented (only Windows and Mac OS X).
+
 #### Date and time formatting
 
 	[General]
