@@ -397,6 +397,9 @@ typedef struct song_voice {
 	int32_t rofs, lofs; // ?
 	int32_t ramp_length;
 	uint32_t vu_meter; // moved this up -paper
+#ifdef ENABLE_WAVEFORMVIS
+	int oldest_recent_sample;
+#endif
 	// Information not used in the mixer
 	int32_t right_volume_new, left_volume_new; // ?
 	int32_t final_volume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
@@ -572,7 +575,7 @@ typedef struct song {
 	uint32_t flags;                                 // Song flags SONG_XXXX
 	uint32_t pan_separation;
 	uint32_t num_voices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
-	uint32_t mix_stat; // number of channels being mixed (not really used)
+	uint32_t mix_stat; // number of channels being mixed
 	uint32_t buffer_count; // number of samples to mix per tick
 	uint32_t tick_count;
 	uint32_t frame_delay;
@@ -591,6 +594,7 @@ typedef struct song {
 	uint32_t freq_factor; // not used -- for tweaking the song speed LP-style (interesting!)
 	uint32_t tempo_factor; // ditto
 	int32_t repeat_count; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
+	int8_t *recent_sample_buffer; // one buffer per voice, stored outside of song_voice_t because we regularly obliterate that
 
 	uint8_t row_highlight_major;
 	uint8_t row_highlight_minor;
@@ -626,12 +630,16 @@ typedef struct song {
 	uint32_t oplregno;
 	uint32_t opl_fm_active;
 
-	const unsigned char *opl_dtab[9];
-	unsigned char opl_keyontab[9];
+	const unsigned char *opl_dtab[FM_CHANNELS];
+	unsigned char opl_keyontab[FM_CHANNELS];
 	int32_t opl_pans[MAX_VOICES];
 
-	int32_t opl_to_chan[9];
+	int32_t opl_to_chan[FM_CHANNELS];
 	int32_t opl_from_chan[MAX_VOICES];
+
+	// up to MIXBUFFERSIZE stereo samples on each of FM_CHANNELS channels
+	// allocated on-demand in snd_fm.c
+	int32_t *opl_buffer_data; // up to MIXBUFFERSIZE samples on each of FM_CHANNELS channels
 	// -----------------------------------------------------------------------
 
 	// MIDI stuff ------------------------------------------------------------
@@ -677,6 +685,22 @@ typedef struct song {
 	// multi-write stuff -- NULL if no multi-write is in progress, else array of one struct per channel
 	struct multi_write *multi_write;
 } song_t;
+
+#ifndef NATIVE_SCREEN_WIDTH
+#define NATIVE_SCREEN_WIDTH 640
+#endif
+#ifndef NATIVE_SCREEN_HEIGHT
+#define NATIVE_SCREEN_HEIGHT 400
+#endif
+
+#ifdef ENABLE_WAVEFORMVIS
+#define RECENT_SAMPLE_BUFFER_SIZE NATIVE_SCREEN_WIDTH
+
+#define RECENT_SAMPLE_BUFFER(csf, voice) (&csf->recent_sample_buffer[(voice) * RECENT_SAMPLE_BUFFER_SIZE])
+
+int csf_get_oldest_recent_sample_output(void);
+void csf_set_oldest_recent_sample_output(int new_value);
+#endif
 
 song_note_t *csf_allocate_pattern(uint32_t rows);
 void csf_free_pattern(void *pat);

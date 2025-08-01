@@ -28,6 +28,7 @@
 #include "player/sndfile.h"
 #include "log.h"
 #include "util.h" /* for clamp */
+#include "mem.h"
 
 #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
 
@@ -53,17 +54,12 @@
 # error "The current value of OPLSOURCE isn't supported! Check build-config.h."
 #endif
 
-/* This just forwards to OPLUpdateMulti now */
-static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_t vu_max[9])
-{
-	int32_t *buffers[18];
-	int i;
-
-	for (i = 0; i < 18; i++)
-		buffers[i] = buffer;
-
-	OPLUpdateMulti(chip, buffers, length, vu_max);
-}
+/* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
+fmopl works in 16bits, although tested output used to range +-10000 instead of
+	+-20000 from adlibtracker/screamtracker in dosbox. So we need 11 bits + 1 extra bit.
+Also note when comparing volumes, that Screamtracker output on mono with PCM samples is not reduced by half.
+*/
+#define OPL_VOLUME 2274
 
 /*
 The documentation in this file regarding the output ports,
@@ -231,8 +227,9 @@ void Fmdrv_Init(song_t *csf, int32_t mixfreq)
 void Fmdrv_Mix(song_t *csf, uint32_t count)
 {
 	uint32_t sz;
-	uint32_t vu_max[18];
-	uint32_t i;
+	uint32_t vu_max[FM_CHANNELS];
+	uint32_t i, j;
+	int32_t *buffers[FM_CHANNELS] = {0};
 
 	if (!csf->opl_fm_active)
 		return;
@@ -247,7 +244,7 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	*/
 
 	/* first, fill in the VU meters */
-	for (i = 0; i < 9 /*18*/; i++) {
+	for (i = 0; i < FM_CHANNELS; i++) {
 		int32_t opl_v = csf->opl_to_chan[i];
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
@@ -257,38 +254,93 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
 	// and do the panning here.
-	if (csf->multi_write) {
-		uint32_t j;
-		int32_t *buffers[18] = {0};
 
-		for (i = 0; i < 9; i++) {
+	if (csf->multi_write) {
+		for (i = 0; i < FM_CHANNELS; i++) {
 			int32_t opl_v = csf->opl_to_chan[i];
 			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 				continue;
 
 			buffers[i] = csf->multi_write[opl_v].buffer;
 		}
+	}
+	else {
+		if (!csf->opl_buffer_data) {
+			SCHISM_RUNTIME_ASSERT(sz <= MIXBUFFERSIZE * 2, "Fmdrv_Mix can only process up to MIXBUFFERSIZE samples at a time, caller requested more");
+			csf->opl_buffer_data = mem_calloc(FM_CHANNELS, MIXBUFFERSIZE * 2 * sizeof(int32_t));
+		}
 
-		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
-	} else {
-		/* updated this to be able to work with the mixing buffer
-		 * directly  --paper */
-		OPLUpdateOne(csf->opl, csf->mix_buffer, count, vu_max);
+		memset(csf->opl_buffer_data, 0, FM_CHANNELS * sz * sizeof(int32_t));
+
+		for (i = 0; i < FM_CHANNELS; i++)
+			buffers[i] = &csf->opl_buffer_data[i * sz];
 	}
 
-	for (i = 0; i < 9 /*18*/; i++) {
+	OPLUpdateMulti(csf->opl, buffers, count, vu_max);
+
+	for (i = 0; i < FM_CHANNELS; i++) {
+		if (!buffers[i]) continue;
+
+		for (uint32_t j = 0; j < sz; j++)
+			buffers[i][j] *= OPL_VOLUME;
+	}
+
+	for (i = 0; i < FM_CHANNELS; i++) {
 		int32_t opl_v = csf->opl_to_chan[i];
+		int32_t *buf;
+		song_voice_t *voice;
+		int8_t *recent_sample_buffer;
+		int oldest_recent_sample;
+
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
 
-		csf->voices[opl_v].vu_meter = (vu_max[i] * OPL_VOLUME) >> 16;
+		voice = &csf->voices[opl_v];
+
+		voice->vu_meter = (vu_max[i] * OPL_VOLUME) >> 16;
+
+		recent_sample_buffer = RECENT_SAMPLE_BUFFER(csf, opl_v);
+
+		oldest_recent_sample = voice->oldest_recent_sample;
+
+#define MERGE_SAMPLE(l, r) ((l >> 1) + (r >> 1))
+#define CONVERT_SAMPLE(x) ((x) >> 17)
+
+		buf = buffers[i];
+
+		if (csf->multi_write) {
+			for (int j = 0; j < sz; j += 2) {
+
+				if (oldest_recent_sample > RECENT_SAMPLE_BUFFER_SIZE)
+					oldest_recent_sample = 0;
+
+				recent_sample_buffer[oldest_recent_sample] = CONVERT_SAMPLE(MERGE_SAMPLE(buf[j], buf[j + 1])) ^ 0x80;
+
+				oldest_recent_sample++;
+			}
+		} else {
+			/* we need the sample data to be a part of the common mixing buffer */
+			for (int j = 0; j < sz; j += 2) {
+				if (oldest_recent_sample > RECENT_SAMPLE_BUFFER_SIZE)
+					oldest_recent_sample = 0;
+
+				recent_sample_buffer[oldest_recent_sample] = CONVERT_SAMPLE(MERGE_SAMPLE(buf[j], buf[j + 1])) ^ 0x80;
+
+				csf->mix_buffer[j] += buf[j];
+
+				oldest_recent_sample++;
+			}
+		}
+
+		voice->oldest_recent_sample = oldest_recent_sample;
 	}
 }
 
 
 /***************************************/
 
-static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
+// YMF262 supports 18 channels
+static const char PortBases[18] = {0, 1, 2, 8, 9, 10, 16, 17, 18, 24, 25, 26, 32, 33, 34, 40, 41, 42};
 
 static int32_t GetVoice(song_t *csf, int32_t c)
 {
@@ -302,7 +354,7 @@ static int32_t SetVoice(song_t *csf, int32_t c)
 	if (csf->opl_from_chan[c] == -1) {
 		// Search for unused chans
 
-		for (a = 0; a < 9; a++) {
+		for (a = 0; a < FM_CHANNELS; a++) {
 			if (csf->opl_to_chan[a] == -1) {
 				csf->opl_to_chan[a] = c;
 				csf->opl_from_chan[c] = a;
@@ -312,7 +364,7 @@ static int32_t SetVoice(song_t *csf, int32_t c)
 
 		if (csf->opl_from_chan[c] == -1) {
 			// Search for note-released chans
-			for (a = 0; a < 9; a++) {
+			for (a = 0; a < FM_CHANNELS; a++) {
 				if ((csf->opl_keyontab[a]&KEYON_BIT) == 0) {
 					csf->opl_from_chan[csf->opl_to_chan[a]] = -1;
 					csf->opl_to_chan[a] = c;
@@ -491,7 +543,7 @@ void OPL_Pan(song_t *csf, int32_t c, int32_t val)
 	const unsigned char *D = csf->opl_dtab[oplc];
 
 	/* feedback, additive synthesis and Panning... */
-	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc, 
+	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc,
 		(D[10] & ~STEREO_BITS)
 		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
 			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
@@ -522,7 +574,7 @@ void OPL_Patch(song_t *csf, int32_t c, const unsigned char *D)
 	OPL_Byte(csf, WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
 
 	/* feedback, additive synthesis and Panning... */
-	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc, 
+	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc,
 		(D[10] & ~STEREO_BITS)
 		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
 			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
@@ -543,7 +595,7 @@ void OPL_Reset(song_t *csf)
 	for(a = 0; a < MAX_VOICES; ++a) {
 		csf->opl_from_chan[a]=-1;
 	}
-	for(a = 0; a < 9; ++a) {
+	for(a = 0; a < FM_CHANNELS; ++a) {
 		csf->opl_to_chan[a]= -1;
 		csf->opl_dtab[a] = NULL;
 	}

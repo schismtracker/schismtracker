@@ -20,7 +20,7 @@ void ym3812_reset_chip(void *chip);
 int  ym3812_write(void *chip, int a, int v);
 unsigned char ym3812_read(void *chip, int a);
 int  ym3812_timer_over(void *chip, int c);
-void ym3812_update_multi(void *chip, int32_t **buffers, int length, uint32_t vu_max[18]);
+void ym3812_update_multi(void *chip, int32_t **buffers, int length, uint32_t vu_max[9]);
 
 void ym3812_set_timer_handler(void *chip, OPL_TIMERHANDLER TimerHandler, void *param);
 void ym3812_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);
@@ -38,13 +38,5 @@ void ymf262_update_multi(void *chip, int32_t **buffers, int length, uint32_t vu_
 void ymf262_set_timer_handler(void *chip, OPL_TIMERHANDLER TimerHandler, void *param);
 void ymf262_set_irq_handler(void *chip, OPL_IRQHANDLER IRQHandler, void *param);
 void ymf262_set_update_handler(void *chip, OPL_UPDATEHANDLER UpdateHandler, void *param);
-
-/* moved this constant from snd_fm.c, because now the OPL update funcs need it */
-/* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
-fmopl works in 16bits, although tested output used to range +-10000 instead of 
-    +-20000 from adlibtracker/screamtracker in dosbox. So we need 11 bits + 1 extra bit.
-Also note when comparing volumes, that Screamtracker output on mono with PCM samples is not reduced by half.
-*/
-#define OPL_VOLUME 2274
 
 #endif /* SCHISM_PLAYER_FMOPL_H_ */
