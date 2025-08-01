@@ -944,6 +944,8 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflag
 		if (text.id) {
 			uint32_t len = MIN(MAX_MESSAGE, text.size);
 
+			/* XXX this is a modplug extension, so most likely Windows-1252,
+			 * not codepage 437 like we'd expect */
 			iff_chunk_read(&text, fp, song->message, len);
 			song->message[len] = '\0';
 		}
@@ -951,6 +953,7 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflag
 		if (midi.id) {
 			slurp_seek(fp, midi.offset, SEEK_SET);
 			it_read_midi_config(&song->midi_config, fp);
+			song->flags |= SONG_EMBEDMIDICFG;
 		}
 	}
 
