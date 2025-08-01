@@ -76,6 +76,13 @@ static void copy_out(void)
 {
 	song_lock_audio();
 	memcpy(&current_song->midi_config, &editcfg, sizeof(midi_config_t));
+	/* if this isn't toggled we don't save the edited midi config,
+	 * and we're fucked, because the song definitely won't play
+	 * right when we pull it back in.
+	 *
+	 * (to be completely honest, this is a stupid flag anyway,
+	 * we should be saving this stuff unconditionally) */
+	current_song->flags |= SONG_EMBEDMIDICFG;
 	song_unlock_audio();
 }
 
@@ -147,6 +154,10 @@ static void midiout_set_page(void)
 void midiout_load_page(struct page *page)
 {
 	int i;
+	char *editcfg_top[] = {
+		editcfg.start, editcfg.stop, editcfg.tick, editcfg.note_on, editcfg.note_off,
+		editcfg.set_volume, editcfg.set_panning, editcfg.set_bank, editcfg.set_program,
+	};
 
 	page->title = "MIDI Output Configuration";
 	page->draw_const = midiout_draw_const;
@@ -155,11 +166,6 @@ void midiout_load_page(struct page *page)
 	page->total_widgets = 32;
 	page->widgets = widgets_midiout;
 	page->help_index = HELP_MIDI_OUTPUT;
-
-	char *editcfg_top[] = {
-		editcfg.start, editcfg.stop, editcfg.tick, editcfg.note_on, editcfg.note_off,
-		editcfg.set_volume, editcfg.set_panning, editcfg.set_bank, editcfg.set_program,
-	};
 
 	for (i = 0; i < 9; i++) {
 		widget_create_textentry(widgets_midiout + i, 17, 13 + i, 43,
