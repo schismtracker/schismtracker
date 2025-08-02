@@ -76,13 +76,6 @@ static void copy_out(void)
 {
 	song_lock_audio();
 	memcpy(&current_song->midi_config, &editcfg, sizeof(midi_config_t));
-	/* if this isn't toggled we don't save the edited midi config,
-	 * and we're fucked, because the song definitely won't play
-	 * right when we pull it back in.
-	 *
-	 * (to be completely honest, this is a stupid flag anyway,
-	 * we should be saving this stuff unconditionally) */
-	current_song->flags |= SONG_EMBEDMIDICFG;
 	song_unlock_audio();
 }
 
