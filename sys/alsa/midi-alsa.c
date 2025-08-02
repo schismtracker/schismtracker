@@ -439,6 +439,7 @@ int alsa_midi_setup(void)
 {
 	static const struct midi_driver alsa_driver = {
 		.poll = _alsa_poll,
+		.wake = NULL,
 		.thread = _alsa_thread,
 		.enable = _alsa_start,
 		.disable = _alsa_stop,

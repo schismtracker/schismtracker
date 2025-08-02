@@ -194,6 +194,7 @@ int macosx_midi_setup(void)
 	static const struct midi_driver driver = {
 		.flags = MIDI_PORT_CAN_SCHEDULE,
 		.poll = _macosx_poll,
+		.wake = NULL,
 		.thread = NULL,
 		.enable = _macosx_start,
 		.disable = _macosx_stop,
