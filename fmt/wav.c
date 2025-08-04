@@ -194,8 +194,6 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	}
 
 	smp->flags         = 0; // flags are set by csf_read_sample
-	smp->volume        = 64 * 4;
-	smp->global_volume = 64;
 	smp->c5speed       = fmt.freqHz;
 	smp->length        = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
 
@@ -233,6 +231,10 @@ int fmt_wav_load_sample(slurp_t *fp, song_sample_t *smp)
 int fmt_wav_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	song_sample_t smp;
+
+	smp.volume = 64 * 4;
+	smp.global_volume = 64;
+
 	if (!wav_load(&smp, fp, 0))
 		return 0;
 

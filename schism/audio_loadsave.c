@@ -833,8 +833,7 @@ int song_load_sample(int n, const char *file)
 	csf_stop_sample(current_song, current_song->samples + n);
 	strncpy(smp.name, base, 25);
 
-	/* this is repeated multiple times in the sample loaders,
-	 * and it really should be removed */
+	/* this was repeated multiple times in the sample loaders */
 	smp.volume = 64 * 4;
 	smp.global_volume = 64;
 

@@ -378,9 +378,6 @@ int fmt_flac_load_sample(slurp_t *fp, song_sample_t *smp)
 		.smp = smp,
 	};
 
-	smp->volume        = 64 * 4;
-	smp->global_volume = 64;
-
 	if (!flac_load(&read_data, 0))
 		return 0;
 
@@ -418,6 +415,9 @@ int fmt_flac_load_sample(slurp_t *fp, song_sample_t *smp)
 int fmt_flac_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	song_sample_t smp = {0};
+
+	smp.volume = 64 * 4;
+	smp.global_volume = 64;
 
 	struct flac_readdata read_data = {
 		.fp = fp,

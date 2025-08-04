@@ -156,8 +156,6 @@ int fmt_au_load_sample(slurp_t *fp, song_sample_t *smp)
 		return 0;
 
 	smp->c5speed = au.sample_rate;
-	smp->volume = 64 * 4;
-	smp->global_volume = 64;
 	smp->length = au.data_size;
 
 	switch (au.encoding) {

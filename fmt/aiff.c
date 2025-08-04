@@ -204,7 +204,6 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			chunk_vhdr.volume = (chunk_vhdr.volume + 512) / 1024;
 
 			smp->volume = chunk_vhdr.volume * 4; //mphack
-			smp->global_volume = 64;
 
 			// this is done kinda weird
 			smp->loop_end = bswapBE32(chunk_vhdr.smp_highoct_repeat);
@@ -310,8 +309,6 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 
 			smp->c5speed = float_decode_ieee_80(chunk_comm.sample_rate);
 			smp->length = bswapBE32(chunk_comm.num_frames);
-			smp->volume = 64*4;
-			smp->global_volume = 64;
 
 			// the audio data starts 8 bytes into the chunk
 			// (don't care about the block alignment stuff)

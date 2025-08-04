@@ -280,8 +280,6 @@ static int macosxca_read(slurp_t *fp, dmoz_file_t *file, song_sample_t *smp)
 		smp->length = total_samples;
 		smp->c5speed = format.mSampleRate;
 		/* yay */
-		smp->volume = 64 * 4;
-		smp->global_volume = 64;
 		memcpy(smp->name, title, sizeof(smp->name)-1);
 		smp->name[sizeof(smp->name)-1] = 0;
 

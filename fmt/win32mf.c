@@ -978,8 +978,6 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 		return 0;
 	}
 
-	smp->volume        = 64 * 4;
-	smp->global_volume = 64;
 	smp->c5speed       = data.sps;
 	smp->length        = sample_length;
 
