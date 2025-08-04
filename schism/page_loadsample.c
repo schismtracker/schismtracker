@@ -452,24 +452,25 @@ int sample_host_dialog(int newpage)
 }
 
 static void finish_load(int cur);
-static void stereo_cvt_complete_left(void)
+
+static void stereo_cvt_complete_impl(void (*transform)(song_sample_t *))
 {
 	int cur = sample_get_current();
 	song_sample_t *smp;
 	smp = song_get_sample(cur);
-	sample_mono_left(smp);
+	transform(smp);
 	dialog_destroy();
 	finish_load(cur);
 }
 
+static void stereo_cvt_complete_left(void)
+{
+	stereo_cvt_complete_impl(sample_mono_left);
+}
+
 static void stereo_cvt_complete_right(void)
 {
-	int cur = sample_get_current();
-	song_sample_t *smp;
-	smp = song_get_sample(cur);
-	sample_mono_right(smp);
-	dialog_destroy();
-	finish_load(cur);
+	stereo_cvt_complete_impl(sample_mono_right);
 }
 
 static void stereo_cvt_complete_both(void)
@@ -588,7 +589,8 @@ static void handle_enter_key(void)
 	} else if (_library_mode) {
 		return;
 	} else if (file->sample) {
-		/* it's already been loaded, so copy it */
+		/* it's already been loaded, so copy it
+		 * XXX we could just... copy the pointer? */
 		smp = song_get_sample(cur);
 		song_copy_sample(cur, file->sample);
 		strncpy(smp->name, file->title, ARRAY_SIZE(smp->name));

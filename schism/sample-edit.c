@@ -528,33 +528,30 @@ MONO_LR(16)
 
 #undef MONO_LR
 
-void sample_mono_left(song_sample_t * sample)
+static inline void sample_mono_(song_sample_t *sample, int off)
 {
 	song_lock_audio();
+	/* stop any playing samples; we can crash if we don't do this */
+	csf_stop_sample(current_song, sample);
 	status.flags |= SONG_NEEDS_SAVE;
 	if (sample->flags & CHN_STEREO) {
 		if (sample->flags & CHN_16BIT)
-			_mono_lr16((int16_t *)sample->data, sample->length, 1);
+			_mono_lr16((int16_t *)sample->data, sample->length, off);
 		else
-			_mono_lr8((int8_t *)sample->data, sample->length, 1);
+			_mono_lr8((int8_t *)sample->data, sample->length, off);
 		sample->flags &= ~CHN_STEREO;
 	}
 	csf_adjust_sample_loop(sample);
 	song_unlock_audio();
 }
+
+void sample_mono_left(song_sample_t * sample)
+{
+	sample_mono_(sample, 1);
+}
 void sample_mono_right(song_sample_t * sample)
 {
-	song_lock_audio();
-	status.flags |= SONG_NEEDS_SAVE;
-	if (sample->flags & CHN_STEREO) {
-		if (sample->flags & CHN_16BIT)
-			_mono_lr16((int16_t *)sample->data, sample->length, 0);
-		else
-			_mono_lr8((int8_t *)sample->data, sample->length, 0);
-		sample->flags &= ~CHN_STEREO;
-	}
-	csf_adjust_sample_loop(sample);
-	song_unlock_audio();
+	sample_mono_(sample, 0);
 }
 
 /* ------------------------------------------------------------------------ */

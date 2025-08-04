@@ -635,6 +635,8 @@ void song_copy_sample(int n, song_sample_t *src)
 {
 	song_lock_audio();
 
+	csf_stop_sample(current_song, current_song->samples + n);
+
 	memcpy(current_song->samples + n, src, sizeof(song_sample_t));
 
 	if (src->data) {
@@ -831,6 +833,11 @@ int song_load_sample(int n, const char *file)
 	csf_stop_sample(current_song, current_song->samples + n);
 	strncpy(smp.name, base, 25);
 
+	/* this is repeated multiple times in the sample loaders,
+	 * and it really should be removed */
+	smp.volume = 64 * 4;
+	smp.global_volume = 64;
+
 	for (load = load_sample_funcs; *load; load++) {
 		slurp_rewind(&s);
 		if ((*load)(&s, &smp))
@@ -959,7 +966,11 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHIS
 	unsigned int j;
 	int x;
 
-	// FIXME why does this do this ? seems to be a no-op
+	// why does this do this ? seems to be a no-op
+	//
+	// it's because we have a stupid "fake sample slot" that we
+	// use for the sample/instrument preview "preload", which
+	// just happens to now be hardcoded at slot 0.
 	csf_stop_sample(current_song, current_song->samples + 0);
 
 	if (library) {
