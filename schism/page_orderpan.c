@@ -519,14 +519,6 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			new_order++;
 		break;
 	case SCHISM_KEYSYM_UP:
-		if (k->mod & SCHISM_KEYMOD_CTRL) {
-			if (status.flags & CLASSIC_MODE) return 0;
-			if (k->state == KEY_RELEASE)
-				return 1;
-			sample_set(sample_get_current()-1);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -534,14 +526,6 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		new_order--;
 		break;
 	case SCHISM_KEYSYM_DOWN:
-		if (k->mod & SCHISM_KEYMOD_CTRL) {
-			if (status.flags & CLASSIC_MODE) return 0;
-			if (k->state == KEY_RELEASE)
-				return 1;
-			sample_set(sample_get_current()+1);
-			status.flags |= NEED_UPDATE;
-			return 1;
-		}
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
@@ -664,24 +648,6 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 				!!(k->mod & SCHISM_KEYMOD_SHIFT), !!(k->sym == SCHISM_KEYSYM_b));
 		return 1;
 
-	case SCHISM_KEYSYM_LESS:
-	case SCHISM_KEYSYM_SEMICOLON:
-	case SCHISM_KEYSYM_COLON:
-		if (!NO_MODIFIER(k->mod)) return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
-		sample_set(sample_get_current()-1);
-		status.flags |= NEED_UPDATE;
-		return 1;
-	case SCHISM_KEYSYM_GREATER:
-	case SCHISM_KEYSYM_QUOTE:
-	case SCHISM_KEYSYM_QUOTEDBL:
-		if (!NO_MODIFIER(k->mod)) return 0;
-		if (k->state == KEY_RELEASE)
-			return 1;
-		sample_set(sample_get_current()+1);
-		status.flags |= NEED_UPDATE;
-		return 1;
 	default:
 		if (k->mouse == MOUSE_NONE) {
 			if (!(k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) && k->text)
