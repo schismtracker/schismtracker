@@ -563,7 +563,7 @@ static void save_module_draw_const(void)
 
 /* --------------------------------------------------------------------- */
 
-static void file_list_draw(void)
+static void file_list_draw(struct widget_context *this)
 {
 	int n, pos;
 	int fg1, fg2, bg;
@@ -578,7 +578,7 @@ static void file_list_draw(void)
 		for (n = top_file, pos = 13; n < flist.num_files && pos < 44; n++, pos++) {
 			file = flist.files[n];
 
-			if (n == current_file && ACTIVE_PAGE.selected_widget == 0) {
+			if (n == current_file && this->selected_widget == 0) {
 				fg1 = fg2 = 0;
 				bg = 3;
 			} else {
@@ -604,7 +604,7 @@ static void file_list_draw(void)
 			draw_text_len(str_from_time(file->timestamp, buf, cfg_str_time_format), 26, 51, 43, 5, 0);
 		}
 	} else {
-		if (ACTIVE_PAGE.selected_widget == 0) {
+		if (this->selected_widget == 0) {
 			draw_text("No files.", 3, 13, 0, 3);
 			draw_fill_chars(12, 13, 48, 13, DEFAULT_FG, 3);
 			draw_char(168, 23, 13, 2, 3);
@@ -671,7 +671,7 @@ static void show_selected_song_length(void)
 	csf_free(song);
 }
 
-static int file_list_handle_text_input(const char *text)
+static int file_list_handle_text_input(SCHISM_UNUSED struct widget_context *this, const char *text)
 {
 	int success = 0;
 	uint32_t *ucs4;
@@ -690,7 +690,7 @@ static int file_list_handle_text_input(const char *text)
 	return success;
 }
 
-static int file_list_handle_key(struct key_event * k)
+static int file_list_handle_key(struct widget_context *this, struct key_event * k)
 {
 	int new_file = current_file;
 
@@ -745,7 +745,7 @@ static int file_list_handle_key(struct key_event * k)
 	default:
 		if (k->mouse == MOUSE_NONE) {
 			if (k->text)
-				return file_list_handle_text_input(k->text);
+				return file_list_handle_text_input(this, k->text);
 
 			return 0;
 		}
@@ -829,22 +829,22 @@ static void dir_list_draw(int width)
 	search_redraw();
 }
 
-static void dir_list_draw_load(void)
+static void dir_list_draw_load(SCHISM_UNUSED struct widget_context *this)
 {
 	dir_list_draw(77 - 51);
 }
 
-static void dir_list_draw_exportsave(void)
+static void dir_list_draw_exportsave(SCHISM_UNUSED struct widget_context *this)
 {
 	dir_list_draw(68 - 51);
 }
 
-static int dir_list_handle_text_input(const char *text)
+static int dir_list_handle_text_input(struct widget_context *this, const char *text)
 {
-	return file_list_handle_text_input(text);
+	return file_list_handle_text_input(this, text);
 }
 
-static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
+static inline int dir_list_handle_key(struct widget_context *this, struct key_event * k, unsigned int width)
 {
 	int new_dir = current_dir;
 
@@ -937,7 +937,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 	default:
 		if (k->mouse == MOUSE_NONE) {
 			if (k->text)
-				return dir_list_handle_text_input(k->text);
+				return dir_list_handle_text_input(this, k->text);
 
 			return 0;
 		}
@@ -954,20 +954,20 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 	return 1;
 }
 
-static int dir_list_handle_key_load(struct key_event * k)
+static int dir_list_handle_key_load(struct widget_context *this, struct key_event * k)
 {
-	return dir_list_handle_key(k, 77 - 51);
+	return dir_list_handle_key(this, k, 77 - 51);
 }
 
-static int dir_list_handle_key_exportsave(struct key_event * k)
+static int dir_list_handle_key_exportsave(struct widget_context *this, struct key_event * k)
 {
-	return dir_list_handle_key(k, 68 - 51);
+	return dir_list_handle_key(this, k, 68 - 51);
 }
 
 /* --------------------------------------------------------------------- */
 /* these handle when enter is pressed on the file/directory textboxes at the bottom of the screen. */
 
-static void filename_entered(void)
+static void filename_entered(SCHISM_UNUSED struct widget_context *this)
 {
 	if (strpbrk(filename_entry, "?*")) {
 		set_glob(filename_entry);
@@ -981,7 +981,7 @@ static void filename_entered(void)
 }
 
 /* strangely similar to the dir list's code :) */
-static void dirname_entered(void)
+static void dirname_entered(SCHISM_UNUSED struct widget_context *this)
 {
 	void *out = charset_iconv_easy(dirname_entry, CHARSET_CP437, CHARSET_CHAR);
 	if (!out)

@@ -665,7 +665,7 @@ static int canceled = 0; /* this sucks, but so do I */
 
 static int disko_finish(void);
 
-static void diskodlg_draw(void)
+static void diskodlg_draw(SCHISM_UNUSED struct dialog *this)
 {
 	int sec, pos;
 	char buf[32];
@@ -953,10 +953,8 @@ struct pat2smp {
 	int pattern, sample, bind;
 };
 
-static void pat2smp_single(void *data)
+static void pat2smp_single(struct pat2smp *ps)
 {
-	struct pat2smp *ps = data;
-
 	if (disko_writeout_sample(ps->sample, ps->pattern, ps->bind) == DW_OK) {
 		set_page(PAGE_SAMPLE_LIST);
 	} else {
@@ -965,6 +963,12 @@ static void pat2smp_single(void *data)
 	}
 
 	free(ps);
+}
+
+static void pat2smp_single_dialog(void *data)
+{
+	struct pat2smp *ps = data;
+	pat2smp_single(ps);
 }
 
 static void pat2smp_multi(void *data)
@@ -1020,7 +1024,7 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 			pat2smp_single(ps);
 		} else {
 			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
-				pat2smp_single, free, 1, ps);
+				pat2smp_single_dialog, free, 1, ps);
 		}
 	}
 }

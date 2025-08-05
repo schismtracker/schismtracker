@@ -51,7 +51,7 @@ static void timeinfo_draw_const(void)
 	draw_text("Total time:", 7, 16, 0, 2);
 }
 
-static int timeinfo_handle_key(struct key_event * k)
+static int timeinfo_handle_key(SCHISM_UNUSED struct widget_context *this, struct key_event * k)
 {
 	switch (k->sym) {
 	case SCHISM_KEYSYM_BACKQUOTE:
@@ -146,7 +146,7 @@ static inline void draw_time(uint64_t secs, int x, int y)
 	draw_text_len(buf, amt, x, y, 0, 2);
 }
 
-static void timeinfo_redraw(void)
+static void timeinfo_redraw(SCHISM_UNUSED struct widget_context *this)
 {
 	uint64_t total_secs = 0;
 

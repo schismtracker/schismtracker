@@ -838,7 +838,7 @@ static void handle_mouse(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-static int fontedit_handle_key(struct key_event * k)
+static int fontedit_handle_key(struct widget_context *this, struct key_event * k)
 {
 	int n, ci = current_char << 3;
 	uint8_t *ptr = font_data + ci;
@@ -1085,7 +1085,7 @@ static int fontedit_handle_key(struct key_event * k)
 
 static struct widget fontedit_widget_hack[1];
 
-static int fontedit_key_hack(struct key_event *k)
+static int fontedit_key_hack(struct widget_context *this, struct key_event *k)
 {
 	switch (k->sym) {
 	case SCHISM_KEYSYM_r: case SCHISM_KEYSYM_l: case SCHISM_KEYSYM_s:
@@ -1096,7 +1096,7 @@ static int fontedit_key_hack(struct key_event *k)
 	case SCHISM_KEYSYM_F4: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F6:
 	case SCHISM_KEYSYM_F7: case SCHISM_KEYSYM_F8: case SCHISM_KEYSYM_F9:
 	case SCHISM_KEYSYM_F10: case SCHISM_KEYSYM_F11: case SCHISM_KEYSYM_F12:
-		return fontedit_handle_key(k);
+		return fontedit_handle_key(this, k);
 	case SCHISM_KEYSYM_RETURN:
 		if (status.dialog_type & (DIALOG_MENU|DIALOG_BOX)) return 0;
 		if (selected_item == FONTLIST) {
@@ -1109,7 +1109,7 @@ static int fontedit_key_hack(struct key_event *k)
 	return 0;
 }
 
-static void do_nil(void) {}
+static void do_nil(SCHISM_UNUSED struct widget_context *this) {}
 void fontedit_load_page(struct page *page)
 {
 	page->title = "";

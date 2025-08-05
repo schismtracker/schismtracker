@@ -350,11 +350,11 @@ static void check_update(void)
 static void _do_clipboard_paste_op(schism_event_t *e)
 {
 	if (ACTIVE_WIDGET.clipboard_paste
-	&& ACTIVE_WIDGET.clipboard_paste(e->type,
+	&& ACTIVE_WIDGET.clipboard_paste(widget_get_context(&ACTIVE_WIDGET), e->type,
 				e->clipboard.clipboard)) return;
 
 	if (ACTIVE_PAGE.clipboard_paste
-	&& ACTIVE_PAGE.clipboard_paste(e->type,
+	&& ACTIVE_PAGE.clipboard_paste((struct widget_context *)&ACTIVE_PAGE, e->type,
 				e->clipboard.clipboard)) return;
 
 	handle_text_input(e->clipboard.clipboard);
