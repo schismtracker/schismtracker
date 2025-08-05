@@ -39,6 +39,8 @@ void log_nl(void);
 
 /* appends a line into the log in the ITF font */
 void log_append(int color, int must_free, const char *text);
+/* appends a line into the log in the ITF font and then timestamps it */
+void log_append_timestamp(int color, int must_free, const char *text);
 
 /* appends a line into the log in the ITF font if bios_font is zero, else
  * appends in the BIOS font */
@@ -46,6 +48,9 @@ void log_append2(int bios_font, int color, int must_free, const char *text);
 
 /* appends a line after being formatted with printf */
 void log_appendf(int color, const char *format, ...)
+	SCHISM_FORMAT_PRINTF(2, 3);
+/* appends a line after being formatted with printf and then timestamps it */
+void log_appendf_timestamp(int color, const char *format, ...)
 	SCHISM_FORMAT_PRINTF(2, 3);
 
 /* like perror() but dumps into the log */

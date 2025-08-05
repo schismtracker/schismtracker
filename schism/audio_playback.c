@@ -1486,7 +1486,7 @@ success:
 
 	if (verbose) {
 		log_nl();
-		log_append(2, 0, "Audio initialised");
+		log_append_timestamp(2, 0, "Audio initialised");
 		log_underline();
 		log_appendf(5, " Using driver '%s'", driver_name);
 		log_appendf(5, " %d Hz, %d bit%s, %s", obtained.freq, obtained.bits,

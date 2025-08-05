@@ -24,6 +24,11 @@
 /* It's lo-og, lo-og, it's big, it's heavy, it's wood!
  * It's lo-og, lo-og, it's better than bad, it's good! */
 
+#ifdef WIN32
+/* without this, gmtime_r isn't declared for some reason */
+#define _POSIX_C_SOURCE 1
+#endif
+
 #include "headers.h"
 
 #include "it.h"
@@ -33,6 +38,8 @@
 #include "keyboard.h"
 #include "charset.h"
 #include "mem.h"
+
+#define MAX_LINE_LENGTH 74
 
 struct log_line {
 	uint8_t color;
@@ -127,7 +134,7 @@ static void log_redraw(void)
 		if (!lines[i].text)
 			continue;
 
-		draw_text_charset_len(lines[i].text, lines[i].set, 74, 3, 14 + n,
+		draw_text_charset_len(lines[i].text, lines[i].set, MAX_LINE_LENGTH, 3, 14 + n,
 			lines[i].color, 0);
 	}
 }
@@ -194,17 +201,14 @@ void log_nl(void)
 	log_append(DEFAULT_FG, 0, "");
 }
 
-void log_appendf(int color, const char *format, ...)
+void _log_vappendf(int color, const char *format, va_list args)
 {
 	char *ptr;
-	va_list ap;
 
-	va_start(ap, format);
-	if (vasprintf(&ptr, format, ap) == -1) {
+	if (vasprintf(&ptr, format, args) == -1) {
 		perror("asprintf");
 		exit(255);
 	}
-	va_end(ap);
 
 	if (!ptr) {
 		perror("asprintf");
@@ -214,10 +218,109 @@ void log_appendf(int color, const char *format, ...)
 	log_append3(CHARSET_UTF8, color, 1, ptr);
 }
 
+void log_appendf(int color, const char *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	_log_vappendf(color, format, ap);
+	va_end(ap);
+}
+
+void _log_timestamp(int colour)
+{
+	time_t now_secs = time(NULL);
+	time_t epoch = 0;
+	struct tm tz_offset;
+	time_t tz_offset_secs = mktime(gmtime_r(&epoch, &tz_offset));
+	struct tm now;
+	char *timestamp = malloc(MAX_LINE_LENGTH + 1);
+	int timestamp_length;
+	int result;
+
+	if (timestamp == NULL) {
+		// we've got 99 problems, but a missing timestamp isn't one of them
+		return;
+	}
+
+	memset(timestamp, ' ', MAX_LINE_LENGTH);
+	timestamp[MAX_LINE_LENGTH] = 0;
+
+	localtime_r(&now_secs, &now);
+
+	result = strftime(timestamp, MAX_LINE_LENGTH, "%b %d %H:%M:%S", &now);
+
+	if (result == 0) {
+		// hmm.
+		free(timestamp);
+		return;
+	}
+
+	timestamp_length = strlen(timestamp);
+
+	// If the day of the month has a leading 0, baleet it
+	if (timestamp[timestamp_length - 11] == '0')
+		memmove(&timestamp[timestamp_length - 11], &timestamp[timestamp_length - 10], 11);
+
+	if (status.flags & STATUS_IS_HEADLESS) {
+		// XXX: Maybe stdout should always get all of the log messages,
+		// regardless of whether we're headless or not? Hm.
+		puts(timestamp);
+		puts("");
+	} else {
+		int chars_on_last_line = strlen(lines[last_line].text);
+
+		int available_chars = MAX_LINE_LENGTH - chars_on_last_line - 2;
+
+		// kill the null termination, because we already have a better one at MAX_LINE_LENGTH
+		timestamp[timestamp_length] = 32;
+
+		memmove(&timestamp[MAX_LINE_LENGTH - timestamp_length], &timestamp[0], timestamp_length);
+		memset(timestamp, 32, MAX_LINE_LENGTH - timestamp_length);
+
+		if (available_chars < timestamp_length) {
+			log_append3(CHARSET_CP437, colour, true, timestamp);
+		}
+		else {
+			memcpy(timestamp, lines[last_line].text, chars_on_last_line);
+
+			if (lines[last_line].must_free) {
+				free((void *) lines[last_line].text);
+			}
+
+			lines[last_line].text      = timestamp;
+			lines[last_line].color     = colour;
+			lines[last_line].must_free = 1;
+		}
+
+		if (status.current_page == PAGE_LOG)
+			status.flags |= NEED_UPDATE;
+	}
+	fflush(stdout);
+}
+
+void log_append_timestamp(int color, int must_free, const char *text)
+{
+	log_append(color, must_free, text);
+	_log_timestamp(color);
+}
+
+void log_appendf_timestamp(int color, const char *format, ...)
+{
+	char *ptr;
+	va_list ap;
+
+	va_start(ap, format);
+	_log_vappendf(color, format, ap);
+	va_end(ap);
+
+	_log_timestamp(color);
+}
+
 static inline SCHISM_ALWAYS_INLINE
 void log_underline_impl(int chars)
 {
-	char buf[75];
+	char buf[MAX_LINE_LENGTH + 1];
 
 	chars = CLAMP(chars, 0, (int) sizeof(buf) - 1);
 	buf[chars--] = '\0';
