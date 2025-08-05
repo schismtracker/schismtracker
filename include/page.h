@@ -28,6 +28,8 @@
 #ifndef SCHISM_PAGE_H_
 #define SCHISM_PAGE_H_
 
+#include "widget_context.h"
+
 /* How much to scroll. */
 #define MOUSE_SCROLL_LINES       3
 
@@ -129,8 +131,8 @@ struct widget_numentry {
 	int32_t min;
 	int32_t max;
 	int32_t value;
-	int *cursor_pos; /* XXX why is this a pointer */
-	int (*handle_unknown_key)(struct key_event *k);
+	int *cursor_pos; /* this is a pointer to allow a column of numentries to share a common cursor_pos */
+	widget_key_cb handle_unknown_key;
 	int reverse; /* boolean */
 };
 
@@ -188,20 +190,20 @@ struct widget_panbar {
  * through function pointers. :) */
 struct widget_listbox {
 	/* get the size of the listbox */
-	uint32_t (*size)(void);
+	widget_cb_uint32 size;
 
 	/* get the name of an item */
-	const char *(*name)(uint32_t i);
+	widget_uint32_cb_str name;
 
 	/* get whether an item is toggled or not.
 	 * in the scope of the UI, this decides whether
 	 * the item is prefixed with a "*" or not.
 	 * in most cases there should only be ONE of
 	 * these at a time. */
-	int (*toggled)(uint32_t i);
+	widget_uint32_cb_int toggled;
 
 	/* custom key handler, for extra keybinds. :) */
-	int (*handle_key)(struct key_event *k);
+	widget_key_cb handle_key;
 
 	struct {
 		/* left & backtab */
@@ -224,13 +226,13 @@ struct widget_other {
 	 * pretty much stuck)
 	 * this MUST be set to a valid function.
 	 * return value is 1 if the key was handled, 0 if not. */
-	int (*handle_key) (struct key_event * k);
-	int (*handle_text_input) (const char *text_input);
+	widget_key_cb handle_key;
+	widget_text_cb handle_text_input;
 
 	/* also the widget drawing function can't possibly know how to
 	 * draw a custom widget, so it calls this instead.
 	 * this MUST be set to a valid function. */
-	void (*redraw) (void);
+	widget_cb redraw;
 };
 
 /* --------------------------------------------------------------------- */
@@ -267,14 +269,17 @@ struct widget {
 	} next;
 
 	/* called whenever the value is changed... duh ;) */
-	void (*changed) (void);
+	void (*changed) (struct widget_context *this);
 
 	/* called when the enter key is pressed */
-	void (*activate) (void);
+	void (*activate) (struct widget_context *this);
+
+	/* the context this widget is participating in (page, dialog) */
+	struct widget_context *this;
 
 	/* called by the clipboard manager; really, only "other" widgets
 	should "override" this... */
-	int (*clipboard_paste)(int cb, const void *cptr);
+	int (*clipboard_paste)(struct widget_context *, int cb, const void *cptr);
 
 	/* true if the widget accepts "text"- used for digraphs and unicode
 	and alt+kp entry... */
@@ -289,6 +294,14 @@ struct widget {
  * everything in this struct MUST be set for each page.
  * functions that aren't implemented should be set to NULL. */
 struct page {
+	/************************************/
+	/* must match struct widget_context */
+	enum widget_context_type context_type;
+	struct widget *widgets;
+	int selected_widget;
+	int total_widgets;
+	/************************************/
+
 	/* the title of the page, eg "Sample List (F3)" */
 	const char *title;
 
@@ -308,11 +321,11 @@ struct page {
 	 * (this is called *very* frequently) */
 	void (*playback_update) (void);
 	/* this gets first shot at keys (to do unnatural overrides) */
-	int (*pre_handle_key) (struct key_event * k);
+	int (*pre_handle_key) (struct widget_context *this, struct key_event * k);
 	/* this catches any keys that the main handler doesn't deal with */
-	void (*handle_key) (struct key_event * k);
+	int (*handle_key) (struct widget_context *this, struct key_event * k);
 	/* handle any text input events from SDL */
-	void (*handle_text_input) (const char* text_input);
+	void (*handle_text_input) (struct widget_context *this, const char* text_input);
 	/* called when the page is set. this is for reloading the
 	 * directory in the file browsers. */
 	void (*set_page) (void);
@@ -321,11 +334,7 @@ struct page {
 	void (*song_mode_changed_cb) (void);
 
 	/* called by the clipboard manager */
-	int (*clipboard_paste)(int cb, const void *cptr);
-
-	struct widget *widgets;
-	int selected_widget;
-	int total_widgets;
+	int (*clipboard_paste)(struct widget_context *this, int cb, const void *cptr);
 
 	/* 0 if no page-specific help */
 	int help_index;
@@ -337,9 +346,7 @@ extern struct page pages[];
 
 /* these are updated to point to the relevant data in the selected page
  * (or the dialog, if one is active) */
-extern struct widget *widgets;
-extern int *selected_widget;
-extern int *total_widgets;
+extern struct widget_context *widget_context;
 
 /* to make it easier to deal with either the page's widgets or the
  * current dialog's:
@@ -348,8 +355,11 @@ extern int *total_widgets;
  * ACTIVE_PAGE_WIDGET references the *page's* idea of what's active.
  *     (these are different if there's a dialog) */
 #define ACTIVE_PAGE        (pages[status.current_page])
-#define ACTIVE_WIDGET      (widgets[*selected_widget])
+#define ACTIVE_WIDGET      (widget_context->widgets[widget_context->selected_widget])
 #define ACTIVE_PAGE_WIDGET (ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget])
+
+/* dynamic cast to struct page * */
+struct page *widget_context_as_page(struct widget_context *this);
 
 extern int instrument_list_subpage;
 #define PAGE_INSTRUMENT_LIST instrument_list_subpage
@@ -476,8 +486,13 @@ void message_reset_selection(void);
 /* --------------------------------------------------------------------- */
 /* Other UI prompt stuff. */
 
-/* Ask for a value, like the thumbbars. */
+/* XXX The code for these is in dialog.c, should these declarations be in dialog.h? */
+
+/* Ask for a value. */
 void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue);
+
+/* Ask for a value, specifically for thumbbars. */
+void numprompt_create_for_thumbbar(const char *prompt, struct widget *thumbbar, void (*finish)(struct widget *thumbbar, int n), char initvalue);
 
 /* Ask for a sample / instrument number, like the "swap sample" dialog. */
 void smpprompt_create(const char *title, const char *prompt, void (*finish)(int n));

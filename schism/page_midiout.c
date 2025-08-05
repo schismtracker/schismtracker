@@ -72,7 +72,7 @@ static void midiout_draw_const(void)
 	}
 }
 
-static void copy_out(void)
+static void copy_out(SCHISM_UNUSED struct widget_context *this)
 {
 	song_lock_audio();
 	memcpy(&current_song->midi_config, &editcfg, sizeof(midi_config_t));
@@ -102,9 +102,9 @@ static void zxx_setpos(int pos)
 }
 
 
-static int pre_handle_key(struct key_event *k)
+static int pre_handle_key(struct widget_context *this, struct key_event *k)
 {
-	if (*selected_widget == 25 && k->sym == SCHISM_KEYSYM_UP) {
+	if (this->selected_widget == 25 && k->sym == SCHISM_KEYSYM_UP) {
 		/* scroll up */
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -113,14 +113,14 @@ static int pre_handle_key(struct key_event *k)
 		zxx_setpos(zxx_top - 1);
 		return 1;
 	}
-	if (*selected_widget == 31 && k->sym == SCHISM_KEYSYM_DOWN) {
+	if (this->selected_widget == 31 && k->sym == SCHISM_KEYSYM_DOWN) {
 		/* scroll down */
 		if (k->state == KEY_RELEASE)
 			return 1;
 		zxx_setpos(zxx_top + 1);
 		return 1;
 	}
-	if ((*selected_widget) >= 25) {
+	if (this->selected_widget >= 25) {
 		switch (k->sym) {
 		case SCHISM_KEYSYM_PAGEUP:
 			if (k->state == KEY_RELEASE)

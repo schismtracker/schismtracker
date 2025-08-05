@@ -101,7 +101,7 @@ static void help_draw_const(void)
 	if (status.dialog_type == DIALOG_NONE) widget_change_focus_to(1);
 }
 
-static void help_redraw(void)
+static void help_redraw(SCHISM_UNUSED struct widget_context *this)
 {
 	int n, pos, x;
 	int lp;
@@ -142,12 +142,12 @@ static void help_redraw(void)
 
 /* --------------------------------------------------------------------- */
 
-static void _help_close(void)
+static void _help_close(SCHISM_UNUSED struct widget_context *this)
 {
 	set_page(status.previous_page);
 }
 
-static int help_handle_key(struct key_event * k)
+static int help_handle_key(SCHISM_UNUSED struct widget_context *this, struct key_event * k)
 {
 	int new_line = top_line;
 

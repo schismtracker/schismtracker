@@ -179,7 +179,7 @@ static void get_pattern_string(unsigned char pattern, char *buf)
 	}
 }
 
-static void orderlist_draw(void)
+static void orderlist_draw(struct widget_context *this)
 {
 	char buf[11];
 	int pos, n;
@@ -193,7 +193,7 @@ static void orderlist_draw(void)
 	}
 
 	/* draw the cursor */
-	if (ACTIVE_PAGE.selected_widget == 0) {
+	if (this->selected_widget == 0) {
 		get_pattern_string(current_song->orderlist[current_order], buf);
 		pos = current_order - top_order;
 		draw_char(buf[orderlist_cursor_pos], orderlist_cursor_pos + 6, 15 + pos, 0, 3);
@@ -398,7 +398,7 @@ static int orderlist_handle_char(char sym)
 	return 1;
 }
 
-static int orderlist_handle_text_input_on_list(const char *text) {
+static int orderlist_handle_text_input_on_list(SCHISM_UNUSED struct widget_context *this, const char *text) {
 	int success = 0;
 
 	/* need proper UTF-8 handling but this is ok for now */
@@ -409,7 +409,7 @@ static int orderlist_handle_text_input_on_list(const char *text) {
 	return success;
 }
 
-static int orderlist_handle_key_on_list(struct key_event * k)
+static int orderlist_handle_key_on_list(struct widget_context *this, struct key_event * k)
 {
 	int prev_order = current_order;
 	int new_order = prev_order;
@@ -480,12 +480,12 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (k->state == KEY_RELEASE)
 				return 1;
-			widget_change_focus_to(33);
+			widget_context_change_focus_to(this, 33);
 		} else {
 			if (!NO_MODIFIER(k->mod)) return 0;
 			if (k->state == KEY_RELEASE)
 				return 1;
-			widget_change_focus_to(1);
+			widget_context_change_focus_to(this, 1);
 		}
 		return 1;
 	case SCHISM_KEYSYM_LEFT:
@@ -685,7 +685,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 	default:
 		if (k->mouse == MOUSE_NONE) {
 			if (!(k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) && k->text)
-				return orderlist_handle_text_input_on_list(k->text);
+				return orderlist_handle_text_input_on_list(this, k->text);
 
 			return 0;
 		}
@@ -782,7 +782,7 @@ static void order_pan_vol_playback_update(void)
 
 /* --------------------------------------------------------------------- */
 
-static void orderpan_update_values_in_song(void)
+static void orderpan_update_values_in_song(struct widget_context *this)
 {
 	song_channel_t *chn;
 	int n;
@@ -792,24 +792,24 @@ static void orderpan_update_values_in_song(void)
 		chn = song_get_channel(n);
 
 		/* yet another modplug hack here! */
-		chn->panning = widgets_orderpan[n + 1].d.panbar.value * 4;
+		chn->panning = this->widgets[n + 1].d.panbar.value * 4;
 
-		if (widgets_orderpan[n + 1].d.panbar.surround)
+		if (this->widgets[n + 1].d.panbar.surround)
 			chn->flags |= CHN_SURROUND;
 		else
 			chn->flags &= ~CHN_SURROUND;
 
-		song_set_channel_mute(n, widgets_orderpan[n + 1].d.panbar.muted);
+		song_set_channel_mute(n, this->widgets[n + 1].d.panbar.muted);
 	}
 }
 
-static void ordervol_update_values_in_song(void)
+static void ordervol_update_values_in_song(struct widget_context *this)
 {
 	int n;
 
 	status.flags |= SONG_NEEDS_SAVE;
 	for (n = 0; n < MAX_CHANNELS; n++)
-		song_get_channel(n)->volume = widgets_ordervol[n + 1].d.thumbbar.value;
+		song_get_channel(n)->volume = this->widgets[n + 1].d.thumbbar.value;
 }
 
 /* called when a channel is muted/unmuted by means other than the panning
@@ -840,15 +840,15 @@ static void order_pan_vol_song_changed_cb(void)
 
 /* --------------------------------------------------------------------- */
 
-static void order_pan_vol_handle_key(struct key_event * k)
+static int order_pan_vol_handle_key(struct widget_context *this, struct key_event * k)
 {
-	int n = ACTIVE_PAGE.selected_widget;
+	int n = this->selected_widget;
 
 	if (k->state == KEY_RELEASE)
-		return;
+		return 0;
 
 	if (!NO_MODIFIER(k->mod))
-		return;
+		return 0;
 
 	switch (k->sym) {
 	case SCHISM_KEYSYM_PAGEDOWN:
@@ -858,21 +858,23 @@ static void order_pan_vol_handle_key(struct key_event * k)
 		n -= 8;
 		break;
 	default:
-		return;
+		return 0;
 	}
 
 	n = CLAMP(n, 1, MAX_CHANNELS);
-	if (ACTIVE_PAGE.selected_widget != n)
-		widget_change_focus_to(n);
+	if (this->selected_widget != n)
+		widget_context_change_focus_to(this, n);
+
+	return 1;
 }
 
-static int order_pre_key(struct key_event *k)
+static int order_pre_key(struct widget_context *this, struct key_event *k)
 {
 	// hack to sync the active widget between pan/vol pages
 	if (!(status.flags & CLASSIC_MODE)) {
 		pages[PAGE_ORDERLIST_PANNING].selected_widget
 			= pages[PAGE_ORDERLIST_VOLUMES].selected_widget
-			= ACTIVE_PAGE.selected_widget;
+			= this->selected_widget;
 	}
 
 	if (k->sym == SCHISM_KEYSYM_F7) {

@@ -21,35 +21,40 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h"
-
-#include "it.h"
+#include "widget_context.h"
+#include "keyboard.h"
 #include "page.h"
-#include "widget.h"
+#include "it.h"
+
+static struct widget_context use_active_page;
 
 /* --------------------------------------------------------------------- */
+/* initialization functions that hold contexts (pages, dialogs) together */
 
-static struct widget widgets_blank[1];
-
-/* --------------------------------------------------------------------- */
-
-static int blank_page_handle_key(SCHISM_UNUSED struct widget_context *this, SCHISM_UNUSED struct key_event * k)
+void widget_set_context(struct widget_context *context)
 {
-	return 0;
+	int i;
+
+	for (i = 0; i < context->total_widgets; i++)
+		context->widgets[i].this = context;
 }
 
-static void blank_page_redraw(SCHISM_UNUSED struct widget_context *this)
+void widget_set_context_use_active_page(struct widget_context *context)
 {
+	int i;
+
+	for (i = 0; i < context->total_widgets; i++)
+		context->widgets[i].this = &use_active_page;
 }
 
 /* --------------------------------------------------------------------- */
+/* accessor that handles the special flag used for widgets on pages */
+/* consumers should generally not read ->this directly */
 
-void blank_load_page(struct page *page)
+struct widget_context *widget_get_context(struct widget *widget)
 {
-	page->title = "";
-	page->total_widgets = 1;
-	page->widgets = widgets_blank;
-	page->help_index = HELP_GLOBAL;
-
-	widget_create_other(widgets_blank + 0, 0, blank_page_handle_key, NULL, blank_page_redraw);
+	if (widget->this == &use_active_page)
+		return (struct widget_context *)&ACTIVE_PAGE;
+	else
+		return widget->this;
 }

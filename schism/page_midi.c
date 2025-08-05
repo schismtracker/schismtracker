@@ -42,44 +42,44 @@ static time_t last_midi_poll = 0;
 
 /* --------------------------------------------------------------------- */
 
-static void midi_output_config(void)
+static void midi_output_config(SCHISM_UNUSED struct widget_context *this)
 {
 	set_page(PAGE_MIDI_OUTPUT);
 }
 
 
-static void update_ip_ports(void)
+static void update_ip_ports(struct widget_context *this)
 {
-	if (widgets_midi[12].d.thumbbar.value > 0 && (status.flags & NO_NETWORK)) {
+	if (this->widgets[12].d.thumbbar.value > 0 && (status.flags & NO_NETWORK)) {
 		status_text_flash("Networking is disabled");
-		widgets_midi[12].d.thumbbar.value = 0;
+		this->widgets[12].d.thumbbar.value = 0;
 	} else {
-		ip_midi_setports(widgets_midi[12].d.thumbbar.value);
+		ip_midi_setports(this->widgets[12].d.thumbbar.value);
 	}
 
 	last_midi_poll = 0;
 	status.flags |= NEED_UPDATE;
 }
 
-static void update_midi_values(void)
+static void update_midi_values(struct widget_context *this)
 {
 	midi_flags = 0
-	|       (widgets_midi[1].d.toggle.state ? MIDI_TICK_QUANTIZE : 0)
-	|       (widgets_midi[2].d.toggle.state ? MIDI_BASE_PROGRAM1 : 0)
-	|       (widgets_midi[3].d.toggle.state ? MIDI_RECORD_NOTEOFF : 0)
-	|       (widgets_midi[4].d.toggle.state ? MIDI_RECORD_VELOCITY : 0)
-	|       (widgets_midi[5].d.toggle.state ? MIDI_RECORD_AFTERTOUCH : 0)
-	|       (widgets_midi[6].d.toggle.state ? MIDI_CUT_NOTE_OFF : 0)
-	|       (widgets_midi[9].d.toggle.state ? MIDI_PITCHBEND : 0)
+	|       (this->widgets[1].d.toggle.state ? MIDI_TICK_QUANTIZE : 0)
+	|       (this->widgets[2].d.toggle.state ? MIDI_BASE_PROGRAM1 : 0)
+	|       (this->widgets[3].d.toggle.state ? MIDI_RECORD_NOTEOFF : 0)
+	|       (this->widgets[4].d.toggle.state ? MIDI_RECORD_VELOCITY : 0)
+	|       (this->widgets[5].d.toggle.state ? MIDI_RECORD_AFTERTOUCH : 0)
+	|       (this->widgets[6].d.toggle.state ? MIDI_CUT_NOTE_OFF : 0)
+	|       (this->widgets[9].d.toggle.state ? MIDI_PITCHBEND : 0)
 	;
-	if (widgets_midi[11].d.toggle.state)
+	if (this->widgets[11].d.toggle.state)
 		current_song->flags |= SONG_EMBEDMIDICFG;
 	else
 		current_song->flags &= ~SONG_EMBEDMIDICFG;
 
-	midi_amplification = widgets_midi[7].d.thumbbar.value;
-	midi_c5note = widgets_midi[8].d.thumbbar.value;
-	midi_pitch_depth = widgets_midi[10].d.thumbbar.value;
+	midi_amplification = this->widgets[7].d.thumbbar.value;
+	midi_c5note = this->widgets[8].d.thumbbar.value;
+	midi_pitch_depth = this->widgets[10].d.thumbbar.value;
 }
 
 static void get_midi_config(void)
@@ -137,7 +137,7 @@ MD_unlock:
 	midi_engine_port_unlock();
 }
 
-static int midi_page_handle_key(struct key_event * k)
+static int midi_page_handle_key(struct widget_context *this, struct key_event * k)
 {
 	int ct = midi_engine_port_count();
 	int new_port = current_port;
@@ -188,7 +188,7 @@ static int midi_page_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		widget_change_focus_to(1);
+		widget_context_change_focus_to(this, 1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	default:
@@ -245,7 +245,7 @@ static void midi_page_redraw(void)
 	draw_box(52,40,73,42, BOX_THIN|BOX_INNER|BOX_INSET);
 }
 
-static void midi_page_draw_portlist(void)
+static void midi_page_draw_portlist(SCHISM_UNUSED struct widget_context *this)
 {
 	/* TODO: test hotplugging, and make sure everything actually
 	 * works as intended. for example:
@@ -339,6 +339,11 @@ static void midi_page_draw_portlist(void)
 
 /* --------------------------------------------------------------------- */
 
+void cfg_midipage_save_dialog(SCHISM_UNUSED struct widget_context *this)
+{
+	cfg_midipage_save();
+}
+
 void midi_load_page(struct page *page)
 {
 	page->title = "MIDI Screen (Shift-F1)";
@@ -373,6 +378,6 @@ void midi_load_page(struct page *page)
 	widget_create_button(widgets_midi + 13, 2, 41, 27, 6, 14, 12, 12, 12,
 		midi_output_config, "MIDI Output Configuration", 2);
 	widget_create_button(widgets_midi + 14, 2, 44, 27, 13, 14, 12, 12, 12,
-		cfg_midipage_save, "Save Output Configuration", 2);
+		cfg_midipage_save_dialog, "Save Output Configuration", 2);
 }
 

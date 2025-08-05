@@ -65,7 +65,7 @@ static void log_draw_const(void)
 	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 }
 
-static int log_handle_key(struct key_event * k)
+static int log_handle_key(SCHISM_UNUSED struct widget_context *this, struct key_event * k)
 {
 	switch (k->sym) {
 	case SCHISM_KEYSYM_UP:
@@ -118,7 +118,7 @@ static int log_handle_key(struct key_event * k)
 	return 1;
 }
 
-static void log_redraw(void)
+static void log_redraw(SCHISM_UNUSED struct widget_context *this)
 {
 	int n, i;
 
