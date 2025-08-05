@@ -474,6 +474,7 @@ void widget_togglebutton_set(struct widget *p_widgets, int widget, int do_callba
 
 void widget_draw_widget(struct widget *w, int selected)
 {
+	struct widget_context *this = widget_get_context(w);
 	char buf[64] = "Channel 42";
 	const char *ptr, *endptr;       /* for the menutoggle */
 	char *str;

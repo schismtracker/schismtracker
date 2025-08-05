@@ -203,7 +203,6 @@ struct widget_listbox {
 	widget_uint32_cb_int toggled;
 
 	/* custom key handler, for extra keybinds. :) */
-
 	widget_key_cb handle_key;
 
 	struct {
@@ -487,8 +486,13 @@ void message_reset_selection(void);
 /* --------------------------------------------------------------------- */
 /* Other UI prompt stuff. */
 
-/* Ask for a value, like the thumbbars. */
+/* XXX The code for these is in dialog.c, should these declarations be in dialog.h? */
+
+/* Ask for a value. */
 void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue);
+
+/* Ask for a value, specifically for thumbbars. */
+void numprompt_create_for_thumbbar(const char *prompt, struct widget *thumbbar, void (*finish)(struct widget *thumbbar, int n), char initvalue);
 
 /* Ask for a sample / instrument number, like the "swap sample" dialog. */
 void smpprompt_create(const char *title, const char *prompt, void (*finish)(int n));

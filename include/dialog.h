@@ -31,9 +31,19 @@ struct widget;
 
 struct dialog;
 
-typedef void (*action_cb)(void *data);
+typedef enum {
+	DIALOG_BUTTON_OK = 1,
+	DIALOG_BUTTON_YES = 1,
+
+	DIALOG_BUTTON_NO = 2,
+
+	DIALOG_BUTTON_CANCEL = 3,
+} dialog_button_t;
+
 typedef void (*dialog_cb)(struct dialog *this);
 typedef int (*dialog_key_event_cb)(struct dialog *this, struct key_event *k);
+typedef void (*dialog_finalize_cb)(struct dialog *this, dialog_button_t dialog_button);
+typedef void (*action_cb)(void *data, void *final_data);
 
 struct dialog {
 	/************************************/
@@ -52,10 +62,15 @@ struct dialog {
 	int text_x;
 
 	void *data; /* extra data pointer */
+	void *final_data; /* data passed to action after dialog_destroy -- always free()d */
 
 	/* maybe these should get the data pointer as well? */
 	dialog_cb draw_const;
 	dialog_key_event_cb handle_key;
+
+	/* notify the dialog that it's time to grab what it
+	 * wants from widgets and stash it in final_data */
+	dialog_finalize_cb finalize;
 
 	/* there's no action_ok, as yes and ok are fundamentally the same */
 	action_cb action_yes;
@@ -73,8 +88,8 @@ void dialog_yes(struct widget_context *this);
 void dialog_no(struct widget_context *this);
 void dialog_cancel(struct widget_context *this);
 
-/* dialog handler that simply calls free() on this->data */
-void dialog_free_data(struct dialog *this);
+/* dialog handler that simply calls free() on data */
+void dialog_free_data(void *data, void *final_data);
 
 int dialog_handle_key(struct key_event * k);
 void dialog_draw(void);
@@ -90,7 +105,7 @@ void dialog_destroy_all(void);
  * the dialog has been displayed. */
 struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
 				    int dialog_total_widgets, int dialog_selected_widget,
-				    dialog_cb draw_const, void *data);
+				    dialog_cb draw_const, void *data, dialog_finalize_cb finalize);
 
 /* dynamic cast to struct dialog * */
 struct dialog *widget_context_as_dialog(struct widget_context *this);

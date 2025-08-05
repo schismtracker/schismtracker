@@ -645,7 +645,7 @@ static void handle_key_itfmap(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-static void confirm_font_save_ok(void *vf)
+static void confirm_font_save_ok(void *vf, SCHISM_UNUSED void *final_data)
 {
 	char *f = vf;
 	if (font_save(f) != 0)
@@ -697,7 +697,7 @@ static void handle_key_fontlist(struct key_event * k)
 						confirm_font_save_ok, NULL, 1, flist.files[cur_font]->base);
 					return;
 				}
-				confirm_font_save_ok(flist.files[cur_font]->base);
+				confirm_font_save_ok(flist.files[cur_font]->base, NULL);
 			}
 			selected_item = EDITBOX;
 			/* fontlist_mode = MODE_OFF; */

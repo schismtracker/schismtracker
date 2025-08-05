@@ -262,7 +262,7 @@ static void file_list_draw(struct widget_context *this)
 		draw_char(168, 31, pos++, 2, 0);
 }
 
-static void do_enable_inst(SCHISM_UNUSED void *d)
+static void do_enable_inst(SCHISM_UNUSED void *d, SCHISM_UNUSED void *final_data)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -270,7 +270,7 @@ static void do_enable_inst(SCHISM_UNUSED void *d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(SCHISM_UNUSED void *d)
+static void dont_enable_inst(SCHISM_UNUSED void *d, SCHISM_UNUSED void *final_data)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }
@@ -335,7 +335,7 @@ static void handle_enter_key(void)
 	/* TODO */
 }
 
-static void do_delete_file(SCHISM_UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	int old_top_file, old_current_file;
 	char *ptr;

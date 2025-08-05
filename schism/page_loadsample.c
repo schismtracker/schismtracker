@@ -414,7 +414,7 @@ static void file_list_draw(struct widget_context *this)
 
 static struct widget stereo_cvt_widgets[4];
 
-static void _create_host_ok(void *vpage)
+static void _create_host_ok(void *vpage, SCHISM_UNUSED void *final_data)
 {
 	intptr_t page = INT_SHAPED_PTR(vpage);
 	song_create_host_instrument(sample_get_current());
@@ -422,7 +422,7 @@ static void _create_host_ok(void *vpage)
 		set_page(page);
 }
 
-static void _create_host_cancel(void *vpage)
+static void _create_host_cancel(void *vpage, SCHISM_UNUSED void *final_data)
 {
 	intptr_t page = INT_SHAPED_PTR(vpage);
 	if (page >= 0)
@@ -539,7 +539,7 @@ static void finish_load(int cur)
 		dd = dialog_create_custom(24, 25, 33, 8,
 				stereo_cvt_widgets, 3,
 				1,
-				stereo_cvt_dialog, NULL);
+				stereo_cvt_dialog, NULL, NULL);
 		dd->handle_key = stereo_cvt_hk;
 		return;
 	}
@@ -611,7 +611,7 @@ static void handle_enter_key(void)
 	}
 }
 
-static void do_discard_changes_and_move(SCHISM_UNUSED void *ign)
+static void do_discard_changes_and_move(SCHISM_UNUSED void *ign, SCHISM_UNUSED void *final_data)
 {
 	fake_slot = KEYJAZZ_NOINST;
 	fake_slot_changed = 0;
@@ -621,7 +621,7 @@ static void do_discard_changes_and_move(SCHISM_UNUSED void *ign)
 	status.flags |= NEED_UPDATE;
 }
 
-static void do_delete_file(SCHISM_UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	int old_top_file, old_current_file;
 	char *ptr;

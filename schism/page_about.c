@@ -100,7 +100,7 @@ void about_load_page(struct page *page)
 	page->set_page = show_about;
 }
 
-static void about_close(SCHISM_UNUSED void *data)
+static void about_close(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	if (status.current_page == PAGE_ABOUT) set_page(PAGE_LOAD_MODULE);
 	status.flags |= NEED_UPDATE;
@@ -196,7 +196,7 @@ void show_about(void)
 	d = dialog_create_custom(11,16,
 			58, 19,
 			widgets_about, 1, 0,
-			about_draw_const, NULL);
+			about_draw_const, NULL, NULL);
 	d->action_yes = about_close;
 	d->action_no = about_close;
 	d->action_cancel = about_close;

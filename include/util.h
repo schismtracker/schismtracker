@@ -133,4 +133,10 @@ int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
 int msgboxv(int style, const char *title, const char *fmt, va_list ap);
 int msgbox(int style, const char *title, const char *fmt, ...);
 
+/* This function takes an int and copies it into a malloc()ed buffer, for
+ * use with lifetime models like dialog.final_data where the pointer is
+ * always free()d.
+ */
+void *malloc_int(int value);
+
 #endif /* SCHISM_UTIL_H_ */

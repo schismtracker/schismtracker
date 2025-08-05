@@ -249,9 +249,7 @@ static int audio_driver_list_toggled_(SCHISM_UNUSED struct widget_context *this,
 
 static void audio_driver_list_activate_(struct widget_context *this)
 {
-	struct widget *w = &this->widgets[this->selected_widget];
-
-	const char *n = audio_driver_name(w->d.listbox.focus);
+	const char *n = audio_driver_name(this->widgets[this->selected_widget].d.listbox.focus);
 
 	audio_flash_reinitialized_text(audio_init(n, NULL));
 

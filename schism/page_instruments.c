@@ -1268,7 +1268,7 @@ static int _env_node_remove(song_envelope_t *env, int current_node)
 	return current_node;
 }
 
-static void do_pre_loop_cut(void *data)
+static void do_pre_loop_cut(void *data, SCHISM_UNUSED void *final_data)
 {
 	song_envelope_t *env = (song_envelope_t *)data;
 	unsigned int bt;
@@ -1302,7 +1302,7 @@ static void do_pre_loop_cut(void *data)
 	status.flags |= NEED_UPDATE;
 }
 
-static void do_post_loop_cut(void *data)
+static void do_post_loop_cut(void *data, SCHISM_UNUSED void *final_data)
 {
 	song_envelope_t *env = (song_envelope_t *)data;
 	env->nodes = env->loop_end+1;
@@ -1327,9 +1327,14 @@ static void env_resize(song_envelope_t *env, int ticks)
 static struct widget env_resize_widgets[2];
 static int env_resize_cursor;
 
-static void do_env_resize(void *data)
+static void env_resize_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
 {
-	env_resize((song_envelope_t *) data, env_resize_widgets[0].d.numentry.value);
+	this->final_data = malloc_int(this->widgets[0].d.numentry.value);
+}
+
+static void do_env_resize(void *data, void *final_data)
+{
+	env_resize((song_envelope_t *) data, *(int *)final_data);
 }
 
 static void env_resize_draw_const(SCHISM_UNUSED struct dialog *this)
@@ -1347,7 +1352,7 @@ static void env_resize_dialog(song_envelope_t *env)
 	widget_create_numentry(env_resize_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999, &env_resize_cursor);
 	env_resize_widgets[0].d.numentry.value = env->ticks[env->nodes - 1];
 	widget_create_button(env_resize_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1, dialog_cancel, "Cancel", 1);
-	dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, env);
+	dialog = dialog_create_custom(26, 22, 29, 11, env_resize_widgets, 2, 0, env_resize_draw_const, env, NULL);
 	dialog->action_yes = do_env_resize;
 }
 
@@ -1355,16 +1360,30 @@ static void env_resize_dialog(song_envelope_t *env)
 
 static struct widget env_adsr_widgets[4];
 
-static void do_env_adsr(void *data)
+static void env_adsr_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
 {
+	int *thumbbar_values = malloc(4 * sizeof(int));
+
+	thumbbar_values[0] = this->widgets[0].d.thumbbar.value;
+	thumbbar_values[1] = this->widgets[1].d.thumbbar.value;
+	thumbbar_values[2] = this->widgets[2].d.thumbbar.value;
+	thumbbar_values[3] = this->widgets[3].d.thumbbar.value;
+
+	this->final_data = thumbbar_values;
+}
+
+static void do_env_adsr(void *data, void *final_data)
+{
+	int *thumbbar_values = final_data;
+
 	// FIXME | move env flags into the envelope itself, where they should be in the first place.
 	// FIXME | then this nonsense can go away.
 	song_instrument_t *ins = (song_instrument_t *) data;
 	song_envelope_t *env = &ins->vol_env;
-	int a = env_adsr_widgets[0].d.thumbbar.value;
-	int d = env_adsr_widgets[1].d.thumbbar.value;
-	int s = env_adsr_widgets[2].d.thumbbar.value;
-	int r = env_adsr_widgets[3].d.thumbbar.value;
+	int a = thumbbar_values[0];
+	int d = thumbbar_values[1];
+	int s = thumbbar_values[2];
+	int r = thumbbar_values[3];
 	int v1 = MAX(a, a * a / 16);
 	int v2 = MAX(v1 + d * d / 16, v1 + d);
 	int v3 = MAX(v2 + r * r / 4, v2 + r);
@@ -1412,7 +1431,7 @@ static void env_adsr_dialog(SCHISM_UNUSED song_envelope_t *env)
 	widget_create_thumbbar(env_adsr_widgets + 3, 34, 27, 17, 2, 4, 4, NULL, 0, 128);
 	widget_create_button(env_adsr_widgets + 4, 36, 30, 6, 3, 0, 4, 4, 0, dialog_cancel, "Cancel", 1);
 
-	dialog = dialog_create_custom(25, 21, 31, 12, env_adsr_widgets, 5, 0, env_adsr_draw_const, ins);
+	dialog = dialog_create_custom(25, 21, 31, 12, env_adsr_widgets, 5, 0, env_adsr_draw_const, ins, NULL);
 	dialog->action_yes = do_env_adsr;
 }
 
@@ -2012,7 +2031,7 @@ struct instrument_save_data {
 	const char *format;
 };
 
-static void save_instrument_free_data(void *ptr)
+static void save_instrument_free_data(void *ptr, SCHISM_UNUSED void *final_data)
 {
 	struct instrument_save_data *data = (struct instrument_save_data *) ptr;
 	if (data->path)
@@ -2020,12 +2039,12 @@ static void save_instrument_free_data(void *ptr)
 	free(data);
 }
 
-static void do_save_instrument(void *ptr)
+static void do_save_instrument(void *ptr, SCHISM_UNUSED void *final_data)
 {
 	struct instrument_save_data *data = (struct instrument_save_data *) ptr;
 
 	song_save_instrument(data->path, data->format, song_get_instrument(current_instrument), current_instrument);
-	save_instrument_free_data(ptr);
+	save_instrument_free_data(ptr, NULL);
 }
 
 static void instrument_save(const char *filename, const char *format)
@@ -2061,7 +2080,7 @@ static void instrument_save(const char *filename, const char *format)
 			return;
 		}
 	} else {
-		do_save_instrument(data);
+		do_save_instrument(data, NULL);
 	}
 }
 
@@ -2073,7 +2092,7 @@ static char export_instrument_filename[SCHISM_NAME_MAX + 1] = "";
 static int export_instrument_format = 0;
 static int num_save_formats = 0;
 
-static void do_export_instrument(SCHISM_UNUSED void *data)
+static void do_export_instrument(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	instrument_save(export_instrument_filename, instrument_save_formats[export_instrument_format].label);
 }
@@ -2175,17 +2194,17 @@ static void export_instrument_dialog(void)
 	export_instrument_filename[ARRAY_SIZE(export_instrument_filename) - 1] = 0;
 
 	dialog = dialog_create_custom(21, 20, 39, 18, export_instrument_widgets, 4, 0,
-				      export_instrument_draw_const, NULL);
+				      export_instrument_draw_const, NULL, NULL);
 	dialog->action_yes = do_export_instrument;
 }
 
 
-static void do_delete_inst(SCHISM_UNUSED void *ign)
+static void do_delete_inst(SCHISM_UNUSED void *ign, SCHISM_UNUSED void *final_data)
 {
 	song_delete_instrument(current_instrument, 0);
 }
 
-static void do_delete_inst_preserve(SCHISM_UNUSED void *ign)
+static void do_delete_inst_preserve(SCHISM_UNUSED void *ign, SCHISM_UNUSED void *final_data)
 {
 	song_delete_instrument(current_instrument, 1);
 }

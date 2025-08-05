@@ -230,7 +230,7 @@ void save_song_or_save_as(void)
 	}
 }
 
-static void do_save_song_overwrite(void *ptr)
+static void do_save_song_overwrite(void *ptr, SCHISM_UNUSED void *final_data)
 {
 	struct stat st;
 
@@ -269,7 +269,7 @@ static void handle_file_entered_S(const char *name)
 			log_appendf(4, "%s: Is a directory", name);
 		} else if (S_ISREG(buf.st_mode)) {
 			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
-				      do_save_song_overwrite, free, 1, str_dup(name));
+				      do_save_song_overwrite, dialog_free_data, 1, str_dup(name));
 		} else {
 			/* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
 			dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0, NULL);
@@ -623,7 +623,7 @@ static void file_list_draw(struct widget_context *this)
 	search_redraw();
 }
 
-static void do_delete_file(SCHISM_UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	int old_top_file, old_current_file, old_top_dir, old_current_dir;
 	char *ptr;

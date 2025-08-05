@@ -765,7 +765,7 @@ int song_load_instrument(int n, const char* file)
 	return song_load_instrument_ex(n,file,NULL,-1);
 }
 
-static void do_enable_inst(SCHISM_UNUSED void* d)
+static void do_enable_inst(SCHISM_UNUSED void* d, SCHISM_UNUSED void* fd)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -773,7 +773,7 @@ static void do_enable_inst(SCHISM_UNUSED void* d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(SCHISM_UNUSED void* d)
+static void dont_enable_inst(SCHISM_UNUSED void* d, SCHISM_UNUSED void* fd)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }

@@ -282,24 +282,33 @@ static const int options_link_split[] = { 5, 6, -1 };
 static int options_selected_widget = 0;
 static int options_last_octave = 0;
 
-static void options_close_cancel(SCHISM_UNUSED void *data)
+static void options_close_cancel(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	kbd_set_current_octave(options_last_octave);
 }
-static void options_close(void *data)
+
+static void options_finalize(struct dialog *this, dialog_button_t button)
+{
+	options_selected_widget = this->selected_widget;
+
+	if (button == DIALOG_BUTTON_OK)
+	{
+		skip_value = this->widgets[1].d.thumbbar.value;
+		current_song->row_highlight_minor = this->widgets[2].d.thumbbar.value;
+		current_song->row_highlight_major = this->widgets[3].d.thumbbar.value;
+		link_effect_column = !!(this->widgets[5].d.togglebutton.state);
+		status.flags |= SONG_NEEDS_SAVE;
+	}
+
+	this->final_data = malloc_int(this->widgets[4].d.thumbbar.value);
+}
+
+static void options_close(void *data, SCHISM_UNUSED void *final_data)
 {
 	int old_size, new_size;
 
-	options_selected_widget = ((struct dialog *) data)->selected_widget;
-
-	skip_value = options_widgets[1].d.thumbbar.value;
-	current_song->row_highlight_minor = options_widgets[2].d.thumbbar.value;
-	current_song->row_highlight_major = options_widgets[3].d.thumbbar.value;
-	link_effect_column = !!(options_widgets[5].d.togglebutton.state);
-	status.flags |= SONG_NEEDS_SAVE;
-
 	old_size = song_get_pattern(current_pattern, NULL);
-	new_size = options_widgets[4].d.thumbbar.value;
+	new_size = *(int *)data;
 	if (old_size != new_size) {
 		song_pattern_resize(current_pattern, new_size);
 		current_row = MIN(current_row, new_size - 1);
@@ -362,7 +371,7 @@ void pattern_editor_display_options(void)
 	widget_togglebutton_set(options_widgets, link_effect_column ? 5 : 6, 0);
 
 	dialog = dialog_create_custom(10, 18, 60, 26, options_widgets, 8, options_selected_widget,
-				      options_draw_const, NULL);
+				      options_draw_const, NULL, options_finalize);
 	dialog->action_yes = options_close;
 	if (status.flags & CLASSIC_MODE) {
 		dialog->action_cancel = options_close;
@@ -395,13 +404,33 @@ static void length_edit_draw_const(SCHISM_UNUSED struct dialog *this)
 	draw_text("Start Pattern", 20, 27, 0, 2);
 	draw_text("End Pattern", 22, 28, 0, 2);
 }
-static void length_edit_close(SCHISM_UNUSED void *data)
+
+struct length_edit_final_data
 {
+	int new_length;
+	int from_pattern, to_pattern;
+};
+
+static void length_edit_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
+{
+	struct length_edit_final_data *final_data;
+
+	final_data = malloc(sizeof(*final_data));
+
+	final_data->new_length = this->widgets[0].d.thumbbar.value;
+	final_data->from_pattern = this->widgets[1].d.thumbbar.value;
+	final_data->to_pattern = this->widgets[2].d.thumbbar.value;
+
+	this->final_data = final_data;
+}
+static void length_edit_close(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data_ptr)
+{
+	struct length_edit_final_data *final_data = (struct length_edit_final_data *)final_data_ptr;
 	int i, nl;
-	nl = length_edit_widgets[0].d.thumbbar.value;
+	nl = final_data->new_length;
 	status.flags |= SONG_NEEDS_SAVE;
-	for (i = length_edit_widgets[1].d.thumbbar.value;
-	i <= length_edit_widgets[2].d.thumbbar.value; i++) {
+	for (i = final_data->from_pattern;
+	i <= final_data->to_pattern; i++) {
 		if (song_get_pattern(i, NULL) != nl) {
 			song_pattern_resize(i, nl);
 			if (i == current_pattern) {
@@ -412,7 +441,7 @@ static void length_edit_close(SCHISM_UNUSED void *data)
 		}
 	}
 }
-static void length_edit_cancel(SCHISM_UNUSED void *data)
+static void length_edit_cancel(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	/* do nothing */
 }
@@ -431,7 +460,7 @@ void pattern_editor_length_edit(void)
 	widget_create_button(length_edit_widgets + 3, 35, 31, 8, 2, 3, 3, 3, 0, dialog_yes, "OK", 4);
 
 	dialog = dialog_create_custom(15, 19, 51, 15, length_edit_widgets, 4, 0,
-				      length_edit_draw_const, NULL);
+				      length_edit_draw_const, NULL, length_edit_finalize);
 	dialog->action_yes = length_edit_close;
 	dialog->action_cancel = length_edit_cancel;
 }
@@ -439,25 +468,51 @@ void pattern_editor_length_edit(void)
 /* --------------------------------------------------------------------------------------------------------- */
 /* multichannel dialog */
 static struct widget multichannel_widgets[MAX_CHANNELS + 1];
-static void multichannel_close(SCHISM_UNUSED void *data)
+
+struct multichannel_final_data
 {
-	int i, m = 0;
+	int accept;
+	int channel_states[MAX_CHANNELS];
+};
+
+static void multichannel_finalize(struct dialog *this, dialog_button_t dialog_button)
+{
+	int i;
+
+	struct multichannel_final_data *final_data = malloc(sizeof(struct multichannel_final_data));
+
+	final_data->accept = (dialog_button == DIALOG_BUTTON_YES);
 
 	for (i = 0; i < MAX_CHANNELS; i++) {
-		channel_multi[i] = !!multichannel_widgets[i].d.toggle.state;
-		if (channel_multi[i])
-			m = 1;
+		final_data->channel_states[i] = !!this->widgets[i].d.toggle.state;
 	}
-	if (m)
-		channel_multi_enabled = 1;
+
+	this->final_data = final_data;
 }
+
+static void multichannel_close(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
+{
+	int i, m = 0;
+	struct multichannel_final_data *result = (struct multichannel_final_data *)final_data;
+
+	if (result->accept) {
+		for (i = 0; i < MAX_CHANNELS; i++) {
+			channel_multi[i] = result->channel_states[i];
+			if (channel_multi[i])
+				m = 1;
+		}
+		if (m)
+			channel_multi_enabled = 1;
+	}
+}
+
 static int multichannel_handle_key(SCHISM_UNUSED struct dialog *this, struct key_event *k)
 {
 	if (k->sym == SCHISM_KEYSYM_n) {
 		if ((k->mod & SCHISM_KEYMOD_ALT) && k->state == KEY_PRESS)
-			dialog_yes(NULL);
+			dialog_yes((struct widget_context *)this);
 		else if (NO_MODIFIER(k->mod) && k->state == KEY_RELEASE)
-			dialog_cancel(NULL);
+			dialog_cancel((struct widget_context *)this);
 		return 1;
 	}
 	return 0;
@@ -515,9 +570,9 @@ static void pattern_editor_display_multichannel(void)
 	widget_create_button(multichannel_widgets + 64, 36, 40, 6, 15, 0, 64, 64, 64, dialog_yes, "OK", 3);
 
 	dialog = dialog_create_custom(7, 18, 66, 25, multichannel_widgets, MAX_CHANNELS + 1, 0,
-				      multichannel_draw_const, NULL);
+				      multichannel_draw_const, NULL, NULL);
+	dialog->finalize = multichannel_finalize;
 	dialog->action_yes = multichannel_close;
-	dialog->action_cancel = multichannel_close;
 	dialog->handle_key = multichannel_handle_key;
 }
 
@@ -953,7 +1008,7 @@ static void history_draw_const(SCHISM_UNUSED struct dialog *this)
 	}
 }
 
-static void history_close(SCHISM_UNUSED void *data)
+static void history_close(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	/* nothing! */
 }
@@ -1016,7 +1071,7 @@ static void pattern_editor_display_history(void)
 
 	widget_create_other(undo_widgets + 0, 0, history_handle_key, NULL, NULL);
 	dialog = dialog_create_custom(17, 21, 47, 16, undo_widgets, 1, 0,
-				      history_draw_const, NULL);
+				      history_draw_const, NULL, NULL);
 	dialog->action_yes = history_close;
 	dialog->action_cancel = history_close;
 	dialog->handle_key = history_handle_key_dialog;
@@ -1034,14 +1089,19 @@ static void selection_vary(int fast, int depth, int part);
 /* this is shared by the fast and normal volume dialogs */
 static struct widget volume_setup_widgets[3];
 
-static void fast_volume_setup_ok(SCHISM_UNUSED void *data)
+static void fast_volume_setup_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
 {
-	fast_volume_percent = volume_setup_widgets[0].d.thumbbar.value;
+	this->final_data = malloc_int(this->widgets[0].d.thumbbar.value);
+}
+
+static void fast_volume_setup_ok(SCHISM_UNUSED void *data, void *final_data)
+{
+	fast_volume_percent = *(int *)final_data;
 	fast_volume_mode = 1;
 	status_text_flash("Alt-I / Alt-J fast volume changes enabled");
 }
 
-static void fast_volume_setup_cancel(SCHISM_UNUSED void *data)
+static void fast_volume_setup_cancel(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	status_text_flash("Alt-I / Alt-J fast volume changes not enabled");
 }
@@ -1069,7 +1129,7 @@ static void fast_volume_toggle(void)
 			      dialog_cancel, "Cancel", 1);
 
 		dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
-					      3, 0, fast_volume_setup_draw_const, NULL);
+					      3, 0, fast_volume_setup_draw_const, NULL, fast_volume_setup_finalize);
 		dialog->action_yes = fast_volume_setup_ok;
 		dialog->action_cancel = fast_volume_setup_cancel;
 	}
@@ -1096,9 +1156,14 @@ static void volume_setup_draw_const(SCHISM_UNUSED struct dialog *this)
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void volume_amplify_ok(SCHISM_UNUSED void *data)
+static void volume_amplify_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
 {
-	volume_percent = volume_setup_widgets[0].d.thumbbar.value;
+	this->final_data = malloc_int(this->widgets[0].d.thumbbar.value);
+}
+
+static void volume_amplify_ok(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
+{
+	volume_percent = *(int *)final_data;
 	selection_amplify(volume_percent);
 }
 
@@ -1121,7 +1186,7 @@ static void volume_amplify(void)
 	widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes, "OK", 3);
 	widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
 	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
-				      3, 0, volume_setup_draw_const, NULL);
+				      3, 0, volume_setup_draw_const, NULL, fast_volume_setup_finalize);
 	dialog->handle_key = volume_amplify_jj;
 	dialog->action_yes = volume_amplify_ok;
 }
@@ -1136,9 +1201,14 @@ static void vary_setup_draw_const(SCHISM_UNUSED struct dialog *this)
 	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void vary_amplify_ok(SCHISM_UNUSED void *data)
+static void vary_amplify_finalize(struct dialog *this, SCHISM_UNUSED dialog_button_t button)
 {
-	vary_depth = volume_setup_widgets[0].d.thumbbar.value;
+	this->final_data = malloc_int(this->widgets[0].d.thumbbar.value);
+}
+
+static void vary_amplify_ok(SCHISM_UNUSED void *data, void *final_data)
+{
+	vary_depth = *(int *)final_data;
 	selection_vary(0, vary_depth, current_vary);
 }
 
@@ -1151,7 +1221,7 @@ static void vary_command(int how)
 	widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes, "OK", 3);
 	widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel, "Cancel", 1);
 	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
-				      3, 0, vary_setup_draw_const, NULL);
+				      3, 0, vary_setup_draw_const, NULL, vary_amplify_finalize);
 	dialog->action_yes = vary_amplify_ok;
 	current_vary = how;
 }
@@ -3068,7 +3138,7 @@ static int patedit_record_note(song_note_t *cur_note, int channel, SCHISM_UNUSED
 				widget_create_button(template_error_widgets+0,36,32,6,0,0,0,0,0,
 						dialog_yes,"OK",3);
 				dialog_create_custom(20, 23, 40, 12, template_error_widgets, 1,
-						0, template_error_draw, NULL);
+						0, template_error_draw, NULL, NULL);
 				r = 0;
 			} else {
 				i = note - q->note;

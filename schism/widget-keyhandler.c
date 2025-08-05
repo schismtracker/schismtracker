@@ -65,11 +65,11 @@ static void bitset_move_cursor(struct widget *widget, int n)
 /* --------------------------------------------------------------------- */
 /* thumbbar value prompt */
 
-static void thumbbar_prompt_finish(int n)
+static void thumbbar_prompt_finish(struct widget *thumbbar, int n)
 {
-	if (n >= ACTIVE_WIDGET.d.thumbbar.min && n <= ACTIVE_WIDGET.d.thumbbar.max) {
-		ACTIVE_WIDGET.d.thumbbar.value = n;
-		if (ACTIVE_WIDGET.changed) ACTIVE_WIDGET.changed(widget_get_context(&ACTIVE_WIDGET));
+	if (n >= thumbbar->d.thumbbar.min && n <= thumbbar->d.thumbbar.max) {
+		thumbbar->d.thumbbar.value = n;
+		if (thumbbar->changed) thumbbar->changed(widget_get_context(thumbbar));
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -94,7 +94,7 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 		c += '0';
 	}
 
-	numprompt_create("Enter Value", thumbbar_prompt_finish, c);
+	numprompt_create_for_thumbbar("Enter Value", widget, thumbbar_prompt_finish, c);
 
 	return 1;
 }
@@ -265,9 +265,8 @@ static int widget_bitset_handle_key(struct widget *w, struct key_event *k)
 	return 0;
 }
 
-static int widget_listbox_handle_key(struct widget *w, struct key_event *k)
+static int widget_listbox_handle_key(struct widget_context *this, struct widget *w, struct key_event *k)
 {
-	struct widget_context *this = widget_get_context(w);
 	int32_t new_device = w->d.listbox.focus;
 	uint32_t size = w->d.listbox.size(this);
 	int load_selected_device = 0;
@@ -412,7 +411,7 @@ int widget_handle_key(struct key_event * k)
 
 	if (!(status.flags & DISKWRITER_ACTIVE)
 	    && ((current_type == WIDGET_OTHER && widget->d.other.handle_key(this, k))
-			|| (current_type == WIDGET_LISTBOX && widget_listbox_handle_key(widget, k))))
+			|| (current_type == WIDGET_LISTBOX && widget_listbox_handle_key(this, widget, k))))
 		return 1;
 
 	if (!(status.flags & DISKWRITER_ACTIVE) && k->mouse

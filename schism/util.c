@@ -157,3 +157,18 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 
 	return r;
 }
+
+/* --------------------------------------------------------------------- */
+
+/* This function takes an int and copies it into a malloc()ed buffer, for
+ * use with lifetime models like dialog.final_data where the pointer is
+ * always free()d.
+ */
+void *malloc_int(int value)
+{
+	int *buffer = malloc(sizeof(int));
+
+	*buffer = value;
+
+	return buffer;
+}
