@@ -559,10 +559,19 @@ char *strptime(const char *buf, const char *fmt, struct tm *tm);
 #ifndef HAVE_MKSTEMP
 int mkstemp(char *template);
 #endif
-#ifndef HAVE_LOCALTIME_R
+#if !defined(HAVE_LOCALTIME_R) || !defined(HAVE_GMTIME_R)
+
+#define NEED_LOCALTIME_GMTIME_R_INIT
+
+void localtime_gmtime_r_quit(void);
+int localtime_gmtime_r_init(void);
+
+# ifndef HAVE_LOCALTIME_R
 struct tm *localtime_r(const time_t *timep, struct tm *result);
-void localtime_r_quit(void);
-int localtime_r_init(void);
+# endif
+# ifndef HAVE_GMTIME_R
+struct tm *gmtime_r(const time_t *timep, struct tm *result);
+# endif
 #endif
 #ifndef HAVE_SETENV
 int setenv(const char *name, const char *value, int overwrite);

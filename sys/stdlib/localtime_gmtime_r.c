@@ -24,25 +24,28 @@
 #include "headers.h"
 #include "mt.h"
 
-static mt_mutex_t *localtime_r_mutex = NULL;
+#ifdef NEED_LOCALTIME_GMTIME_R_INIT
+static mt_mutex_t *localtime_gmtime_r_mutex = NULL;
 static int initialized = 0;
 
-void localtime_r_quit(void)
+void localtime_gmtime_r_quit(void)
 {
-	mt_mutex_delete(localtime_r_mutex);
+	mt_mutex_delete(localtime_gmtime_r_mutex);
 }
 
-int localtime_r_init(void)
+int localtime_gmtime_r_init(void)
 {
-	localtime_r_mutex = mt_mutex_create();
-	if (!localtime_r_mutex)
+	localtime_gmtime_r_mutex = mt_mutex_create();
+	if (!localtime_gmtime_r_mutex)
 		return 0;
 
 	initialized = 1;
 
 	return 1;
 }
+#endif
 
+#ifndef HAVE_LOCALTIME_R
 struct tm *localtime_r(const time_t *timep, struct tm *result)
 {
 	static struct tm *our_tm;
@@ -51,7 +54,7 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
 	if (!initialized)
 		return NULL;
 
-	mt_mutex_lock(localtime_r_mutex);
+	mt_mutex_lock(localtime_gmtime_r_mutex);
 
 	our_tm = localtime(timep);
 
@@ -61,7 +64,33 @@ struct tm *localtime_r(const time_t *timep, struct tm *result)
 
 	*result = *our_tm;
 
-	mt_mutex_unlock(localtime_r_mutex);
+	mt_mutex_unlock(localtime_gmtime_r_mutex);
 
 	return result;
 }
+#endif
+
+#ifndef HAVE_GMTIME_R
+struct tm *gmtime_r(const time_t *timep, struct tm *result)
+{
+	static struct tm *our_tm;
+
+	// huh?
+	if (!initialized)
+		return NULL;
+
+	mt_mutex_lock(localtime_gmtime_r_mutex);
+
+	our_tm = gmtime(timep);
+
+	/* regular localtime() returns NULL pointer on XBOX; make sure
+	 * it doesn't happen again ;) */
+	SCHISM_RUNTIME_ASSERT(our_tm, "localtime() returned a NULL pointer");
+
+	*result = *our_tm;
+
+	mt_mutex_unlock(localtime_gmtime_r_mutex);
+
+	return result;
+}
+#endif

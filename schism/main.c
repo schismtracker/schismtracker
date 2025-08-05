@@ -1027,8 +1027,8 @@ void schism_exit(int x)
 	audio_quit();
 	clippy_quit();
 	events_quit();
-#ifndef HAVE_LOCALTIME_R
-	localtime_r_quit();
+#ifdef NEED_LOCALTIME_GMTIME_R_INIT
+	localtime_gmtime_r_quit();
 #endif
 	timer_quit();
 	mt_quit();
@@ -1082,8 +1082,8 @@ int schism_main(int argc, char** argv)
 	SCHISM_RUNTIME_ASSERT(mt_init(), "Failed to initialize a multithreading backend!");
 	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
 
-#ifndef HAVE_LOCALTIME_R
-	SCHISM_RUNTIME_ASSERT(localtime_r_init(), "Failed to initialize localtime_r replacement!");
+#ifdef NEED_LOCALTIME_GMTIME_R_INIT
+	SCHISM_RUNTIME_ASSERT(localtime_gmtime_r_init(), "Failed to initialize localtime_r/gmtime_r replacement!");
 #endif
 
 	song_initialise();
