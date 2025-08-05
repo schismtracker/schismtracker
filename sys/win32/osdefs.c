@@ -1501,6 +1501,34 @@ int win32_access(const char *path, int amode)
 	return -1;
 }
 
+struct tm *win32_localtime(const time_t *t)
+{
+	static struct tm our_tm = {0};
+
+	FILETIME ft;
+	SYSTEMTIME st;
+	uint64_t ul;
+
+	ul = (*t * 10000000ULL) + 116444736000000000ULL;
+
+	ft.dwHighDateTime = (ul >> 32);
+	ft.dwLowDateTime = (ul & 0xFFFFFFFFU);
+
+	FileTimeToSystemTime(&ft, &st);
+
+	our_tm.tm_year = st.wYear - 1900;
+	our_tm.tm_mon = st.wMonth - 1;
+	our_tm.tm_wday = st.wDayOfWeek;
+	our_tm.tm_mday = st.wDay;
+	our_tm.tm_hour = st.wHour;
+	our_tm.tm_min = st.wMinute;
+	our_tm.tm_sec = st.wSecond;
+	/* our_tm.tm_yday = ??? */
+	/* our_tm.tm_isdst = ??? */
+
+	return &our_tm;
+}
+
 /* ------------------------------------------------------------------------------- */
 
 DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)

@@ -820,6 +820,19 @@ static inline struct tm *xbox_localtime(const time_t *t)
 
 # define localtime xbox_localtime
 
+#elif defined(SCHISM_WIN32)
+
+/* okay, we're on win32, however, FX!32 on Alpha doesn't implement
+ * localtime. so, I'm just implementing it myself here.
+ * it's virtually the same as the Xbox version, just interacting
+ * with userspace functions instead of kernel functions.
+ *  --paper */
+
+/* sys/win32/osdefs.c */
+struct tm *win32_localtime(const time_t *t);
+
+#define localtime win32_localtime
+
 #endif
 
 #ifdef SCHISM_MACOS
