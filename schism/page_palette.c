@@ -189,7 +189,7 @@ static int palette_list_handle_key_(struct widget_context *this, struct key_even
 
 static int palette_list_handle_key(struct widget_context *this, struct key_event * k)
 {
-	int n = *selected_widget;
+	int n = this->selected_widget;
 
 	if (k->state == KEY_RELEASE)
 		return 0;

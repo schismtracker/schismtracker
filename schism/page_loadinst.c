@@ -179,7 +179,7 @@ static void _common_set_page(void)
 
 	status.flags &= ~DIR_INSTRUMENTS_CHANGED;
 
-	*selected_widget = 0;
+	widget_context->selected_widget = 0;
 	slash_search_mode = -1;
 }
 

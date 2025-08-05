@@ -1153,9 +1153,9 @@ static void do_export_sample(SCHISM_UNUSED void *data)
 	sample_save(export_sample_filename, sample_save_formats[i].label);
 }
 
-static void export_sample_list_draw(SCHISM_UNUSED struct widget_context *this)
+static void export_sample_list_draw(struct widget_context *this)
 {
-	int n, focused = (*selected_widget == 3), c;
+	int n, focused = (this->selected_widget == 3), c;
 
 	draw_fill_chars(53, 24, 56, 31, DEFAULT_FG, 0);
 	for (c = 0, n = 0; sample_save_formats[n].label; n++) {

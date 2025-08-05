@@ -347,9 +347,7 @@ extern struct page pages[];
 
 /* these are updated to point to the relevant data in the selected page
  * (or the dialog, if one is active) */
-extern struct widget *widgets;
-extern int *selected_widget;
-extern int *total_widgets;
+extern struct widget_context *widget_context;
 
 /* to make it easier to deal with either the page's widgets or the
  * current dialog's:
@@ -358,7 +356,7 @@ extern int *total_widgets;
  * ACTIVE_PAGE_WIDGET references the *page's* idea of what's active.
  *     (these are different if there's a dialog) */
 #define ACTIVE_PAGE        (pages[status.current_page])
-#define ACTIVE_WIDGET      (widgets[*selected_widget])
+#define ACTIVE_WIDGET      (widget_context->widgets[widget_context->selected_widget])
 #define ACTIVE_PAGE_WIDGET (ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget])
 
 /* dynamic cast to struct page * */

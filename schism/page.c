@@ -58,9 +58,7 @@ struct tracker_status status = {
 
 struct page pages[PAGE_MAX] = {0};
 
-struct widget *widgets = NULL;
-int *selected_widget = NULL;
-int *total_widgets = NULL;
+struct widget_context *widget_context = NULL;
 
 static int fontedit_return_page = PAGE_PATTERN_EDITOR;
 
@@ -652,7 +650,7 @@ static int handle_key_global(struct key_event * k)
 					if (status.dialog_type & DIALOG_MENU) {
 						return 0;
 					} else if (status.dialog_type != DIALOG_NONE) {
-						dialog_yes(NULL);
+						dialog_yes(widget_context);
 						status.flags |= NEED_UPDATE;
 					} else {
 						_mp_finish(NULL);
@@ -1617,9 +1615,7 @@ void set_page(int new_page)
 	}
 
 	/* update the pointers */
-	widgets = ACTIVE_PAGE.widgets;
-	selected_widget = &(ACTIVE_PAGE.selected_widget);
-	total_widgets = &(ACTIVE_PAGE.total_widgets);
+	widget_context = (struct widget_context *)&ACTIVE_PAGE;
 
 	if (ACTIVE_PAGE.set_page) ACTIVE_PAGE.set_page();
 	status.flags |= NEED_UPDATE;
@@ -1669,9 +1665,7 @@ void load_pages(void)
 		widget_set_context_use_active_page((struct widget_context *)&pages[i]);
 	}
 
-	widgets = pages[PAGE_BLANK].widgets;
-	selected_widget = &(pages[PAGE_BLANK].selected_widget);
-	total_widgets = &(pages[PAGE_BLANK].total_widgets);
+	widget_context = (struct widget_context *)&pages[PAGE_BLANK];
 }
 
 /* --------------------------------------------------------------------- */

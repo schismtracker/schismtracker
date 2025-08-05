@@ -104,8 +104,8 @@ static int thumbbar_prompt_value(struct widget *widget, struct key_event *k)
 
 static inline int find_tab_to(int target)
 {
-	for (int i = 0; i < *total_widgets; i++) {
-		if (widgets[i].next.tab == target && i != target) {
+	for (int i = 0; i < widget_context->total_widgets; i++) {
+		if (widget_context->widgets[i].next.tab == target && i != target) {
 			return i;
 		}
 	}
@@ -115,8 +115,8 @@ static inline int find_tab_to(int target)
 
 static inline int find_down_to(int target)
 {
-	for (int i = 0; i < *total_widgets; i++) {
-		if (widgets[i].next.down == target && i != target) {
+	for (int i = 0; i < widget_context->total_widgets; i++) {
+		if (widget_context->widgets[i].next.down == target && i != target) {
 			return i;
 		}
 	}
@@ -126,8 +126,8 @@ static inline int find_down_to(int target)
 
 static inline int find_right_to(int target)
 {
-	for (int i = 0; i < *total_widgets; i++) {
-		if (widgets[i].next.right == target && i != target) {
+	for (int i = 0; i < widget_context->total_widgets; i++) {
+		if (widget_context->widgets[i].next.right == target && i != target) {
 			return i;
 		}
 	}
@@ -166,8 +166,8 @@ static inline int find_tab_to_recursive(int target)
 {
 	int current = target;
 
-	for(int i = 0; i < *total_widgets; i++) {
-		int widget_backtab = widgets[current].next.backtab;
+	for(int i = 0; i < widget_context->total_widgets; i++) {
+		int widget_backtab = widget_context->widgets[current].next.backtab;
 		if(widget_backtab > -1) return widget_backtab;
 
 		int tab_to = find_tab_to(current);
@@ -189,9 +189,9 @@ static inline int find_tab_to_recursive(int target)
 static void _backtab(void)
 {
 	/* hunt for a widget that leads back to this one */
-	if (!total_widgets || !selected_widget) return;
+	if (!widget_context) return;
 
-	int selected = *selected_widget;
+	int selected = widget_context->selected_widget;
 	int backtab = find_tab_to_recursive(selected);
 
 	if(backtab > -1) {
@@ -621,7 +621,7 @@ int widget_handle_key(struct key_event * k)
 					/* k-on target */
 					widget->depressed = k->on_target;
 				} else {
-					widget_togglebutton_set(widgets, *selected_widget, 1);
+					widget_togglebutton_set(widget_context->widgets, widget_context->selected_widget, 1);
 				}
 				return 1;
 			}

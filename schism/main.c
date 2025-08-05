@@ -605,7 +605,7 @@ SCHISM_NORETURN static void event_loop(void)
 						}
 						break;
 					case KEY_DRAG:
-						kk.on_target = (widget_find_xy(kk.x, kk.y) == *selected_widget);
+						kk.on_target = (widget_find_xy(kk.x, kk.y) == widget_context->selected_widget);
 					}
 					if (se.type == SCHISM_MOUSEBUTTONUP && downtrip) {
 						downtrip = 0;
