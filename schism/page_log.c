@@ -279,7 +279,7 @@ void _log_timestamp(int colour)
 		memset(timestamp, 32, MAX_LINE_LENGTH - timestamp_length);
 
 		if (available_chars < timestamp_length) {
-			log_append3(CHARSET_CP437, colour, true, timestamp);
+			log_append3(CHARSET_CP437, colour, 1, timestamp);
 		}
 		else {
 			memcpy(timestamp, lines[last_line].text, chars_on_last_line);
