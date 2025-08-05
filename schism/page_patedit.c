@@ -4156,7 +4156,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 
 	/* stupid hack; if we have a note, that's definitely more important than this stuff */
 	if (n < 0 || current_position > 0) {
-		if (k->sym == SCHISM_KEYSYM_LESS || k->sym == SCHISM_KEYSYM_COLON || k->sym == SCHISM_KEYSYM_SEMICOLON) {
+		if (k->scancode == SCHISM_SCANCODE_COMMA || k->scancode == SCHISM_SCANCODE_SEMICOLON) {
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if ((status.flags & CLASSIC_MODE) || current_position != 4) {
@@ -4164,7 +4164,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
-		} else if (k->sym == SCHISM_KEYSYM_GREATER || k->sym == SCHISM_KEYSYM_QUOTE || k->sym == SCHISM_KEYSYM_QUOTEDBL) {
+		} else if ((k->scancode == SCHISM_SCANCODE_PERIOD && (k->mod & SCHISM_KEYMOD_SHIFT)) || k->scancode == SCHISM_SCANCODE_APOSTROPHE) {
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if ((status.flags & CLASSIC_MODE) || current_position != 4) {
@@ -4172,7 +4172,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
-		} else if (k->sym == SCHISM_KEYSYM_COMMA) {
+		} else if (k->scancode == SCHISM_SCANCODE_COMMA) {
 			if (k->state == KEY_RELEASE)
 				return 0;
 			switch (current_position) {
@@ -4353,8 +4353,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 		return pattern_editor_insert_midi(k);
 	}
 
-	switch (k->sym) {
-	case SCHISM_KEYSYM_UP:
+	switch (k->scancode) {
+	case SCHISM_SCANCODE_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (skip_value) {
@@ -4364,7 +4364,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_row--;
 		}
 		return -1;
-	case SCHISM_KEYSYM_DOWN:
+	case SCHISM_SCANCODE_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (skip_value) {
@@ -4374,7 +4374,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_row++;
 		}
 		return -1;
-	case SCHISM_KEYSYM_LEFT:
+	case SCHISM_SCANCODE_LEFT:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
@@ -4386,7 +4386,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_position--;
 		}
 		return -1;
-	case SCHISM_KEYSYM_RIGHT:
+	case SCHISM_SCANCODE_RIGHT:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
@@ -4397,7 +4397,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_position++;
 		}
 		return -1;
-	case SCHISM_KEYSYM_TAB:
+	case SCHISM_SCANCODE_TAB:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if ((k->mod & SCHISM_KEYMOD_SHIFT) == 0)
@@ -4411,7 +4411,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		shift_selection_end();
 
 		return -1;
-	case SCHISM_KEYSYM_PAGEUP:
+	case SCHISM_SCANCODE_PAGEUP:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		{
@@ -4422,12 +4422,12 @@ static int pattern_editor_handle_key(struct key_event * k)
 				current_row -= rh;
 		}
 		return -1;
-	case SCHISM_KEYSYM_PAGEDOWN:
+	case SCHISM_SCANCODE_PAGEDOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		current_row += current_song->row_highlight_major ? current_song->row_highlight_major : 16;
 		return -1;
-	case SCHISM_KEYSYM_HOME:
+	case SCHISM_SCANCODE_HOME:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (current_position == 0) {
@@ -4440,7 +4440,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_position = 0;
 		}
 		return -1;
-	case SCHISM_KEYSYM_END:
+	case SCHISM_SCANCODE_END:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		n = song_find_last_channel() + 1;
@@ -4454,7 +4454,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_position = 8;
 		}
 		return -1;
-	case SCHISM_KEYSYM_INSERT:
+	case SCHISM_SCANCODE_INSERT:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (template_mode && clipboard.rows == 1) {
@@ -4467,7 +4467,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			pattern_insert_rows(current_row, 1, current_channel, 1);
 		}
 		break;
-	case SCHISM_KEYSYM_DELETE:
+	case SCHISM_SCANCODE_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		if (template_mode && clipboard.rows == 1) {
@@ -4480,7 +4480,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 			pattern_delete_rows(current_row, 1, current_channel, 1);
 		}
 		break;
-	case SCHISM_KEYSYM_MINUS:
+	case SCHISM_SCANCODE_MINUS:
+	case SCHISM_SCANCODE_KP_MINUS:
 		if (k->state == KEY_RELEASE)
 			return 0;
 
@@ -4501,11 +4502,11 @@ static int pattern_editor_handle_key(struct key_event * k)
 		else
 			set_current_pattern(current_pattern - 1);
 		return 1;
-	case SCHISM_KEYSYM_EQUALS:
+	case SCHISM_SCANCODE_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return 0;
 		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_PLUS:
+	case SCHISM_SCANCODE_KP_PLUS:
 		if (k->state == KEY_RELEASE)
 			return 0;
 
@@ -4521,12 +4522,12 @@ static int pattern_editor_handle_key(struct key_event * k)
 			};
 		}
 
-		if ((k->mod & SCHISM_KEYMOD_SHIFT) && k->sym == SCHISM_KEYSYM_KP_PLUS)
+		if ((k->mod & SCHISM_KEYMOD_SHIFT) && k->scancode == SCHISM_SCANCODE_KP_PLUS)
 			set_current_pattern(current_pattern + 4);
 		else
 			set_current_pattern(current_pattern + 1);
 		return 1;
-	case SCHISM_KEYSYM_BACKSPACE:
+	case SCHISM_SCANCODE_BACKSPACE:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		current_channel = multichannel_get_previous (current_channel);
@@ -4535,14 +4536,14 @@ static int pattern_editor_handle_key(struct key_event * k)
 		else
 			current_row--;
 		return -1;
-	case SCHISM_KEYSYM_RETURN:
+	case SCHISM_SCANCODE_RETURN:
 		if (k->state == KEY_RELEASE)
 			return 0;
 		copy_note_to_mask();
 		if (template_mode != TEMPLATE_NOTES_ONLY)
 			template_mode = TEMPLATE_OFF;
 		return 1;
-	case SCHISM_KEYSYM_l:
+	case SCHISM_SCANCODE_L:
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			if (status.flags & CLASSIC_MODE) return 0;
 			if (k->state == KEY_RELEASE)
@@ -4551,7 +4552,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			break;
 		}
 		return pattern_editor_handle_key_default(k);
-	case SCHISM_KEYSYM_a:
+	case SCHISM_SCANCODE_A:
 		if (k->mod & SCHISM_KEYMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
 			if (k->state == KEY_RELEASE) {
 				return 0;
@@ -4565,7 +4566,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			return -1;
 		}
 		return pattern_editor_handle_key_default(k);
-	case SCHISM_KEYSYM_f:
+	case SCHISM_SCANCODE_F:
 		if (k->mod & SCHISM_KEYMOD_SHIFT && !(status.flags & CLASSIC_MODE)) {
 			if (k->state == KEY_RELEASE) {
 				return 0;
@@ -4580,8 +4581,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return pattern_editor_handle_key_default(k);
 
-	case SCHISM_KEYSYM_LSHIFT:
-	case SCHISM_KEYSYM_RSHIFT:
+	case SCHISM_SCANCODE_LSHIFT:
+	case SCHISM_SCANCODE_RSHIFT:
 		if (k->state == KEY_RELEASE) {
 			if (shift_selection.in_progress)
 				shift_selection_end();
