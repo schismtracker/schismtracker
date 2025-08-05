@@ -302,7 +302,8 @@ void _log_timestamp(int colour)
 void log_append_timestamp(int color, int must_free, const char *text)
 {
 	log_append(color, must_free, text);
-	_log_timestamp(color);
+	if (!(status.flags & CLASSIC_MODE))
+		_log_timestamp(color);
 }
 
 void log_appendf_timestamp(int color, const char *format, ...)
@@ -314,7 +315,8 @@ void log_appendf_timestamp(int color, const char *format, ...)
 	_log_vappendf(color, format, ap);
 	va_end(ap);
 
-	_log_timestamp(color);
+	if (!(status.flags & CLASSIC_MODE))
+		_log_timestamp(color);
 }
 
 static inline SCHISM_ALWAYS_INLINE
