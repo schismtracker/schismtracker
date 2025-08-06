@@ -23,8 +23,12 @@
 
 #include "headers.h"
 
+#include "bswap.h"
+#include "network.h"
+#include "network-tcp.h"
 #include "song.h"
 #include "mem.h"
+#include "log.h"
 
 /* Notes:
  *  * The IPX driver seems to work on port 18757 ("IT"), so we should
@@ -36,6 +40,8 @@
  *    This could be literally anything (i.e. 192.168.1.67, fe80::250:56ff:fec0:1,
  *    or something like schismtracker.org).
  *  * This code is currently completely untested. */
+
+static struct network_tcp tcp = {0};
 
 enum {
 	/* extra data:
@@ -93,6 +99,7 @@ enum {
 static void Network_CalculateCRC(const uint8_t *data, size_t size, uint8_t crc[2])
 {
 	uint8_t dh, dl;
+	size_t i;
 
 	dh = 0;
 	dl = 0;
@@ -136,7 +143,7 @@ static int Network_SendData(uint8_t type, const void *data, uint16_t size)
 	/* calculate the CRC */
 	Network_CalculateCRC(buf, size + 7, buf + size + 7);
 
-	/* XXX send the finished buffer to a "driver" */
+	network_tcp_send(&tcp, buf, size + 9);
 
 	free(buf);
 
@@ -157,6 +164,7 @@ int Network_SendPartialPattern(uint8_t num, uint8_t channel, uint8_t row,
 	x[3] = width;
 	x[4] = height;
 
+	/* TODO send the pattern data */
 	return Network_SendData(NETWORK_BLOCKTYPE_PARTIAL_PATTERN, x, sizeof(x));
 }
 
@@ -176,8 +184,8 @@ int Network_SendSongData(uint16_t length, uint16_t offset)
 {
 	uint16_t x[2];
 
-	x[0] = length;
-	x[1] = offset;
+	x[0] = bswapLE16(length);
+	x[1] = bswapLE16(offset);
 
 	/* This definitely isn't correct ... */
 
@@ -222,7 +230,7 @@ int Network_SendNewSample(uint8_t num)
 
 	data[0] = num;
 
-	smp = current_song->samples[num];
+	smp = current_song->samples + num + 1;
 
 	len = smp->length;
 	len = bswapLE32(len);
@@ -294,6 +302,9 @@ static int Network_ReceiveSongData(const void *data_, size_t size)
 
 	memcpy(x, data_, 4);
 
+	x[0] = bswapLE16(x[0]);
+	x[1] = bswapLE16(x[1]);
+
 	/* x[0] == length
 	 * x[1] == offset */
 
@@ -309,6 +320,7 @@ static int Network_ReceiveInstrument(const void *data_, size_t size)
 {
 	/* TODO 99% sure this just receives an IT instrument header.
 	 * Hence we have to handle it properly :) */
+	log_appendf(1, "got instrument?");
 	return -1;
 }
 
@@ -335,14 +347,24 @@ static int Network_ReceivePatternLength(const void *data_, size_t size)
 static int Network_ReceiveDeleteSample(const void *data_, size_t size)
 {
 	const unsigned char *data = data_;
+	uint8_t smpnum;
 
 	/* data[0] == sample number */
+	if (size < 1)
+		return -1;
 
-	/* TODO kill the sample */
-	return -1;
+	smpnum = data[0];
+	if (smpnum >= MAX_SAMPLES)
+		return -1;
+
+	song_lock_audio();
+	csf_destroy_sample(current_song, smpnum + 1);
+	song_unlock_audio();
+
+	return 0;
 }
 
-static int Network_NewSample(const void *data_, size_t size)
+static int Network_ReceiveNewSample(const void *data_, size_t size)
 {
 	const unsigned char *data = data_;
 	uint8_t smpnum;
@@ -366,7 +388,7 @@ static int Network_NewSample(const void *data_, size_t size)
 	song_lock_audio();
 
 	/* kill any sample thats already there */
-	csf_destroy_sample(current_song->samples[smpnum + 1]);
+	csf_destroy_sample(current_song, smpnum + 1);
 
 	/* put in the length; we'll read in the sample later once
 	 * the sample data event arrives */
@@ -397,13 +419,13 @@ static int Network_ReceiveSampleData(const void *data_, size_t size)
 	memcpy(&offset, data + 1, 4);
 	offset = bswapLE32(offset);
 
-	smp = current_song->samples[smpnum + 1];
+	smp = current_song->samples + smpnum + 1;
 
 	fulllength = smp->length
 		* ((smp->flags & CHN_16BIT) ? 2 : 1)
-		* ((smp->flags & CHN_STEREO) : 2 : 1);
+		* ((smp->flags & CHN_STEREO) ? 2 : 1);
 
-	/* I hope this is good enough to prevent again overflow */
+	/* I hope this is good enough to prevent against overflow */
 	if ((offset >= fulllength) || ((offset + size) >= fulllength))
 		return -1;
 
@@ -420,7 +442,7 @@ static int Network_ReceiveSampleData(const void *data_, size_t size)
 
 typedef int (*Network_DataReceiverPtr)(const void *data, size_t size);
 
-static const Network_DataReceiverPtr receivers = {
+static const Network_DataReceiverPtr receivers[] = {
 	[NETWORK_BLOCKTYPE_PARTIAL_PATTERN] = Network_ReceivePartialPattern,
 	[NETWORK_BLOCKTYPE_PATTERN] = Network_ReceivePattern,
 	[NETWORK_BLOCKTYPE_REQUEST_PATTERN] = Network_ReceiveRequestPattern,
@@ -442,6 +464,10 @@ int Network_ReceiveData(const void *data, size_t size)
 	uint16_t w;
 	uint8_t type;
 	uint8_t crc[2];
+
+	{
+		log_appendf(4, "size: %" PRIuSZ, size);
+	}
 
 	if (size < 9)
 		return -1; /* missing header info and CRC */
@@ -474,4 +500,60 @@ int Network_ReceiveData(const void *data, size_t size)
 	/* ok, our data's good. pass it to the interpreters,
 	 * excluding the header and CRC info. */
 	return receivers[type](data + 7, size - 9);
+}
+
+/* ------------------------------------------------------------------------ */
+
+void Network_Close(void)
+{
+	network_tcp_close(&tcp);
+}
+
+int Network_StartServer(uint16_t port)
+{
+	int r;
+
+	Network_Close();
+
+	r = network_tcp_init(&tcp);
+	if (r < 0)
+		return -1;
+
+	r = network_tcp_start_server(&tcp, port);
+	if (r < 0)
+		return -1;
+
+	return 0;
+}
+
+void Network_StopServer(void)
+{
+	Network_Close();
+}
+
+int Network_StartClient(const char *host, uint16_t port)
+{
+	int r;
+
+	Network_Close();
+
+	r = network_tcp_init(&tcp);
+	if (r < 0)
+		return -1;
+
+	r = network_tcp_start_client(&tcp, host, port);
+	if (r < 0)
+		return -1;
+
+	return 0;
+}
+
+void Network_StopClient(void)
+{
+	Network_Close();
+}
+
+void Network_Worker(void)
+{
+	network_tcp_worker(&tcp);
 }

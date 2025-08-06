@@ -470,6 +470,10 @@ endif
 endif
 
 if USE_NETWORK
+files_network = \
+	schism/midi-ip.c \
+	schism/network-tcp.c \
+	schism/network.c
 cflags_network=
 libs_network=$(NETWORK_LIBS)
 endif
@@ -589,7 +593,6 @@ schismtracker_SOURCES = \
 	schism/mem.c           \
 	schism/menu.c			\
 	schism/midi-core.c		\
-	schism/midi-ip.c		\
 	schism/mplink.c			\
 	schism/page.c			\
 	schism/page_about.c		\
@@ -650,7 +653,8 @@ schismtracker_SOURCES = \
 	$(files_os2)			\
 	$(files_xbox)			\
 	$(files_avformat)		\
-	$(files_asio)
+	$(files_asio)			\
+	$(files_network)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtrackertest_OBJECTS)) $(HEADERS)
