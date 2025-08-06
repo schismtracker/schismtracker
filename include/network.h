@@ -26,6 +26,9 @@
 
 #include "headers.h"
 
+/* TCP port 18757 */
+#define NETWORK_DEFAULT_PORT (18757) /* "IT" */
+
 /* Send out info */
 int Network_SendPartialPattern(uint8_t num, uint8_t channel, uint8_t row,
 	uint8_t width, uint8_t height);
@@ -41,5 +44,15 @@ int Network_SendSampleData(uint8_t num);
 
 /* this likely shouldn't be extern (but whatever) */
 int Network_ReceiveData(const void *data, size_t size);
+
+/* server/client stuff */
+void Network_Close(void);
+int Network_StartServer(uint16_t port);
+void Network_StopServer(void);
+int Network_StartClient(const char *host, uint16_t port);
+void Network_StopClient(void);
+
+/* asynchronous worker */
+void Network_Worker(void);
 
 #endif /* SCHISM_NETWORK_H_ */
