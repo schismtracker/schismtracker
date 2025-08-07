@@ -41,6 +41,8 @@
 # define SOCKET_EINPROGRESS WSAEINPROGRESS
 # define SOCKET_LASTERROR   (WSAGetLastError())
 # define SOCKET_INVALID     INVALID_SOCKET
+
+typedef ADDRESS_FAMILY sa_family_t;
 #else
 # include <sys/types.h>
 # include <sys/socket.h>
@@ -103,12 +105,12 @@ static void network_tcp_perror(const char *prefix, int err)
 	})
 
 	if (msg) {
-		log_appendf(4, "[NET] %s: %s", prefix, msg);
+		log_appendf(4, "[NETWORK] %s: %s", prefix, msg);
 		free(msg);
 	}
 #else
 	/* windows could never be this simple */
-	log_appendf(4, "[NET] %s: %s", prefix, strerror(err));
+	log_appendf(4, "[NETWORK] %s: %s", prefix, strerror(err));
 #endif
 }
 
@@ -130,7 +132,7 @@ int network_tcp_socket_nonblock(network_tcp_socket_t fd)
 	u_long mode = 1;
 
 	r = ioctlsocket(fd, FIONBIO, &mode);
-	if (r != NO_ERROR) {
+	if (r != 0) {
 		network_tcp_perror("ioctlsocket", r);
 		return -1;
 	}
@@ -293,76 +295,176 @@ int network_tcp_start_server(struct network_tcp *n, uint16_t port)
 		return -1;
 
 	log_nl();
-	log_appendf(1, "Starting server on port %u", (unsigned int)port);
-	status_text_flash("Starting server on port %u", (unsigned int)port);
+	log_appendf(2, "[NETWORK] Starting server", (unsigned int)port);
+	log_underline();
+	status_text_flash("[NETWORK] Starting server", (unsigned int)port);
+
+	if (n->sfd != SOCKET_INVALID && n->sfd6 != SOCKET_INVALID)
+		log_appendf(5, " Using IPv4 and IPv6");
+	else if (n->sfd != SOCKET_INVALID)
+		log_appendf(5, " Using IPv4 only");
+	else if (n->sfd6 != SOCKET_INVALID)
+		log_appendf(5, " Using IPv6 only");
+
+	log_appendf(5, " Listening on TCP port %u", (unsigned int)port);
 
 	n->server = 1;
 
 	return 0;
 }
 
+static int network_tcp_enumerate_host_ips(const char *node, uint16_t port,
+	int (*cb)(struct sockaddr *addr, size_t addrlen, void *userdata),
+	void *userdata)
+{
+#ifdef HAVE_GETADDRINFO
+	char buf[11];
+	struct addrinfo *info;
+	struct addrinfo hints = {0};
+#endif
+
+#ifdef HAVE_GETADDRINFO
+	hints.ai_family = AF_UNSPEC; /* IPv4 or IPv6 */
+	hints.ai_socktype = SOCK_STREAM;
+
+	str_from_num(0, port, buf);
+
+	if (!getaddrinfo(node, buf, &hints, &info)) {
+		struct addrinfo *pi;
+
+		for (pi = info; pi; pi = pi->ai_next) {
+			if (!cb(pi->ai_addr, pi->ai_addrlen, userdata))
+				continue;
+
+			freeaddrinfo(info);
+			return 0;
+		}
+
+		freeaddrinfo(info);
+	} else
+#endif
+	{
+		/* ancient API from before IPv6 was a thing people actually used */
+		char **s;
+		struct hostent *host;
+
+#ifdef HAVE_GETADDRINFO
+		network_tcp_perror("getaddrinfo", SOCKET_LASTERROR);
+#endif
+
+		host = gethostbyname(node);
+		if (!host) {
+			log_nl();
+			network_tcp_perror("gethostbyname", SOCKET_LASTERROR);
+			return -1;
+		}
+
+		/* verify */
+		switch (host->h_addrtype) {
+		case AF_INET: {
+			struct sockaddr_in addr;
+
+			if (host->h_length < sizeof(struct in_addr))  /* 32-bit */
+				return -1;
+
+			for (s = host->h_addr_list; *s; s++) {
+				memset(&addr, 0, sizeof(addr));
+
+				addr.sin_family = AF_INET;
+				memcpy(&addr.sin_addr, *s, sizeof(addr.sin_addr));
+				addr.sin_port = bswapBE16(port);
+
+				if (cb((struct sockaddr *)&addr, sizeof(addr), userdata))
+					return 0;
+			}
+
+			break;
+		}
+		case AF_INET6:
+			struct sockaddr_in6 addr;
+
+			if (host->h_length < sizeof(struct in6_addr))  /* 32-bit */
+				return -1;
+
+			for (s = host->h_addr_list; *s; s++) {
+				memset(&addr, 0, sizeof(addr));
+
+				addr.sin6_family = AF_INET6;
+				memcpy(&addr.sin6_addr, *s, sizeof(addr.sin6_addr));
+				addr.sin6_port = bswapBE16(port);
+
+				if (cb((struct sockaddr *)&addr, sizeof(addr), userdata))
+					return 0;
+			}
+
+			break;
+		default:
+			/* what */
+			return -1;
+		}
+	}
+
+	return -1;
+}
+
+struct network_tcp_enum_data {
+	struct network_tcp *n;
+	uint16_t port;
+};
+
+static int network_tcp_enum_cb(struct sockaddr *addr, size_t addrlen, void *userdata)
+{
+	struct network_tcp_enum_data *data = userdata;
+	struct network_tcp *n = data->n;
+	network_tcp_socket_t fd;
+
+	switch (addr->sa_family) {
+	case AF_INET: {
+		fd = n->sfd;
+		break;
+	}
+	case AF_INET6:
+		fd = n->sfd6;
+		break;
+	default:
+		return 0;
+	}
+
+	if ((connect(fd, addr, addrlen) == SOCKET_ERROR)
+		&& SOCKET_LASTERROR != SOCKET_EINPROGRESS
+		&& SOCKET_LASTERROR != SOCKET_EWOULDBLOCK /* winsocks */) {
+		network_tcp_perror("connect", SOCKET_LASTERROR);
+		return 0;
+	}
+
+	/* got a connection */
+	n->cfd = fd;
+	n->connecting = 1;
+
+	return 1;
+}
+
 int network_tcp_start_client(struct network_tcp *n, const char *node,
 	uint16_t port)
 {
-	int fd;
+	struct network_tcp_enum_data data;
 	char buf[11];
-	struct addrinfo *info, *pi;
-	struct addrinfo hints = {0};
-	int g;
 
 	if (!n || !n->init)
 		return -1;
 
-	hints.ai_family = AF_UNSPEC; /* IPv4 or IPv6 */
-	hints.ai_socktype = SOCK_STREAM;
+	data.n = n;
+	data.port = port;
 
-	/* convert port number to a string, because getaddrinfo is weird */
-	str_from_num(0, port, buf);
-
-	/* XXX we should be able to fall back to gethostbyname or
-	 * whatever crappy API was here before */
-	if (getaddrinfo(node, buf, &hints, &info)) {
-		log_nl();
-		network_tcp_perror("getaddrinfo", SOCKET_LASTERROR);
-		return -1;
-	}
-
-	g = 0;
-	for (pi = info; pi; pi = pi->ai_next) {
-		/* which socket we use depends on which IP version is being used */
-		switch (pi->ai_family) {
-		case AF_INET:
-			fd = n->sfd;
-			break;
-		case AF_INET6:
-			fd = n->sfd6;
-			break;
-		default:
-			continue;
-		}
-
-		/* TODO the example code in the manpage actually goes over
-		 * the entire linked list, trying each. maybe we should do that too? */
-		if ((connect(fd, pi->ai_addr, pi->ai_addrlen) == SOCKET_ERROR)
-			&& SOCKET_LASTERROR != SOCKET_EINPROGRESS
-			&& SOCKET_LASTERROR != SOCKET_EWOULDBLOCK /* winsocks */)
-			continue;
-
-		g = 1;
-	}
-
-	if (!g)
+	if (network_tcp_enumerate_host_ips(node, port, network_tcp_enum_cb,
+		&data) < 0)
 		return -1;
 
-	freeaddrinfo(info);
-
-	n->cfd = fd;
-
-	/* tell the worker function that we're currently connecting */
-	n->connecting = 1;
+	if (!n->connecting)
+		return -1; /* what */
 
 	log_nl();
-	log_appendf(1, "[NET] Connecting to host %s on port %u",
+	log_appendf(1, "[NETWORK] Connecting to host %s on port %u",
 		node, (unsigned int)port);
 	status_text_flash("Connecting to host %s on port %u",
 		node, (unsigned int)port);
@@ -434,9 +536,14 @@ static int network_tcp_server_worker(struct network_tcp *n)
 		struct sockaddr_in6 i6;
 	} addr;
 	socklen_t addrlen;
-	char host[256]; /* probably good enough */
+#ifdef HAVE_GETNAMEINFO
+	char host[256]; /* probably big enough buffer */
+#endif
 	network_tcp_socket_t socks[] = { n->sfd, n->sfd6 };
 	size_t i;
+#ifdef HAVE_GETHOSTBYADDR
+	struct hostent *hent;
+#endif
 
 	/* TODO we shouldn't just be accepting connections willy nilly.
 	 * We should create a dialog asking the user if they
@@ -449,14 +556,14 @@ static int network_tcp_server_worker(struct network_tcp *n)
 		addrlen = sizeof(addr);
 		n->cfd = accept(socks[i], &addr.i, &addrlen);
 		if (n->cfd == SOCKET_INVALID) {
-			/* oddly, with winsocks I'm not getting any connection at all.
-			 * Is this intended? At all? Is there some firewall here? */
 			if (SOCKET_LASTERROR != SOCKET_EAGAIN && SOCKET_LASTERROR != SOCKET_EWOULDBLOCK)
 				network_tcp_perror("accept", SOCKET_LASTERROR);
 			continue;
 		}
 	}
 
+	/* one last check for if any of the accept calls failed, or
+	 * we have no server sockets (which shouldn't happen) */
 	if (n->cfd == SOCKET_INVALID)
 		return -1; /* failed */
 
@@ -465,6 +572,15 @@ static int network_tcp_server_worker(struct network_tcp *n)
 	if (!getnameinfo((struct sockaddr *)&addr, addrlen, host, sizeof(host), NULL, 0, 0)) {
 		log_appendf(4, "Accepting connection from %s", host);
 		status_text_flash("Accepting connection from %s", host);
+	} else
+#endif
+#ifdef HAVE_GETHOSTBYADDR
+	if ((hostent = (addr.i.sa_family == AF_INET6)
+			? gethostbyaddr((char *)&addr.i6.sin6_addr, 16, AF_INET6)
+			: gethostbyaddr((char *)&addr.i4.sin_addr, 4, AF_INET))) {
+		/* nice spaghetti to get here */
+		log_appendf(4, "Accepting connection from %s", hostent->h_name);
+		status_text_flash("Accepting connection from %s", hostent->h_name);
 	} else
 #endif
 	{
@@ -483,22 +599,22 @@ static int network_tcp_server_worker(struct network_tcp *n)
 	(unsigned int)ip6[12], (unsigned int)ip6[13], \
 	(unsigned int)ip6[14], (unsigned int)ip6[15]
 
-			log_appendf(4, "Accepted connection from " I6F, I6X(ip6));
-			status_text_flash("Accepted connection from " I6F, I6X(ip6));
+			log_appendf(4, "Accepting connection from " I6F, I6X(ip6));
+			status_text_flash("Accepting connection from " I6F, I6X(ip6));
 			break;
 		}
 		case AF_INET: {
 			/* ehhh  */
 			unsigned char *ip = (unsigned char *)&addr.i4.sin_addr.s_addr;
-			log_appendf(4, "Accepted connection from %d.%d.%d.%d",
+			log_appendf(4, "Accepting connection from %d.%d.%d.%d",
 				(int)ip[0], (int)ip[1], (int)ip[2], (int)ip[3]);
-			status_text_flash("Accepted connection from %d.%d.%d.%d",
+			status_text_flash("Accepting connection from %d.%d.%d.%d",
 				(int)ip[0], (int)ip[1], (int)ip[2], (int)ip[3]);
 			break;
 		}
 		default: {
-			log_appendf(4, "Accepted connection from unknown address");
-			status_text_flash("Accepted connection from unknown address");
+			log_appendf(4, "Accepting connection from unknown address");
+			status_text_flash("Accepting connection from unknown address");
 			break;
 		}
 		}
@@ -547,7 +663,6 @@ int network_tcp_worker(struct network_tcp *n)
 		r = select(n->cfd + 1, NULL, &fds, NULL, &tv);
 		if (r == 0) {
 			/* connect() isn't done yet */
-			log_appendf(4, "connect not finished\n");
 			return 0;
 		} else if (r == SOCKET_ERROR) {
 			network_tcp_perror("select", SOCKET_LASTERROR);
@@ -563,21 +678,18 @@ int network_tcp_worker(struct network_tcp *n)
 			network_tcp_perror("Connection failed", err);
 			// need to port to winblows
 			//status_text_flash("Connection failed: %s", strerror(err));
-			if (TCP_ISSERVER(n))
-				closesocket(n->cfd);
+			closesocket(n->cfd);
 			n->cfd = SOCKET_INVALID;
 			return -1;
 		}
 
-		if (TCP_ISSERVER(n)) {
-			if (network_tcp_socket_nonblock(n->cfd) < 0) {
-				closesocket(n->cfd);
-				n->cfd = SOCKET_INVALID;
-				return -1;
-			}
-
-			network_tcp_socket_timeout(n->cfd, 5000000);
+		if (network_tcp_socket_nonblock(n->cfd) < 0) {
+			closesocket(n->cfd);
+			n->cfd = SOCKET_INVALID;
+			return -1;
 		}
+
+		network_tcp_socket_timeout(n->cfd, 5000000);
 
 		n->connecting = 0;
 
@@ -603,13 +715,13 @@ do { \
 			free(n->r.membuf); \
 			n->r.membuf = NULL; \
 	\
-			log_appendf(4, "[NET] Client disconnected"); \
+			log_appendf(4, "[NETWORK] Client disconnected"); \
 			status_text_flash("Client disconnected"); \
 			return 0; \
 		} else { \
 			/* there's nothing we can do, just close the connection */ \
 			network_tcp_close(n); \
-			log_appendf(4, "[NET] Lost connection to server"); \
+			log_appendf(4, "[NETWORK] Lost connection to server"); \
 			status_text_flash("Lost connection to server"); \
 			return 0; \
 		} \

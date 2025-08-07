@@ -74,8 +74,10 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	if (buf) {
 		st = *buf;
 	} else {
-		if (os_stat(filename, &st) < 0)
+		if (os_stat(filename, &st) < 0) {
+			errno = ENOENT;
 			return -1;
+		}
 	}
 
 	if (!size)

@@ -168,6 +168,7 @@ static int slurp_win32_seek_(slurp_t *t, int64_t offset, int whence)
 		int64_t x;
 	} x;
 	DWORD move;
+	DWORD r;
 
 	x.x = offset;
 
