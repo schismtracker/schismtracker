@@ -30,18 +30,90 @@
 #include "network.h"
 #include "network-tcp.h"
 #include "log.h" /* status_text_flash */
+#include "osdefs.h" /* SCHISM_ANSI_UNICODE */
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <fcntl.h>
+#ifdef SCHISM_WIN32
+# include <ws2tcpip.h>
+# include <windows.h>
 
-/* macro for checking if TCP is in server mode */
-#define TCP_ISSERVER(n) ((n)->cfd != (n)->sfd && (n)->cfd != (n)->sfd6)
+# define SOCKET_EMSGSIZE    WSAEMSGSIZE
+# define SOCKET_EWOULDBLOCK WSAEWOULDBLOCK
+# define SOCKET_EINPROGRESS WSAEINPROGRESS
+# define SOCKET_LASTERROR   (WSAGetLastError())
+# define SOCKET_INVALID     INVALID_SOCKET
+#else
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <unistd.h>
+# include <netdb.h>
+# include <fcntl.h>
+
+# define closesocket    close
+# define SOCKET_ERROR   (-1)
+# define SOCKET_INVALID (-1)
+
+# define SOCKET_EMSGSIZE    EMSGSIZE
+# define SOCKET_EWOULDBLOCK EWOULDBLOCK
+# define SOCKET_EINPROGRESS EINPROGRESS
+# ifdef EAGAIN
+#  define SOCKET_EAGAIN     EAGAIN
+# endif
+# define SOCKET_LASTERROR   errno
+#endif
+
+#ifndef SOCKET_EAGAIN
+# define SOCKET_EAGAIN SOCKET_EWOULDBLOCK
+#endif
+
+#define TCP_ISSERVER(n) ((n)->server)
+
+/* perror(), but cross-platform */
+static void network_tcp_perror(const char *prefix, int err)
+{
+#ifdef SCHISM_WIN32
+	/* this much code just to get an error message is insane */
+	char *msg = NULL;
+
+	SCHISM_ANSI_UNICODE({
+		LPSTR buf;
+		FormatMessageA(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+			NULL,
+			err,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPSTR)&buf,
+			0,
+			NULL
+		);
+		charset_iconv(buf, &msg, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX);
+		LocalFree(buf);
+	}, {
+		LPWSTR buf;
+		FormatMessageW(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+			NULL,
+			err,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPWSTR)&buf,
+			0,
+			NULL
+		);
+		charset_iconv(buf, &msg, CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX);
+		LocalFree(buf);
+	})
+
+	if (msg) {
+		log_appendf(4, "[NET] %s: %s", prefix, msg);
+		free(msg);
+	}
+#else
+	/* windows could never be this simple */
+	log_appendf(4, "[NET] %s: %s", prefix, strerror(err));
+#endif
+}
 
 static inline SCHISM_ALWAYS_INLINE
-int network_tcp_socket_nonblock(int fd)
+int network_tcp_socket_nonblock(network_tcp_socket_t fd)
 {
 	/* Convert the socket to a non-blocking socket.
 	 *
@@ -52,40 +124,67 @@ int network_tcp_socket_nonblock(int fd)
 	 *
 	 * This way we don't need to spin up a thread though, so it all
 	 * works out ;) */
+
+#ifdef SCHISM_WIN32
+	int r;
+	u_long mode = 1;
+
+	r = ioctlsocket(fd, FIONBIO, &mode);
+	if (r != NO_ERROR) {
+		network_tcp_perror("ioctlsocket", r);
+		return -1;
+	}
+
+	return 0;
+#else
 	int flags, r;
 
 	flags = fcntl(fd, F_GETFL);
-	if (flags == -1)
+	if (flags == -1) {
+		network_tcp_perror("fcntl", errno);
 		return -1;
+	}
 	r = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-	if (r == -1)
+	if (r == -1) {
+		network_tcp_perror("fcntl", errno);
 		return -1;
+	}
 
 	return 0;
+#endif
 }
 
 /* timeout is hardcoded to 5 seconds for now
  * ideally this would be user-configurable :) */
 static inline SCHISM_ALWAYS_INLINE
-void network_tcp_socket_timeout(int fd, uint64_t us)
+void network_tcp_socket_timeout(network_tcp_socket_t fd, uint64_t us)
 {
+#ifdef SCHISM_WIN32
+	DWORD tv;
+
+	tv = (us / 1000);
+#else
 	struct timeval tv;
 
 	tv.tv_sec  = us / 1000000;
 	tv.tv_usec = us % 1000000;
+#endif
 
-	/* hope this succeeds ... */
-	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+	/* hope this succeeds ...
+	 * the stupid cast is for windows */
+	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+	setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&tv, sizeof(tv));
 }
 
-static int network_tcp_create_socket(int *pfd, int which)
+static int network_tcp_create_socket(network_tcp_socket_t *pfd, int which)
 {
-	int fd;
+	network_tcp_socket_t fd;
 
 	fd = socket(which, SOCK_STREAM, 0);
-	if (fd < 0)
+	if (fd == INVALID_SOCKET) {
+		network_tcp_perror("socket", SOCKET_LASTERROR);
 		return -1;
+	}
 
 	if (network_tcp_socket_nonblock(fd) < 0)
 		return -1;
@@ -104,25 +203,26 @@ int network_tcp_init(struct network_tcp *n)
 	memset(n, 0, sizeof(*n));
 
 	/* 0 is stdin */
-	n->sfd = n->cfd = n->sfd6 = -1;
+	n->sfd = n->cfd = n->sfd6 = SOCKET_INVALID;
 
 	n->init = 1;
 
 	n->s.msgsize = MSGSIZE_MAX;
 
 	if ((network_tcp_create_socket(&n->sfd, AF_INET) < 0)
-		|| (network_tcp_create_socket(&n->sfd6, AF_INET6) < 0))
+		&& (network_tcp_create_socket(&n->sfd6, AF_INET6) < 0)) {
 		return -1;
+	}
 
 #ifdef IPV6_V6ONLY
-	if (n->sfd != -1 && n->sfd6 != -1) {
+	if (n->sfd != SOCKET_INVALID && n->sfd6 != SOCKET_INVALID) {
 		/* disable IPv6 dual-stack shit */
 		int optval;
 
 		optval = 1;
 
-		if (setsockopt(n->sfd6, IPPROTO_IPV6, IPV6_V6ONLY, &optval, sizeof(optval)) < 0) {
-			log_perror("setsockopt IPV6_V6ONLY");
+		if (setsockopt(n->sfd6, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval, sizeof(optval))) {
+			network_tcp_perror("setsockopt IPV6_V6ONLY", SOCKET_LASTERROR);
 			return -1;
 		}
 	}
@@ -136,18 +236,16 @@ void network_tcp_close(struct network_tcp *n)
 	if (!n || !n->init)
 		return;
 
-	close(n->sfd);
-	close(n->sfd6);
+	closesocket(n->sfd);
+	closesocket(n->sfd6);
 
 	/* if we're running a server, then cfd is a completely
 	 * different file descriptor. */
 	if (TCP_ISSERVER(n))
-		close(n->cfd);
+		closesocket(n->cfd);
 
 	/* reset fd values */
-	n->sfd  = -1;
-	n->sfd6 = -1;
-	n->cfd  = -1;
+	n->sfd = n->sfd6 = n->cfd = SOCKET_INVALID;
 
 	n->r.msgsize = 0;
 	n->r.msgrecv = 0;
@@ -159,15 +257,15 @@ void network_tcp_close(struct network_tcp *n)
 
 static int network_tcp_fd_bind_listen(int fd, struct sockaddr *addr, socklen_t addrlen, uint16_t port)
 {
-	if (bind(fd, addr, addrlen) < 0) {
-		log_perror("bind");
+	if (bind(fd, addr, addrlen) == SOCKET_ERROR) {
+		network_tcp_perror("bind", SOCKET_LASTERROR);
 		return -1;
 	}
 
 	/* as of now, we only allow one peer. but, we could allow multiple
 	 * peers if we really wanted to. */
-	if (listen(fd, 1) < 0) {
-		log_perror("listen");
+	if (listen(fd, 1) == SOCKET_ERROR) {
+		network_tcp_perror("listen", SOCKET_LASTERROR);
 		return -1;
 	}
 
@@ -191,12 +289,14 @@ int network_tcp_start_server(struct network_tcp *n, uint16_t port)
 	addrip6.sin6_port = bswapBE16(port); /* network endian */
 
 	if ((network_tcp_fd_bind_listen(n->sfd, (struct sockaddr *)&addrip4, sizeof(addrip4), port) < 0)
-		|| (network_tcp_fd_bind_listen(n->sfd6, (struct sockaddr *)&addrip6, sizeof(addrip6), port) < 0))
+		&& (network_tcp_fd_bind_listen(n->sfd6, (struct sockaddr *)&addrip6, sizeof(addrip6), port) < 0))
 		return -1;
 
 	log_nl();
 	log_appendf(1, "Starting server on port %u", (unsigned int)port);
 	status_text_flash("Starting server on port %u", (unsigned int)port);
+
+	n->server = 1;
 
 	return 0;
 }
@@ -206,8 +306,9 @@ int network_tcp_start_client(struct network_tcp *n, const char *node,
 {
 	int fd;
 	char buf[11];
-	struct addrinfo *info;
+	struct addrinfo *info, *pi;
 	struct addrinfo hints = {0};
+	int g;
 
 	if (!n || !n->init)
 		return -1;
@@ -218,37 +319,43 @@ int network_tcp_start_client(struct network_tcp *n, const char *node,
 	/* convert port number to a string, because getaddrinfo is weird */
 	str_from_num(0, port, buf);
 
+	/* XXX we should be able to fall back to gethostbyname or
+	 * whatever crappy API was here before */
 	if (getaddrinfo(node, buf, &hints, &info)) {
 		log_nl();
-		log_perror("[NET] getaddrinfo");
+		network_tcp_perror("getaddrinfo", SOCKET_LASTERROR);
 		return -1;
 	}
 
-	/* which socket we use depends on which IP version is being used */
-	switch (info->ai_family) {
-	case AF_INET:
-		fd = n->sfd;
-		break;
-	case AF_INET6:
-		fd = n->sfd6;
-		break;
-	default:
-		return -1;
+	g = 0;
+	for (pi = info; pi; pi = pi->ai_next) {
+		/* which socket we use depends on which IP version is being used */
+		switch (pi->ai_family) {
+		case AF_INET:
+			fd = n->sfd;
+			break;
+		case AF_INET6:
+			fd = n->sfd6;
+			break;
+		default:
+			continue;
+		}
+
+		/* TODO the example code in the manpage actually goes over
+		 * the entire linked list, trying each. maybe we should do that too? */
+		if ((connect(fd, pi->ai_addr, pi->ai_addrlen) == SOCKET_ERROR)
+			&& SOCKET_LASTERROR != SOCKET_EINPROGRESS
+			&& SOCKET_LASTERROR != SOCKET_EWOULDBLOCK /* winsocks */)
+			continue;
+
+		g = 1;
 	}
 
-	/* TODO the example code in the manpage actually goes over
-	 * the entire linked list, trying each. maybe we should do that too? */
-	if (connect(fd, info->ai_addr, info->ai_addrlen) < 0
-		&& errno != EINPROGRESS) {
-		log_nl();
-		log_perror("[NET] connect failed");
-		freeaddrinfo(info);
+	if (!g)
 		return -1;
-	}
 
 	freeaddrinfo(info);
 
-	/* fuck it, whatever */
 	n->cfd = fd;
 
 	/* tell the worker function that we're currently connecting */
@@ -259,6 +366,8 @@ int network_tcp_start_client(struct network_tcp *n, const char *node,
 		node, (unsigned int)port);
 	status_text_flash("Connecting to host %s on port %u",
 		node, (unsigned int)port);
+
+	n->server = 0;
 
 	return 0;
 }
@@ -277,23 +386,23 @@ int network_tcp_send(struct network_tcp *n, const void *data, uint32_t size)
 		return -1;
 
 	/* FIXME we need a queue, if the connection is initializing ... */
-	if (n->cfd == -1)
+	if (n->cfd == SOCKET_INVALID)
 		return -1;
 
 	/* transmit size as 32-bit little endian */
 	dw = bswapLE32(size);
 
-	r = write(n->cfd, &dw, 4);
-	if (r < 0) {
-		log_perror("[NET] send (size)");
+	r = send(n->cfd, (char *)&dw, 4, 0);
+	if (r == SOCKET_ERROR) {
+		network_tcp_perror("send (size)", SOCKET_LASTERROR);
 		return -1; /* peer probably disconnected; abandon ship */
 	}
 
 	/* now transmit the data */
 	while (size > n->s.msgsize) {
 		/* run the data in chunks */
-		r = write(n->cfd, (const uint8_t *)data + off, n->s.msgsize);
-		if (r < 0 && errno == EMSGSIZE) {
+		r = send(n->cfd, (char *)data + off, n->s.msgsize, 0);
+		if (r == SOCKET_ERROR && SOCKET_LASTERROR == SOCKET_EMSGSIZE) {
 			/* msgsize is too big. reduce it, and try again */
 			if (n->s.msgsize <= 8)
 				return -1; /* lost cause */
@@ -301,16 +410,16 @@ int network_tcp_send(struct network_tcp *n, const void *data, uint32_t size)
 			n->s.msgsize /= 2;
 			continue;
 		} else if (r < 0) {
-			log_perror("[NET] send (block)");
+			network_tcp_perror("send (block)", SOCKET_LASTERROR);
 		}
 
 		size -= n->s.msgsize;
 		off += n->s.msgsize;
 	}
 
-	if (write(n->cfd, data + off, size) < 0) {
+	if (send(n->cfd, (char *)data + off, size, 0) == SOCKET_ERROR) {
 		/* 99% of gamblers quit before they win big */
-		log_perror("[NET] send (final block)");
+		network_tcp_perror("send (final block)", SOCKET_LASTERROR);
 		return -1;
 	}
 
@@ -326,29 +435,36 @@ static int network_tcp_server_worker(struct network_tcp *n)
 	} addr;
 	socklen_t addrlen;
 	char host[256]; /* probably good enough */
+	network_tcp_socket_t socks[] = { n->sfd, n->sfd6 };
+	size_t i;
 
 	/* TODO we shouldn't just be accepting connections willy nilly.
 	 * We should create a dialog asking the user if they
 	 * want to accept the connection. */
-	addrlen = sizeof(addr);
-	n->cfd = accept(n->sfd, (struct sockaddr *)&addr, &addrlen);
-	if (n->cfd < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-		/* try again with ipv6? */
+	for (i = 0; i < ARRAY_SIZE(socks); i++) {
+		/* ignore any invalid sockets */
+		if (socks[i] == SOCKET_INVALID)
+			continue;
+
 		addrlen = sizeof(addr);
-		n->cfd = accept(n->sfd6, (struct sockaddr *)&addr, &addrlen);
-		if (n->cfd < 0)
-			return (errno == EAGAIN || errno == EWOULDBLOCK) ? 0 : -1;
+		n->cfd = accept(socks[i], &addr.i, &addrlen);
+		if (n->cfd == SOCKET_INVALID) {
+			/* oddly, with winsocks I'm not getting any connection at all.
+			 * Is this intended? At all? Is there some firewall here? */
+			if (SOCKET_LASTERROR != SOCKET_EAGAIN && SOCKET_LASTERROR != SOCKET_EWOULDBLOCK)
+				network_tcp_perror("accept", SOCKET_LASTERROR);
+			continue;
+		}
 	}
 
-	if (network_tcp_socket_nonblock(n->cfd) < 0)
-		return -1;
+	if (n->cfd == SOCKET_INVALID)
+		return -1; /* failed */
 
-	network_tcp_socket_timeout(n->sfd, 5000000);
-
+	/* print out the hostname */
 #ifdef HAVE_GETNAMEINFO
 	if (!getnameinfo((struct sockaddr *)&addr, addrlen, host, sizeof(host), NULL, 0, 0)) {
-		log_appendf(4, "Accepted connection from %s", host);
-		status_text_flash("Accepted connection from %s", host);
+		log_appendf(4, "Accepting connection from %s", host);
+		status_text_flash("Accepting connection from %s", host);
 	} else
 #endif
 	{
@@ -388,8 +504,6 @@ static int network_tcp_server_worker(struct network_tcp *n)
 		}
 	}
 
-	/* call back into the toplevel networking layer, so it can
-	 * initialize the connection */
 	Network_OnConnect();
 
 	return 0;
@@ -405,11 +519,11 @@ int network_tcp_worker(struct network_tcp *n)
 	if (!n || !n->init)
 		return -1;
 
-	if (TCP_ISSERVER(n) && n->cfd == -1) {
+	if (TCP_ISSERVER(n) && n->cfd == SOCKET_INVALID) {
 		if (network_tcp_server_worker(n) < 0) {
-			if (n->cfd != -1)
-				close(n->cfd);
-			n->cfd = -1;
+			if (n->cfd != SOCKET_INVALID)
+				closesocket(n->cfd);
+			n->cfd = SOCKET_INVALID;
 
 			return -1;
 		}
@@ -429,28 +543,40 @@ int network_tcp_worker(struct network_tcp *n)
 		tv.tv_sec = 0;
 		tv.tv_usec = 0;
 
-		printf("fd: %d\n", n->cfd);
-
 		/* Check if we're connected */
 		r = select(n->cfd + 1, NULL, &fds, NULL, &tv);
 		if (r == 0) {
 			/* connect() isn't done yet */
-			printf("connect not finished\n");
+			log_appendf(4, "connect not finished\n");
 			return 0;
-		} else if (r < 0) {
-			log_perror("[NET] select");
+		} else if (r == SOCKET_ERROR) {
+			network_tcp_perror("select", SOCKET_LASTERROR);
 			return -1;
 		}
 
 		/* okay, we're writable. now check whether connect() succeeded */
 
 		len = sizeof(err);
-		r = getsockopt(n->cfd, SOL_SOCKET, SO_ERROR, &err, &len);
+		/* stupid cast for winsocks */
+		r = getsockopt(n->cfd, SOL_SOCKET, SO_ERROR, (char *)&err, &len);
 		if (r < 0 || err) {
-			log_appendf(4, "[NET] Connection failed: %s", strerror(err));
-			status_text_flash("Connection failed: %s", strerror(err));
-			n->cfd = -1;
+			network_tcp_perror("Connection failed", err);
+			// need to port to winblows
+			//status_text_flash("Connection failed: %s", strerror(err));
+			if (TCP_ISSERVER(n))
+				closesocket(n->cfd);
+			n->cfd = SOCKET_INVALID;
 			return -1;
+		}
+
+		if (TCP_ISSERVER(n)) {
+			if (network_tcp_socket_nonblock(n->cfd) < 0) {
+				closesocket(n->cfd);
+				n->cfd = SOCKET_INVALID;
+				return -1;
+			}
+
+			network_tcp_socket_timeout(n->cfd, 5000000);
 		}
 
 		n->connecting = 0;
@@ -459,18 +585,18 @@ int network_tcp_worker(struct network_tcp *n)
 		Network_OnConnect();
 	}
 
-	if (n->cfd == -1)
+	if (n->cfd == SOCKET_INVALID)
 		return 0; /* nothing to do */
 
 #define TCP_READ(fd, buf, size) \
 do { \
-	r = read(fd, buf, size); \
-	if (r < 0) { \
-		return (errno == EAGAIN || errno == EWOULDBLOCK) ? 0 : -1; \
+	r = recv(fd, (char *)buf, size, 0); \
+	if (r == SOCKET_ERROR) { \
+		return (SOCKET_LASTERROR == SOCKET_EAGAIN || SOCKET_LASTERROR == SOCKET_EWOULDBLOCK) ? 0 : -1; \
 	} else if (r == 0) { \
 		if (TCP_ISSERVER(n)) { \
-			close(n->cfd); \
-			n->cfd = -1; \
+			closesocket(n->cfd); \
+			n->cfd = SOCKET_INVALID; \
 	\
 			n->r.msgsize = 0; \
 			n->r.msgrecv = 0; \
@@ -491,7 +617,11 @@ do { \
 } while (0)
 
 	for (;;) {
+#ifdef SCHISM_WIN32
+		int r;
+#else
 		ssize_t r;
+#endif
 		unsigned char buf[4096]; /* 4KiB buffer */
 		size_t left;
 

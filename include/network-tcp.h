@@ -24,6 +24,14 @@
 #ifndef SCHISM_NETWORK_TCP_H_
 #define SCHISM_NETWORK_TCP_H_
 
+#include "headers.h"
+
+#ifdef SCHISM_WIN32
+typedef uintptr_t network_tcp_socket_t;
+#else
+typedef int network_tcp_socket_t;
+#endif
+
 /* TCP is a client-server protocol, not a peer to peer protocol.
  * So we have to have one peer set up the server, while the other
  * peer connects to them. */
@@ -32,15 +40,13 @@
 #define MSGSIZE_MAX (65535)
 
 struct network_tcp {
-	int init; /* ehhhhhh */
-
-	int sfd;  /* server file descriptor */
-	int sfd6; /* server file descriptor; IPv6 */
-	int cfd;  /* client file descriptor */
-
-	/* for clients; network_tcp_start_client sets this, and
-	 * checks whether connect() was successful in the worker. */
+	unsigned int init : 1;
+	unsigned int server : 1;
 	unsigned int connecting : 1;
+
+	network_tcp_socket_t sfd;  /* server file descriptor */
+	network_tcp_socket_t sfd6; /* server file descriptor; IPv6 */
+	network_tcp_socket_t cfd;  /* client file descriptor */
 
 	/* sending state */
 	struct {

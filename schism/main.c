@@ -1239,9 +1239,9 @@ int schism_main(int argc, char** argv)
 	/* this is stupid hacky, but it gets the job done for testing */
 	if (argc >= 2) {
 		if (!strcmp(argv[1], "client")) {
-			Network_StartClient("127.0.0.1", 6500);
+			Network_StartClient("localhost", NETWORK_DEFAULT_PORT);
 		} else if (!strcmp(argv[1], "server")) {
-			Network_StartServer(6500);
+			Network_StartServer(NETWORK_DEFAULT_PORT);
 		}
 	}
 #endif

@@ -489,7 +489,7 @@ static int Network_ReceiveSampleData(const void *data_, size_t size)
 	return 0;
 }
 
-#if 0
+#if 1
 # define NETWORK_HANDSHAKE_PRINT_INFO
 #endif
 
