@@ -318,11 +318,13 @@ void midi_engine_stop(void)
 	_connected = 0;
 	for (n = port_providers; n; ) {
 		q = NULL;
+
 		while (midi_port_foreach(n, &q))
 			midi_port_unregister(q->num);
 
 		if (n->thread) {
 			n->cancelled = 1;
+			midi_port_wake_thread(n);
 			mt_thread_wait(n->thread, NULL);
 		}
 
@@ -441,6 +443,7 @@ struct midi_provider *midi_provider_register(const char *name,
 	n = mem_calloc(1, sizeof(struct midi_provider));
 	n->name = str_dup(name);
 	n->poll = driver->poll;
+	n->wake = driver->wake;
 	n->enable = driver->enable;
 	n->disable = driver->disable;
 	if (driver->flags & MIDI_PORT_CAN_SCHEDULE) {
@@ -619,6 +622,12 @@ void midi_port_unregister(uint32_t num)
 	}
 
 	mt_mutex_unlock(midi_port_mutex);
+}
+
+void midi_port_wake_thread(struct midi_provider *p)
+{
+	if (p->wake)
+		p->wake(p);
 }
 
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)

@@ -443,12 +443,16 @@ cygwin*|mingw*)
 	WIN32_LIBS="-lwinmm"
 
 	AC_CHECK_HEADERS([winsock.h winsock2.h])
-	if test "x$ac_cv_header_winsock_h" = "xyes"; then
-		AC_SUBST([NETWORK_LIBS], [-lwsock32])
-		use_network=yes
-	elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
+	AC_CHECK_LIB(ws2_32, WSAEventSelect, [use_network_ws2=yes], [use_network_ws2=no])
+	if test "x$use_network_ws2" = "xyes"; then
 		AC_SUBST([NETWORK_LIBS], [-lws2_32])
 		use_network=yes
+		AC_DEFINE([USE_NETWORK], [1], [Networking])
+		AC_DEFINE([USE_NETWORK_WS2], [1], [Win32 WinSock2 networking])
+	elif test "x$ac_cv_header_winsock_h" = "xyes"; then
+		AC_SUBST([NETWORK_LIBS], [-lwsock32])
+		use_network=yes
+		AC_DEFINE([USE_NETWORK], [1], [Networking])
 	else
 		AC_MSG_ERROR([*** Couldn't find winsock (how)])
 	fi
@@ -627,6 +631,7 @@ AM_CONDITIONAL([USE_MACOS], [test "x$use_macos" = "xyes"])
 AM_CONDITIONAL([USE_OS2], [test "x$use_os2" = "xyes"])
 AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
+AM_CONDITIONAL([USE_NETWORK_WS2], [test "x$use_network_ws2" = "xyes"])
 AM_CONDITIONAL([USE_XBOX], [test "x$use_xbox" = "xyes"])
 AM_CONDITIONAL([USE_ASIO], [test "x$use_asio" = "xyes"])
 

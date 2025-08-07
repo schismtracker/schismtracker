@@ -161,6 +161,7 @@ int oss_midi_setup(void)
 	static const struct midi_driver driver = {
 		.flags = 0,
 		.poll = _oss_poll,
+		.wake = NULL,
 		.thread = _oss_thread,
 		.enable = _oss_start_stop,
 		.disable = _oss_start_stop,

@@ -292,6 +292,7 @@ int win32mm_midi_setup(void)
 	static const struct midi_driver driver = {
 		.flags = 0,
 		.poll = _win32mm_poll,
+		.wake = NULL,
 		.thread = NULL,
 		.enable = _win32mm_start,
 		.disable = _win32mm_stop,

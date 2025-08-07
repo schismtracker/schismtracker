@@ -424,6 +424,7 @@ int jack_midi_setup(void)
 {
 	static const struct midi_driver jack_driver = {
 		.poll = _jack_poll,
+		.wake = NULL,
 		.flags = 0, // jack is realtime
 		.thread = _jack_thread,
 		.enable = _jack_start,

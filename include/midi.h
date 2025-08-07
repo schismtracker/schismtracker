@@ -32,6 +32,7 @@ struct midi_driver {
 	uint32_t flags;
 
 	void (*poll)(struct midi_provider *m);
+	void (*wake)(struct midi_provider *m);
 	int (*thread)(struct midi_provider *m);
 
 	/* return: 1 on success, 0 on failure */
@@ -49,6 +50,8 @@ struct mt_thread;
 struct midi_provider {
 	char *name;
 	void (*poll)(struct midi_provider *);
+	void (*wake)(struct midi_provider *);
+
 	struct mt_thread *thread;
 	volatile int cancelled;
 
@@ -134,6 +137,8 @@ uint32_t midi_port_register(struct midi_provider *p,
 
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor);
 void midi_port_unregister(uint32_t num);
+
+void midi_port_wake_thread(struct midi_provider* p);
 
 /* ------------------------------------------------------------------------ */
 /* MIDI hotplug support */
