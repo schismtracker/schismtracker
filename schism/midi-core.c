@@ -555,7 +555,7 @@ static int64_t midi_port_get_unused(void)
 
 /* midi engines list ports this way */
 uint32_t midi_port_register(struct midi_provider *pv, uint8_t inout, const char *name,
-	void *userdata, int free_userdata)
+	void *userdata, void (*destroy_userdata)(void *))
 {
 	struct midi_port *p;
 	int64_t i;
@@ -574,7 +574,7 @@ uint32_t midi_port_register(struct midi_provider *pv, uint8_t inout, const char 
 	p->drain = pv->drain;
 	p->mark = 0;
 
-	p->free_userdata = free_userdata;
+	p->destroy_userdata = destroy_userdata;
 	p->userdata = userdata;
 	p->provider = pv;
 
@@ -609,9 +609,7 @@ void midi_port_unregister(uint32_t num)
 		struct midi_port *q = port_top[num];
 
 		if (q->disable) q->disable(q);
-		/* TODO: this should be a function pointer, e.g.
-		 *   if (q->destroy) q->destroy(q); */
-		if (q->free_userdata) free(q->userdata);
+		if (q->destroy_userdata) q->destroy_userdata(q->userdata);
 		if (q->name) free(q->name);
 		free(q);
 
@@ -677,6 +675,8 @@ int midi_port_disable(struct midi_port *p)
 	mt_mutex_lock(midi_port_mutex);
 
 	r = (p->disable) ? (p->disable(p)) : 0;
+	//if (!r)
+	//	p->io = 0;
 
 	mt_mutex_unlock(midi_port_mutex);
 	mt_mutex_unlock(midi_record_mutex);

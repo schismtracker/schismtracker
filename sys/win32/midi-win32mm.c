@@ -272,7 +272,7 @@ static void _win32mm_poll(struct midi_provider *p)
 					continue; \
 			}) \
 		\
-			midi_port_register(p, IOCAP, utf8, data, 1); \
+			midi_port_register(p, IOCAP, utf8, data, free); \
 		\
 			free(utf8); \
 		} \

@@ -163,7 +163,7 @@ static void _macosx_add_port(struct midi_provider *p, MIDIEndpointRef ep, uint8_
 	get_ep_name(m->ep, name, 55);
 	name[54] = '\0';
 
-	midi_port_register(p, inout, name, m, 1);
+	midi_port_register(p, inout, name, m, free);
 }
 
 static void _macosx_poll(struct midi_provider *p)

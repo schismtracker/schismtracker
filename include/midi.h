@@ -87,7 +87,9 @@ struct midi_port {
 	uint32_t num;
 
 	void *userdata;
-	int free_userdata;
+	/* err, should this take in the midi port pointer? */
+	void (*destroy_userdata)(void *);
+
 	int (*enable)(struct midi_port *d);
 	int (*disable)(struct midi_port *d);
 	void (*send_now)(struct midi_port *d,
@@ -130,7 +132,7 @@ struct midi_provider *midi_provider_register(const char *name, const struct midi
 
 /* midi engines list ports this way */
 uint32_t midi_port_register(struct midi_provider *p,
-	uint8_t inout, const char *name, void *userdata, int free_userdata);
+	uint8_t inout, const char *name, void *userdata, void (*destroy_userdata)(void *));
 
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor);
 void midi_port_unregister(uint32_t num);

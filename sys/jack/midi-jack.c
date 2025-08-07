@@ -363,7 +363,7 @@ static void _jack_enumerate_ports(const char **port_names, struct midi_provider 
 		m = mem_alloc(sizeof(*m));
 		m->port = port;
 
-		midi_port_register(p, inout, name, m, 1);
+		midi_port_register(p, inout, name, m, free);
 	}
 }
 

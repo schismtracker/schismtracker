@@ -409,7 +409,8 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 				continue;
 			}
 			data = mem_alloc(sizeof(struct alsa_midi));
-			data->c = c; data->p = p;
+			data->c = c;
+			data->p = p;
 			data->client = ctext;
 			data->port = ptext;
 			buffer = NULL;
@@ -426,7 +427,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 				continue;
 			}
 
-			midi_port_register(_alsa_provider, io, buffer, data, 1);
+			midi_port_register(_alsa_provider, io, buffer, data, free);
 			free(buffer);
 		}
 	}
