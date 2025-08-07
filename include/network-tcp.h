@@ -34,8 +34,9 @@
 struct network_tcp {
 	int init; /* ehhhhhh */
 
-	int sfd; /* server file descriptor */
-	int cfd; /* client file descriptor */
+	int sfd;  /* server file descriptor */
+	int sfd6; /* server file descriptor; IPv6 */
+	int cfd;  /* client file descriptor */
 
 	/* for clients; network_tcp_start_client sets this, and
 	 * checks whether connect() was successful in the worker. */

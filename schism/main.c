@@ -1005,6 +1005,10 @@ void schism_exit(int x)
 #ifdef USE_AVFORMAT
 	avformat_quit();
 #endif
+#ifdef USE_NETWORK
+	/* close any open network stuff */
+	Network_Close();
+#endif
 
 	if (shutdown_process & EXIT_SAVECFG)
 		cfg_atexit_save();
@@ -1171,9 +1175,9 @@ int schism_main(int argc, char** argv)
 #endif
 
 #if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2) && !defined(SCHISM_XBOX)
-	signal(SIGINT, exit);
-	signal(SIGQUIT, exit);
-	signal(SIGTERM, exit);
+	signal(SIGINT, schism_exit);
+	signal(SIGQUIT, schism_exit);
+	signal(SIGTERM, schism_exit);
 #endif
 
 	video_mousecursor(cfg_video_mousecursor);
@@ -1235,9 +1239,9 @@ int schism_main(int argc, char** argv)
 	/* this is stupid hacky, but it gets the job done for testing */
 	if (argc >= 2) {
 		if (!strcmp(argv[1], "client")) {
-			Network_StartClient("127.0.0.1", NETWORK_DEFAULT_PORT);
+			Network_StartClient("127.0.0.1", 6500);
 		} else if (!strcmp(argv[1], "server")) {
-			Network_StartServer(NETWORK_DEFAULT_PORT);
+			Network_StartServer(6500);
 		}
 	}
 #endif
