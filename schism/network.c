@@ -81,6 +81,9 @@ enum {
 	 *  uint8_t -- sample number
 	 *  uint32_t -- offset */
 	NETWORK_BLOCKTYPE_SAMPLE_DATA = 9,
+
+	/* --- SCHISM EXTENSIONS START ---- */
+	NETWORK_BLOCKTYPE_HANDSHAKE = 10,
 };
 
 /* Network data layout:
@@ -251,6 +254,54 @@ int Network_SendSampleData(uint8_t num)
 	return Network_SendData(NETWORK_BLOCKTYPE_SAMPLE, &num, sizeof(num));
 }
 
+int Network_SendHandshake(const char *username, const char *motd)
+{
+	static const char tracker[] = "Schism Tracker " VERSION;
+	uint32_t usernamelen, motdlen, trackerlen;
+	uint32_t len;
+	uint8_t *buf;
+	uint32_t dw;
+	uint16_t w;
+
+	usernamelen = strlen(username);
+	motdlen = strlen(motd);
+	trackerlen = (ARRAY_SIZE(tracker) - 1);
+
+	len = 2 + 4 + trackerlen + 4 + usernamelen + 4 + motdlen;
+	if (len > 65000)
+		return -1; /* don't even bother */
+
+	buf = mem_alloc(len);
+
+	/* version */
+	w = bswapLE16(1);
+	memcpy(buf, &w, 2);
+
+	/* tracker name */
+	dw = bswapLE32(trackerlen);
+	memcpy(buf + 2, &dw, 4);
+
+	memcpy(buf + 2 + 4, tracker, trackerlen);
+
+	/* user name */
+	dw = bswapLE32(usernamelen);
+	memcpy(buf + 2 + 4 + trackerlen, &dw, 4);
+
+	memcpy(buf + 2 + 4 + trackerlen + 4, username, usernamelen);
+
+	/* message of the day */
+	dw = bswapLE32(motdlen);
+	memcpy(buf + 2 + 4 + trackerlen + 4 + usernamelen, &dw, 4);
+
+	memcpy(buf + 2 + 4 + trackerlen + 4 + usernamelen + 4, motd, motdlen);
+
+	Network_SendData(NETWORK_BLOCKTYPE_HANDSHAKE, buf, len);
+
+	free(buf);
+
+	return 0;
+}
+
 /* ------------------------------------------------------------------------ */
 /* Data receivers */
 
@@ -326,7 +377,8 @@ static int Network_ReceiveInstrument(const void *data_, size_t size)
 
 static int Network_ReceiveSample(const void *data_, size_t size)
 {
-	/* TODO ditto with the above, probably IT sample header. */
+	/* TODO ditto with the above, probably IT sample header.
+	 * We could use the MPTM extension for AdLib samples */
 	return -1;
 }
 
@@ -437,6 +489,101 @@ static int Network_ReceiveSampleData(const void *data_, size_t size)
 	return 0;
 }
 
+#if 0
+# define NETWORK_HANDSHAKE_PRINT_INFO
+#endif
+
+#ifdef NETWORK_HANDSHAKE_PRINT_INFO
+static int Network_HandshakeReceiveStringCallback(const void *data, size_t size,
+	void *userdata)
+{
+	if (size > INT_MAX)
+		return -1;
+
+	log_appendf(1, "%s: %.*s", (char *)userdata, (int)size, (char *)data);
+	return 0;
+}
+#endif
+
+static int Network_ReceiveHandshake(const void *data, size_t size)
+{
+	slurp_t mem;
+	uint16_t w;
+	uint32_t dw;
+
+	/* All integers are little endian unless otherwise specified.
+	 * netstrings shall not include any NUL bytes.
+	 *
+	 * Additionally, since the username and motd are able to be
+	 * input by the user, they may not necessarily be valid UTF-8.
+	 * You'll want to make sure you handle the case where the data
+	 * may be invalid.
+	 *
+	 * Schism Tracker always sends a tracker name of the form
+	 * "Schism Tracker YYYYMMDD". Anyone else using this protocol
+	 * is encouraged to also append a version number after the
+	 * actual tracker name.
+	 *
+	 * #pragma pack(push, 1)
+	 *
+	 * // like a Pascal string, but can be much longer (32-bit len)
+	 * typedef struct {
+	 *     uint32_t len;   // string length
+	 *     char data[len]; // string data, in UTF-8. must not include any
+	 *                     // NUL terminating bytes (i.e. '\0')
+	 * } netstring;
+	 *
+	 * // handshake data structure
+	 * struct {
+	 *     // AVAILABLE STARTING VERSION 1
+	 *     uint16_t ver;       // handshake version
+	 *     netstring tracker;  // tracker name
+	 *     netstring username; // username
+	 *     netstring motd;     // message of the day
+	 * };
+	 *
+	 * #pragma pack(pop) */
+
+	slurp_memstream(&mem, (uint8_t *)data, size);
+
+	if (slurp_read(&mem, &w, 2) != 2)
+		return -1;
+	w = bswapLE16(w);
+
+	if (w >= 1) {
+		/* FIXME all of the data is just skipped over instead of being read */
+		if (slurp_read(&mem, &dw, 4) != 4)
+			return -1;
+		dw = bswapLE32(dw);
+
+#ifdef NETWORK_HANDSHAKE_PRINT_INFO
+		slurp_receive(&mem, Network_HandshakeReceiveStringCallback, dw, (char *)"Tracker");
+#endif
+		slurp_seek(&mem, dw, SEEK_CUR);
+
+		if (slurp_read(&mem, &dw, 4) != 4)
+			return -1;
+		dw = bswapLE32(dw);
+
+#ifdef NETWORK_HANDSHAKE_PRINT_INFO
+		slurp_receive(&mem, Network_HandshakeReceiveStringCallback, dw, (char *)"Username");
+#endif
+		slurp_seek(&mem, dw, SEEK_CUR);
+
+		if (slurp_read(&mem, &dw, 4) != 4)
+			return -1;
+		dw = bswapLE32(dw);
+
+#ifdef NETWORK_HANDSHAKE_PRINT_INFO
+		slurp_receive(&mem, Network_HandshakeReceiveStringCallback, dw, (char *)"MOTD");
+#endif
+		slurp_seek(&mem, dw, SEEK_CUR);
+	}
+
+	/* then process version 2... then version 3... */
+	return 0;
+}
+
 /* ------------------------------------------------------------------------ */
 /* Data receiver type table */
 
@@ -453,6 +600,7 @@ static const Network_DataReceiverPtr receivers[] = {
 	[NETWORK_BLOCKTYPE_DELETE_SAMPLE] = Network_ReceiveDeleteSample,
 	[NETWORK_BLOCKTYPE_NEW_SAMPLE] = Network_ReceiveNewSample,
 	[NETWORK_BLOCKTYPE_SAMPLE_DATA] = Network_ReceiveSampleData,
+	[NETWORK_BLOCKTYPE_HANDSHAKE] = Network_ReceiveHandshake,
 };
 
 /* ------------------------------------------------------------------------ */
@@ -464,10 +612,6 @@ int Network_ReceiveData(const void *data, size_t size)
 	uint16_t w;
 	uint8_t type;
 	uint8_t crc[2];
-
-	{
-		log_appendf(4, "size: %" PRIuSZ, size);
-	}
 
 	if (size < 9)
 		return -1; /* missing header info and CRC */
@@ -484,12 +628,9 @@ int Network_ReceiveData(const void *data, size_t size)
 	memcpy(&w, data + 4, 2);
 	w = bswapLE16(w);
 
-	if (w < 9)
+	/* invalid size, or unfinished block */
+	if (w < 9 || w > size)
 		return -1; /* invalid size */
-
-	/* unfinished block ?? */
-	if (w > size)
-		return -1;
 
 	Network_CalculateCRC((const uint8_t *)data, size - 2, crc);
 
@@ -556,4 +697,19 @@ void Network_StopClient(void)
 void Network_Worker(void)
 {
 	network_tcp_worker(&tcp);
+}
+
+/* The TCP driver calls this back once it can send messages
+ * (i.e., once it's connected) */
+int Network_OnConnect(void)
+{
+	int r;
+
+	r = Network_SendHandshake("Unregistered", "MOTD");
+	if (r < 0)
+		return r;
+
+	/* TODO once we're connected, the server should send
+	 * all of the song data to the clients. */
+	return 0;
 }

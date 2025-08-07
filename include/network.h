@@ -41,6 +41,7 @@ int Network_SendPatternLength(uint8_t num, uint8_t new_maxrow);
 int Network_SendDeleteSample(uint8_t num);
 int Network_SendNewSample(uint8_t num);
 int Network_SendSampleData(uint8_t num);
+int Network_SendHandshake(const char *username, const char *motd);
 
 /* this likely shouldn't be extern (but whatever) */
 int Network_ReceiveData(const void *data, size_t size);
@@ -54,5 +55,9 @@ void Network_StopClient(void);
 
 /* asynchronous worker */
 void Network_Worker(void);
+
+/* called by the driver once it's connected (i.e., we can
+ * actually write data) */
+int Network_OnConnect(void);
 
 #endif /* SCHISM_NETWORK_H_ */
