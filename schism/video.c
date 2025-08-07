@@ -642,7 +642,7 @@ void video_report(void)
 {
 	log_nl();
 
-	log_append(2, 0, "Video initialised");
+	log_append_timestamp(2, "Video initialised");
 	log_underline();
 
 	backend->report();

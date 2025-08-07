@@ -33,11 +33,16 @@
 #include "keyboard.h"
 #include "charset.h"
 #include "mem.h"
+#include "str.h"
+#include "config.h"
+
+#define MAX_LINE_LENGTH 74
 
 struct log_line {
 	uint8_t color;
 	const char *text;
 	charset_t set;
+	size_t underline_len; /* this is NOT the actual length of text */
 	/* Set this flag if the text should be free'd when it is scrolled offscreen.
 	DON'T set it if the text is going to be modified after it is added to the log (e.g. for displaying
 	status information for module loaders like IT); in that case, change the text pointer to some
@@ -127,8 +132,8 @@ static void log_redraw(void)
 		if (!lines[i].text)
 			continue;
 
-		draw_text_charset_len(lines[i].text, lines[i].set, 74, 3, 14 + n,
-			lines[i].color, 0);
+		draw_text_charset_len(lines[i].text, lines[i].set, MAX_LINE_LENGTH,
+			3, 14 + n, lines[i].color, 0);
 	}
 }
 
@@ -167,10 +172,11 @@ void log_append3(charset_t set, int color, int must_free, const char *text)
 			memmove(lines, lines + 1, last_line * sizeof(struct log_line));
 		}
 
-		lines[last_line].text      = text;
-		lines[last_line].set       = set;
-		lines[last_line].color     = color;
-		lines[last_line].must_free = must_free;
+		lines[last_line].text          = text;
+		lines[last_line].set           = set;
+		lines[last_line].color         = color;
+		lines[last_line].must_free     = must_free;
+		lines[last_line].underline_len = charset_strlen(text, set);
 
 		top_line = CLAMP(last_line - 32, 0, NUM_LINES - 32);
 
@@ -217,7 +223,7 @@ void log_appendf(int color, const char *format, ...)
 static inline SCHISM_ALWAYS_INLINE
 void log_underline_impl(int chars)
 {
-	char buf[75];
+	char buf[MAX_LINE_LENGTH + 1];
 
 	chars = CLAMP(chars, 0, (int) sizeof(buf) - 1);
 	buf[chars--] = '\0';
@@ -230,7 +236,7 @@ void log_underline_impl(int chars)
 
 void log_underline(void)
 {
-	log_underline_impl(charset_strlen(lines[last_line].text, lines[last_line].set));
+	log_underline_impl(lines[last_line].underline_len);
 }
 
 void log_perror(const char *prefix)
@@ -240,3 +246,62 @@ void log_perror(const char *prefix)
 	log_appendf(4, "%s: %s", prefix, e);
 }
 
+/* ------------------------------------------------------------------------ */
+/* timestamps */
+
+/* takes in UTF-8 data always */
+void log_append_timestamp(int color, const char *text)
+{
+	char datestr[27], timestr[27];
+	time_t thetime;
+	struct tm tm;
+	size_t s, ds, ts/*pmo*/;
+
+	time(&thetime);
+	localtime_r(&thetime, &tm);
+
+	/* output date/time in user preferred format */
+	str_date_from_tm(&tm, datestr, cfg_str_date_format);
+	str_time_from_tm(&tm, timestr, cfg_str_time_format);
+
+	/* calculate the length
+	 * XXX utf-8 data isn't always exactly X many chars,
+	 * so we'll definitely fuck up international text */
+	s = strlen(text);
+	ds = strlen(datestr);
+	ts = strlen(timestr);
+
+	if (ds + ts + 3 + s/* " [" and "]" */ >= MAX_LINE_LENGTH) {
+		/* no space for a timestamp;
+		 * just duplicate the string in this case. */
+		log_append3(CHARSET_UTF8, color, 1, str_dup(text));
+	} else {
+		log_appendf(color, "%-*s [%s %s]", MAX_LINE_LENGTH - 3 - ds - ts - 1,
+			text, datestr, timestr);
+
+		/* fix the underline length */
+		lines[last_line].underline_len = charset_strlen(text, CHARSET_UTF8);
+	}
+}
+
+void log_appendf_timestamp(int color, const char *format, ...)
+{
+	char *ptr;
+	va_list ap;
+
+	va_start(ap, format);
+	if (vasprintf(&ptr, format, ap) == -1) {
+		perror("asprintf");
+		exit(255);
+	}
+	va_end(ap);
+
+	if (!ptr) {
+		perror("asprintf");
+		exit(255);
+	}
+
+	log_append_timestamp(color, ptr);
+
+	free(ptr);
+}

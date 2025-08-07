@@ -286,7 +286,7 @@ int song_load_unchecked(const char *file)
 	}
 
 	log_nl();
-	log_appendf(2, "Loading %s", base);
+	log_appendf_timestamp(2, "Loading %s", base);
 	log_underline();
 
 	newsong = song_create_load(file);
@@ -455,7 +455,7 @@ int song_export(const char *filename, const char *type)
 
 	log_nl();
 	log_nl();
-	log_appendf(2, "Exporting to %s", format->name);
+	log_appendf_timestamp(2, "Exporting to %s", format->name);
 	log_underline();
 
 	/* disko does the rest of the log messages itself */
@@ -485,7 +485,7 @@ int song_save(const char *filename, const char *type)
 	mangle = mangle_filename(filename, NULL, format->ext);
 
 	log_nl();
-	log_appendf(2, "Saving %s module", format->name);
+	log_appendf_timestamp(2, "Saving %s module", format->name);
 	log_underline();
 
 /* TODO: add or replace file extension as appropriate

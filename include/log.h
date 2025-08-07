@@ -51,6 +51,10 @@ void log_appendf(int color, const char *format, ...)
 /* like perror() but dumps into the log */
 void log_perror(const char *prefix);
 
+/* timestamping */
+void log_append_timestamp(int color, const char *text);
+void log_appendf_timestamp(int color, const char *format, ...);
+
 void status_text_flash(const char *format, ...)
 	SCHISM_FORMAT_PRINTF(1, 2);
 void status_text_flash_bios(const char *format, ...)
