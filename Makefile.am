@@ -471,7 +471,6 @@ endif
 
 if USE_NETWORK
 files_network = \
-	schism/midi-ip.c \
 	schism/network-tcp.c \
 	schism/network.c
 cflags_network=
@@ -593,6 +592,7 @@ schismtracker_SOURCES = \
 	schism/mem.c           \
 	schism/menu.c			\
 	schism/midi-core.c		\
+	schism/midi-ip.c		\
 	schism/mplink.c			\
 	schism/page.c			\
 	schism/page_about.c		\
