@@ -26,8 +26,6 @@
 
 #include "headers.h"
 
-#include <wchar.h>
-
 #include "it.h"
 #include "page.h"
 #include "widget.h"
