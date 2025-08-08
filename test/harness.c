@@ -25,6 +25,7 @@
 
 #include "osdefs.h"
 #include "timer.h"
+#include "str.h"
 #include "mt.h"
 
 /* these are no-ops now  --paper */
@@ -36,6 +37,7 @@ static int run_test(test_index_entry *entry)
 	timer_ticks_t start_time, end_time;
 	testresult_t result;
 	int i;
+	char buf[14];
 
 	/* clear any existing output (this also initializes the
 	 * global memory stream) */
@@ -51,7 +53,7 @@ static int run_test(test_index_entry *entry)
 	for (i = 6 + strlen(entry->name) + 1; i < 78 - TESTRESULT_STR_MAX_LEN; i++)
 		fputc('.', stdout);
 
-	printf(" %s (%" PRIu64 " ms)\n", testresult_str(result), end_time - start_time);
+	printf(" %s (%s ms)\n", testresult_str(result), str_from_num_thousands(end_time - start_time, buf));
 
 	test_log_dump();
 
@@ -92,9 +94,15 @@ int schism_test_main(int argc, char **argv)
 	SCHISM_RUNTIME_ASSERT(timer_init(), "need timers");
 
 	if (argc <= 1) {
+		timer_ticks_t start_time, end_time;
+
 		int passed_tests = 0;
 		int failed_tests = 0;
 		int i, j;
+
+		char buf[14];
+
+		start_time = timer_ticks();
 
 		for (i = 0; automated_tests[i].name; i++) {
 			testresult_t result = run_test_child(argv[0], &automated_tests[i]);
@@ -117,7 +125,10 @@ int schism_test_main(int argc, char **argv)
 			}
 		}
 
+		end_time = timer_ticks();
+
 		printf("Results: %d passed, %d failed\n", passed_tests, failed_tests);
+		printf("Elapsed: %s ms\n", str_from_num_thousands(end_time - start_time, buf));
 
 		exit_code = (failed_tests == 0) ? 0 : 1;
 	}

@@ -175,6 +175,58 @@ char *str_from_num_signed(int digits, int32_t n, char buf[12])
 	return buf;
 }
 
+char *str_from_num_thousands(int n, char buf[15])
+{
+	char *ptr;
+	int place = 0;
+	int negative = 0;
+
+	// Special case
+	if (n == INT32_MIN) {
+		strcpy(buf, "-2,147,483,648");
+		return buf;
+	}
+
+	// All other negative numbers have corresponding positive numbers
+	if (n < 0) {
+		n = -n;
+		negative = 1;
+	}
+
+	ptr = buf + 14;
+	*ptr = '\0';
+
+	while (1) {
+		ptr--;
+
+		*ptr = (n % 10) + '0';
+		n /= 10;
+
+		if (n == 0)
+			break;
+
+		place++;
+
+		if ((place % 3) == 0) {
+			ptr--;
+			*ptr = ',';
+		}
+	}
+
+	if (negative) {
+		ptr--;
+		*ptr = '-';
+	}
+
+	if (ptr > buf) {
+		int chars = (buf + 14) - ptr;
+
+		memmove(buf, ptr, chars + 1); /* incl. '\0' */
+	}
+
+	return buf;
+}
+
 /* --------------------------------------------------------------------- */
 /* STRING HANDLING FUNCTIONS */
 
