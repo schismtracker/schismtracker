@@ -26,6 +26,8 @@
 
 #include "headers.h"
 
+#include <wchar.h>
+
 #include "it.h"
 #include "page.h"
 #include "widget.h"
@@ -255,7 +257,9 @@ void log_append_timestamp(int color, const char *text)
 	char datestr[27], timestr[27];
 	time_t thetime;
 	struct tm tm;
-	size_t s, ds, ts/*pmo*/;
+	size_t s, ds, ts/*pmo*/, i;
+	charset_decode_t dec;
+	uint32_t ucs4text[MAX_LINE_LENGTH + 1];
 
 	time(&thetime);
 	localtime_r(&thetime, &tm);
@@ -264,24 +268,64 @@ void log_append_timestamp(int color, const char *text)
 	str_date_from_tm(&tm, datestr, cfg_str_date_format);
 	str_time_from_tm(&tm, timestr, cfg_str_time_format);
 
-	/* calculate the length
-	 * XXX utf-8 data isn't always exactly X many chars,
-	 * so we'll definitely fuck up international text */
-	s = strlen(text);
 	ds = strlen(datestr);
 	ts = strlen(timestr);
 
-	if (ds + ts + 3 + s/* " [" and "]" */ >= MAX_LINE_LENGTH) {
-		/* no space for a timestamp;
-		 * just duplicate the string in this case. */
-		log_append3(CHARSET_UTF8, color, 1, str_dup(text));
-	} else {
-		log_appendf(color, "%-*s [%s %s]", MAX_LINE_LENGTH - 3 - ds - ts - 1,
-			text, datestr, timestr);
+	/* decode directly into our buffer, getting the on-screen length of the
+	 * text at the same time */
+	memset(&dec, 0, sizeof(dec));
 
-		/* fix the underline length */
-		lines[last_line].underline_len = charset_strlen(text, CHARSET_UTF8);
+	dec.in = text;
+	dec.offset = 0;
+	dec.size = SIZE_MAX;
+
+	for (s = 0; dec.state == DECODER_STATE_NEED_MORE && !charset_decode_next(&dec, CHARSET_UTF8); s++) {
+		/* break out if the codepoint is a NUL terminator */
+		if (dec.codepoint == 0)
+			break;
+
+		if (ds+ts+4+s >= MAX_LINE_LENGTH) {
+			/* can't fit the timestamp; give up */
+			log_append3(CHARSET_UTF8, color, 1, str_dup(text));
+			return;
+		}
+
+		ucs4text[s] = dec.codepoint;
 	}
+
+	/* fill the rest of the buffer with spaces */
+	for (i = s; i < MAX_LINE_LENGTH; i++)
+		ucs4text[i] = ' ';
+
+	/* this is somewhat spaghetti-fied, sorry */
+	/* ucs4text[MAX_LINE_LENGTH - 1 - ts - 1 - ds - 2] = ' '; --- already done */
+	ucs4text[MAX_LINE_LENGTH - 1 - ts - 1 - ds - 1] = '[';
+
+	/* date output should always be in English ASCII,
+	 * so we can just convert it in-place */
+	for (i = 0; i < ds; i++)
+		ucs4text[MAX_LINE_LENGTH - 1 - ts - 1 - ds + i] = datestr[i];
+
+	/* ucs4text[MAX_LINE_LENGTH - 1 - ts - 1] = ' '; --- already done */
+
+	/* same for time output */
+	for (i = 0; i < ts; i++)
+		ucs4text[MAX_LINE_LENGTH - 1 - ts + i] = timestr[i];
+
+	ucs4text[MAX_LINE_LENGTH - 1] = ']';
+
+	ucs4text[MAX_LINE_LENGTH] = '\0';
+
+	{
+		/* copy buffer to the heap */
+		uint32_t *x = mem_alloc((MAX_LINE_LENGTH + 1) * 4);
+		memcpy(x, ucs4text, sizeof(ucs4text));
+		/* bad hack */
+		log_append3(CHARSET_UCS4, color, 1, (const char *)x);
+	}
+
+	/* fix the underline length */
+	lines[last_line].underline_len = s;
 }
 
 void log_appendf_timestamp(int color, const char *format, ...)
