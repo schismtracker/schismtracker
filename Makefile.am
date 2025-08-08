@@ -136,8 +136,9 @@ noinst_HEADERS = \
 	include/str.h           \
 	include/mt.h       \
 	include/timer.h         \
-	include/test-assertions.h       \
-	include/test-funcs.h			\
+	include/test-assertions.h  \
+	include/test-funcs.h       \
+	include/test-tempfile.h    \
 	include/tree.h			\
 	include/util.h			\
 	include/version.h		\
@@ -679,15 +680,17 @@ schismtracker_LDFLAGS = $(ldflags_macosx)
 ### Automated testing -- some additional files get compiled, but
 ### these are only linked into schismtrackertest.
 
-schismtrackertest_SOURCES =	\
-	schism/main.c			\
-	test/harness.c			\
-	test/testresult.c		\
-	test/log.c				\
-	test/index.c			\
-	test/cases/bshift.c   \
-	test/cases/slurp.c		\
-	test/cases/str.c
+schismtrackertest_SOURCES = \
+	schism/main.c               \
+	test/harness.c              \
+	test/testresult.c           \
+	test/log.c                  \
+	test/index.c                \
+	test/tempfile.c             \
+	test/cases/bshift.c         \
+	test/cases/slurp.c          \
+	test/cases/str.c            \
+	test/cases/config-parser.c
 
 # err, this is flaky, but okay for now i guess
 mains =									\

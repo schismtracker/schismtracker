@@ -22,6 +22,7 @@
  */
 
 #include "test.h"
+#include "test-tempfile.h"
 
 #include "osdefs.h"
 #include "timer.h"
@@ -147,6 +148,8 @@ int schism_test_main(int argc, char **argv)
 
 		exit_code = result_to_exit_code(result);
 	}
+
+	test_temp_files_cleanup();
 
 	timer_quit();
 	mt_quit();
