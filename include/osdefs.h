@@ -200,7 +200,7 @@ void win32_toggle_menu(void *window, int on); // window should be a pointer to t
 int win32_stat(const char *path, struct stat *st);
 int win32_mkdir(const char *path, uint32_t mode);
 FILE* win32_fopen(const char *path, const char *flags);
-int win32_exec(int *status, const char *dir, const char *name, ...);
+int win32_exec(int *status, int *abnormal_exit, const char *dir, const char *name, ...);
 int win32_run_hook(const char *dir, const char *exe, const char *maybe_arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
 void win32_show_message_box(const char *title, const char *text, int style);
@@ -212,7 +212,7 @@ int win32_access(const char *path, int amode);
 // audio-dsound.c
 int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutnamev, char **result);
 
-int posix_exec(int *status, const char *dir, const char *name, ...);
+int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *name, ...);
 int posix_run_hook(const char *dir, const char *exe, const char *maybe_arg);
 
 int macosx_event(schism_event_t *event);
