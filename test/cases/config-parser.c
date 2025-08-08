@@ -207,7 +207,7 @@ testresult_t test_config_file_null_default_with_value_set_defined_key(void)
 	strcpy(buf, semaphore);
 
 	// Act
-	cfg_get_string(&cfg, "ducks", "weight", buf, 64, NULL);
+	cfg_get_string(&cfg, "ducks", "weight", buf, 63, NULL);
 
 	// Assert
 	ASSERT(strcmp(buf, semaphore) != 0);

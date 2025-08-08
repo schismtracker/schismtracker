@@ -68,7 +68,10 @@ int cfg_write(cfg_file_t *cfg);
 
 /* the return value is the full value for the key. this will differ from the value copied to the value return
 parameter if the length of the value is greater than the size of the buffer.
-value may be NULL, in which case nothing is copied. */
+value may be NULL, in which case nothing is copied.
+
+if value is non-NULL, then len needs to be the number of characters that can fit into value before the null-
+terminator. that is to say, value[len] will be assigned to. if value is a char[64], pass 63 for len. :-) */
 const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char *key_name,
 			   char *value, int len, const char *def);
 int cfg_get_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int def);
