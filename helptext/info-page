@@ -9,6 +9,8 @@
 | PgUp/PgDn         Change window type
 | Alt-Up/Down       Move window base up/down
 |
+| Alt-N             In waveform windows, toggles channel numbering
+|
 | V                 Toggle between volume/velocity bars
 | I                 Toggle between sample/instrument names
 |

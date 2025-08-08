@@ -476,8 +476,14 @@ endif
 
 if USE_OPL2
 files_opl = player/fmopl2.c
+cflags_fmopl = -DFM_CHANNELS=9
 else
 files_opl = player/fmopl3.c
+cflags_fmopl = -DFM_CHANNELS=18
+endif
+
+if ENABLE_WAVEFORMVIS
+CFLAGS += -DENABLE_WAVEFORMVIS
 endif
 
 ## Replacement functions for crappy systems

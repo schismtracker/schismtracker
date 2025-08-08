@@ -34,6 +34,20 @@
 #include "fmt.h" // for it_decompress8 / it_decompress16
 #include "mem.h"
 
+#ifdef ENABLE_WAVEFORMVIS
+int8_t recent_sample_buffer[(MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE];
+static int oldest_recent_output_sample = 0;
+
+int csf_get_oldest_recent_sample_output(void)
+{
+	return oldest_recent_output_sample;
+}
+
+void csf_set_oldest_recent_sample_output(int new_value)
+{
+	oldest_recent_output_sample = new_value;
+}
+#endif
 
 static void _csf_reset(song_t *csf)
 {
@@ -100,6 +114,8 @@ static void _csf_reset(song_t *csf)
 	OPL_Close(csf);
 	GM_Reset(csf, 1);
 
+	csf->opl_buffer_data = NULL;
+
 	memset(csf->midi_note_tracker, 0, sizeof(csf->midi_note_tracker));
 	memset(csf->midi_vol_tracker, 0, sizeof(csf->midi_vol_tracker));
 	memset(csf->midi_ins_tracker, 0, sizeof(csf->midi_ins_tracker));
@@ -118,6 +134,7 @@ song_t *csf_allocate(void)
 {
 	song_t *csf = mem_calloc(1, sizeof(song_t));
 	_csf_reset(csf);
+	csf->recent_sample_buffer = mem_calloc(MAX_VOICES + 2, NATIVE_SCREEN_WIDTH);
 	return csf;
 }
 
@@ -194,6 +211,9 @@ void csf_destroy(song_t *csf)
 			csf->instruments[i] = NULL;
 		}
 	}
+
+	free(csf->recent_sample_buffer);
+	free(csf->opl_buffer_data);
 
 	_csf_reset(csf);
 }
@@ -811,7 +831,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		SCHISM_FALLTHROUGH;
 	case SF(8,M,LE,PCMS):
 	case SF(8,M,LE,PCMU):
-	case SF(8,M,LE,PCMD): 
+	case SF(8,M,LE,PCMD):
 	case SF(8,M,BE,PCMS):
 	case SF(8,M,BE,PCMU):
 	case SF(8,M,BE,PCMD): {
@@ -838,7 +858,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	// 8-bit stereo samples
 	case SF(8,SS,LE,PCMS):
 	case SF(8,SS,LE,PCMU):
-	case SF(8,SS,LE,PCMD): 
+	case SF(8,SS,LE,PCMD):
 	case SF(8,SS,BE,PCMS):
 	case SF(8,SS,BE,PCMU):
 	case SF(8,SS,BE,PCMD): {

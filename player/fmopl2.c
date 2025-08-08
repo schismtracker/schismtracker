@@ -1652,7 +1652,7 @@ static void OPLWriteReg(FM_OPL *OPL, int r, int v)
 }
 
 /* lock/unlock for common table */
-static int OPL_LockTable()
+static int OPL_LockTable(void)
 {
 	num_lock++;
 	if(num_lock>1) return 0;
@@ -2065,8 +2065,8 @@ do { \
 	vu_max[CHN] = MAX(vu_max[CHN], ab); \
 \
 	if (buffers[j]) { \
-		buffers[j][i*2+0] += OPL->output[0] * OPL_VOLUME; \
-		buffers[j][i*2+1] += OPL->output[0] * OPL_VOLUME; \
+		buffers[j][i*2+0] += OPL->output[0]; \
+		buffers[j][i*2+1] += OPL->output[0]; \
 	} \
 } while (0)
 
