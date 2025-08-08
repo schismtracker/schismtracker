@@ -688,7 +688,8 @@ schismtrackertest_SOURCES =	\
 	test/testresult.c		\
 	test/log.c				\
 	test/index.c			\
-	test/cases/bshift.c
+	test/cases/bshift.c   \
+	test/cases/str.c
 
 # err, this is flaky, but okay for now i guess
 mains =									\
