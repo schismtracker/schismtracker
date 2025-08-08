@@ -76,7 +76,8 @@ int posix_exec(int *status, const char *dir, const char *name, ...)
 		/* newer API; POSIX.1-2001 */
 		while (waitid(P_PID, pid, &info, WEXITED) == -1);
 
-		if (info.si_code == CLD_EXITED) {
+		/* if the child terminated abnormally, well, the exec call is still technically a success */
+		if ((info.si_code == CLD_EXITED) || (info.si_code == CLD_KILLED) || (info.si_code == CLD_DUMPED)) {
 			if (status)
 				*status = info.si_status;
 			r = 1;
