@@ -1698,7 +1698,7 @@ cleanup: \
 WIN32_EXEC_IMPL(A, CHARSET_ANSI, CHAR, _spawnvp, _chdir, _strdup, _getcwd);
 WIN32_EXEC_IMPL(W, CHARSET_WCHAR_T, WCHAR, _wspawnvp, _wchdir, _wcsdup, _wgetcwd);
 
-int win32_exec(int *status, const char *dir, const char *name, ...)
+int win32_exec(int *status, int *abnormal_exit, const char *dir, const char *name, ...)
 {
 	int r;
 	va_list ap;
@@ -1706,9 +1706,9 @@ int win32_exec(int *status, const char *dir, const char *name, ...)
 	va_start(ap, name);
 
 	SCHISM_ANSI_UNICODE({
-		r = win32_exec_A(status, dir, name, ap);
+		r = win32_exec_A(status, abnormal_exit, dir, name, ap);
 	}, {
-		r = win32_exec_W(status, dir, name, ap);
+		r = win32_exec_W(status, abnormal_exit, dir, name, ap);
 	})
 
 	va_end(ap);
@@ -1774,7 +1774,7 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 		return 0;
 	}
 
-	if (!win32_exec(&st, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL))
+	if (!win32_exec(&st, NULL, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL))
 		st = !0; /* because the status ... is NOT quo */
 
 	free(bat_name);
