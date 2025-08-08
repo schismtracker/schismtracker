@@ -127,6 +127,8 @@ int schism_test_main(int argc, char **argv)
 						fputc('.', stdout);
 
 					puts(" CRASH");
+
+					fflush(stdout);
 				}
 			}
 		}
