@@ -788,35 +788,7 @@ void *alloca(size_t size);
 
 /* XXX why the hell is this here and not osdefs.c */
 
-#include <xboxkrnl/xboxkrnl.h>
-
-static inline struct tm *xbox_localtime(const time_t *t)
-{
-	static struct tm our_tm = {0};
-
-	LARGE_INTEGER ft;
-	TIME_FIELDS st;
-	uint64_t ul;
-
-	ul = (*t * 10000000ULL) + 116444736000000000ULL;
-
-	ft.HighPart = (ul >> 32);
-	ft.LowPart = (ul & 0xFFFFFFFFU);
-
-	RtlTimeToTimeFields(&ft, &st);
-
-	our_tm.tm_year = st.Year - 1900;
-	our_tm.tm_mon = st.Month - 1;
-	our_tm.tm_wday = st.Weekday;
-	our_tm.tm_mday = st.Day;
-	our_tm.tm_hour = st.Hour;
-	our_tm.tm_min = st.Minute;
-	our_tm.tm_sec = st.Second;
-	/* our_tm.tm_yday = ??? */
-	/* our_tm.tm_isdst = ??? */
-
-	return &our_tm;
-}
+struct tm *xbox_localtime(const time_t *t);
 
 # define localtime xbox_localtime
 

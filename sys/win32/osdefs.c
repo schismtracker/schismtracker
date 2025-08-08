@@ -1505,16 +1505,47 @@ struct tm *win32_localtime(const time_t *t)
 {
 	static struct tm our_tm = {0};
 
+	DWORD dw;
 	FILETIME ft;
 	SYSTEMTIME st;
 	uint64_t ul;
+	TIME_ZONE_INFORMATION tz;
+	LONG bias;
 
 	ul = (*t * 10000000ULL) + 116444736000000000ULL;
 
+	/* FileTimeToLocalFileTime does not account for
+	 * daylight savings time, so we have to put in
+	 * a little more effort. */
+	dw = GetTimeZoneInformation(&tz);
+
+	/* the real bias is actually the bias plus
+	 * the standard/daylight bias. */
+	bias = tz.Bias;
+
+	switch (dw) {
+	case TIME_ZONE_ID_STANDARD:
+		bias += tz.StandardBias;
+		break;
+	case TIME_ZONE_ID_DAYLIGHT:
+		bias += tz.DaylightBias;
+		break;
+	}
+
+	/* subtract bias from UTC
+	 * UTC = local time + bias
+	 * local time = UTC - bias */
+	ul -= ((int64_t)bias * 60LL * 10000000LL);
+
+	/* shove it into the FILETIME */
 	ft.dwHighDateTime = (ul >> 32);
 	ft.dwLowDateTime = (ul & 0xFFFFFFFFU);
 
+	/* local time -> system time */
 	FileTimeToSystemTime(&ft, &st);
+
+	/* Toggle flag for daylight savings time */
+	our_tm.tm_isdst = (dw == TIME_ZONE_ID_DAYLIGHT);
 
 	our_tm.tm_year = st.wYear - 1900;
 	our_tm.tm_mon = st.wMonth - 1;
@@ -1523,8 +1554,8 @@ struct tm *win32_localtime(const time_t *t)
 	our_tm.tm_hour = st.wHour;
 	our_tm.tm_min = st.wMinute;
 	our_tm.tm_sec = st.wSecond;
-	/* our_tm.tm_yday = ??? */
-	/* our_tm.tm_isdst = ??? */
+	/* our_tm.tm_yday = ... cba calculating this.
+	 *    we don't use it anyway */
 
 	return &our_tm;
 }
