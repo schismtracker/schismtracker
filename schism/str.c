@@ -199,6 +199,8 @@ char *str_from_num_thousands(int n, char buf[15])
 	while (1) {
 		ptr--;
 
+		if (ptr < buf) return buf;
+
 		*ptr = (n % 10) + '0';
 		n /= 10;
 
@@ -209,6 +211,7 @@ char *str_from_num_thousands(int n, char buf[15])
 
 		if ((place % 3) == 0) {
 			ptr--;
+			if (ptr < buf) return buf;
 			*ptr = ',';
 		}
 	}
