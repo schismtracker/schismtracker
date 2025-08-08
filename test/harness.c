@@ -66,10 +66,15 @@ static testresult_t run_test_child(const char *self, test_index_entry *entry)
 	static int inproc_warn = 0;
 
 #ifdef HAVE_OS_EXEC
-	int status;
+	int status, abnormal_exit;
 
-	if (os_exec(&status, NULL, self, entry->name, (char *)NULL))
-		return status;
+	if (os_exec(&status, &abnormal_exit, NULL, self, entry->name, (char *)NULL))
+	{
+		if (abnormal_exit)
+			return SCHISM_TESTRESULT_CRASH;
+		else
+			return status;
+	}
 #endif
 
 	if (!inproc_warn) {
