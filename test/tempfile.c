@@ -22,16 +22,23 @@
  */
 
 #include "headers.h"
+#include "util.h"
 
 #include "test-tempfile.h"
 
+#ifdef SCHISM_WIN32
+#define unlink _unlink
+#endif
+
 int test_temp_file(char **temp_file, const char *template, int template_length)
 {
-	*temp_file = strdup("test_tmp_XXXXXX");
+	*temp_file = malloc(16);
 
-	int fd = mkstemp(*temp_file);
+	strcpy(*temp_file, "test_tmp_XXXXXX");
 
-	if (fd < 0)
+	FILE *f = mkfstemp(*temp_file);
+
+	if (f == NULL)
 	{
 		free(*temp_file);
 		*temp_file = NULL;
@@ -48,7 +55,7 @@ int test_temp_file(char **temp_file, const char *template, int template_length)
 		remaining = template_length;
 
 		while (1) {
-			int num_written = write(fd, buf, remaining);
+			int num_written = fwrite(buf, 1, remaining, f);
 
 			if (num_written <= 0)
 				break;
@@ -57,7 +64,7 @@ int test_temp_file(char **temp_file, const char *template, int template_length)
 		}
 	}
 
-	close(fd);
+	fclose(f);
 
 	if (remaining == 0) {
 		FILE *log = fopen("test_tmp.lst", "ab");
