@@ -37,7 +37,7 @@ static int run_test(test_index_entry *entry)
 	timer_ticks_t start_time, end_time;
 	testresult_t result;
 	int i;
-	char buf[14];
+	char buf[15];
 
 	/* clear any existing output (this also initializes the
 	 * global memory stream) */
