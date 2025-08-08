@@ -1624,7 +1624,7 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 
 #define WIN32_EXEC_IMPL(SUFFIX, CHARSET, CHAR_TYPE, SPAWNVP, CHDIR, STRDUP, GETCWD) \
 	static inline SCHISM_ALWAYS_INLINE \
-	int win32_exec_##SUFFIX(int *status, const char *dir, const char *name, va_list ap) \
+	int win32_exec_##SUFFIX(int *status, int *abnormal_exit, const char *dir, const char *name, va_list ap) \
 	{ \
 		CHAR_TYPE *argv[256]; \
 		int i; \
@@ -1673,6 +1673,14 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 				goto cleanup; \
 	\
 			if (status) *status = st; \
+	\
+			/* on Windows, if a process dies because of an unhandled exception, the status code
+			 * will be STATUS_(exception type), e.g. STATUS_ACCESS_VIOLATION, which will be a
+			 * 32-bit number with the top two bits set. see documentation for the
+			 * EXCEPTION_RECORD structure for more info
+			 */ \
+			if (abnormal_exit) \
+				*abnormal_exit = ((st & 0xC0000000) == 0xC0000000); \
 	\
 			/* hope this works? */ \
 			if (dir) CHDIR(old_wdir); \
