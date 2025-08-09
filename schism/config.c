@@ -190,7 +190,7 @@ void cfg_load(void)
 # define WANT_FIXED_HEIGHT_DEFAULT (400 * 6)
 #endif
 
-	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format) - 1, "");
+	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format), "");
 	cfg_video_width = cfg_get_number(&cfg, "Video", "width", WIDTH_DEFAULT);
 	cfg_video_height = cfg_get_number(&cfg, "Video", "height", HEIGHT_DEFAULT);
 	cfg_video_fullscreen = !!cfg_get_number(&cfg, "Video", "fullscreen", 0);
@@ -203,22 +203,13 @@ void cfg_load(void)
 	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
 
 	tmp = dmoz_get_home_directory();
-	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules) - 1, tmp);
-	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, ARRAY_SIZE(cfg_dir_samples) - 1, tmp);
-	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, ARRAY_SIZE(cfg_dir_instruments) - 1, tmp);
+	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules), tmp);
+	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, ARRAY_SIZE(cfg_dir_samples), tmp);
+	cfg_get_string(&cfg, "Directories", "instruments", cfg_dir_instruments, ARRAY_SIZE(cfg_dir_instruments), tmp);
 	free(tmp);
 
-	ptr = cfg_get_string(&cfg, "Directories", "module_pattern", NULL, 0, NULL);
-	if (ptr) {
-		strncpy(cfg_module_pattern, ptr, ARRAY_SIZE(cfg_module_pattern) - 1);
-		cfg_module_pattern[ARRAY_SIZE(cfg_module_pattern) - 1] = 0;
-	}
-
-	ptr = cfg_get_string(&cfg, "Directories", "export_pattern", NULL, 0, NULL);
-	if (ptr) {
-		strncpy(cfg_export_pattern, ptr, ARRAY_SIZE(cfg_export_pattern) - 1);
-		cfg_export_pattern[ARRAY_SIZE(cfg_export_pattern) - 1] = 0;
-	}
+	cfg_get_string(&cfg, "Directories", "module_pattern", cfg_module_pattern, ARRAY_SIZE(cfg_module_pattern), NULL);
+	cfg_get_string(&cfg, "Directories", "export_pattern", cfg_export_pattern, ARRAY_SIZE(cfg_export_pattern), NULL);
 
 	ptr = cfg_get_string(&cfg, "General", "numlock_setting", NULL, 0, NULL);
 	if (!ptr)
@@ -341,7 +332,7 @@ void cfg_load(void)
 	else
 		status.flags &= ~MIDI_LIKE_TRACKER;
 
-	str_realloc(&cfg_font, cfg_get_string(&cfg, "General", "font", cfg_font, 0, "font.cfg"), 0);
+	str_realloc(&cfg_font, cfg_get_string(&cfg, "General", "font", NULL, 0, "font.cfg"), 0);
 
 	cfg_load_palette(&cfg);
 

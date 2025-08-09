@@ -1223,7 +1223,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	else
 		status.flags &= ~CRAYOLA_MODE;
 
-	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", s, MAX_CHANNELS, "a");
+	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", s, ARRAY_SIZE(s), "a");
 
 	/* "decode" the track view scheme */
 	for (n = 0; n < MAX_CHANNELS; n++) {
@@ -1246,7 +1246,7 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	if (n < MAX_CHANNELS)
 		memset(track_view_scheme + n, r, MAX_CHANNELS - n);
 
-	cfg_get_string(cfg, "Pattern Editor", "channel_multi", s, MAX_CHANNELS, "");
+	cfg_get_string(cfg, "Pattern Editor", "channel_multi", s, ARRAY_SIZE(s), "");
 	memset(channel_multi, 0, sizeof(channel_multi));
 	channel_multi_enabled = 0;
 	for (n = 0; n < MAX_CHANNELS; n++) {

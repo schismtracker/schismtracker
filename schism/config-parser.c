@@ -410,9 +410,9 @@ const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char
 			r = key->value;
 	}
 	if (value && r) {
-		//copy up to len chars [0..len-1]
-		strncpy(value, r, len);
-		value[len] = 0;
+		/* copy len-1 chars, and append a NUL terminator */
+		strncpy(value, r, len-1);
+		value[len-1] = 0;
 	}
 	return r;
 }

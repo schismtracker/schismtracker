@@ -90,10 +90,10 @@ static void _cfg_load_midi_port_locked(struct midi_port *q)
 		j = -1;
 		if (sscanf(c->name, "MIDI Port %d", &j) != 1) continue;
 		if (j < 1) continue;
-		sn = cfg_get_string(&cfg, c->name, "name", buf, 255, NULL);
+		sn = cfg_get_string(&cfg, c->name, "name", buf, ARRAY_SIZE(buf), NULL);
 		if (!sn) continue;
 		if (strcasecmp(ss, sn) != 0) continue;
-		sn = cfg_get_string(&cfg, c->name, "provider", buf, 255, NULL);
+		sn = cfg_get_string(&cfg, c->name, "provider", buf, ARRAY_SIZE(buf), NULL);
 		if (sn && sp && strcasecmp(sp, sn) != 0) continue;
 		/* okay found port */
 		if ((q->iocap & MIDI_INPUT) && cfg_get_number(&cfg, c->name, "input", 0)) {
@@ -125,18 +125,18 @@ void cfg_load_midi(cfg_file_t *cfg)
 
 	song_lock_audio();
 	md = &default_midi_config;
-	cfg_get_string(cfg,"MIDI","start", md->start, 31, "FF");
-	cfg_get_string(cfg,"MIDI","stop", md->stop, 31, "FC");
-	cfg_get_string(cfg,"MIDI","tick", md->tick, 31, "");
-	cfg_get_string(cfg,"MIDI","note_on", md->note_on, 31, "9c n v");
-	cfg_get_string(cfg,"MIDI","note_off", md->note_off, 31, "9c n 0");
-	cfg_get_string(cfg,"MIDI","set_volume", md->set_volume, 31, "");
-	cfg_get_string(cfg,"MIDI","set_panning", md->set_panning, 31, "");
-	cfg_get_string(cfg,"MIDI","set_bank", md->set_bank, 31, "");
-	cfg_get_string(cfg,"MIDI","set_program", md->set_program, 31, "Cc p");
+	cfg_get_string(cfg,"MIDI","start",       md->start,       ARRAY_SIZE(md->start),       "FF");
+	cfg_get_string(cfg,"MIDI","stop",        md->stop,        ARRAY_SIZE(md->stop),        "FC");
+	cfg_get_string(cfg,"MIDI","tick",        md->tick,        ARRAY_SIZE(md->tick),        "");
+	cfg_get_string(cfg,"MIDI","note_on",     md->note_on,     ARRAY_SIZE(md->note_on),     "9c n v");
+	cfg_get_string(cfg,"MIDI","note_off",    md->note_off,    ARRAY_SIZE(md->note_off),    "9c n 0");
+	cfg_get_string(cfg,"MIDI","set_volume",  md->set_volume,  ARRAY_SIZE(md->set_volume),  "");
+	cfg_get_string(cfg,"MIDI","set_panning", md->set_panning, ARRAY_SIZE(md->set_panning), "");
+	cfg_get_string(cfg,"MIDI","set_bank",    md->set_bank,    ARRAY_SIZE(md->set_bank),    "");
+	cfg_get_string(cfg,"MIDI","set_program", md->set_program, ARRAY_SIZE(md->set_program), "Cc p");
 	for (i = 0; i < 16; i++) {
 		snprintf(buf, 16, "SF%X", i);
-		cfg_get_string(cfg, "MIDI", buf, md->sfx[i], 31,
+		cfg_get_string(cfg, "MIDI", buf, md->sfx[i], ARRAY_SIZE(md->sfx[i]),
 				i == 0 ? "F0F000z" : "");
 	}
 
@@ -146,7 +146,7 @@ void cfg_load_midi(cfg_file_t *cfg)
 			snprintf(buf2, 32, "F0F001%02x", i * 8);
 		else
 			buf2[0] = '\0';
-		cfg_get_string(cfg, "MIDI", buf, md->zxx[i], 31, buf2);
+		cfg_get_string(cfg, "MIDI", buf, md->zxx[i], ARRAY_SIZE(md->zxx[i]), buf2);
 	}
 
 	mc = &current_song->midi_config;

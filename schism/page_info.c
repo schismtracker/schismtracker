@@ -959,7 +959,8 @@ void cfg_load_info(cfg_file_t *cfg)
 	char *left, *right;
 	size_t len;
 
-	if (!cfg_get_string(cfg, "Info Page", "layout", buf, 255, NULL)) {
+	/* XXX this is stupid, just save the pointer to the value and use it */
+	if (!cfg_get_string(cfg, "Info Page", "layout", buf, ARRAY_SIZE(buf), NULL)) {
 		cfg_load_info_old(cfg);
 		return;
 	}

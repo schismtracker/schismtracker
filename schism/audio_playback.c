@@ -1208,13 +1208,16 @@ void cfg_load_audio(cfg_file_t *cfg)
 	CFG_GET_A(master.left, 31);
 	CFG_GET_A(master.right, 31);
 
-	cfg_get_string(cfg, "Audio", "driver", cfg_audio_driver, 255, NULL);
-	if (!cfg_get_string(cfg, "Audio", "device", cfg_audio_device, 255, NULL)) {
+	cfg_get_string(cfg, "Audio", "driver", cfg_audio_driver, ARRAY_SIZE(cfg_audio_driver), NULL);
+	if (!cfg_get_string(cfg, "Audio", "device", cfg_audio_device, ARRAY_SIZE(cfg_audio_device), NULL)) {
+		/* if we have a driver name, but no device name, parse */
 		char *driver, *device;
+
 		audio_parse_driver_spec(cfg_audio_driver, &driver, &device);
 		if (device) {
-			strncpy(cfg_audio_driver, driver, 255);
-			strncpy(cfg_audio_device, device, 255);
+			/* TODO we should borrow strlcpy from BSD */
+			strncpy(cfg_audio_driver, driver, ARRAY_SIZE(cfg_audio_driver) - 1);
+			strncpy(cfg_audio_device, device, ARRAY_SIZE(cfg_audio_device) - 1);
 			free(device);
 		}
 		free(driver);
