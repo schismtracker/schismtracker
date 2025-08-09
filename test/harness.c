@@ -130,7 +130,7 @@ int schism_test_main(int argc, char **argv)
 		diff_time = end_time - start_time;
 
 		printf("Results: %d passed, %d failed\n", passed_tests, failed_tests);
-		printf("Elapsed: %s.%03" PRIu32 " seconds\n", str_from_num_thousands(diff_time / 1000, buf), diff_time % 1000);
+		printf("Elapsed: %s.%03" PRIu32 " seconds\n", str_from_num_thousands(diff_time / 1000, buf), (uint32_t)(diff_time % 1000));
 
 		exit_code = (failed_tests == 0) ? 0 : 1;
 	}
