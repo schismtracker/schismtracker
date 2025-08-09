@@ -28,7 +28,7 @@
 #if defined(HAVE_EXECL) && defined(HAVE_FORK) && (defined(HAVE_WAITID) || defined(HAVE_WAITPID)) && !defined(SCHISM_WIN32)
 #include <sys/wait.h>
 
-int posix_exec(int *status, const char *dir, const char *name, ...)
+int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *name, ...)
 {
 	pid_t pid;
 	char *argv[256]; /* more than enough */
@@ -76,9 +76,12 @@ int posix_exec(int *status, const char *dir, const char *name, ...)
 		/* newer API; POSIX.1-2001 */
 		while (waitid(P_PID, pid, &info, WEXITED) == -1);
 
-		if (info.si_code == CLD_EXITED) {
+		/* if the child terminated abnormally, well, the exec call is still technically a success */
+		if ((info.si_code == CLD_EXITED) || (info.si_code == CLD_KILLED) || (info.si_code == CLD_DUMPED)) {
 			if (status)
 				*status = info.si_status;
+			if (abnormal_exit)
+				*abnormal_exit = (info.si_code != CLD_EXITED);
 			r = 1;
 		}
 	}
@@ -114,7 +117,7 @@ int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 	if (asprintf(&bat_name, "./%s", name) < 0)
 		return 0;
 
-	if (!os_exec(&st, dir, bat_name, maybe_arg, (char *)NULL)) {
+	if (!os_exec(&st, NULL, dir, bat_name, maybe_arg, (char *)NULL)) {
 		free(bat_name);
 		return 0; /* what? */
 	}

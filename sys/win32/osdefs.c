@@ -1624,7 +1624,7 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 
 #define WIN32_EXEC_IMPL(SUFFIX, CHARSET, CHAR_TYPE, SPAWNVP, CHDIR, STRDUP, GETCWD) \
 	static inline SCHISM_ALWAYS_INLINE \
-	int win32_exec_##SUFFIX(int *status, const char *dir, const char *name, va_list ap) \
+	int win32_exec_##SUFFIX(int *status, int *abnormal_exit, const char *dir, const char *name, va_list ap) \
 	{ \
 		CHAR_TYPE *argv[256]; \
 		int i; \
@@ -1674,6 +1674,14 @@ DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
 	\
 			if (status) *status = st; \
 	\
+			/* on Windows, if a process dies because of an unhandled exception, the status code
+			 * will be STATUS_(exception type), e.g. STATUS_ACCESS_VIOLATION, which will be a
+			 * 32-bit number with the top two bits set. see documentation for the
+			 * EXCEPTION_RECORD structure for more info
+			 */ \
+			if (abnormal_exit) \
+				*abnormal_exit = ((st & 0xC0000000) == 0xC0000000); \
+	\
 			/* hope this works? */ \
 			if (dir) CHDIR(old_wdir); \
 		} \
@@ -1690,7 +1698,7 @@ cleanup: \
 WIN32_EXEC_IMPL(A, CHARSET_ANSI, CHAR, _spawnvp, _chdir, _strdup, _getcwd);
 WIN32_EXEC_IMPL(W, CHARSET_WCHAR_T, WCHAR, _wspawnvp, _wchdir, _wcsdup, _wgetcwd);
 
-int win32_exec(int *status, const char *dir, const char *name, ...)
+int win32_exec(int *status, int *abnormal_exit, const char *dir, const char *name, ...)
 {
 	int r;
 	va_list ap;
@@ -1698,9 +1706,9 @@ int win32_exec(int *status, const char *dir, const char *name, ...)
 	va_start(ap, name);
 
 	SCHISM_ANSI_UNICODE({
-		r = win32_exec_A(status, dir, name, ap);
+		r = win32_exec_A(status, abnormal_exit, dir, name, ap);
 	}, {
-		r = win32_exec_W(status, dir, name, ap);
+		r = win32_exec_W(status, abnormal_exit, dir, name, ap);
 	})
 
 	va_end(ap);
@@ -1766,7 +1774,7 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 		return 0;
 	}
 
-	if (!win32_exec(&st, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL))
+	if (!win32_exec(&st, NULL, dir, cmd, "/c", bat_name, maybe_arg, (char *)NULL))
 		st = !0; /* because the status ... is NOT quo */
 
 	free(bat_name);
