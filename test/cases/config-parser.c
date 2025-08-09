@@ -46,6 +46,8 @@ testresult_t test_config_file_defined_values(void)
 	ASSERT(count == 7);
 	ASSERT(weight == 64);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -64,6 +66,8 @@ testresult_t test_config_file_undefined_values_in_defined_section(void)
 	ASSERT(strcmp(sauce, "soy") == 0);
 	ASSERT(feathers == 94995);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -81,6 +85,8 @@ testresult_t test_config_file_undefined_section(void)
 	// Assert
 	ASSERT(strcmp(weather, "elf") == 0);
 	ASSERT(dismal == 758);
+
+	cfg_free(&cfg);
 
 	RETURN_PASS;
 }
@@ -107,6 +113,8 @@ testresult_t test_config_file_obviously_broken_values(void)
 	ASSERT(num_null_key == 1);
 	ASSERT(str_null_default_value == NULL);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -129,6 +137,8 @@ testresult_t test_config_file_null_default_with_value_set(void)
 	// Assert
 	ASSERT(strcmp(buf, semaphore) == 0);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -150,6 +160,8 @@ testresult_t test_config_file_null_default_with_value_set_defined_key(void)
 
 	// Assert
 	ASSERT(strcmp(buf, semaphore) != 0);
+
+	cfg_free(&cfg);
 
 	RETURN_PASS;
 }
@@ -175,6 +187,8 @@ testresult_t test_config_file_string_boundary_defined_key(void)
 	// Assert
 	ASSERT(strlen(buf) == 26);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -197,6 +211,8 @@ testresult_t test_config_file_string_boundary_default_value(void)
 	// Assert
 	ASSERT(strlen(buf) == 10);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -218,6 +234,8 @@ testresult_t test_config_file_string_boundary_zero(void)
 
 	// Assert
 	ASSERT(strlen(buf) == 0);
+
+	cfg_free(&cfg);
 
 	RETURN_PASS;
 }
@@ -369,6 +387,8 @@ testresult_t test_config_file_set_string_in_new_section(void)
 	ASSERT(grep_config(&cfg, NULL, "is", "tasty") == 2);
 	ASSERT(grep_config(&cfg, NULL, NULL, "tasty") == 1);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -391,6 +411,8 @@ testresult_t test_config_file_set_new_string_in_existing_section(void)
 	ASSERT(grep_config(&cfg, NULL, "are", "tasty") == 2);
 	ASSERT(grep_config(&cfg, NULL, NULL, "tasty") == 1);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -411,6 +433,8 @@ testresult_t test_config_file_set_number_in_new_section(void)
 	ASSERT(grep_config(&cfg, NULL, "hats", NULL) == 1);
 	ASSERT(grep_config(&cfg, NULL, "hats", "3") == 2);
 	ASSERT(grep_config(&cfg, NULL, NULL, "3") == 1);
+
+	cfg_free(&cfg);
 
 	RETURN_PASS;
 }
@@ -433,6 +457,8 @@ testresult_t test_config_file_set_new_number_in_existing_section(void)
 	ASSERT(grep_config(&cfg, NULL, "boots", NULL) == 1);
 	ASSERT(grep_config(&cfg, NULL, "boots", "4") == 2);
 	ASSERT(grep_config(&cfg, NULL, NULL, "4") == 1);
+
+	cfg_free(&cfg);
 
 	RETURN_PASS;
 }
@@ -457,6 +483,8 @@ testresult_t test_config_file_set_string_in_null_section(void)
 	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
 	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -479,6 +507,8 @@ testresult_t test_config_file_set_number_in_null_section(void)
 	ASSERT(grep_config(&cfg, NULL, "colour", "brown") == 2);
 	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
 	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
+
+	cfg_free(&cfg);
 
 	RETURN_PASS;
 }
@@ -503,6 +533,8 @@ testresult_t test_config_file_set_string_with_null_key(void)
 	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
 	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -525,6 +557,8 @@ testresult_t test_config_file_set_number_with_null_key(void)
 	ASSERT(grep_config(&cfg, NULL, "colour", "brown") == 2);
 	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
 	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
+
+	cfg_free(&cfg);
 
 	RETURN_PASS;
 }
@@ -557,6 +591,8 @@ testresult_t test_config_file_set_string_with_null_value(void)
 	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
 	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
 
+	cfg_free(&cfg);
+
 	RETURN_PASS;
 }
 
@@ -574,6 +610,8 @@ testresult_t test_config_file_get_string_with_null_value(void)
 
 	// Assert
 	ASSERT(strcmp(result, "it does") == 0);
+
+	cfg_free(&cfg);
 
 	RETURN_PASS;
 }
