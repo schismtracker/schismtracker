@@ -26,6 +26,7 @@
 #include "mem.h"
 #include "str.h"
 #include "util.h"
+#include "bits.h"
 
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
@@ -175,74 +176,43 @@ char *str_from_num_signed(int digits, int32_t n, char buf[12])
 	return buf;
 }
 
-/* speedy version of floor(log10(n)) */
-static inline SCHISM_ALWAYS_INLINE
-int num_get_digits_32(uint32_t n) {
-    if (n < UINT32_C(10))         return 1;
-    if (n < UINT32_C(100))        return 2;
-    if (n < UINT32_C(1000))       return 3;
-    if (n < UINT32_C(10000))      return 4;
-    if (n < UINT32_C(100000))     return 5;
-    if (n < UINT32_C(1000000))    return 6;
-    if (n < UINT32_C(10000000))   return 7;
-    if (n < UINT32_C(100000000))  return 8;
-    if (n < UINT32_C(1000000000)) return 9;
-
-	/* our little comedian */
-    return 10;
-}
-
+/* hm, this ought to take in a delimiter */
 char *str_from_num_thousands(int32_t n, char buf[15])
 {
 	char *ptr;
-	int place = 0;
-	int negative = 0;
+	int place;
+	int negative;
+	int places;
+	uint32_t un;
 
-	// Special case
-	if (n == INT32_MIN) {
-		strcpy(buf, "-2,147,483,648");
-		return buf;
-	}
+	negative = (n < 0);
+	un = babs32(n);
+	places = bplacesu32(un);
 
-	// All other negative numbers have corresponding positive numbers
-	if (n < 0) {
-		n = -n;
-		negative = 1;
-	}
+	/* place max: 10
+	 * ((place / 3) - 1) max: 3
+	 * negative max: 1
+	 *
+	 * total max: 14. */
 
-	ptr = buf + 14;
+	/* work backwards */
+	ptr = buf + places + negative + ((places - 1) / 3);
 	*ptr = '\0';
 
-	while (1) {
-		ptr--;
+	for (place = 0; /* nothing */; /* nothing */) {
+		*--ptr = (un % 10) + '0';
+		un /= 10;
 
-		if (ptr < buf) return buf;
-
-		*ptr = (n % 10) + '0';
-		n /= 10;
-
-		if (n == 0)
-			break;
+		if (!un) break;
 
 		place++;
 
-		if ((place % 3) == 0) {
-			ptr--;
-			if (ptr < buf) return buf;
-			*ptr = ',';
-		}
+		if (!(place % 3))
+			*--ptr = ',';
 	}
 
-	if (negative) {
-		ptr--;
-		*ptr = '-';
-	}
-
-	if (ptr > buf) {
-		int chars = (buf + 14) - ptr;
-
-		memmove(buf, ptr, chars + 1); /* incl. '\0' */
-	}
+	if (negative)
+		*--ptr = '-';
 
 	return buf;
 }
