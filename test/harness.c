@@ -94,13 +94,13 @@ int schism_test_main(int argc, char **argv)
 	SCHISM_RUNTIME_ASSERT(timer_init(), "need timers");
 
 	if (argc <= 1) {
-		timer_ticks_t start_time, end_time;
+		timer_ticks_t start_time, end_time, diff_time;
 
 		int passed_tests = 0;
 		int failed_tests = 0;
 		int i, j;
 
-		char buf[14];
+		char buf[15];
 
 		start_time = timer_ticks();
 
@@ -127,8 +127,10 @@ int schism_test_main(int argc, char **argv)
 
 		end_time = timer_ticks();
 
+		diff_time = end_time - start_time;
+
 		printf("Results: %d passed, %d failed\n", passed_tests, failed_tests);
-		printf("Elapsed: %s ms\n", str_from_num_thousands(end_time - start_time, buf));
+		printf("Elapsed: %s.%03" PRIu32 " seconds\n", str_from_num_thousands(diff_time / 1000, buf), diff_time % 1000);
 
 		exit_code = (failed_tests == 0) ? 0 : 1;
 	}
