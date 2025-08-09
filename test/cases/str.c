@@ -26,408 +26,161 @@
 
 #include "str.h"
 
-testresult_t test_str_from_num_thousands_0(void)
+static testresult_t test_str_from_num_thousands(int32_t n, const char *expect)
 {
 	// Arrange
 	char buf[15];
 
 	// Act
-	char *result = str_from_num_thousands(0, buf);
+	char *result = str_from_num_thousands(n, buf);
 
 	// Assert
 	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "0") == 0);
+	ASSERT(strcmp(result, expect) == 0);
 	RETURN_PASS;
+}
+
+testresult_t test_str_from_num_thousands_0(void)
+{
+	return test_str_from_num_thousands(0, "0");
 }
 
 testresult_t test_str_from_num_thousands_999(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(999, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "999") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(999, "999");
 }
 
 testresult_t test_str_from_num_thousands_1_000(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(1000, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "1,000") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(1000, "1,000");
 }
 
 testresult_t test_str_from_num_thousands_999_999(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(999999, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "999,999") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(999999, "999,999");
 }
 
 testresult_t test_str_from_num_thousands_1_000_000(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(1000000, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "1,000,000") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(1000000, "1,000,000");
 }
 
 testresult_t test_str_from_num_thousands_999_999_999(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(999999999, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "999,999,999") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(999999999, "999,999,999");
 }
 
 testresult_t test_str_from_num_thousands_1_000_000_000(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(1000000000, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "1,000,000,000") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(1000000000, "1,000,000,000");
 }
 
 testresult_t test_str_from_num_thousands_int32_min(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(INT32_MIN, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-2,147,483,648") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(INT32_MIN, "-2,147,483,648");
 }
 
 testresult_t test_str_from_num_thousands_int32_max(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(INT32_MAX, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "2,147,483,647") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(INT32_MAX, "2,147,483,647");
 }
 
 testresult_t test_str_from_num_thousands_digits_1_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(7, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "7") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(7, "7");
 }
 
 testresult_t test_str_from_num_thousands_digits_2_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(32, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "32") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(32, "32");
 }
 
 testresult_t test_str_from_num_thousands_digits_3_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(891, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "891") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(891, "891");
 }
 
 testresult_t test_str_from_num_thousands_digits_4_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(5834, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "5,834") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(5834, "5,834");
 }
 
 testresult_t test_str_from_num_thousands_digits_5_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(45891, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "45,891") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(45891, "45,891");
 }
 
 testresult_t test_str_from_num_thousands_digits_6_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(591848, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "591,848") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(591848, "591,848");
 }
 
 testresult_t test_str_from_num_thousands_digits_7_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(5691834, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "5,691,834") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(5691834, "5,691,834");
 }
 
 testresult_t test_str_from_num_thousands_digits_8_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(68917829, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "68,917,829") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(68917829, "68,917,829");
 }
 
 testresult_t test_str_from_num_thousands_digits_9_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(591848968, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "591,848,968") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(591848968, "591,848,968");
 }
 
 testresult_t test_str_from_num_thousands_digits_10_positive(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(2082850450, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "2,082,850,450") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(2082850450, "2,082,850,450");
 }
 
 testresult_t test_str_from_num_thousands_digits_1_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-7, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-7") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-7, "-7");
 }
 
 testresult_t test_str_from_num_thousands_digits_2_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-32, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-32") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-32, "-32");
 }
 
 testresult_t test_str_from_num_thousands_digits_3_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-891, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-891") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-891, "-891");
 }
 
 testresult_t test_str_from_num_thousands_digits_4_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-5834, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-5,834") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-5834, "-5,834");
 }
 
 testresult_t test_str_from_num_thousands_digits_5_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-45891, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-45,891") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-45891, "-45,891");
 }
 
 testresult_t test_str_from_num_thousands_digits_6_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-591848, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-591,848") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-591848, "-591,848");
 }
 
 testresult_t test_str_from_num_thousands_digits_7_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-5691834, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-5,691,834") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-5691834, "-5,691,834");
 }
 
 testresult_t test_str_from_num_thousands_digits_8_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-68917829, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-68,917,829") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-68917829, "-68,917,829");
 }
 
 testresult_t test_str_from_num_thousands_digits_9_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-591848968, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-591,848,968") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-591848968, "-591,848,968");
 }
 
 testresult_t test_str_from_num_thousands_digits_10_negative(void)
 {
-	// Arrange
-	char buf[15];
-
-	// Act
-	char *result = str_from_num_thousands(-2082850450, buf);
-
-	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, "-2,082,850,450") == 0);
-	RETURN_PASS;
+	return test_str_from_num_thousands(-2082850450, "-2,082,850,450");
 }
