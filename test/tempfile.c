@@ -30,20 +30,14 @@
 #define unlink _unlink
 #endif
 
-int test_temp_file(char **temp_file, const char *template, int template_length)
+int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *template, int template_length)
 {
-	*temp_file = malloc(16);
+	strcpy(temp_file, TEST_TEMP_FILE_NAME_TEMPLATE);
 
-	strcpy(*temp_file, "test_tmp_XXXXXX");
-
-	FILE *f = mkfstemp(*temp_file);
+	FILE *f = mkfstemp(temp_file);
 
 	if (f == NULL)
-	{
-		free(*temp_file);
-		*temp_file = NULL;
 		return 0;
-	}
 
 	int remaining = 0;
 
@@ -70,14 +64,13 @@ int test_temp_file(char **temp_file, const char *template, int template_length)
 		FILE *log = fopen("test_tmp.lst", "ab");
 
 		if (log) {
-			fputs(*temp_file, log);
+			fputs(temp_file, log);
 			fclose(log);
 		}
 
 		return 1;
 	} else {
-		unlink(*temp_file);
-		free(*temp_file);
+		unlink(temp_file);
 		return 0;
 	}
 }

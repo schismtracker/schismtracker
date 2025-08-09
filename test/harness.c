@@ -69,12 +69,7 @@ static testresult_t run_test_child(const char *self, test_index_entry *entry)
 	int status, abnormal_exit;
 
 	if (os_exec(&status, &abnormal_exit, NULL, self, entry->name, (char *)NULL))
-	{
-		if (abnormal_exit)
-			return SCHISM_TESTRESULT_CRASH;
-		else
-			return status;
-	}
+		return abnormal_exit ? SCHISM_TESTRESULT_CRASH : status;
 #endif
 
 	if (!inproc_warn) {

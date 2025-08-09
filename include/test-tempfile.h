@@ -24,7 +24,11 @@
 #ifndef SCHISM_TEST_TEMPFILE_H_
 #define SCHISM_TEST_TEMPFILE_H_
 
-int test_temp_file(char **temp_file, const char *template, int template_length);
+/* must end with the literal string "XXXXXX" (mkfstemp) */
+#define TEST_TEMP_FILE_NAME_TEMPLATE "test_tmp_XXXXXX"
+#define TEST_TEMP_FILE_NAME_LENGTH (sizeof(TEST_TEMP_FILE_NAME_TEMPLATE))
+
+int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *template, int template_length);
 void test_temp_files_cleanup(void);
 
 #endif /* SCHISM_TEST_TEMPFILE_H_ */
