@@ -61,7 +61,7 @@ int midi_c5note = 60;
 #define CFG_GET_MI(v,d) midi_ ## v = cfg_get_number(cfg, "MIDI", #v, d)
 
 
-static void _cfg_load_midi_part_locked(struct midi_port *q)
+static void _cfg_load_midi_port_locked(struct midi_port *q)
 {
 	struct cfg_section *c;
 	/*struct midi_provider *p;*/
@@ -592,7 +592,7 @@ uint32_t midi_port_register(struct midi_provider *pv, uint8_t inout, const char 
 	p->num = i;
 
 	/* finally, and just before unlocking, load any configuration for it... */
-	_cfg_load_midi_part_locked(p);
+	_cfg_load_midi_port_locked(p);
 
 	mt_mutex_unlock(midi_port_mutex);
 
