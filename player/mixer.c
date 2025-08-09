@@ -27,7 +27,7 @@
 #include "player/snd_fm.h"
 #include "player/snd_gm.h"
 #include "player/cmixer.h"
-#include "bshift.h"
+#include "bits.h"
 #include "util.h"   // for CLAMP
 
 // For pingpong loops that work like most of Impulse Tracker's drivers
@@ -101,18 +101,6 @@
 // ----------------------------------------------------------------------------
 // MIXING MACROS
 // ----------------------------------------------------------------------------
-
-// Safe absolute value of a 32-bit signed integer.
-static inline SCHISM_ALWAYS_INLINE uint32_t safe_abs_32(int32_t x)
-{
-	return (x < 0) ? (uint32_t)(~x + 1) : (uint32_t)x;
-}
-
-// Fast average of two unsigned 32-bit integers.
-static inline SCHISM_ALWAYS_INLINE uint32_t avg_u32(uint32_t a, uint32_t b)
-{
-	return (a >> 1) + (b >> 1) + (a & b & 1);
-}
 
 #define SNDMIX_BEGINSAMPLELOOP(bits) \
 	register song_voice_t * const chan = channel; \

@@ -27,7 +27,7 @@
 #include "headers.h"
 
 #include "fmt.h"
-#include "bswap.h"
+#include "bits.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* chunk helpers */

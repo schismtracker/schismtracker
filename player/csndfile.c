@@ -23,8 +23,8 @@
 
 #include "headers.h"
 
-#include "bswap.h"
-#include "bshift.h"
+#include "bits.h"
+#include "bits.h"
 #include "player/sndfile.h"
 #include "player/snd_fm.h"
 #include "player/snd_gm.h"

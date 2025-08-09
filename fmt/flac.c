@@ -22,8 +22,8 @@
  */
 
 #include "headers.h"
-#include "bshift.h"
-#include "bswap.h"
+#include "bits.h"
+#include "bits.h"
 #include "fmt.h"
 #include "it.h"
 #include "disko.h"

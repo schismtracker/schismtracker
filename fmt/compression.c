@@ -23,7 +23,7 @@
 
 #include "headers.h"
 #include "fmt.h"
-#include "bswap.h"
+#include "bits.h"
 
 // ------------------------------------------------------------------------------------------------------------
 // IT decompression code from itsex.c (Cubic Player) and load_it.cpp (Modplug)

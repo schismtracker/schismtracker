@@ -22,7 +22,7 @@
  */
 
 #include "headers.h"
-#include "bswap.h"
+#include "bits.h"
 #include "fmt.h"
 
 // 'chunk' is filled in with the chunk header

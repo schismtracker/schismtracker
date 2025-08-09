@@ -24,7 +24,7 @@
 #include "headers.h"
 
 #include "it.h"
-#include "bshift.h"
+#include "bits.h"
 #include "util.h"
 #include "song.h"
 #include "sample-edit.h"

@@ -30,7 +30,7 @@
 char *str_from_num(int digits, uint32_t n, char buf[11]);
 char *str_from_num_signed(int digits, int32_t n, char buf[12]);
 char *str_from_num99(int32_t n, char buf[3]);
-char *str_from_num_thousands(int digits, char buf[15]);
+char *str_from_num_thousands(int32_t n, char buf[15]);
 
 /* date/time formatting */
 typedef enum {

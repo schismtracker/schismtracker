@@ -175,7 +175,24 @@ char *str_from_num_signed(int digits, int32_t n, char buf[12])
 	return buf;
 }
 
-char *str_from_num_thousands(int n, char buf[15])
+/* speedy version of floor(log10(n)) */
+static inline SCHISM_ALWAYS_INLINE
+int num_get_digits_32(uint32_t n) {
+    if (n < UINT32_C(10))         return 1;
+    if (n < UINT32_C(100))        return 2;
+    if (n < UINT32_C(1000))       return 3;
+    if (n < UINT32_C(10000))      return 4;
+    if (n < UINT32_C(100000))     return 5;
+    if (n < UINT32_C(1000000))    return 6;
+    if (n < UINT32_C(10000000))   return 7;
+    if (n < UINT32_C(100000000))  return 8;
+    if (n < UINT32_C(1000000000)) return 9;
+
+	/* our little comedian */
+    return 10;
+}
+
+char *str_from_num_thousands(int32_t n, char buf[15])
 {
 	char *ptr;
 	int place = 0;

@@ -24,7 +24,7 @@
 #include "headers.h"
 #include "fmt.h"
 #include "str.h"
-#include "bswap.h"
+#include "bits.h"
 #include "log.h"
 
 #include <math.h>

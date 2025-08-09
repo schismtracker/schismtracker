@@ -24,7 +24,7 @@
 #include "test.h"
 #include "test-assertions.h"
 
-#include "bshift.h"
+#include "bits.h"
 
 testresult_t test_bshift_arithmetic(void)
 {

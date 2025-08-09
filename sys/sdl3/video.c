@@ -29,7 +29,7 @@
 
 #include "it.h"
 #include "charset.h"
-#include "bswap.h"
+#include "bits.h"
 #include "config.h"
 #include "video.h"
 #include "osdefs.h"

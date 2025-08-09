@@ -8,7 +8,7 @@
 #define SCHISM_PLAYER_SNDFILE_H_
 
 #include "headers.h"
-#include "bshift.h"
+#include "bits.h"
 
 #include "disko.h"
 #include "slurp.h"

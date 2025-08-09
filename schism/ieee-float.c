@@ -24,7 +24,7 @@
 /* Routines to portably operate on IEEE floating point numbers. */
 
 #include "headers.h"
-#include "bswap.h"
+#include "bits.h"
 #include "ieee-float.h"
 
 /* These are used for hardware encoding/decoding of floating point numbers.

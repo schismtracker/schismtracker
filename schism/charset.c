@@ -23,7 +23,7 @@
 
 #include "headers.h"
 
-#include "bswap.h"
+#include "bits.h"
 #include "charset.h"
 #include "util.h"
 #include "disko.h"

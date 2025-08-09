@@ -2032,13 +2032,6 @@ void ym3812_set_update_handler(void *chip,OPL_UPDATEHANDLER UpdateHandler,void *
 	OPLSetUpdateHandler(YM3812, UpdateHandler, param);
 }
 
-/* Safe absolute value of a 32-bit signed integer.
- * (this is copied elsewhere; it needs to be in a header) */
-static inline SCHISM_ALWAYS_INLINE uint32_t safe_abs_32(int32_t x)
-{
-	return (x < 0) ? (uint32_t)(~x + 1) : (uint32_t)x;
-}
-
 /* like update_one, but does it for each channel independently
  * XXX: vu_max should be [static 9] but I don't know how many compilers support it */
 void ym3812_update_multi(void *chip, int32_t *buffers[9], int length, uint32_t vu_max[9])

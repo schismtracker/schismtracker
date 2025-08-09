@@ -25,7 +25,7 @@
 
 #include "fmt.h"
 #include "mem.h"
-#include "bswap.h"
+#include "bits.h"
 #include "osdefs.h"
 
 #include <AudioToolbox/AudioToolbox.h>

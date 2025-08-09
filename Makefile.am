@@ -105,8 +105,7 @@ noinst_HEADERS = \
 	include/auto/logoschism.h	\
 	include/auto/schismico_hires.h	\
 	include/test.h     \
-	include/bswap.h			\
-	include/bshift.h        \
+	include/bits.h     \
 	include/charset.h		\
 	include/clippy.h		\
 	include/config-parser.h		\
@@ -569,8 +568,6 @@ schismtracker_SOURCES = \
 	player/tables.c			\
 	schism/audio_loadsave.c		\
 	schism/audio_playback.c		\
-	schism/bshift.c         \
-	schism/bswap.c          \
 	schism/charset.c		\
 	schism/charset_stdlib.c \
 	schism/charset_unicode.c   \

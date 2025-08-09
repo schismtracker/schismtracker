@@ -23,7 +23,7 @@
 
 #include "headers.h"
 
-#include "bshift.h"
+#include "bits.h"
 #include "util.h"
 
 #include "player/sndfile.h"
