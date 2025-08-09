@@ -54,6 +54,7 @@ extern char cfg_export_pattern[SCHISM_PATH_MAX + 1];
 void cfg_init_dir(void);
 void cfg_load(void);
 void cfg_save(void);
+void cfg_preferences_save(void);
 void cfg_midipage_save(void);
 void cfg_atexit_save(void); /* this only saves a handful of settings, not everything */
 void cfg_save_output(void);

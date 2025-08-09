@@ -410,16 +410,9 @@ void cfg_save_output(void)
 	cfg_free(&cfg);
 }
 
-void cfg_atexit_save(void)
+static void cfg_save_world(cfg_file_t *cfg)
 {
-	char *ptr;
-	cfg_file_t cfg;
-
-	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
-	cfg_init(&cfg, ptr);
-	free(ptr);
-
-	cfg_atexit_save_audio(&cfg);
+	cfg_atexit_save_audio(cfg);
 
 	/* TODO: move these config options to video.c, this is lame :)
 	Or put everything here, which is what the note in audio_loadsave.cc
@@ -431,26 +424,26 @@ void cfg_atexit_save(void)
 			[VIDEO_INTERPOLATION_BEST] = "best",
 		};
 
-		cfg_set_string(&cfg, "Video", "interpolation", names[cfg_video_interpolation]);
+		cfg_set_string(cfg, "Video", "interpolation", names[cfg_video_interpolation]);
 	}
-	
-	cfg_set_number(&cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
-	cfg_set_number(&cfg, "Video", "mouse_cursor", video_mousecursor_visible());
-	cfg_set_number(&cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
-	cfg_set_number(&cfg, "Video", "hardware", !!(video_is_hardware()));
-	cfg_set_number(&cfg, "Video", "want_menu_bar", !!cfg_video_want_menu_bar);
 
-	cfg_set_number(&cfg, "General", "vis_style", status.vis_style);
-	cfg_set_number(&cfg, "General", "time_display", status.time_display);
-	cfg_set_number(&cfg, "General", "classic_mode", !!(status.flags & CLASSIC_MODE));
-	cfg_set_number(&cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
-	cfg_set_number(&cfg, "General", "numbered_backups", !!(status.flags & NUMBERED_BACKUPS));
+	cfg_set_number(cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
+	cfg_set_number(cfg, "Video", "mouse_cursor", video_mousecursor_visible());
+	cfg_set_number(cfg, "Video", "lazy_redraw", !!(status.flags & LAZY_REDRAW));
+	cfg_set_number(cfg, "Video", "hardware", !!(video_is_hardware()));
+	cfg_set_number(cfg, "Video", "want_menu_bar", !!cfg_video_want_menu_bar);
 
-	cfg_set_number(&cfg, "General", "accidentals_as_flats", (kbd_sharp_flat_state() == KBD_SHARP_FLAT_FLATS));
-	cfg_set_number(&cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
-	cfg_set_number(&cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
+	cfg_set_number(cfg, "General", "vis_style", status.vis_style);
+	cfg_set_number(cfg, "General", "time_display", status.time_display);
+	cfg_set_number(cfg, "General", "classic_mode", !!(status.flags & CLASSIC_MODE));
+	cfg_set_number(cfg, "General", "make_backups", !!(status.flags & MAKE_BACKUPS));
+	cfg_set_number(cfg, "General", "numbered_backups", !!(status.flags & NUMBERED_BACKUPS));
 
-	cfg_set_number(&cfg, "General", "midi_like_tracker", !!(status.flags & MIDI_LIKE_TRACKER));
+	cfg_set_number(cfg, "General", "accidentals_as_flats", (kbd_sharp_flat_state() == KBD_SHARP_FLAT_FLATS));
+	cfg_set_number(cfg, "General", "meta_is_ctrl", !!(status.flags & META_IS_CTRL));
+	cfg_set_number(cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
+
+	cfg_set_number(cfg, "General", "midi_like_tracker", !!(status.flags & MIDI_LIKE_TRACKER));
 	/* Say, whose bright idea was it to make this a string setting?
 	The config file is human editable but that's mostly for developer convenience and debugging
 	purposes. These sorts of things really really need to be options in the GUI so that people
@@ -459,18 +452,47 @@ void cfg_atexit_save(void)
 	be necessary in most cases. */
 	switch (status.fix_numlock_setting) {
 	case NUMLOCK_ALWAYS_ON:
-		cfg_set_string(&cfg, "General", "numlock_setting", "on");
+		cfg_set_string(cfg, "General", "numlock_setting", "on");
 		break;
 	case NUMLOCK_ALWAYS_OFF:
-		cfg_set_string(&cfg, "General", "numlock_setting", "off");
+		cfg_set_string(cfg, "General", "numlock_setting", "off");
 		break;
 	case NUMLOCK_HONOR:
-		cfg_set_string(&cfg, "General", "numlock_setting", "system");
+		cfg_set_string(cfg, "General", "numlock_setting", "system");
 		break;
 	case NUMLOCK_GUESS:
 		/* leave empty */
 		break;
 	};
+}
+
+void cfg_preferences_save(void)
+{
+	char *ptr;
+	cfg_file_t cfg;
+
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+	free(ptr);
+
+	cfg_save_midi(&cfg); /* what is this doing here? */
+	cfg_save_world(&cfg);
+	cfg_save_audio_playback(&cfg);
+
+	cfg_write(&cfg);
+	cfg_free(&cfg);
+}
+
+void cfg_atexit_save(void)
+{
+	char *ptr;
+	cfg_file_t cfg;
+
+	ptr = dmoz_path_concat(cfg_dir_dotschism, "config");
+	cfg_init(&cfg, ptr);
+	free(ptr);
+
+	cfg_save_world(&cfg);
 
 	/* hm... most of the time probably nothing's different, so saving the
 	config file here just serves to make the backup useless. maybe add a
