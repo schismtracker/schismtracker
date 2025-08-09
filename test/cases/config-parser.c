@@ -6,31 +6,35 @@
 
 #include "config-parser.h"
 
-#define CONFIG_FILE \
-"[ducks]\n" \
-"colour = brown\n" \
-"count = 7\n" \
-"weight = 64 lb.\n"
+static const char * const test_config_file_content =
+	"[ducks]\n"
+	"colour = brown\n"
+	"count = 7\n"
+	"weight = 64 lb.\n";
+
+#define ARRANGE_TEST_CONFIG_FILE(CFG) \
+	do \
+	{ \
+		char test_config_file[TEST_TEMP_FILE_NAME_LENGTH]; \
+\
+		if (!test_temp_file(test_config_file, test_config_file_content, -1)) \
+			return SCHISM_TESTRESULT_INCONCLUSIVE; \
+\
+		int init_result = cfg_init(&cfg, test_config_file); \
+\
+		if (init_result < 0) \
+		{ \
+			test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result); \
+			RETURN_FAIL; \
+		} \
+	} while (0)
 
 testresult_t test_config_file_defined_values(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	const char *colour = cfg_get_string(&cfg, "ducks", "colour", NULL, 0, "abcd");
@@ -48,22 +52,9 @@ testresult_t test_config_file_defined_values(void)
 testresult_t test_config_file_undefined_values_in_defined_section(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	const char *sauce = cfg_get_string(&cfg, "ducks", "sauce", NULL, 0, "soy");
@@ -79,22 +70,9 @@ testresult_t test_config_file_undefined_values_in_defined_section(void)
 testresult_t test_config_file_undefined_section(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	const char *weather = cfg_get_string(&cfg, "barbecue", "weather", NULL, 0, "elf");
@@ -110,22 +88,9 @@ testresult_t test_config_file_undefined_section(void)
 testresult_t test_config_file_obviously_broken_values(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	// could be separate tests...
@@ -148,22 +113,9 @@ testresult_t test_config_file_obviously_broken_values(void)
 testresult_t test_config_file_null_default_with_value_set(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	char buf[64];
 
@@ -183,22 +135,9 @@ testresult_t test_config_file_null_default_with_value_set(void)
 testresult_t test_config_file_null_default_with_value_set_defined_key(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	char buf[64];
 
@@ -218,22 +157,9 @@ testresult_t test_config_file_null_default_with_value_set_defined_key(void)
 testresult_t test_config_file_string_boundary_defined_key(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	char buf[64];
 
@@ -255,22 +181,9 @@ testresult_t test_config_file_string_boundary_defined_key(void)
 testresult_t test_config_file_string_boundary_default_value(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	char buf[64];
 
@@ -290,22 +203,9 @@ testresult_t test_config_file_string_boundary_default_value(void)
 testresult_t test_config_file_string_boundary_zero(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	cfg_set_string(&cfg, "shouldn't", "crash", "daikon");
 
@@ -457,22 +357,9 @@ static int grep_config_ex(const cfg_file_t *cfg, const char *section_expr, const
 testresult_t test_config_file_set_string_in_new_section(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_string(&cfg, "toast", "is", "tasty");
@@ -491,22 +378,9 @@ testresult_t test_config_file_set_string_in_new_section(void)
 testresult_t test_config_file_set_new_string_in_existing_section(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_string(&cfg, "ducks", "are", "tasty");
@@ -526,22 +400,9 @@ testresult_t test_config_file_set_new_string_in_existing_section(void)
 testresult_t test_config_file_set_number_in_new_section(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_number(&cfg, "cowboy", "hats", 3);
@@ -560,22 +421,9 @@ testresult_t test_config_file_set_number_in_new_section(void)
 testresult_t test_config_file_set_new_number_in_existing_section(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_number(&cfg, "ducks", "boots", 4);
@@ -595,22 +443,9 @@ testresult_t test_config_file_set_new_number_in_existing_section(void)
 testresult_t test_config_file_set_string_in_null_section(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_string(&cfg, NULL, "shouldn't", "crash");
@@ -631,22 +466,9 @@ testresult_t test_config_file_set_string_in_null_section(void)
 testresult_t test_config_file_set_number_in_null_section(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_number(&cfg, NULL, "don't segfault", 42);
@@ -667,22 +489,9 @@ testresult_t test_config_file_set_number_in_null_section(void)
 testresult_t test_config_file_set_string_with_null_key(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_string(&cfg, "shouldn't", NULL, "crash");
@@ -703,22 +512,9 @@ testresult_t test_config_file_set_string_with_null_key(void)
 testresult_t test_config_file_set_number_with_null_key(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_number(&cfg, "don't segfault", NULL, 42);
@@ -739,22 +535,9 @@ testresult_t test_config_file_set_number_with_null_key(void)
 testresult_t test_config_file_set_string_with_null_value(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	// Act
 	cfg_set_string(&cfg, "shouldn't", "crash", NULL);
@@ -783,22 +566,9 @@ testresult_t test_config_file_set_string_with_null_value(void)
 testresult_t test_config_file_get_string_with_null_value(void)
 {
 	// Arrange
-	char *test_config_file;
-
-	if (!test_temp_file(&test_config_file, CONFIG_FILE, -1))
-		return SCHISM_TESTRESULT_INCONCLUSIVE;
-
 	cfg_file_t cfg;
 
-	int init_result = cfg_init(&cfg, test_config_file);
-
-	free(test_config_file);
-
-	if (init_result < 0)
-	{
-		test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result);
-		RETURN_FAIL;
-	}
+	ARRANGE_TEST_CONFIG_FILE(cfg);
 
 	cfg_set_string(&cfg, "shouldn't", "crash", NULL);
 
