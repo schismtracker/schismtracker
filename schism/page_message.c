@@ -65,9 +65,9 @@ static int message_extfont = 1;
 
 /* --------------------------------------------------------------------- */
 
-static int message_handle_key_editmode(struct key_event * k);
-static int message_handle_text_input_editmode(const char *text);
-static int message_handle_key_viewmode(struct key_event * k);
+static int message_handle_key_editmode(struct widget_context *this, struct key_event * k);
+static int message_handle_text_input_editmode(struct widget_context *this, const char *text);
+static int message_handle_key_viewmode(struct widget_context *this, struct key_event * k);
 
 /* --------------------------------------------------------------------- */
 
@@ -226,7 +226,7 @@ static void text(char *line, int len, int n)
 	}
 }
 
-static void message_draw(void)
+static void message_draw(SCHISM_UNUSED struct widget_context *this)
 {
 	char *line, *prevline = current_song->message;
 	int len = get_nth_line(current_song->message, top_line, &line);
@@ -446,7 +446,7 @@ static void message_delete_line(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static void message_clear(SCHISM_UNUSED void *data)
+static void message_clear(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	current_song->message[0] = 0;
 	memused_songchanged();
@@ -463,7 +463,7 @@ static void prompt_message_clear(void)
 
 /* --------------------------------------------------------------------- */
 
-static int message_handle_key_viewmode(struct key_event * k)
+static int message_handle_key_viewmode(struct widget_context *this, struct key_event * k)
 {
 	if (k->state == KEY_PRESS) {
 		if (k->mouse == MOUSE_SCROLL_UP) {
@@ -472,7 +472,7 @@ static int message_handle_key_viewmode(struct key_event * k)
 			top_line += MOUSE_SCROLL_LINES;
 		} else if (k->mouse == MOUSE_CLICK) {
 			message_set_editmode();
-			return message_handle_key_editmode(k);
+			return message_handle_key_editmode(this, k);
 		}
 	}
 
@@ -555,7 +555,7 @@ static void _delete_selection(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
-static int message_handle_text_input_editmode(const char *text)
+static int message_handle_text_input_editmode(SCHISM_UNUSED struct widget_context *this, const char *text)
 {
 	uint8_t *dos;
 	size_t i;
@@ -582,7 +582,7 @@ static int message_handle_text_input_editmode(const char *text)
 	return 1;
 }
 
-static int message_handle_key_editmode(struct key_event * k)
+static int message_handle_key_editmode(struct widget_context *this, struct key_event *k)
 {
 	int line_len, num_lines = -1;
 	int new_cursor_line = cursor_line;
@@ -751,7 +751,7 @@ static int message_handle_key_editmode(struct key_event * k)
 			}
 		} else if (k->mouse == MOUSE_NONE) {
 			if (k->text) {
-				return message_handle_text_input_editmode(k->text);
+				return message_handle_text_input_editmode(this, k->text);
 			} else if (k->sym == SCHISM_KEYSYM_TAB) {
 				if (k->state == KEY_PRESS)
 					message_insert_char('\t');

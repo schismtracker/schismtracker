@@ -1003,7 +1003,7 @@ void cfg_load_info(cfg_file_t *cfg)
 
 /* --------------------------------------------------------------------- */
 
-static void info_page_redraw(void)
+static void info_page_redraw(SCHISM_UNUSED struct widget_context *this)
 {
 	int n, height, pos = (window_types[windows[0].type].first_row ? 13 : 12);
 
@@ -1021,7 +1021,7 @@ static void info_page_redraw(void)
 
 /* --------------------------------------------------------------------- */
 
-static int info_page_handle_key(struct key_event * k)
+static int info_page_handle_key(SCHISM_UNUSED struct widget_context *this, struct key_event * k)
 {
 	int n, p, order;
 

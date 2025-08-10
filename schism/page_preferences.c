@@ -33,6 +33,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "mem.h"
+#include "dialog.h"
 
 #include "disko.h"
 
@@ -150,35 +151,35 @@ static void preferences_set_page(void)
 
 /* --------------------------------------------------------------------- */
 
-static void change_volume(void)
+static void change_volume(SCHISM_UNUSED struct widget_context *this)
 {
-	audio_settings.master.left = widgets_preferences[0].d.thumbbar.value;
-	audio_settings.master.right = widgets_preferences[1].d.thumbbar.value;
+	audio_settings.master.left = this->widgets[0].d.thumbbar.value;
+	audio_settings.master.right = this->widgets[1].d.thumbbar.value;
 }
 
 #define SAVED_AT_EXIT "Audio configuration will be saved at exit"
 
-static void change_eq(void)
+static void change_eq(SCHISM_UNUSED struct widget_context *this)
 {
 	int i,j;
 	for (i = 0; interpolation_modes[i]; i++);
 	for (j = 0; j < 4; j++) {
-		audio_settings.eq_freq[j] = widgets_preferences[i+2+(j*2)].d.thumbbar.value;
-		audio_settings.eq_gain[j] = widgets_preferences[i+3+(j*2)].d.thumbbar.value;
+		audio_settings.eq_freq[j] = this->widgets[i+2+(j*2)].d.thumbbar.value;
+		audio_settings.eq_gain[j] = this->widgets[i+3+(j*2)].d.thumbbar.value;
 	}
 	song_init_eq(1, current_song->mix_frequency);
 }
 
 
-static void change_mixer(void)
+static void change_mixer(SCHISM_UNUSED struct widget_context *this)
 {
 	int i;
 	for (i = 0; interpolation_modes[i]; i++) {
-		if (widgets_preferences[2+i].d.togglebutton.state) {
+		if (this->widgets[2+i].d.togglebutton.state) {
 			audio_settings.interpolation_mode = i;
 		}
 	}
-	audio_settings.no_ramping = widgets_preferences[i+11].d.togglebutton.state;
+	audio_settings.no_ramping = this->widgets[i+11].d.togglebutton.state;
 
 	song_init_modplug();
 	status_text_flash(SAVED_AT_EXIT);
@@ -188,13 +189,13 @@ static void change_mixer(void)
 
 static const int audio_device_focus_offsets_[] = {1, 1, 2, 2, 2, 3};
 
-static uint32_t audio_device_list_size_(void)
+static uint32_t audio_device_list_size_(SCHISM_UNUSED struct widget_context *this)
 {
 	/* include default device... */
 	return audio_device_list_size + 1;
 }
 
-static const char *audio_device_list_name_(uint32_t i) {
+static const char *audio_device_list_name_(SCHISM_UNUSED struct widget_context *this, uint32_t i) {
 	if (i > 0) {
 		i--;
 
@@ -206,7 +207,7 @@ static const char *audio_device_list_name_(uint32_t i) {
 	return "default";
 }
 
-static int audio_device_list_toggled_(uint32_t i)
+static int audio_device_list_toggled_(SCHISM_UNUSED struct widget_context *this, uint32_t i)
 {
 	uint32_t ts = song_audio_device_id();
 
@@ -217,9 +218,9 @@ static int audio_device_list_toggled_(uint32_t i)
 	return (ts == AUDIO_BACKEND_DEFAULT);
 }
 
-static void audio_device_list_activate_(void)
+static void audio_device_list_activate_(struct widget_context *this)
 {
-	struct widget *w = &ACTIVE_WIDGET;
+	struct widget *w = &this->widgets[this->selected_widget];
 
 	uint32_t id = !w->d.listbox.focus
 		? AUDIO_BACKEND_DEFAULT
@@ -232,23 +233,23 @@ static void audio_device_list_activate_(void)
 
 static const int audio_driver_focus_offsets_[] = {4, 4, 4, 5, 5, 5};
 
-static uint32_t audio_driver_list_size_(void)
+static uint32_t audio_driver_list_size_(SCHISM_UNUSED struct widget_context *this)
 {
 	return audio_driver_count();
 }
 
-static const char *audio_driver_list_name_(uint32_t i) {
+static const char *audio_driver_list_name_(SCHISM_UNUSED struct widget_context *this, uint32_t i) {
 	return audio_driver_name(i);
 }
 
-static int audio_driver_list_toggled_(uint32_t i)
+static int audio_driver_list_toggled_(SCHISM_UNUSED struct widget_context *this, uint32_t i)
 {
 	return !strcmp(song_audio_driver(), audio_driver_name(i));
 }
 
-static void audio_driver_list_activate_(void)
+static void audio_driver_list_activate_(struct widget_context *this)
 {
-	const char *n = audio_driver_name(ACTIVE_WIDGET.d.listbox.focus);
+	const char *n = audio_driver_name(this->widgets[this->selected_widget].d.listbox.focus);
 
 	audio_flash_reinitialized_text(audio_init(n, NULL));
 
@@ -260,7 +261,7 @@ static void audio_driver_list_activate_(void)
 /* this is a dirty hack */
 static int *page_total_widgets = NULL;
 
-static void save_config_now(void)
+static void save_config_now(SCHISM_UNUSED struct widget_context *this)
 {
 	cfg_preferences_save();
 	status_text_flash("Configuration saved");
@@ -276,7 +277,7 @@ void preferences_audio_driver_changed(const char *name)
 	status.flags |= NEED_UPDATE;
 }
 
-static void open_control_panel(void)
+static void open_control_panel(struct widget_context *this)
 {
 	audio_open_control_panel();
 }

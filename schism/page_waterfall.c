@@ -330,7 +330,7 @@ static void draw_screen(void)
 	vgamem_ovl_apply(&ovl);
 }
 
-static int waterfall_handle_key(struct key_event *k)
+static int waterfall_handle_key(SCHISM_UNUSED struct widget_context *this, struct key_event *k)
 {
 	int n, v, order, ii;
 
@@ -484,7 +484,7 @@ static int waterfall_handle_key(struct key_event *k)
 
 
 static struct widget waterfall_widget_hack[1];
-static void do_nil(void) {}
+static void do_nil(SCHISM_UNUSED struct widget_context *this) {}
 
 static void waterfall_set_page(void)
 {

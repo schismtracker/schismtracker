@@ -179,7 +179,7 @@ static void _common_set_page(void)
 
 	status.flags &= ~DIR_INSTRUMENTS_CHANGED;
 
-	*selected_widget = 0;
+	widget_context->selected_widget = 0;
 	slash_search_mode = -1;
 }
 
@@ -197,7 +197,7 @@ static void library_instrument_set_page(void)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-static void file_list_draw(void)
+static void file_list_draw(struct widget_context *this)
 {
 	int n, pos, fg, bg;
 	char buf[11];
@@ -262,7 +262,7 @@ static void file_list_draw(void)
 		draw_char(168, 31, pos++, 2, 0);
 }
 
-static void do_enable_inst(SCHISM_UNUSED void *d)
+static void do_enable_inst(SCHISM_UNUSED void *d, SCHISM_UNUSED void *final_data)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -270,7 +270,7 @@ static void do_enable_inst(SCHISM_UNUSED void *d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(SCHISM_UNUSED void *d)
+static void dont_enable_inst(SCHISM_UNUSED void *d, SCHISM_UNUSED void *final_data)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }
@@ -335,7 +335,7 @@ static void handle_enter_key(void)
 	/* TODO */
 }
 
-static void do_delete_file(SCHISM_UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	int old_top_file, old_current_file;
 	char *ptr;
@@ -363,7 +363,7 @@ static void do_delete_file(SCHISM_UNUSED void *data)
 	file_list_reposition();
 }
 
-static int file_list_handle_text_input(const char *text)
+static int file_list_handle_text_input(SCHISM_UNUSED struct widget_context *this, const char *text)
 {
 	dmoz_file_t* f = flist.files[current_file];
 	uint32_t *ucs4;
@@ -405,7 +405,7 @@ static int file_list_handle_text_input(const char *text)
 	return success;
 }
 
-static int file_list_handle_key(struct key_event * k)
+static int file_list_handle_key(struct widget_context *this, struct key_event * k)
 {
 	int new_file = current_file;
 
@@ -479,7 +479,7 @@ static int file_list_handle_key(struct key_event * k)
 		SCHISM_FALLTHROUGH;
 	default:
 		if (k->text)
-			return file_list_handle_text_input(k->text);
+			return file_list_handle_text_input(this, k->text);
 
 		if (!k->mouse) return 0;
 	}
@@ -505,12 +505,18 @@ static int file_list_handle_key(struct key_event * k)
 	return 1;
 }
 
-static void load_instrument_handle_key(struct key_event * k)
+static int load_instrument_handle_key(SCHISM_UNUSED struct widget_context *this, struct key_event * k)
 {
 	if (k->state == KEY_RELEASE)
-		return;
+		return 0;
+
 	if (k->sym == SCHISM_KEYSYM_ESCAPE && NO_MODIFIER(k->mod))
+	{
 		set_page(PAGE_INSTRUMENT_LIST);
+		return 1;
+	}
+
+	return 0;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */

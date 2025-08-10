@@ -144,6 +144,7 @@ noinst_HEADERS = \
 	include/version.h		\
 	include/vgamem.h      \
 	include/video.h			\
+	include/widget_context.h     \
 	include/widget.h        \
 	include/player/cmixer.h		\
 	include/player/fmopl.h			\
@@ -627,6 +628,7 @@ schismtracker_SOURCES = \
 	schism/video.c			\
 	schism/widget-keyhandler.c	\
 	schism/widget.c			\
+	schism/widget_context.c   \
 	schism/xpmdata.c		\
 	sys/posix/osdefs.c \
 	$(files_macosx)			\

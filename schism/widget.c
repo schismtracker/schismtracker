@@ -34,7 +34,7 @@
 /* create_* functions (the constructors, if you will) */
 
 void widget_create_toggle(struct widget *w, int x, int y, int next_up, int next_down,
-		   int next_left, int next_right, int next_tab, void (*changed) (void))
+		   int next_left, int next_right, int next_tab, widget_cb changed)
 {
 	w->type = WIDGET_TOGGLE;
 	w->accept_text = 0;
@@ -54,7 +54,7 @@ void widget_create_toggle(struct widget *w, int x, int y, int next_up, int next_
 }
 
 void widget_create_menutoggle(struct widget *w, int x, int y, int next_up, int next_down, int next_left,
-		       int next_right, int next_tab, void (*changed) (void), const char *const *choices)
+		       int next_right, int next_tab, widget_cb changed, const char *const *choices)
 {
 	int n, width = 0, len;
 
@@ -85,7 +85,7 @@ void widget_create_menutoggle(struct widget *w, int x, int y, int next_up, int n
 }
 
 void widget_create_button(struct widget *w, int x, int y, int width, int next_up, int next_down, int next_left,
-		   int next_right, int next_tab, void (*changed) (void), const char *text, int padding)
+		   int next_right, int next_tab, widget_cb changed, const char *text, int padding)
 {
 	w->type = WIDGET_BUTTON;
 	w->accept_text = 0;
@@ -107,7 +107,7 @@ void widget_create_button(struct widget *w, int x, int y, int width, int next_up
 }
 
 void widget_create_togglebutton(struct widget *w, int x, int y, int width, int next_up, int next_down,
-			 int next_left, int next_right, int next_tab, void (*changed) (void),
+			 int next_left, int next_right, int next_tab, widget_cb changed,
 			 const char *text, int padding, const int *group)
 {
 	w->type = WIDGET_TOGGLEBUTTON;
@@ -131,7 +131,7 @@ void widget_create_togglebutton(struct widget *w, int x, int y, int width, int n
 }
 
 void widget_create_textentry(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		      int next_tab, void (*changed) (void), char *text, int max_length)
+		      int next_tab, widget_cb changed, char *text, int max_length)
 {
 	w->type = WIDGET_TEXTENTRY;
 	w->accept_text = 1;
@@ -154,7 +154,7 @@ void widget_create_textentry(struct widget *w, int x, int y, int width, int next
 }
 
 void widget_create_numentry(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		     int next_tab, void (*changed) (void), int32_t min, int32_t max, int *cursor_pos)
+		     int next_tab, widget_cb changed, int32_t min, int32_t max, int *cursor_pos)
 {
 	w->type = WIDGET_NUMENTRY;
 	w->accept_text = 1;
@@ -178,7 +178,7 @@ void widget_create_numentry(struct widget *w, int x, int y, int width, int next_
 }
 
 void widget_create_thumbbar(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		     int next_tab, void (*changed) (void), int min, int max)
+		     int next_tab, widget_cb changed, int min, int max)
 {
 	w->type = WIDGET_THUMBBAR;
 	w->accept_text = 0;
@@ -201,7 +201,7 @@ void widget_create_thumbbar(struct widget *w, int x, int y, int width, int next_
 }
 
 void widget_create_bitset(struct widget *w, int x, int y, int width, int next_up, int next_down,
-		   int next_tab, void (*changed) (void),
+		   int next_tab, widget_cb changed,
 		   int nbits, const char* bits_on, const char* bits_off,
 		   int *cursor_pos)
 {
@@ -227,7 +227,7 @@ void widget_create_bitset(struct widget *w, int x, int y, int width, int next_up
 }
 
 void widget_create_panbar(struct widget *w, int x, int y, int next_up, int next_down, int next_tab,
-		   void (*changed) (void), int channel)
+		   widget_cb changed, int channel)
 {
 	w->type = WIDGET_PANBAR;
 	w->accept_text = 0;
@@ -248,15 +248,15 @@ void widget_create_panbar(struct widget *w, int x, int y, int next_up, int next_
 	w->activate = NULL;
 }
 
-void widget_create_listbox(struct widget *w, uint32_t (*i_size) (void),
-	int (*i_toggled) (uint32_t), const char * (*i_name) (uint32_t),
-	void (*i_changed) (void), void (*i_activate)(void),
-	int (*i_handle_key) (struct key_event *kk),
+void widget_create_listbox(struct widget *w,
+	widget_cb_uint32 i_size, widget_uint32_cb_int i_toggled,
+	widget_uint32_cb_str i_name, widget_cb i_changed,
+	widget_cb i_activate, widget_key_cb i_handle_key,
 	const int *focus_offsets_left, const int *focus_offsets_right,
 	int next_up, int next_down)
 {
-	w->type = WIDGET_LISTBOX;
 	w->accept_text = 0;
+	w->type = WIDGET_LISTBOX;
 	w->changed = i_changed;
 	w->activate = i_activate;
 	w->depressed = 0;
@@ -282,8 +282,8 @@ void widget_create_listbox(struct widget *w, uint32_t (*i_size) (void),
 	w->d.listbox.focus_offsets.right = focus_offsets_right;
 }
 
-void widget_create_other(struct widget *w, int next_tab, int (*i_handle_key) (struct key_event *k),
-		  int (*i_handle_text_input) (const char* text), void (*i_redraw) (void))
+void widget_create_other(struct widget *w, int next_tab, widget_key_cb i_handle_key,
+		  widget_text_cb i_handle_text_input, widget_cb i_redraw)
 {
 	w->type = WIDGET_OTHER;
 	w->accept_text = 0;
@@ -362,7 +362,7 @@ int widget_textentry_add_char(struct widget *w, unsigned char c)
 {
 	text_add_char(w->d.textentry.text, c, &(w->d.textentry.cursor_pos), w->d.textentry.max_length);
 
-	if (w->changed) w->changed();
+	if (w->changed) w->changed(widget_get_context(w));
 	status.flags |= NEED_UPDATE;
 
 	return 1;
@@ -391,7 +391,7 @@ void widget_numentry_change_value(struct widget *w, int32_t new_value)
 {
 	new_value = CLAMP(new_value, w->d.numentry.min, w->d.numentry.max);
 	w->d.numentry.value = new_value;
-	if (w->changed) w->changed();
+	if (w->changed) w->changed(widget_get_context(w));
 	status.flags |= NEED_UPDATE;
 }
 
@@ -464,7 +464,7 @@ void widget_togglebutton_set(struct widget *p_widgets, int widget, int do_callba
 	p_widgets[widget].d.togglebutton.state = 1;
 
 	if (do_callback && p_widgets[widget].changed)
-		p_widgets[widget].changed();
+		p_widgets[widget].changed(widget_get_context(p_widgets + widget));
 
 	status.flags |= NEED_UPDATE;
 }
@@ -474,6 +474,7 @@ void widget_togglebutton_set(struct widget *p_widgets, int widget, int do_callba
 
 void widget_draw_widget(struct widget *w, int selected)
 {
+	struct widget_context *this = widget_get_context(w);
 	char buf[64] = "Channel 42";
 	const char *ptr, *endptr;       /* for the menutoggle */
 	char *str;
@@ -619,8 +620,10 @@ void widget_draw_widget(struct widget *w, int selected)
 		}
 		break;
 	case WIDGET_LISTBOX: {
+		struct widget_context *this = widget_get_context(w);
+
 		uint32_t i, o;
-		uint32_t size = w->d.listbox.size();
+		uint32_t size = w->d.listbox.size(this);
 
 		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y + w->height - 1, DEFAULT_FG, 0);
 
@@ -643,13 +646,13 @@ void widget_draw_widget(struct widget *w, int selected)
 				bg = 0;
 			}
 
-			draw_text_utf8_len(w->d.listbox.toggled(o) ? "*" : " ", 1, w->x, w->y + i, fg, bg);
-			draw_text_utf8_len(w->d.listbox.name(o), w->width - 1, w->x + 1, w->y + i, fg, bg);
+			draw_text_utf8_len(w->d.listbox.toggled(this, o) ? "*" : " ", 1, w->x, w->y + i, fg, bg);
+			draw_text_utf8_len(w->d.listbox.name(this, o), w->width - 1, w->x + 1, w->y + i, fg, bg);
 		}
 		break;
 	}
 	case WIDGET_OTHER:
-		if (w->d.other.redraw) w->d.other.redraw();
+		if (w->d.other.redraw) w->d.other.redraw(widget_get_context(w));
 		break;
 	default:
 		/* shouldn't ever happen... */
@@ -660,23 +663,32 @@ void widget_draw_widget(struct widget *w, int selected)
 /* --------------------------------------------------------------------- */
 /* more crap */
 
-void widget_change_focus_to(int new_widget_index)
+void widget_context_change_focus_to(struct widget_context *this, int new_widget_index)
 {
-	if(new_widget_index == *selected_widget || new_widget_index < 0 || new_widget_index >= *total_widgets) {
+	struct widget *active_widget;
+	if(new_widget_index == this->selected_widget || new_widget_index < 0 || new_widget_index >= this->total_widgets) {
 		return;
 	}
 
-	if (ACTIVE_WIDGET.depressed) ACTIVE_WIDGET.depressed = 0;
+	active_widget = &this->widgets[this->selected_widget];
 
-	*selected_widget = new_widget_index;
+	if (active_widget->depressed) active_widget->depressed = 0;
 
-	ACTIVE_WIDGET.depressed = 0;
+	this->selected_widget = new_widget_index;
+	active_widget = &this->widgets[this->selected_widget];
 
-	if (ACTIVE_WIDGET.type == WIDGET_TEXTENTRY)
-		ACTIVE_WIDGET.d.textentry.cursor_pos
-				= strlen(ACTIVE_WIDGET.d.textentry.text);
+	active_widget->depressed = 0;
+
+	if (active_widget->type == WIDGET_TEXTENTRY)
+		active_widget->d.textentry.cursor_pos
+				= strlen(active_widget->d.textentry.text);
 
 	status.flags |= NEED_UPDATE;
+}
+
+void widget_change_focus_to(int new_widget_index)
+{
+	widget_context_change_focus_to(widget_context, new_widget_index);
 }
 
 int widget_find_xy(int x, int y)
@@ -684,10 +696,10 @@ int widget_find_xy(int x, int y)
 	struct widget *w;
 	int i, pad;
 
-	if (!total_widgets)
+	if (!widget_context)
 		return -1;
-	for (i = 0; i < *total_widgets; i++) {
-		w = widgets + i;
+	for (i = 0; i < widget_context->total_widgets; i++) {
+		w = widget_context->widgets + i;
 		switch (w->type) {
 		case WIDGET_BUTTON:
 		case WIDGET_TOGGLEBUTTON:

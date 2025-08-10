@@ -230,7 +230,7 @@ void save_song_or_save_as(void)
 	}
 }
 
-static void do_save_song_overwrite(void *ptr)
+static void do_save_song_overwrite(void *ptr, SCHISM_UNUSED void *final_data)
 {
 	struct stat st;
 
@@ -269,7 +269,7 @@ static void handle_file_entered_S(const char *name)
 			log_appendf(4, "%s: Is a directory", name);
 		} else if (S_ISREG(buf.st_mode)) {
 			dialog_create(DIALOG_OK_CANCEL, "Overwrite file?",
-				      do_save_song_overwrite, free, 1, str_dup(name));
+				      do_save_song_overwrite, dialog_free_data, 1, str_dup(name));
 		} else {
 			/* log_appendf(4, "%s: Not overwriting non-regular file", ptr); */
 			dialog_create(DIALOG_OK, "Not a regular file", NULL, NULL, 0, NULL);
@@ -425,7 +425,7 @@ static void search_redraw(void)
 	}
 }
 
-static void search_update(void)
+static void search_update(struct widget_context *this)
 {
 	int n;
 
@@ -435,7 +435,7 @@ static void search_update(void)
 
 	/* go through the file/dir list (whatever one is selected) and
 	 * find the first entry matching the text */
-	if (*selected_widget == 0) {
+	if (this->selected_widget == 0) {
 		for (n = 0; n < flist.num_files; n++) {
 			if (charset_strncasecmp(flist.files[n]->base, CHARSET_CHAR,
 					search_text, CHARSET_UCS4, search_text_length) == 0) {
@@ -458,7 +458,7 @@ static void search_update(void)
 	status.flags |= NEED_UPDATE;
 }
 
-static int search_text_add_char(uint32_t c)
+static int search_text_add_char(struct widget_context *this, uint32_t c)
 {
 	if (c < 32)
 		return 0;
@@ -468,7 +468,7 @@ static int search_text_add_char(uint32_t c)
 
 	search_text[search_text_length++] = c;
 	search_text[search_text_length] = 0;
-	search_update();
+	search_update(this);
 
 	return 1;
 }
@@ -563,7 +563,7 @@ static void save_module_draw_const(void)
 
 /* --------------------------------------------------------------------- */
 
-static void file_list_draw(void)
+static void file_list_draw(struct widget_context *this)
 {
 	int n, pos;
 	int fg1, fg2, bg;
@@ -578,7 +578,7 @@ static void file_list_draw(void)
 		for (n = top_file, pos = 13; n < flist.num_files && pos < 44; n++, pos++) {
 			file = flist.files[n];
 
-			if (n == current_file && ACTIVE_PAGE.selected_widget == 0) {
+			if (n == current_file && this->selected_widget == 0) {
 				fg1 = fg2 = 0;
 				bg = 3;
 			} else {
@@ -604,7 +604,7 @@ static void file_list_draw(void)
 			draw_text_len(str_from_time(file->timestamp, buf, cfg_str_time_format), 26, 51, 43, 5, 0);
 		}
 	} else {
-		if (ACTIVE_PAGE.selected_widget == 0) {
+		if (this->selected_widget == 0) {
 			draw_text("No files.", 3, 13, 0, 3);
 			draw_fill_chars(12, 13, 48, 13, DEFAULT_FG, 3);
 			draw_char(168, 23, 13, 2, 3);
@@ -623,7 +623,7 @@ static void file_list_draw(void)
 	search_redraw();
 }
 
-static void do_delete_file(SCHISM_UNUSED void *data)
+static void do_delete_file(SCHISM_UNUSED void *data, SCHISM_UNUSED void *final_data)
 {
 	int old_top_file, old_current_file, old_top_dir, old_current_dir;
 	char *ptr;
@@ -671,7 +671,7 @@ static void show_selected_song_length(void)
 	csf_free(song);
 }
 
-static int file_list_handle_text_input(const char *text)
+static int file_list_handle_text_input(struct widget_context *this, const char *text)
 {
 	int success = 0;
 	uint32_t *ucs4;
@@ -682,7 +682,7 @@ static int file_list_handle_text_input(const char *text)
 		return 0;
 
 	for (i = 0; ucs4[i]; i++)
-		if (search_text_add_char(ucs4[i]))
+		if (search_text_add_char(this, ucs4[i]))
 			success = 1;
 
 	free(ucs4);
@@ -690,7 +690,7 @@ static int file_list_handle_text_input(const char *text)
 	return success;
 }
 
-static int file_list_handle_key(struct key_event * k)
+static int file_list_handle_key(struct widget_context *this, struct key_event * k)
 {
 	int new_file = current_file;
 
@@ -745,13 +745,13 @@ static int file_list_handle_key(struct key_event * k)
 	default:
 		if (k->mouse == MOUSE_NONE) {
 			if (k->text)
-				return file_list_handle_text_input(k->text);
+				return file_list_handle_text_input(this, k->text);
 
 			return 0;
 		}
 	}
 
-	struct widget *w = &widgets[0];
+	struct widget *w = &this->widgets[0];
 
 	if (k->mouse != MOUSE_NONE && !(k->x >= w->x && k->x <= w->x + w->width && k->y >= w->y && k->y <= w->y + w->height))
 		return 0;
@@ -829,22 +829,22 @@ static void dir_list_draw(int width)
 	search_redraw();
 }
 
-static void dir_list_draw_load(void)
+static void dir_list_draw_load(SCHISM_UNUSED struct widget_context *this)
 {
 	dir_list_draw(77 - 51);
 }
 
-static void dir_list_draw_exportsave(void)
+static void dir_list_draw_exportsave(SCHISM_UNUSED struct widget_context *this)
 {
 	dir_list_draw(68 - 51);
 }
 
-static int dir_list_handle_text_input(const char *text)
+static int dir_list_handle_text_input(struct widget_context *this, const char *text)
 {
-	return file_list_handle_text_input(text);
+	return file_list_handle_text_input(this, text);
 }
 
-static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
+static inline int dir_list_handle_key(struct widget_context *this, struct key_event * k, unsigned int width)
 {
 	int new_dir = current_dir;
 
@@ -859,7 +859,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 					change_dir(dlist.dirs[current_dir]->path);
 
 					if (flist.num_files > 0)
-							*selected_widget = 0;
+						this->selected_widget = 0;
 					status.flags |= NEED_UPDATE;
 					return 1;
 					break;
@@ -908,7 +908,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 			change_dir(dlist.dirs[current_dir]->path);
 
 		if (flist.num_files > 0)
-			*selected_widget = 0;
+			this->selected_widget = 0;
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SCHISM_KEYSYM_BACKSPACE:
@@ -937,7 +937,7 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 	default:
 		if (k->mouse == MOUSE_NONE) {
 			if (k->text)
-				return dir_list_handle_text_input(k->text);
+				return dir_list_handle_text_input(this, k->text);
 
 			return 0;
 		}
@@ -954,20 +954,20 @@ static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
 	return 1;
 }
 
-static int dir_list_handle_key_load(struct key_event * k)
+static int dir_list_handle_key_load(struct widget_context *this, struct key_event * k)
 {
-	return dir_list_handle_key(k, 77 - 51);
+	return dir_list_handle_key(this, k, 77 - 51);
 }
 
-static int dir_list_handle_key_exportsave(struct key_event * k)
+static int dir_list_handle_key_exportsave(struct widget_context *this, struct key_event * k)
 {
-	return dir_list_handle_key(k, 68 - 51);
+	return dir_list_handle_key(this, k, 68 - 51);
 }
 
 /* --------------------------------------------------------------------- */
 /* these handle when enter is pressed on the file/directory textboxes at the bottom of the screen. */
 
-static void filename_entered(void)
+static void filename_entered(SCHISM_UNUSED struct widget_context *this)
 {
 	if (strpbrk(filename_entry, "?*")) {
 		set_glob(filename_entry);
@@ -981,7 +981,7 @@ static void filename_entered(void)
 }
 
 /* strangely similar to the dir list's code :) */
-static void dirname_entered(void)
+static void dirname_entered(SCHISM_UNUSED struct widget_context *this)
 {
 	void *out = charset_iconv_easy(dirname_entry, CHARSET_CP437, CHARSET_CHAR);
 	if (!out)
@@ -994,7 +994,7 @@ static void dirname_entered(void)
 
 	free(out);
 
-	*selected_widget = (flist.num_files > 0) ? 0 : 1;
+	this->selected_widget = (flist.num_files > 0) ? 0 : 1;
 	status.flags |= NEED_UPDATE;
 	/* reset */
 	top_file = current_file = 0;

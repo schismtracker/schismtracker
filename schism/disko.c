@@ -665,7 +665,7 @@ static int canceled = 0; /* this sucks, but so do I */
 
 static int disko_finish(void);
 
-static void diskodlg_draw(void)
+static void diskodlg_draw(SCHISM_UNUSED struct dialog *this)
 {
 	int sec, pos;
 	char buf[32];
@@ -687,7 +687,7 @@ static void diskodlg_draw(void)
 	draw_box(23, 29, 56, 31, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
-static void diskodlg_cancel(SCHISM_UNUSED void *ignored)
+static void diskodlg_cancel(SCHISM_UNUSED void *ignored, SCHISM_UNUSED void *final_data)
 {
 	canceled = 1;
 	export_dwsong.flags |= SONG_ENDREACHED;
@@ -708,14 +708,14 @@ static void diskodlg_cancel(SCHISM_UNUSED void *ignored)
 static void disko_dialog_setup(size_t len);
 
 // this needs to be done to work around stupid inconsistent key-up code
-static void diskodlg_reset(SCHISM_UNUSED void *ignored)
+static void diskodlg_reset(SCHISM_UNUSED void *ignored, SCHISM_UNUSED void *final_data)
 {
 	disko_dialog_setup(est_len);
 }
 
 static void disko_dialog_setup(size_t len)
 {
-	struct dialog *d = dialog_create_custom(22, 25, 36, 8, diskodlg_widgets, 0, 0, diskodlg_draw, NULL);
+	struct dialog *d = dialog_create_custom(22, 25, 36, 8, diskodlg_widgets, 0, 0, diskodlg_draw, NULL, NULL);
 	d->action_yes = diskodlg_reset;
 	d->action_no = diskodlg_reset;
 	d->action_cancel = diskodlg_cancel;
@@ -953,10 +953,8 @@ struct pat2smp {
 	int pattern, sample, bind;
 };
 
-static void pat2smp_single(void *data)
+static void pat2smp_single(struct pat2smp *ps)
 {
-	struct pat2smp *ps = data;
-
 	if (disko_writeout_sample(ps->sample, ps->pattern, ps->bind) == DW_OK) {
 		set_page(PAGE_SAMPLE_LIST);
 	} else {
@@ -965,6 +963,12 @@ static void pat2smp_single(void *data)
 	}
 
 	free(ps);
+}
+
+static void pat2smp_single_dialog(void *data, SCHISM_UNUSED void *final_data)
+{
+	struct pat2smp *ps = data;
+	pat2smp_single(ps);
 }
 
 static void pat2smp_multi(void *data)
@@ -1020,7 +1024,7 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 			pat2smp_single(ps);
 		} else {
 			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
-				pat2smp_single, free, 1, ps);
+				pat2smp_single_dialog, dialog_free_data, 1, ps);
 		}
 	}
 }
