@@ -53,9 +53,9 @@ int slurp_mmap(slurp_t *fp, const char *filename, size_t st)
 		return (errno == ENOMEM) ? SLURP_OPEN_FAIL : SLURP_OPEN_IGNORE;
 	}
 
+	slurp_memstream(fp, addr, st);
+
 	fp->closure = munmap_slurp_;
-	fp->internal.memory.length = st;
-	fp->internal.memory.data = addr;
 	fp->internal.memory.interfaces.mmap.fd = fd;
 
 	return SLURP_OPEN_SUCCESS;

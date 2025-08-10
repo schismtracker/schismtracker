@@ -145,7 +145,7 @@ void unslurp(slurp_t *t);
 
 #ifdef SCHISM_WIN32
 int slurp_win32_mmap(slurp_t *useme, const char *filename, size_t st);
-int slurp_win32(slurp_t *s, const char *filename);
+int slurp_win32(slurp_t *s, const char *filename, size_t st);
 #endif
 
 #if HAVE_MMAP

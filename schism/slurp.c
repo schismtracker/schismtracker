@@ -29,7 +29,7 @@
 #include "osdefs.h"
 #include "mem.h"
 
-static int slurp_stdio_open_(slurp_t *t, const char *filename);
+static int slurp_stdio_open_(slurp_t *t, const char *filename, size_t size);
 static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_stdio_tell_(slurp_t *t);
@@ -51,7 +51,20 @@ static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count);
 
 int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 {
+	static int (*const init_funcs[])(slurp_t *t, const char *filename, size_t size) = {
+#ifdef SCHISM_WIN32
+		slurp_win32_mmap,
+#endif
+#ifdef HAVE_MMAP
+		slurp_mmap,
+#endif
+#ifdef SCHISM_WIN32
+		slurp_win32,
+#endif
+		slurp_stdio_open_,
+	};
 	struct stat st;
+	size_t i;
 
 	if (!t)
 		return -1;
@@ -68,51 +81,16 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	if (!size)
 		size = st.st_size;
 
-#if (defined(SCHISM_WIN32) || defined(HAVE_MMAP))
-	switch (
-#ifdef SCHISM_WIN32
-		slurp_win32_mmap(t, filename, size)
-#elif defined(HAVE_MMAP)
-		slurp_mmap(t, filename, size)
-#else
-# error Where are we now?
-#endif
-	) {
-	case SLURP_OPEN_FAIL:
-		return -1;
-	case SLURP_OPEN_SUCCESS:
-		t->seek = slurp_memory_seek_;
-		t->tell = slurp_memory_tell_;
-		t->peek = slurp_memory_peek_;
-		t->receive = slurp_memory_receive_;
-		t->length = slurp_memory_length_;
-		goto finished;
-	default:
-	case SLURP_OPEN_IGNORE:
-		break;
-	}
-#endif
-
-#ifdef SCHISM_WIN32
-	switch (slurp_win32(t, filename)) {
-	case SLURP_OPEN_FAIL:
-		return -1;
-	case SLURP_OPEN_SUCCESS:
-		/* function pointers already filled in */
-		goto finished;
-	case SLURP_OPEN_IGNORE:
-		break;
-	}
-#endif
-
-	switch (slurp_stdio_open_(t, filename)) {
-	case SLURP_OPEN_FAIL:
-		return -1;
-	case SLURP_OPEN_SUCCESS:
-		goto finished;
-	default:
-	case SLURP_OPEN_IGNORE:
-		break;
+	for (i = 0; i < ARRAY_SIZE(init_funcs); i++) {
+		switch (init_funcs[i](t, filename, size)) {
+		case SLURP_OPEN_FAIL:
+			return -1;
+		case SLURP_OPEN_SUCCESS:
+			goto finished;
+		default:
+		case SLURP_OPEN_IGNORE:
+			break;
+		}
 	}
 
 	/* fail */
@@ -200,6 +178,8 @@ int slurp_stdio(slurp_t *t, FILE *fp)
 {
 	long end;
 
+	memset(t, 0, sizeof(*t));
+
 	t->internal.stdio.fp = fp;
 
 	if (fseek(t->internal.stdio.fp, 0, SEEK_END))
@@ -225,22 +205,29 @@ int slurp_stdio(slurp_t *t, FILE *fp)
 	return SLURP_OPEN_SUCCESS;
 }
 
-static int slurp_stdio_open_(slurp_t *t, const char *filename)
+static int slurp_stdio_open_(slurp_t *t, const char *filename, SCHISM_UNUSED size_t size)
 {
 	FILE *fp;
+	void (*closure)(slurp_t *);
+	int r;
 
 	if (!strcmp(filename, "-")) {
 		fp = stdin;
-		t->closure = NULL;
+		closure = NULL;
 	} else {
 		fp = os_fopen(filename, "rb");
-		t->closure = slurp_stdio_closure_;
+		closure = slurp_stdio_closure_;
 	}
 
 	if (!fp)
 		return SLURP_OPEN_FAIL;
 
-	return slurp_stdio(t, fp);
+	r = slurp_stdio(t, fp);
+	if (r != SLURP_OPEN_SUCCESS)
+		return r;
+
+	t->closure = closure;
+	return SLURP_OPEN_SUCCESS;
 }
 
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
@@ -266,21 +253,7 @@ static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count)
 
 static int slurp_stdio_eof_(slurp_t *t)
 {
-	long pos, end;
-
-	pos = slurp_stdio_tell_(t);
-	if (pos < 0)
-		return -1; // what the hell?
-
-	slurp_stdio_seek_(t, 0, SEEK_END);
-
-	end = slurp_stdio_tell_(t);
-	if (end < 0)
-		return -1;
-
-	slurp_stdio_seek_(t, pos, SEEK_SET);
-
-	return pos >= end;
+	return feof(t->internal.stdio.fp);
 }
 
 static void slurp_stdio_closure_(slurp_t *t)
@@ -444,18 +417,21 @@ static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 	if (off < 0 || (size_t)off > len)
 		return -1;
 
-	for (i = 0, len = 0; i < ARRAY_SIZE(s->internal.sf2.data); i++) {
-		if (off >= len && off < len + s->internal.sf2.data[i].len) {
+	for (i = 0; i < ARRAY_SIZE(s->internal.sf2.data); i++) {
+		if (off < s->internal.sf2.data[i].len) {
 			s->internal.sf2.current = i;
-			return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[i].off + off - len, SEEK_SET);
+			return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[i].off + off, SEEK_SET);
 		}
 
-		len += s->internal.sf2.data[i].len;
+		off -= s->internal.sf2.data[i].len;
 	}
 
-	/* ? */
+	/* likely EOF */
 	s->internal.sf2.current = ARRAY_SIZE(s->internal.sf2.data) - 1;
-	return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[s->internal.sf2.current].off + off - len, SEEK_SET);
+	/* fix this up */
+	off += s->internal.sf2.data[s->internal.sf2.current].len;
+	/* seek */
+	return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[s->internal.sf2.current].off + off, SEEK_SET);
 }
 
 static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)

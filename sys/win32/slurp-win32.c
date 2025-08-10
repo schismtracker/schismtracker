@@ -58,8 +58,34 @@ static void win32_unmap_(slurp_t *slurp)
 	}
 }
 
+static inline HANDLE CreateFileUTF8(const char *filename, DWORD a, DWORD b, LPSECURITY_ATTRIBUTES c, DWORD d, DWORD e, HANDLE f)
+{
+	HANDLE h;
+
+	SCHISM_ANSI_UNICODE({
+		// Windows 9x
+		char *filename_a;
+		if (charset_iconv(filename, &filename_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+			return INVALID_HANDLE_VALUE;
+
+		h = CreateFileA(filename_a, a, b, c, d, e, f);
+		free(filename_a);
+	}, {
+		wchar_t *filename_w;
+		if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+			return INVALID_HANDLE_VALUE;
+
+		h = CreateFileW(filename_w, a, b, c, d, e, f);
+		free(filename_w);
+	})
+
+	return h;
+}
+
+// this function name is misleading now
 static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *function, int val)
 {
+	/* this could be moved to osdefs.c  --paper */
 	DWORD err = GetLastError();
 	char *ptr = NULL;
 
@@ -86,57 +112,49 @@ static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *
 		log_appendf(4, "  %s", ptr);
 		free(ptr);
 	}
-	win32_unmap_(slurp);
+
+	//win32_unmap_(slurp);
 	return val;
-}
-
-static inline HANDLE CreateFileUTF8(const char *filename, DWORD a, DWORD b, LPSECURITY_ATTRIBUTES c, DWORD d, DWORD e, HANDLE f)
-{
-	HANDLE h;
-
-	SCHISM_ANSI_UNICODE({
-		// Windows 9x
-		char *filename_a;
-		if (charset_iconv(filename, &filename_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return INVALID_HANDLE_VALUE;
-
-		h = CreateFileA(filename_a, a, b, c, d, e, f);
-		free(filename_a);
-	}, {
-		wchar_t *filename_w;
-		if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return INVALID_HANDLE_VALUE;
-
-		h = CreateFileW(filename_w, a, b, c, d, e, f);
-		free(filename_w);
-	})
-
-	return h;
 }
 
 int slurp_win32_mmap(slurp_t *slurp, const char *filename, size_t st)
 {
-	slurp->internal.memory.interfaces.win32.file = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (slurp->internal.memory.interfaces.win32.file == INVALID_HANDLE_VALUE)
+	/* updated this to hopefully have no possible race conditions regarding the
+	 * actual size of the memory mapping. if older versions of windows don't support
+	 * it, then we can simply fall back to the regular file functions  --paper */
+	LPVOID data;
+	DWORD hi, lo;
+	HANDLE file;
+	HANDLE mapping;
+
+	file = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (file == INVALID_HANDLE_VALUE)
 		return win32_error_unmap_(slurp, filename, "CreateFile", SLURP_OPEN_FAIL);
 
+	hi = (st >> 32);
+	lo = st; /* cast truncates to 32bits */
+
 	// These functions are stubs on Windows 95 & 98, so simply ignore if
-	// they fail and fall back to the win32 implementation
-	slurp->internal.memory.interfaces.win32.mapping = CreateFileMapping(slurp->internal.memory.interfaces.win32.file, NULL, PAGE_READONLY, 0, 0, NULL);
-
-	if (!slurp->internal.memory.interfaces.win32.mapping) {
-		win32_unmap_(slurp);
+	// they fail and fall back to the regular file implementation
+	mapping = CreateFileMapping(file, NULL, PAGE_READONLY, hi, lo, NULL);
+	if (!mapping) {
+		CloseHandle(file);
 		return SLURP_OPEN_IGNORE;
 	}
 
-	slurp->internal.memory.data = MapViewOfFile(slurp->internal.memory.interfaces.win32.mapping, FILE_MAP_READ, 0, 0, 0);
-	if (!slurp->internal.memory.data) {
-		win32_unmap_(slurp);
+	data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, st);
+	if (!data) {
+		CloseHandle(mapping);
+		CloseHandle(file);
 		return SLURP_OPEN_IGNORE;
 	}
 
-	slurp->internal.memory.length = st;
+	slurp_memstream(slurp, data, st);
+
 	slurp->closure = win32_unmap_;
+
+	slurp->internal.memory.interfaces.win32.file = file;
+	slurp->internal.memory.interfaces.win32.mapping = mapping;
 
 	return SLURP_OPEN_SUCCESS;
 }
@@ -202,7 +220,7 @@ static void slurp_win32_closure_(slurp_t *t)
 	CloseHandle(t->internal.win32.handle);
 }
 
-int slurp_win32(slurp_t *t, const char *filename)
+int slurp_win32(slurp_t *t, const char *filename, SCHISM_UNUSED size_t size)
 {
 	t->internal.win32.handle = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (t->internal.win32.handle == INVALID_HANDLE_VALUE)
