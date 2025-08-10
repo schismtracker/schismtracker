@@ -262,10 +262,7 @@ static int *page_total_widgets = NULL;
 
 static void save_config_now(void)
 {
-	/* TODO */ /* uhhh, todo what? */
-	cfg_midipage_save(); /* what is this doing here? */
-	cfg_atexit_save();
-	cfg_save_output();
+	cfg_preferences_save();
 	status_text_flash("Configuration saved");
 }
 
