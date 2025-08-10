@@ -30,21 +30,26 @@
 #define unlink _unlink
 #endif
 
-int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *template, int template_length)
+/* if you need a template that can change length, just pass strlen(template), no need to add
+ * extra complexity to this function... (if it does NOT change length, pass it as a constant.
+ * don't call strlen if you don't have to, because it can be expensive)
+ *
+ * (also this really should just return the file pointer itself ... lol) */
+int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *template, size_t template_length)
 {
-	strcpy(temp_file, TEST_TEMP_FILE_NAME_TEMPLATE);
+	FILE *f;
+	size_t remaining;
 
-	FILE *f = mkfstemp(temp_file);
+	/* optimize: strcpy -> memcpy */
+	memcpy(temp_file, TEST_TEMP_FILE_NAME_TEMPLATE, TEST_TEMP_FILE_NAME_LENGTH);
 
+	f = mkfstemp(temp_file);
 	if (f == NULL)
 		return 0;
 
-	int remaining = 0;
+	remaining = 0;
 
 	if (template != NULL) {
-		if (template_length < 0)
-			template_length = strlen(template);
-
 		const char *buf = template;
 		remaining = template_length;
 
@@ -70,7 +75,9 @@ int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *templ
 
 		return 1;
 	} else {
-		unlink(temp_file);
+		// TODO still need to make an os_remove, or a
+		// dmoz_path_remove, or whatever
+		remove(temp_file);
 		return 0;
 	}
 }

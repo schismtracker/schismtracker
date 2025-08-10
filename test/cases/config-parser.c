@@ -6,7 +6,7 @@
 
 #include "config-parser.h"
 
-static const char * const test_config_file_content =
+static const char test_config_file_content[] =
 	"[ducks]\n"
 	"colour = brown\n"
 	"count = 7\n"
@@ -17,7 +17,7 @@ static const char * const test_config_file_content =
 	{ \
 		char test_config_file[TEST_TEMP_FILE_NAME_LENGTH]; \
 \
-		if (!test_temp_file(test_config_file, test_config_file_content, -1)) \
+		if (!test_temp_file(test_config_file, test_config_file_content, ARRAY_SIZE(test_config_file_content) - 1)) \
 			return SCHISM_TESTRESULT_INCONCLUSIVE; \
 \
 		int init_result = cfg_init(&cfg, test_config_file); \
