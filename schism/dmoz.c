@@ -118,9 +118,7 @@ static const schism_dmoz_backend_t *backend = NULL;
 /* note: this has do be split up like this; otherwise it gets read as '\x9ad' which is the Wrong Thing. */
 #define TITLE_DIRECTORY "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a" \
 	"Directory\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
-#define TITLE_LIBRARY "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9aLibrary\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
 #define DESCR_DIRECTORY "Directory"
-#define DESCR_UNKNOWN "Unknown sample format"
 
 /* memory allocation: how many files/dirs are allocated at a time */
 #define FILE_BLOCK_SIZE 256
@@ -300,7 +298,7 @@ int dmoz_path_from_fsspec(const void *pvref, char **path)
 		cinfo.dirInfo.ioFDirIndex = index;
 		cinfo.dirInfo.ioDrDirID = spec.parID;
 		err = PBGetCatInfoSync(&cinfo);
-		
+
 		if (err == noErr) {
 			unsigned char name_len = spec.name[0];
 
@@ -315,7 +313,7 @@ int dmoz_path_from_fsspec(const void *pvref, char **path)
 
 			// from here on out, ignore the input file name
 			index = -1;
-			
+
 			// move up to the parent
 			spec.parID = cinfo.dirInfo.ioDrParID;
 		}
@@ -336,14 +334,14 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 	OSErr err = noErr;
 	FSSpec spec = *(const FSSpec *)pvref;
 	Str255 name; // Must be long enough for a partial pathname consisting of two segments (64 bytes)
-	
+
 	const char* p = path;
 	const char* pEnd;
 	size_t segLen;
 	// Find the end of the path segment
 	for (pEnd = ++p; *pEnd && *pEnd != ':'; ++pEnd);
 	segLen = pEnd - p;
-	
+
 	// Try to find a volume that matches this name
 	for (ItemCount volIndex = 1; err == noErr; ++volIndex)
 	{
@@ -355,7 +353,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 		hfsParams.volumeParam.ioVolIndex = volIndex;
 		err = PBHGetVInfoSync(&hfsParams);
 		volRefNum = hfsParams.volumeParam.ioVRefNum;
-	
+
 		// Compare against our path segment
 		if (err == noErr && segLen == StrLength(name)) {
 			// FIXME FIXME READ ALL ABOUT IT:
@@ -370,9 +368,9 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 			}
 		}
 	}
-	
+
 	p = pEnd;
-	
+
 	// okay, now we have the root directory.
 	// NOW, we have to parse the rest of the path.
 	// I have no idea if '.' or '..' are actual real filenames on Mac OS.
@@ -381,7 +379,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 		case ':': // skip any path separators
 			++p;
 			break;
-	
+
 		case '.': // "current directory" or "parent directory"
 			if (p[1] == '/' || p[1] == 0) { // "current directory"
 				++p;
@@ -428,7 +426,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 			*partial++ = ':'; // Separator
 			while (p != pEnd)
 				*partial++ = *p++; // copy in the new element
-			  
+
 			name[0] = partial - &name[1]; // Set the name length
 
 			// Update the spec
@@ -437,7 +435,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 		}
 		}
 	}
-	
+
 	// copy the result
 	memcpy(pvref, &spec, sizeof(spec));
 
@@ -1771,7 +1769,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		OSErr err = PBHGetVInfoSync(&hfsParams);
 		if (err != noErr)
 			break;
-	
+
 		// FIXME: Need conversion to & from UTF-8
 		dmoz_add_file_or_dir(flist, dlist, strn_dup(&ppath[1], ppath[0]), strn_dup(&ppath[1], ppath[0]), NULL, -(1024 - index + 1));
 	}
@@ -1884,7 +1882,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 					break;
 				}
 			});
-			
+
 			if (!strcmp(filename, ".")
 				|| !strcmp(filename, "..")
 				|| filename[strlen(filename)-1] == '~'
@@ -1902,9 +1900,9 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 				free(filename);
 				continue; /* better luck next time */
 			}
-	
+
 			st.st_mtime = MAX(0, st.st_mtime);
-	
+
 			if (file_attrib & FILE_ATTRIBUTE_DIRECTORY) {
 				dmoz_add_file_or_dir(flist, dlist, fullpath, filename, &st, 0);
 			} else if (file_attrib == INVALID_FILE_ATTRIBUTES) {
