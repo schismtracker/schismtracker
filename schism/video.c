@@ -743,9 +743,11 @@ void video_colors_iterate(unsigned char palette[16][3], video_colors_callback_sp
 
 static void bgr32_fun_(unsigned int i, unsigned char rgb[3])
 {
-	video.tc_bgr32[i] = rgb[2] |
-		(rgb[1] << 8) |
-		(rgb[0] << 16) | (0xFF << 24);
+	video.tc_bgr32[i]
+		= ((uint32_t)rgb[2] << 0)
+		| ((uint32_t)rgb[1] << 8)
+		| ((uint32_t)rgb[0] << 16)
+		| ((uint32_t)0xFF   << 24);
 }
 
 void video_colors(unsigned char palette[16][3])

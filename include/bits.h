@@ -43,8 +43,8 @@
 	int##type##_t schism_signed_lshift_##type##_(int##type##_t x, unsigned int y) \
     { \
         union { \
-            uint##type##_t s; \
-            int##type##_t u; \
+            int##type##_t s; \
+            uint##type##_t u; \
         } xx; \
         xx.s = x; \
         xx.u <<= y; \
@@ -60,14 +60,16 @@ SCHISM_SIGNED_LSHIFT_VARIANT(16)
 SCHISM_SIGNED_LSHIFT_VARIANT(32)
 SCHISM_SIGNED_LSHIFT_VARIANT(64)
 SCHISM_SIGNED_LSHIFT_VARIANT(max)
+
+/* avoid UB by type promoting using ORs */
 #define lshift_signed(x, y) \
-	((sizeof((x) << (y)) <= sizeof(int8_t)) \
+	((sizeof((x) | (y)) <= sizeof(int8_t)) \
 		? (schism_signed_lshift_8_(x, y)) \
-		: (sizeof((x) << (y)) <= sizeof(int16_t)) \
+		: (sizeof((x) | (y)) <= sizeof(int16_t)) \
 			? (schism_signed_lshift_16_(x, y)) \
-			: (sizeof((x) << (y)) <= sizeof(int32_t)) \
+			: (sizeof((x) | (y)) <= sizeof(int32_t)) \
 				? (schism_signed_lshift_32_(x, y)) \
-				: (sizeof((x) << (y)) <= sizeof(int64_t)) \
+				: (sizeof((x) | (y)) <= sizeof(int64_t)) \
 					? (schism_signed_lshift_64_(x, y)) \
 					: (schism_signed_lshift_max_(x, y)))
 

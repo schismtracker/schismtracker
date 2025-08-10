@@ -860,7 +860,9 @@ void song_stop_unlocked(int quitting)
 
 	current_song->vu_left = 0;
 	current_song->vu_right = 0;
-	memset(audio_buffer, 0, audio_buffer_samples * audio_sample_size);
+
+	if (audio_buffer)
+		memset(audio_buffer, 0, audio_buffer_samples * audio_sample_size);
 }
 
 void song_loop_pattern(int pattern, int row)

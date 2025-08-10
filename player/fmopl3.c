@@ -56,6 +56,7 @@ differences between OPL2 and OPL3 shown in datasheets:
 */
 
 #include "headers.h"
+#include "bits.h"
 
 #include "player/fmopl.h"
 
@@ -820,7 +821,7 @@ static inline int32_t op_calc(uint32_t phase, uint32_t env, int32_t pm, uint32_t
 {
 	uint32_t p;
 
-	p = (env<<4) + sin_tab[wave_tab + ((((int32_t)((phase & ~FREQ_MASK) + (pm<<16))) >> FREQ_SH ) & SIN_MASK) ];
+	p = (env<<4) + sin_tab[wave_tab + ((((int32_t)((phase & ~FREQ_MASK) + lshift_signed(pm, 16))) >> FREQ_SH ) & SIN_MASK) ];
 
 	if (p >= TL_TAB_LEN)
 		return 0;
@@ -862,7 +863,7 @@ static inline void chan_calc( OPL3 *chip, OPL3_CH *CH )
 	{
 		if (!SLOT->FB)
 			out = 0;
-		SLOT->op1_out[1] = op_calc1(SLOT->Cnt, env, (out<<SLOT->FB), SLOT->wavetable );
+		SLOT->op1_out[1] = op_calc1(SLOT->Cnt, env, lshift_signed(out, SLOT->FB), SLOT->wavetable );
 	}
 	*SLOT->connect += SLOT->op1_out[1];
 //logerror("out0=%5i vol0=%4i ", SLOT->op1_out[1], env );

@@ -246,7 +246,7 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 			bb.bits = 0;
 			bb.buffer = 0;
 			bb.src = buf;
-			bb.end = buf + pblk.pk_size;
+			bb.end = buf + (pblk.pk_size - pblk.tt_entries);
 
 			while (subblk < pblk.sub_blk) {
 				uint32_t newval = 0x10000;
@@ -284,6 +284,8 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 				}
 				if (destpos >= size) {
 					subblk++;
+					if (subblk >= pblk.sub_blk)
+						break;
 					destpos = 0;
 					size = psubblk[subblk].unpk_size >> 1;
 					dest = (uint16_t *)(buffer + psubblk[subblk].unpk_pos);
@@ -318,7 +320,7 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 			bb.bits = 0;
 			bb.buffer = 0;
 			bb.src = buf;
-			bb.end = buf + pblk.pk_size;
+			bb.end = buf + (pblk.pk_size - pblk.tt_entries);
 
 			while (subblk < pblk.sub_blk) {
 				uint32_t newval = 0x100;
@@ -352,6 +354,8 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 				}
 				if (destpos >= size) {
 					subblk++;
+					if (subblk >= pblk.sub_blk)
+						break;
 					destpos = 0;
 					size = psubblk[subblk].unpk_size;
 					dest = buffer + psubblk[subblk].unpk_pos;
