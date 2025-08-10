@@ -67,10 +67,11 @@ if the file has not been modified, this call is a no-op. */
 int cfg_write(cfg_file_t *cfg);
 
 /* the return value is the full value for the key. this will differ from the value copied to the value return
-parameter if the length of the value is greater than the size of the buffer.
-value may be NULL, in which case nothing is copied. */
+ * parameter if the length of the value is greater than the size of the buffer.
+ * `value` may be NULL, in which case nothing is copied. if it is not NULL, then `len` takes in the full size
+ * of the buffer pointed to by `value`. The result in `value` will always be terminated with a NUL character. */
 const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char *key_name,
-			   char *value, int len, const char *def);
+	char *value, size_t len, const char *def);
 int cfg_get_number(cfg_file_t *cfg, const char *section_name, const char *key_name, int def);
 
 void cfg_set_string(cfg_file_t *cfg, const char *section_name, const char *key_name, const char *value);

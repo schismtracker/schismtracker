@@ -397,7 +397,7 @@ int cfg_write(cfg_file_t *cfg)
 }
 
 const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char *key_name,
-			   char *value, int len, const char *def)
+	char *value, size_t len, const char *def)
 {
 	struct cfg_section *section;
 	struct cfg_key *key;
@@ -409,7 +409,7 @@ const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char
 		if (key && key->value)
 			r = key->value;
 	}
-	if (value && r) {
+	if (value && r && len > 0) {
 		/* copy len-1 chars, and append a NUL terminator */
 		strncpy(value, r, len-1);
 		value[len-1] = 0;
