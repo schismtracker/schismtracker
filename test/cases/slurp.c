@@ -23,6 +23,7 @@
 
 #include "test.h"
 #include "test-assertions.h"
+#include "test-tempfile.h"
 
 #include "slurp.h"
 
@@ -84,6 +85,22 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	/* getting the length should not affect EOF
 	 * (i.e., it should not call seek()) */
 	(void)slurp_length(fp);
+	ASSERT(slurp_eof(fp));
+
+	/* seeking to the end should not cause EOF */
+	ASSERT(slurp_seek(fp, 0, SEEK_END) == 0);
+	ASSERT(!slurp_eof(fp));
+
+	/* random operations should have no effect on EOF */
+	(void)slurp_tell(fp);
+	ASSERT(!slurp_eof(fp));
+
+	/* getting the length should not affect EOF */
+	(void)slurp_length(fp);
+	ASSERT(!slurp_eof(fp));
+
+	/* any reads SHOULD affect EOF */
+	(void)slurp_getc(fp);
 	ASSERT(slurp_eof(fp));
 
 	/* seeking should clear any EOF flag */
@@ -168,4 +185,27 @@ testresult_t test_slurp_sf2(void)
 	return r;
 }
 
-/* TODO need to add slurp test functions for win32 and stdio */
+testresult_t test_slurp_stdio(void)
+{
+	slurp_t fp;
+	char tmp[TEST_TEMP_FILE_NAME_LENGTH];
+	FILE *stdfp;
+	testresult_t r;
+
+	ASSERT(test_temp_file(tmp, expected_result, ARRAY_SIZE(expected_result) - 1));
+
+	/* XXX we open the file, close the file, and then reopen it.
+	 * this is a source for race conditions ... */
+	stdfp = fopen(tmp, "rb");
+
+	ASSERT(slurp_stdio(&fp, stdfp) == SLURP_OPEN_SUCCESS);
+
+	r = test_slurp_common(&fp);
+
+	unslurp(&fp);
+	fclose(stdfp);
+
+	return r;
+}
+
+/* TODO need to add slurp test functions for win32 */
