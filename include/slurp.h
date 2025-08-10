@@ -48,18 +48,20 @@ struct slurp_struct_ {
 	size_t (*read)(slurp_t *t, void *ptr, size_t count);
 	uint64_t (*length)(slurp_t *t);
 
-	/* this one is optional, and will use the default implementation
-	 * in slurp.c if it's NULL */
+	/* this one is optional, and slurp will emulate stdio behavior if it's NULL */
 	int (*eof)(slurp_t *);
 
 	/* clean up after ourselves (optional, can be NULL) */
 	void (*closure)(slurp_t *);
 
-	/* receive data in a callback function; keeps away useless allocation for memory mapping.
+	/* receive data in a callback function; keeps away useless allocation when memory mapping.
 	 * (optional, can be NULL) */
 	int (*receive)(slurp_t *, int (*callback)(const void *, size_t, void *), size_t length, void *userdata);
 
+	/* used internally to mark position for slurp_limit() */
 	int64_t limit;
+
+	unsigned int eof_ : 1; /* need THIS to emulate the EOF flag, for impls without it */
 
 	union {
 		struct {
@@ -67,8 +69,6 @@ struct slurp_struct_ {
 			unsigned char *data2; /* for 2mem (this allows us to share tell,seek,length impl) */
 			size_t length;
 			size_t pos;
-
-			int eof; /* need THIS to emulate the stupid EOF flag */
 
 			/* for specific interfaces that are all "memory-based" */
 			union {
