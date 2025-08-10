@@ -125,6 +125,9 @@ can be used to read only part of a file, or if the file size is known but a stat
 available. */
 int slurp(slurp_t *t, const char *filename, struct stat *buf, size_t size);
 
+/* initializes a slurp_t over an existing file */
+int slurp_stdio(slurp_t *t, FILE *fp);
+
 /* initializes a slurp_t over an existing memory stream */
 int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize);
 int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize);

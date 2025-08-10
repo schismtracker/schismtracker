@@ -109,11 +109,6 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
 	case SLURP_OPEN_FAIL:
 		return -1;
 	case SLURP_OPEN_SUCCESS:
-		t->seek = slurp_stdio_seek_;
-		t->tell = slurp_stdio_tell_;
-		t->eof  = slurp_stdio_eof_;
-		t->read = slurp_stdio_read_;
-		t->length = slurp_stdio_length_;
 		goto finished;
 	default:
 	case SLURP_OPEN_IGNORE:
@@ -200,25 +195,8 @@ void unslurp(slurp_t * t)
 /* --------------------------------------------------------------------- */
 /* stdio implementation */
 
-static int slurp_stdio_open_(slurp_t *t, const char *filename)
-{
-	FILE *fp;
-
-	if (!strcmp(filename, "-")) {
-		fp = stdin;
-		t->closure = NULL;
-	} else {
-		fp = os_fopen(filename, "rb");
-		t->closure = slurp_stdio_closure_;
-	}
-
-	if (!fp)
-		return SLURP_OPEN_FAIL;
-
-	return slurp_stdio_open_file_(t, fp);
-}
-
-static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
+/* this function does NOT automatically close the file */
+int slurp_stdio(slurp_t *t, FILE *fp)
 {
 	long end;
 
@@ -237,7 +215,32 @@ static int slurp_stdio_open_file_(slurp_t *t, FILE *fp)
 
 	t->internal.stdio.length = MAX(0, end);
 
+	/* A BARBERSHOP HAIRCUT THAT COSTS A QUARTER */
+	t->seek = slurp_stdio_seek_;
+	t->tell = slurp_stdio_tell_;
+	t->eof  = slurp_stdio_eof_;
+	t->read = slurp_stdio_read_;
+	t->length = slurp_stdio_length_;
+
 	return SLURP_OPEN_SUCCESS;
+}
+
+static int slurp_stdio_open_(slurp_t *t, const char *filename)
+{
+	FILE *fp;
+
+	if (!strcmp(filename, "-")) {
+		fp = stdin;
+		t->closure = NULL;
+	} else {
+		fp = os_fopen(filename, "rb");
+		t->closure = slurp_stdio_closure_;
+	}
+
+	if (!fp)
+		return SLURP_OPEN_FAIL;
+
+	return slurp_stdio(t, fp);
 }
 
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
