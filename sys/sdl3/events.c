@@ -97,6 +97,20 @@ static schism_keymod_t sdl3_event_mod_state(void)
 	return sdl3_modkey_trans(sdl3_GetModState());
 }
 
+static mouse_button sdl2_mouse_buttons_trans(Uint32 sdl_mouse_button_state)
+{
+	enum mouse_button ret = 0;
+
+	if (sdl12_mouse_button_state & SDL_BUTTON(SDL_BUTTON_LEFT))
+		ret |= MOUSE_BUTTON_LEFT;
+	if (sdl12_mouse_button_state & SDL_BUTTON(SDL_BUTTON_MIDDLE))
+		ret |= MOUSE_BUTTON_MIDDLE;
+	if (sdl12_mouse_button_state & SDL_BUTTON(SDL_BUTTON_RIGHT))
+		ret |= MOUSE_BUTTON_RIGHT;
+
+	return ret;
+}
+
 /* These are here for linking text input to keyboard inputs.
  * If no keyboard input can be found, then the text will
  * be sent as a SCHISM_TEXTINPUT event.
@@ -292,6 +306,7 @@ static void sdl3_pump_events(void)
 			schism_event.type = SCHISM_MOUSEMOTION;
 			schism_event.motion.x = e.motion.x;
 			schism_event.motion.y = e.motion.y;
+			schism_event.motion.buttons = sdl3_mouse_buttons_trans(e.motion.state);
 			events_push_event(&schism_event);
 			break;
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
