@@ -103,30 +103,15 @@ struct it_instrument {
 };
 
 /* --------------------------------------------------------------------- */
-int fmt_iti_read_info(dmoz_file_t *file, slurp_t *fp)
+
+static int load_it_notetrans(struct instrumentloader *ii, song_instrument_t *instrument, slurp_t *fp,
+	int *numsamps)
 {
-	struct it_instrument iti;
+	/* sample bits; made an array simply because it means it's expandible */
+	BITARRAY_DECLARE(smpbits, 256);
+	int n, m;
 
-	if (slurp_read(fp, &iti, sizeof(iti)) != sizeof(iti)
-		|| memcmp(&iti.id, "IMPI", sizeof(iti.id)))
-		return 0;
-
-	file->description = "Impulse Tracker Instrument";
-	file->title = strn_dup((const char *)iti.name, sizeof(iti.name));
-	file->type = TYPE_INST_ITI;
-
-	return 1;
-}
-
-static const uint32_t env_flags[3][4] = {
-	{ENV_VOLUME,  ENV_VOLLOOP,   ENV_VOLSUSTAIN,   ENV_VOLCARRY},
-	{ENV_PANNING, ENV_PANLOOP,   ENV_PANSUSTAIN,   ENV_PANCARRY},
-	{ENV_PITCH,   ENV_PITCHLOOP, ENV_PITCHSUSTAIN, ENV_PITCHCARRY},
-};
-
-static int load_it_notetrans(struct instrumentloader *ii, song_instrument_t *instrument, slurp_t *fp)
-{
-	int n;
+	BITARRAY_ZERO(smpbits);
 
 	for (n = 0; n < 120; n++) {
 		int note = slurp_getc(fp);
@@ -139,12 +124,69 @@ static int load_it_notetrans(struct instrumentloader *ii, song_instrument_t *ins
 		if (!NOTE_IS_NOTE(note))
 			note = n + NOTE_FIRST;
 
-		instrument->note_map[n] = note;
-		instrument->sample_map[n] = (ii ? instrument_loader_sample(ii, smp) : smp);
+		if (instrument) {
+			instrument->note_map[n] = note;
+			instrument->sample_map[n] = (ii ? instrument_loader_sample(ii, smp) : smp);
+		}
+
+		/* smp == 0 means theres no sample mapped */
+		if (!smp)
+			continue;
+
+		/* this should never ever happen (UCHAR_MAX == 255) */
+		SCHISM_RUNTIME_ASSERT(smp < 256, "overflow");
+
+		BITARRAY_SET(smpbits, smp);
+	}
+
+	if (numsamps) {
+		*numsamps = 0;
+
+		for (n = 0; n < 256; n++)
+			if (BITARRAY_ISSET(smpbits, n))
+				(*numsamps)++;
 	}
 
 	return 1;
 }
+
+int fmt_iti_read_info(dmoz_file_t *file, slurp_t *fp)
+{
+	int maxsamp;
+	unsigned char impi[4];
+	unsigned char name[26];
+
+	if (slurp_length(fp) < 554)
+		return 0;
+
+	if (slurp_read(fp, impi, sizeof(impi)) != sizeof(impi)
+		|| memcmp(impi, "IMPI", sizeof(impi)))
+		return 0;
+
+	/* read in name */
+	slurp_seek(fp, 28, SEEK_CUR);
+
+	if (slurp_read(fp, name, sizeof(name)) != sizeof(name))
+		return 0;
+
+	slurp_seek(fp, 6, SEEK_CUR);
+
+	if (!load_it_notetrans(NULL, NULL, fp, &maxsamp))
+		return 0;
+
+	file->description = "Impulse Tracker Instrument";
+	file->title = strn_dup((const char *)name, sizeof(name));
+	file->type = TYPE_INST_ITI;
+	file->sampsize = maxsamp;
+
+	return 1;
+}
+
+static const uint32_t env_flags[3][4] = {
+	{ENV_VOLUME,  ENV_VOLLOOP,   ENV_VOLSUSTAIN,   ENV_VOLCARRY},
+	{ENV_PANNING, ENV_PANLOOP,   ENV_PANSUSTAIN,   ENV_PANCARRY},
+	{ENV_PITCH,   ENV_PITCHLOOP, ENV_PITCHSUSTAIN, ENV_PITCHCARRY},
+};
 
 // XXX need to check slurp return values
 static uint32_t load_it_envelope(song_envelope_t *env, slurp_t *fp, int envtype, int adj)
@@ -238,7 +280,7 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 	instrument->global_volume = 128;
 	instrument->panning = 32 * 4; //mphack
 
-	if (!load_it_notetrans(NULL, instrument, fp))
+	if (!load_it_notetrans(NULL, instrument, fp, NULL))
 		return 0;
 
 	if (ihdr.flags & 1)
@@ -341,7 +383,7 @@ int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrumen
 	instrument->midi_program = ihdr.mpr;
 	instrument->midi_bank = bswapLE16(ihdr.mbank);
 
-	if (!load_it_notetrans(ii, instrument, fp))
+	if (!load_it_notetrans(ii, instrument, fp, NULL))
 		return 0;
 
 	instrument->flags |= load_it_envelope(&instrument->vol_env, fp, 0, 0);
