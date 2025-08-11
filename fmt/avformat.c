@@ -416,7 +416,7 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	 * other than this, because this is stupid.
 	 *   --paper */
 	if (use_ioctx) {
-		ioctx = schism_avio_alloc_context(buffer, sizeof(buffer), 0, s, avfmt_read_packet, NULL, avfmt_seek);
+		ioctx = schism_avio_alloc_context(buffer, SCHISM_AVFORMAT_BUFFER_SIZE, 0, s, avfmt_read_packet, NULL, avfmt_seek);
 		if (!ioctx)
 			goto fail;
 	}
