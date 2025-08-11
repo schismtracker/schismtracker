@@ -192,7 +192,7 @@ testresult_t test_slurp_stdio(void)
 	FILE *stdfp;
 	testresult_t r;
 
-	ASSERT(test_temp_file(tmp, expected_result, ARRAY_SIZE(expected_result) - 1));
+	REQUIRE(test_temp_file(tmp, expected_result, ARRAY_SIZE(expected_result) - 1));
 
 	/* XXX we open the file, close the file, and then reopen it.
 	 * this is a source for race conditions ... */

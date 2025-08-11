@@ -27,6 +27,7 @@
 #include "test.h"
 
 /* TODO prefix these with TEST_ */
+#define REQUIRE(init_cond) do { if (!(init_cond)) { test_log_printf("%s, line %d: test initialization failed: %s\n", __FILE__, __LINE__, #init_cond); return SCHISM_TESTRESULT_INCONCLUSIVE; } } while (0)
 #define ASSERT(cond) do { if (!(cond)) { test_log_printf("%s, line %d: assertion failed: %s\n", __FILE__, __LINE__, #cond); return SCHISM_TESTRESULT_FAIL; } } while (0)
 #define RETURN_PASS return SCHISM_TESTRESULT_PASS
 #define RETURN_FAIL return SCHISM_TESTRESULT_FAIL
