@@ -382,6 +382,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Apple software now uses the 2 trailing digits of the year for
+          # the release number, making them non-Y2K compliant. Nice! 
+          - { host: macos-15, compiler: '26.0' }
           - { host: macos-15, compiler: '16.4' }
           - { host: macos-15, compiler: '16.3' }
           - { host: macos-15, compiler: '16.2' }
