@@ -115,11 +115,20 @@ static const schism_dmoz_backend_t *backend = NULL;
 /* --------------------------------------------------------------------------------------------------------- */
 /* constants */
 
-/* note: this has do be split up like this; otherwise it gets read as '\x9ad' which is the Wrong Thing. */
+/* note: this has to be split up like this; otherwise it gets read as '\x9ad' which is the Wrong Thing. */
 #define TITLE_DIRECTORY "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a" \
 	"Directory\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
-#define TITLE_LIBRARY "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9aLibrary\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
 #define DESCR_DIRECTORY "Directory"
+
+/* these two constants are unused.
+ * TITLE_LIBRARY is the title used for a library in Impulse Tracker; however, we actually
+ * display the title of the module (or instrument). I think this is a better choice, considering
+ * most people usually know a mod by the title and not the filename ;)
+ *
+ * DESCR_UNKNOWN is the description used for unknown formats on the sample load screen.
+ * However, "Unknown module format" is used on the load module screen. Perhaps we should
+ * use that there, instead of "Unsupported file format" ? */
+#define TITLE_LIBRARY "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9aLibrary\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
 #define DESCR_UNKNOWN "Unknown sample format"
 
 /* memory allocation: how many files/dirs are allocated at a time */
@@ -281,6 +290,10 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
  * means we have to do all of this stupid conversion ourselves.
  *
  *  - paper */
+
+/* TODO: HFS+ internally uses UTF-16 for filenames. We should
+ * definitely be able to utilize that, so that we don't lose data
+ * if some crazy lunatic switches their locale */
 int dmoz_path_from_fsspec(const void *pvref, char **path)
 {
 	OSErr err = noErr;
