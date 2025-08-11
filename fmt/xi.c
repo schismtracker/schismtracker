@@ -219,6 +219,8 @@ int fmt_xi_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->description = "Fasttracker II Instrument";
 	file->title = strn_dup((const char *)xi.name, sizeof(xi.name));
 	file->type = TYPE_INST_XI;
+	file->sampsize = xi.xish.nsamples;
+
 	return 1;
 }
 
