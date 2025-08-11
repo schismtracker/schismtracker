@@ -3623,11 +3623,10 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	if (max_row_number < 0)
 		max_row_number = 0;
 
-	/* hack to render this useful :)
-	 * XXX what the hell was this supposed to do? */
-	if (k->sym == SCHISM_KEYSYM_KP_9) {
+	/* hack to render this useful :) */
+	if (k->orig_sym == SCHISM_KEYSYM_KP_9) {
 		k->sym = SCHISM_KEYSYM_F9;
-	} else if (k->sym == SCHISM_KEYSYM_KP_0) {
+	} else if (k->orig_sym == SCHISM_KEYSYM_KP_0) {
 		k->sym = SCHISM_KEYSYM_F10;
 	}
 
@@ -3635,6 +3634,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	if (n > -1 && n <= 9) {
 		if (k->state == KEY_RELEASE)
 			return 1;
+		/* IT just sets it to 9, why is this here?  --paper */
 		skip_value = (n == 9) ? 16 : n;
 		status_text_flash("Cursor step set to %d", skip_value);
 		return 1;
@@ -4408,10 +4408,6 @@ static int pattern_editor_handle_key(struct key_event * k)
 			current_channel--;
 		current_position = 0;
 
-		/* hack to keep shift-tab from changing the selection */
-		k->mod &= ~SCHISM_KEYMOD_SHIFT;
-		shift_selection_end();
-
 		return -1;
 	case SCHISM_KEYSYM_PAGEUP:
 		if (k->state == KEY_RELEASE)
@@ -4667,7 +4663,8 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 
 	current_channel = CLAMP(current_channel, 1, MAX_CHANNELS);
 	pattern_editor_reposition();
-	if (k->mod & SCHISM_KEYMOD_SHIFT)
+	/* ignore Shift-Tab */
+	if ((k->mod & SCHISM_KEYMOD_SHIFT) && k->sym != SCHISM_KEYSYM_TAB)
 		shift_selection_update();
 
 	status.flags |= NEED_UPDATE;
