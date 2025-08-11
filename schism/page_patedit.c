@@ -3278,6 +3278,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 /* return 1 => handled key, 0 => no way */
 static int pattern_editor_insert(struct key_event *k)
 {
+	/* wow, this is horrifying */
 	int ins, smp, j, n, vol;
 	song_note_t *pattern, *cur_note;
 
@@ -3622,7 +3623,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	if (max_row_number < 0)
 		max_row_number = 0;
 
-	/* hack to render this useful :) */
+	/* hack to render this useful :)
+	 * XXX what the hell was this supposed to do? */
 	if (k->sym == SCHISM_KEYSYM_KP_9) {
 		k->sym = SCHISM_KEYSYM_F9;
 	} else if (k->sym == SCHISM_KEYSYM_KP_0) {

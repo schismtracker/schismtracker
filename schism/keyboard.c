@@ -272,7 +272,7 @@ int kbd_is_modifier_key(struct key_event *k)
 int numeric_key_event(struct key_event *k, int kponly)
 {
 	if (kponly) {
-		switch (k->sym) {
+		switch (k->orig_sym) {
 		case SCHISM_KEYSYM_KP_0: return 0;
 		case SCHISM_KEYSYM_KP_1: return 1;
 		case SCHISM_KEYSYM_KP_2: return 2;
@@ -290,6 +290,8 @@ int numeric_key_event(struct key_event *k, int kponly)
 	}
 
 	switch (k->sym) {
+	/* why are we checking for keypad here?
+	 * it should already be translated by kbd_key_translate */
 	case SCHISM_KEYSYM_0: case SCHISM_KEYSYM_KP_0: return 0;
 	case SCHISM_KEYSYM_1: case SCHISM_KEYSYM_KP_1: return 1;
 	case SCHISM_KEYSYM_2: case SCHISM_KEYSYM_KP_2: return 2;
@@ -456,26 +458,16 @@ int kbd_char_to_hex(struct key_event *k)
 {
 	if (!NO_CAM_MODS(k->mod)) return -1;
 
-	switch (k->orig_sym) {
-	case SCHISM_KEYSYM_KP_0: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
+	switch (k->sym) {
 	case SCHISM_KEYSYM_0: return 0;
-	case SCHISM_KEYSYM_KP_1: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_1: return 1;
-	case SCHISM_KEYSYM_KP_2: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_2: return 2;
-	case SCHISM_KEYSYM_KP_3: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_3: return 3;
-	case SCHISM_KEYSYM_KP_4: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_4: return 4;
-	case SCHISM_KEYSYM_KP_5: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_5: return 5;
-	case SCHISM_KEYSYM_KP_6: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_6: return 6;
-	case SCHISM_KEYSYM_KP_7: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_7: return 7;
-	case SCHISM_KEYSYM_KP_8: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_8: return 8;
-	case SCHISM_KEYSYM_KP_9: if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1; SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_9: return 9;
 	case SCHISM_KEYSYM_a: return 10;
 	case SCHISM_KEYSYM_b: return 11;
@@ -506,9 +498,6 @@ int kbd_get_note(struct key_event *k)
 	int note;
 
 	if (!NO_CAM_MODS(k->mod)) return -1;
-
-	if (k->sym == SCHISM_KEYSYM_KP_1 || k->sym == SCHISM_KEYSYM_KP_PERIOD)
-		if (!(k->mod & SCHISM_KEYMOD_NUM)) return -1;
 
 	switch (k->scancode) {
 	case SCHISM_SCANCODE_GRAVE:

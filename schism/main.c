@@ -470,10 +470,10 @@ SCHISM_NORETURN static void event_loop(void)
 					/* should be handled per OS */
 					break;
 				case NUMLOCK_ALWAYS_OFF:
-					status.keymod &= ~SCHISM_KEYMOD_NUM;
+					kk.mod &= ~SCHISM_KEYMOD_NUM;
 					break;
 				case NUMLOCK_ALWAYS_ON:
-					status.keymod |= SCHISM_KEYMOD_NUM;
+					kk.mod |= SCHISM_KEYMOD_NUM;
 					break;
 				};
 				/* copy the keymod into the status global */
