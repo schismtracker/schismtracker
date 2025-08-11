@@ -328,4 +328,46 @@ SCHISM_SPLACES_VARIANT(64)
 
 #undef SCHISM_SPLACES_VARIANT
 
+/* ------------------------------------------------------------------------ */
+/* bitarrays.
+ * this has the same general idea as the UNIX-y fd_set, with the added
+ * benefit of being expandible to whatever size.
+ *
+ * you should make sure that you're within range, because these macros
+ * do no checks. */
+
+#define BITARRAY_DECLARE(name, size) \
+	uint32_t name[(size + 31) / 32]
+#define BITARRAY_ZERO(name) \
+	((void)memset(name, 0, sizeof(name)))
+
+/* these should not be touched outside of bits.h.
+ * users should use the macros */
+static inline SCHISM_ALWAYS_INLINE
+void barray_set_impl(uint32_t *barray, size_t barrsize, int bit)
+{
+	barray[bit >> 5] |= ((uint32_t)1 << (bit & 0x1F));
+}
+
+static inline SCHISM_ALWAYS_INLINE
+void barray_clear_impl(uint32_t *barray, size_t barrsize, int bit)
+{
+	barray[bit >> 5] &= ~((uint32_t)1 << (bit & 0x1F));
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int barray_isset_impl(uint32_t *barray, size_t barrsize, int bit)
+{
+	return !!(barray[bit >> 5] & ((uint32_t)1 << (bit & 0x1F)));
+}
+
+/* XXX these expand bit multiple times, which can make for errors.
+ * maybe we should make these inline functions */
+#define BITARRAY_SET(name, bit) \
+	(barray_set_impl(name, sizeof(name), bit))
+#define BITARRAY_CLEAR(name, bit) \
+	(barray_clear_impl(name, sizeof(name), bit))
+#define BITARRAY_ISSET(name, bit) \
+	(barray_isset_impl(name, sizeof(name), bit))
+
 #endif /* SCHISM_BITS_H_ */
