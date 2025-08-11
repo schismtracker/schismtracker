@@ -1657,8 +1657,10 @@ static void OPL3WriteReg(OPL3 *chip, int r, int v)
 			return;
 
 		default:
+			/*
 			if (r < 0x120)
-				/*logerror("YMF262: write to unknown register (set#2): %03x value=%02x\n",r,v);*/
+				logerror("YMF262: write to unknown register (set#2): %03x value=%02x\n",r,v);
+			*/
 		break;
 		}
 
@@ -2285,7 +2287,7 @@ static OPL3 *OPL3Create(uint32_t clock, uint32_t rate, int type)
 	ptr = (char *)calloc(1, state_size);
 	if (ptr == NULL)
 		return NULL;
-		
+
 	chip = (OPL3*) ptr;
 	chip->type  = type;
 	chip->clock = clock;
