@@ -59,6 +59,8 @@ TEST_FUNC(test_str_from_num_thousands_digits_8_negative)
 TEST_FUNC(test_str_from_num_thousands_digits_9_negative)
 TEST_FUNC(test_str_from_num_thousands_digits_10_negative)
 
+TEST_FUNC(test_str_concat)
+
 TEST_FUNC(test_slurp_memstream)
 TEST_FUNC(test_slurp_2memstream)
 TEST_FUNC(test_slurp_sf2)

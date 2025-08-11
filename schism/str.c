@@ -460,17 +460,49 @@ int str_get_num_lines(const char *text)
 
 char *str_concat(const char *s, ...)
 {
-	va_list ap;
+	/* As it turns out, concatenating strings isn't hard, but doing it
+	 * *fast* is another story. Here we go over the list of strings not
+	 * once, not twice, but thrice, because it will generally be faster
+	 * than reading over the whole string many times. (here we do it twice,
+	 * the first time to get the length, and the next time to do the
+	 * actual copying, similar to str_dup) */
+	va_list ap, ap2, ap3;
 	char *out = NULL;
-	int len = 0;
+	size_t len;
+	size_t i;
+	const char *n;
 
-	va_start(ap,s);
-	while (s) {
-		out = mem_realloc(out, (len += strlen(s)+1));
-		strcat(out, s);
-		s = va_arg(ap, const char *);
+	va_start(ap, s);
+	va_copy(ap2, ap);
+	va_copy(ap3, ap);
+
+	/* first check how many strings we have */
+	for (i = 0, n = s; n; n = va_arg(ap, const char *), i++);
+
+	SCHISM_VLA_ALLOC(size_t, lens, i);
+
+	len = 0;
+
+	/* then find their lengths */
+	for (i = 0, n = s; n; n = va_arg(ap2, const char *), i++) {
+		lens[i] = strlen(n);
+		len += lens[i];
 	}
+
+	out = mem_alloc(len + 1);
+
+	len = 0;
+
+	/* finally, do the copying */
+	for (i = 0, n = s; n; n = va_arg(ap3, const char *), i++) {
+		memcpy(out + len, n, lens[i]);
+		len += lens[i];
+	}
+
 	va_end(ap);
+	va_end(ap2);
+	va_end(ap3);
+
 	return out;
 }
 

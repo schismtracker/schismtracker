@@ -184,3 +184,29 @@ testresult_t test_str_from_num_thousands_digits_10_negative(void)
 {
 	return test_str_from_num_thousands(-2082850450, "-2,082,850,450");
 }
+
+/* ------------------------------------------------------------------------ */
+
+testresult_t test_str_concat(void)
+{
+	static const struct {
+		const char *args[5];
+		const char *expected;
+	} c[] = {
+		{{"123", "456", "789", "012"}, "123456789012"},
+		{{"123", "ok", "67"}, "123ok67"},
+	};
+	size_t i;
+	char *r;
+
+	for (i = 0; i < ARRAY_SIZE(c); i++) {
+		r = str_concat(c[i].args[0], c[i].args[1], c[i].args[2], c[i].args[3], c[i].args[4], (char *)NULL);
+		REQUIRE(r);
+
+		ASSERT(!strcmp(c[i].expected, r));
+
+		free(r);
+	}
+
+	RETURN_PASS;
+}
