@@ -499,6 +499,8 @@ char *str_concat(const char *s, ...)
 		len += lens[i];
 	}
 
+	out[len] = '\0';
+
 	va_end(ap);
 	va_end(ap2);
 	va_end(ap3);
