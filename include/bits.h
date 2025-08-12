@@ -202,17 +202,23 @@ SCHISM_ABS_VARIANT(64)
 
 #undef SCHISM_ABS_VARIANT
 
-/* old name */
+/* old name (should be removed) */
 #define safe_abs_32 babs32
 
 /* ------------------------------------------------------------------------ */
 /* average (unsigned integers) */
 
+/* round((x + y) / 2) */
 #define SCHISM_UAVG_VARIANT(BITS) \
 	static inline SCHISM_ALWAYS_INLINE \
 	uint##BITS##_t bavgu##BITS(uint##BITS##_t x, uint##BITS##_t y) \
 	{ \
-		return (x >> 1) + (y >> 1) + (x & y & 1); \
+		uint##BITS##_t x_d_rem    = (x & 1); \
+		uint##BITS##_t y_d_rem    = (y & 1); \
+		uint##BITS##_t rem_d_quot = ((x_d_rem + y_d_rem) >> 1); \
+		uint##BITS##_t rem_d_rem  = ((x_d_rem + y_d_rem) &  1); \
+	\
+		return ((x / 2) + (y / 2)) + rem_d_quot + rem_d_rem; \
 	}
 
 SCHISM_UAVG_VARIANT(8)
@@ -222,16 +228,13 @@ SCHISM_UAVG_VARIANT(64)
 
 #undef SCHISM_UAVG_VARIANT
 
-/* old name */
+/* old name (should be removed) */
 #define avg_u32 bavgu32
 
 /* ------------------------------------------------------------------------ */
 /* average (signed integers) */
 
-/* this gives identical results to what AltiVec does. this means it always
- * rounds up, and is mathematically equivalent to `ceil((x + y) / 2)`.
- * it was originally created for my vectorization library but I've adapted
- * it for use here.  --paper */
+/* round((x + y) / 2) */
 #define SCHISM_SAVG_VARIANT(BITS) \
 	static inline SCHISM_ALWAYS_INLINE \
 	int##BITS##_t bavgs##BITS(int##BITS##_t x, int##BITS##_t y) \
@@ -344,19 +347,19 @@ SCHISM_SPLACES_VARIANT(64)
 /* these should not be touched outside of bits.h.
  * users should use the macros */
 static inline SCHISM_ALWAYS_INLINE
-void barray_set_impl(uint32_t *barray, size_t barrsize, int bit)
+void barray_set_impl(uint32_t *barray, int bit)
 {
 	barray[bit >> 5] |= ((uint32_t)1 << (bit & 0x1F));
 }
 
 static inline SCHISM_ALWAYS_INLINE
-void barray_clear_impl(uint32_t *barray, size_t barrsize, int bit)
+void barray_clear_impl(uint32_t *barray, int bit)
 {
 	barray[bit >> 5] &= ~((uint32_t)1 << (bit & 0x1F));
 }
 
 static inline SCHISM_ALWAYS_INLINE
-int barray_isset_impl(uint32_t *barray, size_t barrsize, int bit)
+int barray_isset_impl(uint32_t *barray, int bit)
 {
 	return !!(barray[bit >> 5] & ((uint32_t)1 << (bit & 0x1F)));
 }
@@ -364,10 +367,10 @@ int barray_isset_impl(uint32_t *barray, size_t barrsize, int bit)
 /* XXX these expand bit multiple times, which can make for errors.
  * maybe we should make these inline functions */
 #define BITARRAY_SET(name, bit) \
-	(barray_set_impl(name, sizeof(name), bit))
+	(barray_set_impl(name, bit))
 #define BITARRAY_CLEAR(name, bit) \
-	(barray_clear_impl(name, sizeof(name), bit))
+	(barray_clear_impl(name, bit))
 #define BITARRAY_ISSET(name, bit) \
-	(barray_isset_impl(name, sizeof(name), bit))
+	(barray_isset_impl(name, bit))
 
 #endif /* SCHISM_BITS_H_ */
