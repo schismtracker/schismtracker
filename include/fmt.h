@@ -233,6 +233,10 @@ int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt /* struct w
 /* --------------------------------------------------------------------------------------------------------- */
 // other misc functions...
 
+/* fills player quirks from a schism version
+ * we could do this for old modplug/openmpt versions too */
+void fmt_fill_schism_quirks(song_t *csf, uint32_t ver);
+
 /* fills a dmoz_file_t from a csndfile sample */
 void fmt_fill_file_from_sample(dmoz_file_t *file, const song_sample_t *smp);
 

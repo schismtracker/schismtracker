@@ -26,6 +26,7 @@
 #include "str.h"
 #include "bits.h"
 #include "log.h"
+#include "version.h"
 
 #include <math.h>
 
@@ -525,4 +526,44 @@ do { \
 	}
 
 	return 0;
+}
+
+/* ------------------------------------------------------------------------ */
+
+void fmt_fill_schism_quirks(song_t *csf, uint32_t ver)
+{
+	/* stolen from OpenMPT source code ... */
+	struct {
+		uint32_t verfixed;
+		int quirk;
+	} quirks[] = {
+		/* TODO this is currently created every time the function is run;
+		 * ver_mktime should be macro-ized so we can do it at compile time */
+		{ver_mktime(2015,  1, 29), CSF_QUIRK_PERIODS_ARE_HERTZ                 },  // https://github.com/schismtracker/schismtracker/commit/671b30311082a0e7df041fca25f989b5d2478f69
+		{ver_mktime(2016,  5, 13), CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG            },  // https://github.com/schismtracker/schismtracker/commit/e7b1461fe751554309fd403713c2a1ef322105ca
+		{ver_mktime(2021,  5,  2), CSF_QUIRK_IT_DO_NOT_OVERRIDE_CHANNEL_PAN    },  // https://github.com/schismtracker/schismtracker/commit/a34ec86dc819915debc9e06f4727b77bf2dd29ee
+		{ver_mktime(2021,  5,  2), CSF_QUIRK_IT_PANNING_RESET                  },  // https://github.com/schismtracker/schismtracker/commit/648f5116f984815c69e11d018b32dfec53c6b97a
+		{ver_mktime(2021, 11,  1), CSF_QUIRK_IT_PITCH_PAN_SEPARATION           },  // https://github.com/schismtracker/schismtracker/commit/6e9f1207015cae0fe1b829fff7bb867e02ec6dea
+		{ver_mktime(2022,  4, 30), CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT            },  // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
+		{ver_mktime(2022,  4, 30), CSF_QUIRK_IT_PORTAMENTO_SWAP_RESETS_POSITION},  // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
+		{ver_mktime(2022,  4, 30), CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER },  // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
+		{ver_mktime(2023,  3,  9), CSF_QUIRK_IT_INITIAL_NOTE_MEMORY            },  // https://github.com/schismtracker/schismtracker/commit/73e9d60676c2b48c8e94e582373e29517105b2b1
+		{ver_mktime(2023, 10, 17), CSF_QUIRK_IT_DCT_BEHAVIOR                   },  // https://github.com/schismtracker/schismtracker/commit/31d36dc00013fc5ab0efa20c782af18e8b006e07
+		{ver_mktime(2023, 10, 19), CSF_QUIRK_IT_SAMPLE_AND_HOLD_PANBRELLO      },  // https://github.com/schismtracker/schismtracker/commit/411ec16b190ba1a486d8b0907ad8d74f8fdc2840
+		{ver_mktime(2023, 10, 19), CSF_QUIRK_IT_PORTAMENTO_NO_NOTE             },  // https://github.com/schismtracker/schismtracker/commit/8ff0a86a715efb50c89770fb9095d4c4089ff187
+		{ver_mktime(2023, 10, 22), CSF_QUIRK_IT_FIRST_TICK_HANDLING            },  // https://github.com/schismtracker/schismtracker/commit/b9609e4f827e1b6ce9ebe6573b85e69388ca0ea0
+		{ver_mktime(2023, 10, 22), CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER },  // https://github.com/schismtracker/schismtracker/commit/a9e5df533ab52c35190fcc1cbfed4f0347b660bb
+		{ver_mktime(2024,  3,  9), CSF_QUIRK_IT_PANBRELLO_HOLD                 },  // https://github.com/schismtracker/schismtracker/commit/ebdebaa8c8a735a7bf49df55debded1b7aac3605
+		{ver_mktime(2024,  5, 12), CSF_QUIRK_IT_NO_SUSTAIN_ON_PORTAMENTO       },  // https://github.com/schismtracker/schismtracker/commit/6f68f2855a7e5e4ffe825869244e631e15741037
+		{ver_mktime(2024,  5, 12), CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT_IGNORE_CELL},  // https://github.com/schismtracker/schismtracker/commit/aa84148e019a65f3d52ecd33fd84bfecfdb87bf4
+		{ver_mktime(2024,  5, 27), CSF_QUIRK_IT_OFFSET_WITH_INSTRUMENT_NUMBER  },  // https://github.com/schismtracker/schismtracker/commit/9237960d45079a54ad73f87bacfe5dd8ae82e273
+		{ver_mktime(2024, 10, 13), CSF_QUIRK_IT_DOUBLE_PORTAMENTO_SLIDES       },  // https://github.com/schismtracker/schismtracker/commit/223e327d9448561931b8cac8a55180286b17276c
+		{ver_mktime(2025,  1,  8), CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF           },  // https://github.com/schismtracker/schismtracker/commit/ff7a817df327c8f13d97b8c6546a9329f59edff8
+	};
+	size_t i;
+
+	/* :p */
+	for (i = 0; i < ARRAY_SIZE(quirks); i++)
+		if (quirks[i].verfixed >= ver)
+			BITARRAY_CLEAR(csf->quirks, quirks[i].quirk);
 }

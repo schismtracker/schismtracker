@@ -344,6 +344,11 @@ SCHISM_SPLACES_VARIANT(64)
 #define BITARRAY_ZERO(name) \
 	((void)memset(name, 0, sizeof(name)))
 
+/* this overflows (into bits not defined in size), but I don't
+ * think it matters */
+#define BITARRAY_FILL(name) \
+	((void)memset(name, 0xFF, sizeof(name)))
+
 /* these should not be touched outside of bits.h.
  * users should use the macros */
 static inline SCHISM_ALWAYS_INLINE

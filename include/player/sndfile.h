@@ -521,6 +521,36 @@ typedef void (*song_midi_out_raw_spec_t)(struct song *csf, const unsigned char *
 
 ////////////////////////////////////////////////////////////////////
 
+/* quick n dirty copy of the quirks openmpt has defined for schism
+ * there are likely many more than this, but let's start by not
+ * reinventing the wheel
+ *
+ * the default playback behavior is that all of these are on. */
+enum {
+	CSF_QUIRK_PERIODS_ARE_HERTZ,
+	CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG,
+	CSF_QUIRK_IT_DO_NOT_OVERRIDE_CHANNEL_PAN,
+	CSF_QUIRK_IT_PANNING_RESET,
+	CSF_QUIRK_IT_PITCH_PAN_SEPARATION,
+	CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT,
+	CSF_QUIRK_IT_PORTAMENTO_SWAP_RESETS_POSITION,
+	CSF_QUIRK_IT_INITIAL_NOTE_MEMORY,
+	CSF_QUIRK_IT_DCT_BEHAVIOR,
+	CSF_QUIRK_IT_SAMPLE_AND_HOLD_PANBRELLO,
+	CSF_QUIRK_IT_PORTAMENTO_NO_NOTE,
+	CSF_QUIRK_IT_FIRST_TICK_HANDLING,
+	CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER,
+	CSF_QUIRK_IT_PANBRELLO_HOLD,
+	CSF_QUIRK_IT_NO_SUSTAIN_ON_PORTAMENTO,
+	CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT_IGNORE_CELL,
+	CSF_QUIRK_IT_OFFSET_WITH_INSTRUMENT_NUMBER,
+	CSF_QUIRK_IT_DOUBLE_PORTAMENTO_SLIDES,
+	CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF,
+
+	/* bitarray size */
+	CSF_QUIRK_MAX_,
+};
+
 typedef struct {
 	char start[MAX_MIDI_MACRO];
 	char stop[MAX_MIDI_MACRO];
@@ -607,6 +637,9 @@ typedef struct song {
 	song_history_t *history; // Preserved entries from prior sessions, might be NULL if histlen = 0
 
 	song_history_t editstart; // When the song was loaded (pending addition to edit history)
+
+	// playback quirks -----------------------------------------------------------
+	BITARRAY_DECLARE(quirks, CSF_QUIRK_MAX_);
 
 	// mixer stuff -----------------------------------------------------------
 	uint32_t mix_flags; // SNDMIX_*
