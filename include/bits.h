@@ -364,8 +364,6 @@ int barray_isset_impl(uint32_t *barray, int bit)
 	return !!(barray[bit >> 5] & ((uint32_t)1 << (bit & 0x1F)));
 }
 
-/* XXX these expand bit multiple times, which can make for errors.
- * maybe we should make these inline functions */
 #define BITARRAY_SET(name, bit) \
 	(barray_set_impl(name, bit))
 #define BITARRAY_CLEAR(name, bit) \
