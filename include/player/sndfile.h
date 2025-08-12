@@ -16,7 +16,7 @@
 #include "tables.h"
 
 #include "timer.h" // timer_ticks_t
-
+#include "fmopl.h" // OPL_CHANNELS
 
 #define MOD_AMIGAC2             0x1AB
 #define MAX_SAMPLE_LENGTH       0x10000000 /* borrowed from OpenMPT; originally 16000000 */
@@ -811,11 +811,11 @@ typedef struct song {
 	uint32_t oplregno;
 	uint32_t opl_fm_active;
 
-	const unsigned char *opl_dtab[9];
-	unsigned char opl_keyontab[9];
+	const unsigned char *opl_dtab[OPL_CHANNELS];
+	unsigned char opl_keyontab[OPL_CHANNELS];
 	int32_t opl_pans[MAX_VOICES];
 
-	int32_t opl_to_chan[9];
+	int32_t opl_to_chan[OPL_CHANNELS];
 	int32_t opl_from_chan[MAX_VOICES];
 	// -----------------------------------------------------------------------
 

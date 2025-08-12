@@ -54,12 +54,12 @@
 #endif
 
 /* This just forwards to OPLUpdateMulti now */
-static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_t vu_max[9])
+static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_t vu_max[OPL_CHANNELS])
 {
-	int32_t *buffers[18];
+	int32_t *buffers[OPL_CHANNELS];
 	int i;
 
-	for (i = 0; i < 18; i++)
+	for (i = 0; i < OPL_CHANNELS; i++)
 		buffers[i] = buffer;
 
 	OPLUpdateMulti(chip, buffers, length, vu_max);
@@ -231,7 +231,7 @@ void Fmdrv_Init(song_t *csf, int32_t mixfreq)
 void Fmdrv_Mix(song_t *csf, uint32_t count)
 {
 	uint32_t sz;
-	uint32_t vu_max[18];
+	uint32_t vu_max[OPL_CHANNELS];
 	uint32_t i;
 
 	if (!csf->opl_fm_active)
@@ -247,7 +247,7 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	*/
 
 	/* first, fill in the VU meters */
-	for (i = 0; i < 9 /*18*/; i++) {
+	for (i = 0; i < OPL_CHANNELS; i++) {
 		int32_t opl_v = csf->opl_to_chan[i];
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
@@ -259,9 +259,9 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	// and do the panning here.
 	if (csf->multi_write) {
 		uint32_t j;
-		int32_t *buffers[18] = {0};
+		int32_t *buffers[OPL_CHANNELS] = {0};
 
-		for (i = 0; i < 9; i++) {
+		for (i = 0; i < OPL_CHANNELS; i++) {
 			int32_t opl_v = csf->opl_to_chan[i];
 			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 				continue;
@@ -274,9 +274,9 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		/* updated this to be able to work with the mixing buffer
 		 * directly  --paper */
 		uint32_t j;
-		int32_t *buffers[18] = {0};
+		int32_t *buffers[OPL_CHANNELS] = {0};
 
-		for (i = 0; i < 9; i++) {
+		for (i = 0; i < OPL_CHANNELS; i++) {
 			int32_t opl_v = csf->opl_to_chan[i];
 			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 				continue;
@@ -287,7 +287,7 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
 	}
 
-	for (i = 0; i < 9 /*18*/; i++) {
+	for (i = 0; i < OPL_CHANNELS; i++) {
 		int32_t opl_v = csf->opl_to_chan[i];
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
@@ -299,7 +299,11 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 
 /***************************************/
 
-static const char PortBases[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
+#if OPL_BANK_SIZE != 9
+# error OPL_BANK_SIZE must be 9 for the current implementation.
+#endif
+
+static const char PortBases[OPL_BANK_SIZE] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
 
 static int32_t GetVoice(song_t *csf, int32_t c)
 {
@@ -313,7 +317,7 @@ static int32_t SetVoice(song_t *csf, int32_t c)
 	if (csf->opl_from_chan[c] == -1) {
 		// Search for unused chans
 
-		for (a = 0; a < 9; a++) {
+		for (a = 0; a < OPL_CHANNELS; a++) {
 			if (csf->opl_to_chan[a] == -1) {
 				csf->opl_to_chan[a] = c;
 				csf->opl_from_chan[c] = a;
@@ -323,7 +327,7 @@ static int32_t SetVoice(song_t *csf, int32_t c)
 
 		if (csf->opl_from_chan[c] == -1) {
 			// Search for note-released chans
-			for (a = 0; a < 9; a++) {
+			for (a = 0; a < OPL_CHANNELS; a++) {
 				if ((csf->opl_keyontab[a]&KEYON_BIT) == 0) {
 					csf->opl_from_chan[csf->opl_to_chan[a]] = -1;
 					csf->opl_to_chan[a] = c;
@@ -367,7 +371,11 @@ void OPL_NoteOff(song_t *csf, int32_t c)
 		return;
 
 	csf->opl_keyontab[oplc] &= ~(KEYON_BIT);
-	OPL_Byte(csf, KEYON_BLOCK + oplc, csf->opl_keyontab[oplc]);
+
+	if (oplc < OPL_BANK_SIZE)
+		OPL_Byte(csf, KEYON_BLOCK + oplc, csf->opl_keyontab[oplc]);
+	else
+		OPL_Byte_RightSide(csf, KEYON_BLOCK + oplc - OPL_BANK_SIZE, csf->opl_keyontab[oplc]);
 }
 
 
@@ -402,8 +410,15 @@ void OPL_HertzTouch(song_t *csf, int32_t c, int32_t milliHertz, int32_t keyoff)
 	csf->opl_keyontab[oplc] = (keyoff ? 0 : KEYON_BIT)      // Key on
 				| (outblock << 2)                    // Octave
 				| ((outfnum >> 8) & FNUM_HIGH_MASK); // F-number high 2 bits
-	OPL_Byte(csf, FNUM_LOW +    oplc, outfnum & 0xFF);  // F-Number low 8 bits
-	OPL_Byte(csf, KEYON_BLOCK + oplc, csf->opl_keyontab[oplc]);
+
+	if (oplc < OPL_BANK_SIZE) {
+		OPL_Byte(csf, FNUM_LOW +    oplc, outfnum & 0xFF);  // F-Number low 8 bits
+		OPL_Byte(csf, KEYON_BLOCK + oplc, csf->opl_keyontab[oplc]);
+	}
+	else {
+		OPL_Byte_RightSide(csf, FNUM_LOW +    oplc - OPL_BANK_SIZE, outfnum & 0xFF);  // F-Number low 8 bits
+		OPL_Byte_RightSide(csf, KEYON_BLOCK + oplc - OPL_BANK_SIZE, csf->opl_keyontab[oplc]);
+	}
 }
 
 
@@ -417,7 +432,16 @@ void OPL_Touch(song_t *csf, int32_t c, uint32_t vol)
 		return;
 
 	const unsigned char *D = csf->opl_dtab[oplc];
-	int32_t Ope = PortBases[oplc];
+	int32_t Ope = PortBases[oplc % OPL_BANK_SIZE];
+
+	void (*SendByte)(song_t *csf, uint32_t idx, unsigned char data);
+
+	if (oplc < OPL_BANK_SIZE) {
+		SendByte = OPL_Byte;
+	}
+	else {
+		SendByte = OPL_Byte_RightSide;
+	}
 
 /*
 	Bytes 40-55 - Level Key Scaling / Total Level
@@ -480,11 +504,11 @@ void OPL_Touch(song_t *csf, int32_t c, uint32_t vol)
 
 	// Set volume of both operators in additive mode
 	if(D[10] & CONNECTION_BIT)
-		OPL_Byte(csf, KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
+		SendByte(csf, KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
 			(63 + ( (D[2]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
 		);
 
-	OPL_Byte(csf, KSL_LEVEL+   3+Ope, (D[3] & KSL_MASK) |
+	SendByte(csf, KSL_LEVEL+   3+Ope, (D[3] & KSL_MASK) |
 		(63 + ( (D[3]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
 	);
 
@@ -501,8 +525,17 @@ void OPL_Pan(song_t *csf, int32_t c, int32_t val)
 
 	const unsigned char *D = csf->opl_dtab[oplc];
 
+	void (*SendByte)(song_t *csf, uint32_t idx, unsigned char data);
+
+	if (oplc < OPL_BANK_SIZE) {
+		SendByte = OPL_Byte;
+	}
+	else {
+		SendByte = OPL_Byte_RightSide;
+	}
+
 	/* feedback, additive synthesis and Panning... */
-	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc, 
+	SendByte(csf, FEEDBACK_CONNECTION+(oplc % OPL_BANK_SIZE),
 		(D[10] & ~STEREO_BITS)
 		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
 			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
@@ -518,22 +551,31 @@ void OPL_Patch(song_t *csf, int32_t c, const unsigned char *D)
 		return;
 
 	csf->opl_dtab[oplc] = D;
-	int32_t Ope = PortBases[oplc];
+	int32_t Ope = PortBases[oplc % OPL_BANK_SIZE];
 
-	OPL_Byte(csf, AM_VIB+           Ope, D[0]);
-	OPL_Byte(csf, KSL_LEVEL+        Ope, D[2]);
-	OPL_Byte(csf, ATTACK_DECAY+     Ope, D[4]);
-	OPL_Byte(csf, SUSTAIN_RELEASE+  Ope, D[6]);
-	OPL_Byte(csf, WAVE_SELECT+      Ope, D[8]&7);// 5 high bits used elsewhere
+	void (*SendByte)(song_t *csf, uint32_t idx, unsigned char data);
 
-	OPL_Byte(csf, AM_VIB+         3+Ope, D[1]);
-	OPL_Byte(csf, KSL_LEVEL+      3+Ope, D[3]);
-	OPL_Byte(csf, ATTACK_DECAY+   3+Ope, D[5]);
-	OPL_Byte(csf, SUSTAIN_RELEASE+3+Ope, D[7]);
-	OPL_Byte(csf, WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
+	if (oplc < OPL_BANK_SIZE) {
+		SendByte = OPL_Byte;
+	}
+	else {
+		SendByte = OPL_Byte_RightSide;
+	}
+
+	SendByte(csf, AM_VIB+           Ope, D[0]);
+	SendByte(csf, KSL_LEVEL+        Ope, D[2]);
+	SendByte(csf, ATTACK_DECAY+     Ope, D[4]);
+	SendByte(csf, SUSTAIN_RELEASE+  Ope, D[6]);
+	SendByte(csf, WAVE_SELECT+      Ope, D[8]&7);// 5 high bits used elsewhere
+
+	SendByte(csf, AM_VIB+         3+Ope, D[1]);
+	SendByte(csf, KSL_LEVEL+      3+Ope, D[3]);
+	SendByte(csf, ATTACK_DECAY+   3+Ope, D[5]);
+	SendByte(csf, SUSTAIN_RELEASE+3+Ope, D[7]);
+	SendByte(csf, WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
 
 	/* feedback, additive synthesis and Panning... */
-	OPL_Byte(csf, FEEDBACK_CONNECTION+oplc, 
+	SendByte(csf, FEEDBACK_CONNECTION+oplc,
 		(D[10] & ~STEREO_BITS)
 		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
 			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
@@ -554,7 +596,7 @@ void OPL_Reset(song_t *csf)
 	for(a = 0; a < MAX_VOICES; ++a) {
 		csf->opl_from_chan[a]=-1;
 	}
-	for(a = 0; a < 9; ++a) {
+	for(a = 0; a < OPL_CHANNELS; ++a) {
 		csf->opl_to_chan[a]= -1;
 		csf->opl_dtab[a] = NULL;
 	}
@@ -573,20 +615,26 @@ int32_t OPL_Detect(song_t *csf)
 {
 	/* Reset timers 1 and 2 */
 	OPL_Byte(csf, TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
+	OPL_Byte_RightSide(csf, TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
 
 	/* Reset the IRQ of the FM chip */
 	OPL_Byte(csf, TIMER_CONTROL_REGISTER, IRQ_RESET);
+	OPL_Byte_RightSide(csf, TIMER_CONTROL_REGISTER, IRQ_RESET);
 
 	unsigned char ST1 = Fmdrv_Inportb(csf, OPL_BASE); /* Status register */
 
 	OPL_Byte(csf, TIMER1_REGISTER, 255);
 	OPL_Byte(csf, TIMER_CONTROL_REGISTER, TIMER2_MASK | TIMER1_START);
+	OPL_Byte_RightSide(csf, TIMER1_REGISTER, 255);
+	OPL_Byte_RightSide(csf, TIMER_CONTROL_REGISTER, TIMER2_MASK | TIMER1_START);
 
 	/*_asm xor cx,cx;P1:_asm loop P1*/
 	unsigned char ST2 = Fmdrv_Inportb(csf, OPL_BASE);
 
 	OPL_Byte(csf, TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
 	OPL_Byte(csf, TIMER_CONTROL_REGISTER, IRQ_RESET);
+	OPL_Byte_RightSide(csf, TIMER_CONTROL_REGISTER, TIMER1_MASK | TIMER2_MASK);
+	OPL_Byte_RightSide(csf, TIMER_CONTROL_REGISTER, IRQ_RESET);
 
 	int32_t OPLMode = (ST2 & 0xE0) == 0xC0 && !(ST1 & 0xE0);
 
