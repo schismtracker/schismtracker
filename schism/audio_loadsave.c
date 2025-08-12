@@ -114,6 +114,9 @@ void song_new(int flags)
 
 	song_stop_unlocked(0);
 
+	/* reset the quirks */
+	BITARRAY_FILL(current_song->quirks);
+
 	if ((flags & KEEP_PATTERNS) == 0) {
 		song_set_filename(NULL);
 		status.flags &= ~SONG_NEEDS_SAVE;
@@ -534,6 +537,8 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 	switch (ret) {
 	case SAVE_SUCCESS:
 		status.flags &= ~SONG_NEEDS_SAVE;
+		/* kill any quirks */
+		BITARRAY_FILL(current_song->quirks);
 		if (charset_strcasecmp(song_filename, CHARSET_UTF8, mangle, CHARSET_UTF8))
 			song_set_filename(mangle);
 		log_appendf(5, " Done");
