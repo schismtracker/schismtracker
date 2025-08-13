@@ -1455,7 +1455,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	   C-5 .. G02 <- maps to sample 2
 	   ... 01 ... <- plays sample 1 with the volume and panning attributes of sample 2
 	*/
-	if (penv && !inst_changed && psmp != oldsmp && chan->ptr_sample && !NOTE_IS_NOTE(chan->row_note))
+	if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER)
+		&& penv && !inst_changed && psmp != oldsmp && chan->ptr_sample && !NOTE_IS_NOTE(chan->row_note))
 		return;
 
 	if (!penv && psmp != oldsmp && porta) {
@@ -2344,7 +2345,10 @@ void csf_process_effects(song_t *csf, int firsttick)
 				}
 			}
 
-			if (instr && note == NOTE_NONE) {
+			if (instr && note == NOTE_NONE) { //Case: instrument with no note data
+				//IT compatibility: Instrument with no note.
+				int trigger_after_sample_end = BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER) && !chan->current_sample_data;
+
 				if (csf->flags & SONG_INSTRUMENTMODE) {
 					if (chan->ptr_sample)
 						chan->volume = chan->ptr_sample->volume;
@@ -2353,10 +2357,10 @@ void csf_process_effects(song_t *csf, int firsttick)
 				}
 
 				if (csf->flags & SONG_INSTRUMENTMODE) {
-					if (instr < MAX_INSTRUMENTS && (chan->ptr_instrument != csf->instruments[instr] || !chan->current_sample_data))
+					if (instr < MAX_INSTRUMENTS && (chan->ptr_instrument != csf->instruments[instr] || trigger_after_sample_end))
 						note = chan->new_note;
 				} else {
-					if (instr < MAX_SAMPLES && (chan->ptr_sample != &csf->samples[instr] || !chan->current_sample_data))
+					if (instr < MAX_SAMPLES && (chan->ptr_sample != &csf->samples[instr] || trigger_after_sample_end))
 						note = chan->new_note;
 				}
 			}
@@ -2422,11 +2426,16 @@ void csf_process_effects(song_t *csf, int firsttick)
 						csf->instruments[instr]->midi_bank,
 						csf->instruments[instr]->midi_channel_mask);
 
-				if (NOTE_IS_NOTE(note)) {
+				if (NOTE_IS_NOTE(note))
 					chan->new_instrument = 0;
-					if (psmp != chan->ptr_sample) {
+
+				if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_PORTAMENTO_SWAP_RESETS_POSITION)) {
+					if (NOTE_IS_NOTE(note) && psmp != chan->ptr_sample) {
 						chan->position = chan->position_frac = 0;
 					}
+				} else if (psmp != chan->ptr_sample && NOTE_IS_NOTE(note)) {
+					// Special IT case: portamento+note causes sample change -> ignore portamento
+					porta = 0;
 				}
 			}
 			// New Note ?
