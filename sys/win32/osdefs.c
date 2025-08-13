@@ -1312,23 +1312,6 @@ int win32_event(schism_event_t *event)
 
 /* ------------------------------------------------------------------------ */
 
-static inline SCHISM_ALWAYS_INLINE void win32_stat_conv(struct __stat64 *mst,
-	struct stat *st)
-{
-	st->st_atime = mst->st_atime;
-	st->st_ctime = mst->st_ctime;
-	st->st_mtime = mst->st_mtime;
-	st->st_size = mst->st_size;
-
-	st->st_mode = 0;
-
-	if (mst->st_mode & _S_IFREG)
-		st->st_mode |= S_IFREG;
-
-	if (mst->st_mode & _S_IFDIR)
-		st->st_mode |= S_IFDIR;
-}
-
 /* converts FILETIME to unix time_t */
 static inline int64_t win32_filetime_to_unix_time(FILETIME *ft) {
 	uint64_t ul = ((uint64_t)ft->dwHighDateTime << 32) | ft->dwLowDateTime;
@@ -1360,6 +1343,7 @@ int win32_stat(const char* path, struct stat* st)
 		})
 		if (dw == INVALID_FILE_ATTRIBUTES) {
 			free(wpath);
+			errno = ENOENT;
 			return -1;
 		} else if (dw & FILE_ATTRIBUTE_DIRECTORY) {
 			st->st_mode |= S_IFDIR;
@@ -1383,6 +1367,7 @@ int win32_stat(const char* path, struct stat* st)
 		})
 		if (fh == INVALID_HANDLE_VALUE) {
 			free(wpath);
+			errno = EINVAL; /* FIXME set something useful here */
 			return -1;
 		}
 
@@ -1395,6 +1380,7 @@ int win32_stat(const char* path, struct stat* st)
 
 		if (fail) {
 			free(wpath);
+			errno = EINVAL;
 			return -1;
 		}
 
