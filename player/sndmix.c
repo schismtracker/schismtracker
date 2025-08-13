@@ -343,8 +343,10 @@ static inline void rn_process_ins_fade(song_voice_t *chan, int32_t *nvol) {
 }
 
 
-static inline void rn_process_envelope(song_voice_t *chan, int32_t *nvol)
+static inline void rn_process_envelope(song_t *csf, song_voice_t *chan, int32_t *nvol)
 {
+	song_instrument_t *penv = chan->ptr_instrument;
+
 	// Volume Envelope
 	rn_process_vol_env(chan, nvol);
 
@@ -353,6 +355,16 @@ static inline void rn_process_envelope(song_voice_t *chan, int32_t *nvol)
 
 	// FadeOut volume
 	rn_process_ins_fade(chan, nvol);
+
+	if (!BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_PITCH_PAN_SEPARATION)) {
+		// Pitch/Pan separation
+		if (penv->pitch_pan_separation && chan->final_panning && chan->note) {
+			// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
+			// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
+			chan->final_panning += ((int32_t) (chan->note - penv->pitch_pan_center - 1)
+						* penv->pitch_pan_separation) / 2;
+		}
+	}
 }
 
 static inline void rn_process_midi_macro(song_t *csf, song_voice_t *chan)
@@ -789,7 +801,6 @@ uint32_t csf_read(song_t *csf, void * v_buffer, uint32_t bufsize)
 		// Handle eq
 		if (csf->mix_channels >= 2) {
 			eq_stereo(csf, csf->mix_buffer, count);
-			// FIXME: disable this when we're writing WAVs
 			if (!(csf->mix_flags & SNDMIX_DIRECTTODISK)) normalize_stereo(csf, csf->mix_buffer, count << 1);
 		} else {
 			eq_mono(csf, csf->mix_buffer, count);
@@ -1135,7 +1146,7 @@ int32_t csf_read_note(song_t *csf)
 			if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument) {
 				/* OpenMPT test cases s77.it and EnvLoops.it */
 				rn_increment_env_pos(chan);
-				rn_process_envelope(chan, &vol);
+				rn_process_envelope(csf, chan, &vol);
 			} else {
 				// No Envelope: key off => note cut
 				// 1.41-: CHN_KEYOFF|CHN_NOTEFADE

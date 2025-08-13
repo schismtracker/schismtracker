@@ -532,7 +532,13 @@ do { \
 
 void fmt_fill_schism_quirks(song_t *csf, uint32_t ver)
 {
-	/* stolen from OpenMPT source code ... */
+	/* stolen from OpenMPT source code
+	 *
+	 * TODO look into scdev archives and see if there are any more gory
+	 * quirks that could be reimplemented... I know the filter code has
+	 * changed multiple times throughout the years (eventually landing on
+	 * the actual IT algorithm)... so that could probably be a start, once
+	 * all of these are done. */
 	struct {
 		uint32_t verfixed;
 		int quirk;

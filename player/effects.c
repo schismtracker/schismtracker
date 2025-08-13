@@ -227,13 +227,29 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, i
 	return frequency;
 }
 
-static void set_instrument_panning(song_voice_t *chan, int32_t panning)
+static void set_instrument_panning_ex(song_t *csf, song_voice_t *chan, int32_t panning)
 {
-	chan->channel_panning = (int16_t)(chan->panning + 1);
-	if (chan->flags & CHN_SURROUND)
-		chan->channel_panning |= 0x8000;
+	if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_DO_NOT_OVERRIDE_CHANNEL_PAN)) {
+		chan->channel_panning = (int16_t)(chan->panning + 1);
+		if (chan->flags & CHN_SURROUND)
+			chan->channel_panning |= 0x8000;
+	} else {
+		/* I think this is correct? */
+		chan->channel_panning = 0;
+	}
 	chan->panning = panning;
 	chan->flags &= ~CHN_SURROUND;
+}
+
+/* penv can be NULL here, but pins cannot */
+static void set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrument_t *penv,
+	song_sample_t *pins)
+{
+	if (penv && (penv->flags & ENV_SETPANNING)) {
+		set_instrument_panning_ex(csf, chan, penv->panning);
+	} else if (pins->flags & CHN_PANNING) {
+		set_instrument_panning_ex(csf, chan, pins->panning);
+	}
 }
 
 static void fx_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
@@ -559,9 +575,8 @@ static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
 	if ((csf->flags & SONG_FIRSTTICK) && chan->row_note != NOTE_NONE) {
 		chan->cd_retrig = param & 0xf;
 	} else if (--chan->cd_retrig <= 0) {
-		
 		// in Impulse Tracker, retrig only works if a sample is currently playing in the channel
-		if (chan->position == 0)
+		if (!chan->position && BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG))
 			return;
 		
 		chan->cd_retrig = param & 0xf;
@@ -917,18 +932,14 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 	}
 
 	need_note = need_velocity = -1;
-	if (m_note > 120) {
+	if (m_note > NOTE_LAST) {
 		if (csf->midi_note_tracker[chan] != 0) {
 			csf_process_midi_macro(csf, chan, csf->midi_config.note_off,
 				0, csf->midi_note_tracker[chan], 0, csf->midi_ins_tracker[chan]);
 		}
 
 		csf->midi_note_tracker[chan] = 0;
-		if (m->voleffect != VOLFX_VOLUME) {
-			csf->midi_vol_tracker[chan] = 64;
-		} else {
-			csf->midi_vol_tracker[chan] = m->volparam;
-		}
+		csf->midi_vol_tracker[chan] = (m->voleffect == VOLFX_VOLUME) ? m->volparam : 64;
 	} else if (!m->note && m->voleffect == VOLFX_VOLUME) {
 		csf->midi_vol_tracker[chan] = m->volparam;
 		need_velocity = csf->midi_vol_tracker[chan];
@@ -937,12 +948,9 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 			csf_process_midi_macro(csf, chan, csf->midi_config.note_off,
 				0, csf->midi_note_tracker[chan], 0, csf->midi_ins_tracker[chan]);
 		}
+		/* this is all stupid */
 		csf->midi_note_tracker[chan] = m_note;
-		if (m->voleffect != VOLFX_VOLUME) {
-			csf->midi_vol_tracker[chan] = 64;
-		} else {
-			csf->midi_vol_tracker[chan] = m->volparam;
-		}
+		csf->midi_vol_tracker[chan] = (m->voleffect == VOLFX_VOLUME) ? m->volparam : 64;
 		need_note = csf->midi_note_tracker[chan];
 		need_velocity = csf->midi_vol_tracker[chan];
 	}
@@ -1390,7 +1398,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 
 	if (penv && NOTE_IS_NOTE(note)) {
 		/* OpenMPT test case emptyslot.it */
-		if (!penv->sample_map[note - NOTE_FIRST]) {
+		if (!penv->sample_map[note - NOTE_FIRST] && BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT)) {
 			chan->ptr_instrument = penv;
 			return;
 		}
@@ -1401,7 +1409,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	} else if (csf->flags & SONG_INSTRUMENTMODE) {
 		if (NOTE_IS_CONTROL(note))
 			return;
-		if (!penv) {
+		if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT) && !penv) {
 			/* OpenMPT test case emptyslot.it */
 			chan->ptr_instrument = NULL;
 			chan->new_instrument = 0;
@@ -1430,6 +1438,9 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 		} else {
 			chan->instrument_volume = psmp->global_volume;
 		}
+
+		if (!BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_PANNING_RESET))
+			set_instrument_panning(csf, chan, penv, psmp);
 	}
 
 	/* samples should not change on instrument number in compatible Gxx mode.
@@ -1593,7 +1604,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	song_sample_t *pins = chan->ptr_sample;
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? chan->ptr_instrument : NULL;
 	if (penv && NOTE_IS_NOTE(note)) {
-		if (!penv->sample_map[note - 1])
+		if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT) && !penv->sample_map[note - 1])
 			return;
 		if (!(have_inst && porta && pins))
 			pins = csf_translate_keyboard(csf, penv, note, pins);
@@ -1671,22 +1682,21 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		porta = 0;
 	}
 
-	if (penv && (penv->flags & ENV_SETPANNING)) {
-		set_instrument_panning(chan, penv->panning);
-	} else if (pins->flags & CHN_PANNING) {
-		set_instrument_panning(chan, pins->panning);
-	}
+	if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_PANNING_RESET))
+		set_instrument_panning(csf, chan, penv, pins);
 
 	// Pitch/Pan separation
-	if (penv && penv->pitch_pan_separation) {
-		if (!chan->channel_panning) {
-			chan->channel_panning = (int16_t)(chan->panning + 1);
-		}
+	if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_PITCH_PAN_SEPARATION)) {
+		if (penv && penv->pitch_pan_separation) {
+			if (!chan->channel_panning) {
+				chan->channel_panning = (int16_t)(chan->panning + 1);
+			}
 
-		// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
-		// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
-		int delta = (int)(chan->note - penv->pitch_pan_center - NOTE_FIRST) * penv->pitch_pan_separation / 2;
-		chan->panning = CLAMP(chan->panning + delta, 0, 256);
+			// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
+			// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
+			int delta = (int)(chan->note - penv->pitch_pan_center - NOTE_FIRST) * penv->pitch_pan_separation / 2;
+			chan->panning = CLAMP(chan->panning + delta, 0, 256);
+		}
 	}
 
 	if (penv && porta)
@@ -1820,7 +1830,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
         /* MPT test case dct_smp_note_test.it */
         if (n > 0 && n < MAX_SAMPLES)
         	data = csf->samples[n].data;
-        else /* OpenMPT test case emptyslot.it */
+        else if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT)) /* emptyslot.it */
         	return;
 	}
 	if (!penv) return;

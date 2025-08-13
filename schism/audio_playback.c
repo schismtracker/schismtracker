@@ -1320,7 +1320,7 @@ static void _schism_midi_out_raw(song_t *csf, const unsigned char *data, uint32_
 
 #ifdef SCHISM_MIDI_DEBUG
 	/* prints all of the raw midi messages into the terminal; useful for debugging output */
-	int i = (8000*(audio_buffer_samples)) / (current_song->mix_frequency);
+	//int i = (8000*(audio_buffer_samples)) / (current_song->mix_frequency);
 
 	for (int i=0; i < len; i++) {
 		printf("%02x ",data[i]);

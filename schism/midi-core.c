@@ -766,10 +766,7 @@ void midi_queue_alloc(SCHISM_UNUSED int buffer_length, int sample_size, int samp
 {
 	// bytes per millisecond, rounded up
 	midims = sample_size * samples_per_second;
-	midims += 1000 - (midims % 1000);
-	midims /= 1000;
-
-	// nothing else to do now
+	midims = (midims + 999) / 1000;
 }
 
 int midi_need_flush(void)
@@ -808,11 +805,6 @@ void midi_send_flush(void)
 	mt_mutex_unlock(midi_record_mutex);
 }
 
-// The old queue was kind of dumb and unnecessary. In fact, the Windows version
-// did... exactly this! :)
-//
-// I guess mrsbrisby just didn't know that SDL provided a timer API, or it wasn't
-// provided by that time.
 struct _midi_send_timer_curry {
 	uint32_t len;
 	unsigned char msg[SCHISM_FAM_SIZE];
