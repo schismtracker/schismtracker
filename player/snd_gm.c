@@ -609,7 +609,7 @@ void GM_SetFreqAndVol(song_t *csf, int32_t c, int32_t Hertz, int32_t vol, MidiBe
 	       point accuracy, but given the range of the numbers
 	       we work here with, that's hardly an issue.)
 	*/
-	double midinote = 69 + 12.0 * log(Hertz/440.0) / log(2.0);
+	double midinote = 69 + 12.0 * (log(Hertz/440.0) / log(2.0));
 
 	// Reduce by a couple of octaves... Apparently the hertz
 	// value that comes from SchismTracker is upscaled by some 2^5.
@@ -629,8 +629,8 @@ void GM_SetFreqAndVol(song_t *csf, int32_t c, int32_t Hertz, int32_t vol, MidiBe
 		if (bend_mode == MIDI_BEND_DOWN) note += (int32_t)(0x2000 / SEMITONE_BEND_DEPTH);
 		if (bend_mode == MIDI_BEND_UP)   note -= (int32_t)(0x2000 / SEMITONE_BEND_DEPTH);
 
-		if (note < 1) note = 1;
-		if (note > 127) note = 127;
+		note = CLAMP(note, 1, 127);
+
 		GM_KeyOn(csf, c, note, vol);
 	}
 
@@ -646,11 +646,12 @@ void GM_SetFreqAndVol(song_t *csf, int32_t c, int32_t Hertz, int32_t vol, MidiBe
 		//bend = (bend / bend_artificial_inaccuracy) * bend_artificial_inaccuracy;
 
 		// Clamp the bending value so that we won't break the protocol
-		if(bend < 0) bend = 0;
-		if(bend > 0x3FFF) bend = 0x3FFF;
+		bend = CLAMP(bend, 0, 0x3FFF);
 
 		GM_Bend(csf, c, bend);
 	}
+
+	vol = CLAMP(vol, 0, 127);
 
 	if (vol < 0) vol = 0;
 	else if (vol > 127) vol = 127;
@@ -674,7 +675,7 @@ void GM_SendSongPositionCode(song_t *csf, uint32_t note16pos)
 	csf->midi_last_song_counter = 0.0;
 }
 
-
+/* XXX what the hell is all this? */
 void GM_IncrementSongCounter(song_t *csf, int32_t count)
 {
 	/* We assume that one schism tick = one midi tick (24ppq).
