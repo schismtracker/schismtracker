@@ -2754,7 +2754,7 @@ static void pattern_editor_redraw(void)
 
 	for (chan = top_display_channel, chan_pos = 0; chan_pos < visible_channels; chan++, chan_pos++) {
 		track_view = track_views + track_view_scheme[chan_pos];
-		/* maybe i'm retarded but the pattern editor should be dealing
+		/* maybe i'm stupid but the pattern editor should be dealing
 		   with the same concept of "channel" as the rest of the
 		   interface. the mixing channels really could be any arbitrary
 		   number -- modplug just happens to reserve the first MAX_CHANNELS for

@@ -472,7 +472,7 @@ int csf_set_resampling_mode(song_t *csf, uint32_t mode)
 }
 
 
-// This used to use some retarded positioning based on the total number of rows elapsed, which is useless.
+// This used to use some stupid positioning based on the total number of rows elapsed, which is useless.
 // However, the only code calling this function is in this file, to set it to the start, so I'm optimizing
 // out the row count.
 static void set_current_pos_0(song_t *csf)

@@ -365,7 +365,7 @@ void cfg_save(void)
 	cfg_init(&cfg, ptr);
 	free(ptr);
 
-	// this wart is here because Storlek is retarded
+	// this wart is here because Storlek is stupid
 	cfg_delete_key(&cfg, "Directories", "filename_pattern");
 
 	cfg_set_string(&cfg, "Directories", "modules", cfg_dir_modules);
