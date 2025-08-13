@@ -927,7 +927,7 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 		if (m->voleffect != VOLFX_VOLUME) {
 			csf->midi_vol_tracker[chan] = 64;
 		} else {
-			csf->midi_vol_tracker[chan] = m->voleffect;
+			csf->midi_vol_tracker[chan] = m->volparam;
 		}
 	} else if (!m->note && m->voleffect == VOLFX_VOLUME) {
 		csf->midi_vol_tracker[chan] = m->volparam;
