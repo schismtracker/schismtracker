@@ -209,9 +209,11 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 		sdl3_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, buf);
 	}
 
-	dev->stream = sdl3_OpenAudioDeviceStream((id == AUDIO_BACKEND_DEFAULT || id >= (uint32_t)device_count)
+	SDL_AudioDeviceID sdl_device_id = (id == AUDIO_BACKEND_DEFAULT || id >= (uint32_t)device_count)
 		? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK
-		: devices[id], &sdl_desired, sdl3_audio_callback, dev);
+		: devices[id];
+
+	dev->stream = sdl3_OpenAudioDeviceStream(sdl_device_id, &sdl_desired, sdl3_audio_callback, dev);
 
 	// reset this before checking if opening succeeded
 	sdl3_ResetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES);
@@ -229,7 +231,7 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 	int samples;
 	{
 		SDL_AudioSpec xyzzy;
-		sdl3_GetAudioDeviceFormat(id, &xyzzy, &samples);
+		sdl3_GetAudioDeviceFormat(sdl_device_id, &xyzzy, &samples);
 	}
 	obtained->samples = samples;
 
