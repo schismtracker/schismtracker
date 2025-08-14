@@ -484,8 +484,11 @@ int widget_handle_key(struct key_event * k)
 		}
 	}
 
+	int activate_with_return = (k->sym == SCHISM_KEYSYM_RETURN);
+	int activate_with_space = (k->sym == SCHISM_KEYSYM_SPACE) && (widget->type != WIDGET_TEXTENTRY);
+
 	if (k->mouse == MOUSE_CLICK
-	    || (k->mouse == MOUSE_NONE && k->sym == SCHISM_KEYSYM_RETURN)) {
+	    || (k->mouse == MOUSE_NONE && (activate_with_return || activate_with_space))) {
 #if 0
 		if (k->mouse && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
