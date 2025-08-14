@@ -380,7 +380,7 @@ int ip_midi_getports(void)
 	if (status.flags & NO_NETWORK) return 0;
 
 	mt_mutex_lock(blocker);
-	for (i = 0; midi_port_foreach(midi_ip_prov, &q); i++);
+	for (i = 0, q = NULL; midi_port_foreach(midi_ip_prov, &q); i++);
 	mt_mutex_unlock(blocker);
 
 	return i;
