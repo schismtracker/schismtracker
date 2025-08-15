@@ -34,6 +34,8 @@ static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
 static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
 static SDL_Keymod (SDLCALL *sdl3_GetModState)(void) = NULL;
+static SDL_Keycode (SDLCALL *sdl3_GetKeyFromScancode)(SDL_Scancode);
+static const char * (SDLCALL *sdl3_GetKeyName)(SDL_Keycode);
 static bool (SDLCALL *sdl3_PollEvent)(SDL_Event *event) = NULL;
 
 static void (SDLCALL *sdl3_free)(void *) = NULL;
@@ -352,6 +354,11 @@ static void sdl3_pump_events(void)
 	pop_pending_keydown(NULL);
 }
 
+static const char *sdl3_get_key_name_from_scancode(int scancode)
+{
+	return sdl3_GetKeyName(sdl3_GetKeyFromScancode(scancode));
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // dynamic loading
 
@@ -361,6 +368,8 @@ static int sdl3_events_load_syms(void)
 	SCHISM_SDL3_SYM(QuitSubSystem);
 
 	SCHISM_SDL3_SYM(GetModState);
+	SCHISM_SDL3_SYM(GetKeyFromScancode);
+	SCHISM_SDL3_SYM(GetKeyName);
 	SCHISM_SDL3_SYM(PollEvent);
 #ifdef SCHISM_WIN32
 	SCHISM_SDL3_SYM(SetWindowsMessageHook);
@@ -417,4 +426,5 @@ const schism_events_backend_t schism_events_backend_sdl3 = {
 
 	.keymod_state = sdl3_event_mod_state,
 	.pump_events = sdl3_pump_events,
+	.get_key_name_from_scancode = sdl3_get_key_name_from_scancode,
 };
