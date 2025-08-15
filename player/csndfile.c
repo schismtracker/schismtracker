@@ -732,7 +732,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 
 uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 {
-	const uint64_t memsize = slurp_length(fp);
+	const uint64_t memsize = slurp_length(fp) - slurp_tell(fp);
 	uint32_t len = 0, mem;
 
 	if (sample->flags & CHN_ADLIB) return 0; // no sample data
