@@ -225,12 +225,7 @@ int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset)
 	int tot;
 	if (song_get_mode() & MODE_PATTERN_LOOP) {
 		// just wrap around current rows
-		tot = song_get_max_row_number_in_pattern(*n);
-
-		if (tot == 0) // pattern of length 1
-			*row = 0;
-		else
-			*row = (*row + offset) % tot;
+		*row = (*row + offset) % (song_get_max_row_number_in_pattern(*n) + 1);
 
 		return song_get_pattern(*n, buf);
 	}
