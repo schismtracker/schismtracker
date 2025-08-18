@@ -108,12 +108,9 @@ int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 	return 1;
 }
 
-// cwtv should be 0x214 when loading from its or iti
-int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
+static int load_its_header_impl(struct it_sample *its, slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 {
-	struct it_sample its;
-
-#define READ_VALUE(name) do { if (slurp_read(fp, &its.name, sizeof(its.name)) != sizeof(its.name)) { return 0; } } while (0)
+#define READ_VALUE(name) do { if (slurp_read(fp, &its->name, sizeof(its->name)) != sizeof(its->name)) { return 0; } } while (0)
 
 	READ_VALUE(id);
 	READ_VALUE(filename);
@@ -138,25 +135,25 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 
 #undef READ_VALUE
 
-	if (its.id != bswapLE32(0x53504D49))
+	if (its->id != bswapLE32(0x53504D49))
 		return 0;
 
 	/* alright, let's get started */
-	smp->length = bswapLE32(its.length);
-	if ((its.flags & 1) == 0) {
+	smp->length = bswapLE32(its->length);
+	if ((its->flags & 1) == 0) {
 		// sample associated with header
 		return 0;
 	}
 
-	smp->global_volume = its.gvl;
-	if (its.flags & 16) {
+	smp->global_volume = its->gvl;
+	if (its->flags & 16) {
 		smp->flags |= CHN_LOOP;
-		if (its.flags & 64)
+		if (its->flags & 64)
 			smp->flags |= CHN_PINGPONGLOOP;
 	}
-	if (its.flags & 32) {
+	if (its->flags & 32) {
 		smp->flags |= CHN_SUSTAINLOOP;
-		if (its.flags & 128)
+		if (its->flags & 128)
 			smp->flags |= CHN_PINGPONGSUSTAIN;
 	}
 
@@ -164,28 +161,58 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	 * been fixed sometime before IT 2.14, which is fortunate because that's what a lot of other
 	 * programs annoyingly identify themselves as. */
 	if (cwtv < 0x0214)
-		its.flags &= ~4;
+		its->flags &= ~4;
 
-	memcpy(smp->name, (const char *)its.name, MIN(sizeof(smp->name), sizeof(its.name)));
+	memcpy(smp->name, (const char *)its->name, MIN(sizeof(smp->name), sizeof(its->name)));
 	smp->name[ARRAY_SIZE(smp->name) - 1] = '\0';
-	memcpy(smp->filename, (const char *)its.filename, MIN(sizeof(smp->filename), sizeof(its.filename)));
+	memcpy(smp->filename, (const char *)its->filename, MIN(sizeof(smp->filename), sizeof(its->filename)));
 	smp->filename[ARRAY_SIZE(smp->filename) - 1] = '\0';
 
-	smp->volume = its.vol * 4;
-	smp->panning = (its.dfp & 127) * 4;
-	if (its.dfp & 128)
+	smp->volume = its->vol * 4;
+	smp->panning = (its->dfp & 127) * 4;
+	if (its->dfp & 128)
 		smp->flags |= CHN_PANNING;
-	smp->loop_start = bswapLE32(its.loopbegin);
-	smp->loop_end = bswapLE32(its.loopend);
-	smp->c5speed = bswapLE32(its.c5speed);
-	smp->sustain_start = bswapLE32(its.susloopbegin);
-	smp->sustain_end = bswapLE32(its.susloopend);
+	smp->loop_start = bswapLE32(its->loopbegin);
+	smp->loop_end = bswapLE32(its->loopend);
+	smp->c5speed = bswapLE32(its->c5speed);
+	smp->sustain_start = bswapLE32(its->susloopbegin);
+	smp->sustain_end = bswapLE32(its->susloopend);
 
 	int vibs[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM};
-	smp->vib_type = vibs[its.vit & 3];
-	smp->vib_rate = its.vir;
-	smp->vib_depth = its.vid;
-	smp->vib_speed = its.vis;
+	smp->vib_type = vibs[its->vit & 3];
+	smp->vib_rate = its->vir;
+	smp->vib_depth = its->vid;
+	smp->vib_speed = its->vis;
+
+	return 1;
+}
+
+int load_its_header(slurp_t *fp, song_sample_t *smp)
+{
+	struct it_sample its;
+
+	if (!load_its_header_impl(&its, fp, smp, 0x0214))
+		return 0;
+
+	/* eh, this is stupid */
+	if (its.flags & 4) smp->flags |= CHN_STEREO;
+	else smp->flags &= ~CHN_STEREO;
+
+	if (its.flags & 2) smp->flags |= CHN_16BIT;
+	else smp->flags &= ~CHN_16BIT;
+
+	return 1;
+}
+
+// cwtv should be 0x0214 when loading from its or iti
+int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
+{
+	struct it_sample its;
+	int r;
+
+	r = load_its_header_impl(&its, fp, smp, cwtv);
+	if (!r)
+		return 0;
 
 	// sanity checks purged, csf_adjust_sample_loop already does them  -paper
 
@@ -194,8 +221,6 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	const int64_t pos = slurp_tell(fp);
 	if (pos < 0)
 		return 0;
-
-	int r;
 
 	if ((its.flags & 1) && its.cvt == 64 && its.length == 12) {
 		// OPL instruments in OpenMPT MPTM files (which are essentially extended IT files)

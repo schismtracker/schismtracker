@@ -23,7 +23,7 @@
 
 #include "headers.h"
 
-#include "bswap.h"
+#include "bits.h"
 #include "network.h"
 #include "network-tcp.h"
 #include "song.h"
@@ -34,11 +34,10 @@
  *  * The IPX driver seems to work on port 18757 ("IT"), so we should
  *    replicate that.
  *  * The IPX driver also seems to be the only one ever implemented.
- *  * The IPX driver seems to use MAC addresses rather than IPv4 addresses.
- *    This makes sense for local addresses, but for internet networking
- *    it will not work at all. Hence, we should be able to take in a hostname.
- *    This could be literally anything (i.e. 192.168.1.67, fe80::250:56ff:fec0:1,
- *    or something like schismtracker.org).
+ *  * The IPX driver (somewhat obviously) uses Novell protocols instead of the
+ *    TCP/IP stack which eventually won out over IPX. Since we don't use IPX
+ *    (because it is absolutely ancient and no one uses it anymore), we need
+ *    not worry about 100% compatibility with IT.
  *  * This code is currently completely untested. */
 
 static struct network_tcp tcp = {0};
@@ -187,24 +186,64 @@ int Network_SendSongData(uint16_t length, uint16_t offset)
 {
 	uint16_t x[2];
 
+	if ((length + offset) > 512)
+		return -1;
+
 	x[0] = bswapLE16(length);
 	x[1] = bswapLE16(offset);
 
-	/* This definitely isn't correct ... */
-
-	return Network_SendData(NETWORK_BLOCKTYPE_SONGDATA, x, sizeof(x));
+	/* TODO */
+	return 0;
 }
 
 int Network_SendInstrument(uint8_t num)
 {
-	/* TODO actually send the instrument header */
-	return Network_SendData(NETWORK_BLOCKTYPE_INSTRUMENT, &num, sizeof(num));
+	disko_t memfp;
+	song_instrument_t *inst;
+	int r;
+
+	if (num >= MAX_INSTRUMENTS)
+		return -1;
+
+	disko_memopen_estimate(&memfp, 555);
+
+	disko_putc(&memfp, num);
+
+	song_lock_audio();
+	inst = current_song->instruments[num + 1];
+	save_iti_instrument(&memfp, current_song, inst, 0);
+	song_unlock_audio();
+
+	r = Network_SendData(NETWORK_BLOCKTYPE_INSTRUMENT, memfp.data, memfp.length);
+
+	disko_memclose(&memfp, 0);
+
+	return r;
 }
 
 int Network_SendSample(uint8_t num)
 {
-	/* TODO actually send the sample header */
-	return Network_SendData(NETWORK_BLOCKTYPE_SAMPLE, &num, sizeof(num));
+	disko_t memfp;
+	song_sample_t *smp;
+	int r;
+
+	if (num >= MAX_SAMPLES)
+		return -1;
+
+	disko_memopen_estimate(&memfp, 81);
+
+	disko_putc(&memfp, num);
+
+	song_lock_audio();
+	smp = current_song->samples + num + 1;
+	save_its_header(&memfp, smp);
+	song_unlock_audio();
+
+	r = Network_SendData(NETWORK_BLOCKTYPE_SAMPLE, memfp.data, memfp.length);
+
+	disko_memclose(&memfp, 0);
+
+	return r;
 }
 
 int Network_SendPatternLength(uint8_t num, uint8_t new_maxrow)
@@ -248,10 +287,44 @@ int Network_SendNewSample(uint8_t num)
 	return Network_SendData(NETWORK_BLOCKTYPE_NEW_SAMPLE, data, sizeof(data));
 }
 
+#define NETWORK_SENDSAMPLE_BLOCKSIZE (65000 - 5)
+
 int Network_SendSampleData(uint8_t num)
 {
-	/* TODO actually send the data */
-	return Network_SendData(NETWORK_BLOCKTYPE_SAMPLE, &num, sizeof(num));
+	/* hm. probably shouldn't be using a static buffer here ... whatever */
+	static uint8_t membuf[65000];
+	song_sample_t *smp;
+	uint32_t len, dw, i;
+
+	if (num >= MAX_SAMPLES)
+		return -1;
+
+	smp = current_song->samples + num + 1;
+
+	if (!smp->data)
+		return -1; /* no sample data to send */
+
+	len = smp->length
+		* ((smp->flags & CHN_16BIT) ? 2 : 1)
+		* ((smp->flags & CHN_STEREO) ? 2 : 1);
+
+	membuf[0] = num;
+
+	/* FIXME we're actually sending this as interleaved stereo (not to
+	 * spec with IT sample definition) */
+	for (i = 0; i < len; i += NETWORK_SENDSAMPLE_BLOCKSIZE) {
+		uint32_t blksize = MIN(NETWORK_SENDSAMPLE_BLOCKSIZE, len - i);
+
+		dw = bswapLE32(i);
+		memcpy(membuf + 1, &dw, 4);
+
+		memcpy(membuf + 5, (char *)smp->data + i, blksize);
+
+		if (Network_SendData(NETWORK_BLOCKTYPE_SAMPLE_DATA, membuf, blksize + 5) < 0)
+			return -1;
+	}
+
+	return 0;
 }
 
 int Network_SendHandshake(const char *username, const char *motd)
@@ -363,23 +436,58 @@ static int Network_ReceiveSongData(const void *data_, size_t size)
 	if (x[0] + x[1] > 512)
 		return -1;
 
-	/* TODO no idea how to handle this  --paper */
+	/* This contains the header of an IT file, plus 64 bytes of padding,
+	 * with the order list right behind it. */
 	return -1;
 }
 
 static int Network_ReceiveInstrument(const void *data_, size_t size)
 {
-	/* TODO 99% sure this just receives an IT instrument header.
-	 * Hence we have to handle it properly :) */
-	log_appendf(1, "got instrument?");
-	return -1;
+	slurp_t fp;
+	song_instrument_t *inst;
+	int num;
+
+	slurp_memstream(&fp, (uint8_t *)data_, size);
+
+	num = slurp_getc(&fp);
+	if (num == EOF || num >= MAX_INSTRUMENTS)
+		return -1;
+
+	inst = csf_allocate_instrument();
+
+	if (!load_it_instrument(NULL, inst, &fp)) {
+		csf_free_instrument(inst);
+		return -1;
+	}
+
+	/* do as little processing as possible while we're locked */
+	song_lock_audio();
+	current_song->instruments[num + 1] = inst;
+	song_unlock_audio();
+
+	return 0;
 }
 
 static int Network_ReceiveSample(const void *data_, size_t size)
 {
 	/* TODO ditto with the above, probably IT sample header.
 	 * We could use the MPTM extension for AdLib samples */
-	return -1;
+	slurp_t fp;
+	song_sample_t *smp;
+	int num;
+
+	slurp_memstream(&fp, (uint8_t *)data_, size);
+
+	num = slurp_getc(&fp);
+	if (num == EOF || num >= MAX_SAMPLES)
+		return -1;
+
+	song_lock_audio();
+	smp = current_song->samples + num + 1;
+	load_its_header(&fp, smp);
+	song_unlock_audio();
+
+	return 0;
 }
 
 static int Network_ReceivePatternLength(const void *data_, size_t size)
@@ -421,12 +529,10 @@ static int Network_ReceiveNewSample(const void *data_, size_t size)
 	const unsigned char *data = data_;
 	uint8_t smpnum;
 	uint32_t len;
+	song_sample_t *smp;
 
 	if (size < 5)
 		return -1;
-
-	/* length is already in samples (i.e. no x2 for 16-bit)
-	 * X to doubt we could send stereo samples sanely. */
 
 	smpnum = data[0];
 
@@ -444,7 +550,13 @@ static int Network_ReceiveNewSample(const void *data_, size_t size)
 
 	/* put in the length; we'll read in the sample later once
 	 * the sample data event arrives */
-	current_song->samples[smpnum + 1].length = len;
+	smp = current_song->samples + smpnum + 1;
+	smp->length = len;
+
+	len *= (smp->flags & CHN_16BIT)  ? 2 : 1;
+	len *= (smp->flags & CHN_STEREO) ? 2 : 1;
+
+	smp->data = csf_allocate_sample(len);
 
 	song_unlock_audio();
 
@@ -471,6 +583,8 @@ static int Network_ReceiveSampleData(const void *data_, size_t size)
 	memcpy(&offset, data + 1, 4);
 	offset = bswapLE32(offset);
 
+	song_lock_audio();
+
 	smp = current_song->samples + smpnum + 1;
 
 	fulllength = smp->length
@@ -478,11 +592,12 @@ static int Network_ReceiveSampleData(const void *data_, size_t size)
 		* ((smp->flags & CHN_STEREO) ? 2 : 1);
 
 	/* I hope this is good enough to prevent against overflow */
-	if ((offset >= fulllength) || ((offset + size) >= fulllength))
+	if (!smp->data || (offset > fulllength) || ((offset + (size - 5)) > fulllength)) {
+		song_unlock_audio();
 		return -1;
+	}
 
 	/* prevent races */
-	song_lock_audio();
 	memcpy((char *)smp->data + offset, data + 5, size - 5);
 	song_unlock_audio();
 
@@ -711,5 +826,29 @@ int Network_OnConnect(void)
 
 	/* TODO once we're connected, the server should send
 	 * all of the song data to the clients. */
+	return 0;
+}
+
+/* Server-specific stuff */
+int Network_OnServerConnect(void)
+{
+	/* We're controlling the song; send all of the data
+	 * to the client */
+	int r, n;
+
+	//r = Network_SendSongData(512, 0);
+	//if (r < 0) return -1;
+
+	for (n = 0; n < MAX_SAMPLES; n++) {
+		Network_SendSample(n);
+		if (current_song->samples[n + 1].data) {
+			Network_SendNewSample(n);
+			Network_SendSampleData(n);
+		}
+	}
+
+	for (n = 0; n < MAX_INSTRUMENTS; n++)
+		Network_SendInstrument(n);
+
 	return 0;
 }
