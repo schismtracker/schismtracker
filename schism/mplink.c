@@ -320,7 +320,7 @@ int song_next_order_for_pattern(int pat)
 
 int song_get_max_row_number_in_pattern(int pattern)
 {
-	if (pattern > MAX_PATTERNS)
+	if (pattern >= MAX_PATTERNS)
 		return -1;
 	return (current_song->pattern_size[pattern] ? current_song->pattern_size[pattern] : 64) - 1;
 }
