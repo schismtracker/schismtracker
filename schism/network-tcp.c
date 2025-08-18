@@ -23,7 +23,7 @@
 
 #include "headers.h"
 
-#include "bswap.h"
+#include "bits.h"
 #include "str.h"
 #include "mem.h"
 #include "disko.h"
@@ -183,7 +183,7 @@ static int network_tcp_create_socket(network_tcp_socket_t *pfd, int which)
 	network_tcp_socket_t fd;
 
 	fd = socket(which, SOCK_STREAM, 0);
-	if (fd == INVALID_SOCKET) {
+	if (fd == SOCKET_INVALID) {
 		network_tcp_perror("socket", SOCKET_LASTERROR);
 		return -1;
 	}
@@ -295,9 +295,9 @@ int network_tcp_start_server(struct network_tcp *n, uint16_t port)
 		return -1;
 
 	log_nl();
-	log_appendf(2, "[NETWORK] Starting server", (unsigned int)port);
+	log_appendf(2, "[NETWORK] Starting server");
 	log_underline();
-	status_text_flash("[NETWORK] Starting server", (unsigned int)port);
+	status_text_flash("[NETWORK] Starting server");
 
 	if (n->sfd != SOCKET_INVALID && n->sfd6 != SOCKET_INVALID)
 		log_appendf(5, " Using IPv4 and IPv6");
@@ -380,7 +380,7 @@ static int network_tcp_enumerate_host_ips(const char *node, uint16_t port,
 
 			break;
 		}
-		case AF_INET6:
+		case AF_INET6: {
 			struct sockaddr_in6 addr;
 
 			if (host->h_length < sizeof(struct in6_addr))  /* 32-bit */
@@ -398,6 +398,7 @@ static int network_tcp_enumerate_host_ips(const char *node, uint16_t port,
 			}
 
 			break;
+		}
 		default:
 			/* what */
 			return -1;
@@ -429,6 +430,9 @@ static int network_tcp_enum_cb(struct sockaddr *addr, size_t addrlen, void *user
 	default:
 		return 0;
 	}
+
+	if (fd == SOCKET_INVALID)
+		return 0; /* do nothing */
 
 	if ((connect(fd, addr, addrlen) == SOCKET_ERROR)
 		&& SOCKET_LASTERROR != SOCKET_EINPROGRESS
@@ -482,7 +486,11 @@ int network_tcp_send(struct network_tcp *n, const void *data, uint32_t size)
 	uint8_t x;
 	size_t off;
 	uint32_t dw;
+#ifdef SCHISM_WIN32
 	int r;
+#else
+	ssize_t r;
+#endif
 
 	if (!n || !n->init)
 		return -1;
@@ -499,6 +507,8 @@ int network_tcp_send(struct network_tcp *n, const void *data, uint32_t size)
 		network_tcp_perror("send (size)", SOCKET_LASTERROR);
 		return -1; /* peer probably disconnected; abandon ship */
 	}
+
+	off = 0;
 
 	/* now transmit the data */
 	while (size > n->s.msgsize) {
@@ -519,7 +529,8 @@ int network_tcp_send(struct network_tcp *n, const void *data, uint32_t size)
 		off += n->s.msgsize;
 	}
 
-	if (send(n->cfd, (char *)data + off, size, 0) == SOCKET_ERROR) {
+	r = send(n->cfd, (char *)data + off, size, 0);
+	if (r == SOCKET_ERROR) {
 		/* 99% of gamblers quit before they win big */
 		network_tcp_perror("send (final block)", SOCKET_LASTERROR);
 		return -1;
@@ -556,6 +567,7 @@ static int network_tcp_server_worker(struct network_tcp *n)
 		addrlen = sizeof(addr);
 		n->cfd = accept(socks[i], &addr.i, &addrlen);
 		if (n->cfd == SOCKET_INVALID) {
+			/* I have no idea why this would return these errors, but whatever.. */
 			if (SOCKET_LASTERROR != SOCKET_EAGAIN && SOCKET_LASTERROR != SOCKET_EWOULDBLOCK)
 				network_tcp_perror("accept", SOCKET_LASTERROR);
 			continue;
@@ -567,6 +579,11 @@ static int network_tcp_server_worker(struct network_tcp *n)
 	if (n->cfd == SOCKET_INVALID)
 		return -1; /* failed */
 
+	if (network_tcp_socket_nonblock(n->cfd) < 0)
+		return -1;
+
+	network_tcp_socket_timeout(n->cfd, 5000000);
+
 	/* print out the hostname */
 #ifdef HAVE_GETNAMEINFO
 	if (!getnameinfo((struct sockaddr *)&addr, addrlen, host, sizeof(host), NULL, 0, 0)) {
@@ -575,12 +592,12 @@ static int network_tcp_server_worker(struct network_tcp *n)
 	} else
 #endif
 #ifdef HAVE_GETHOSTBYADDR
-	if ((hostent = (addr.i.sa_family == AF_INET6)
+	if ((hent = (addr.i.sa_family == AF_INET6)
 			? gethostbyaddr((char *)&addr.i6.sin6_addr, 16, AF_INET6)
 			: gethostbyaddr((char *)&addr.i4.sin_addr, 4, AF_INET))) {
 		/* nice spaghetti to get here */
-		log_appendf(4, "Accepting connection from %s", hostent->h_name);
-		status_text_flash("Accepting connection from %s", hostent->h_name);
+		log_appendf(4, "Accepting connection from %s", hent->h_name);
+		status_text_flash("Accepting connection from %s", hent->h_name);
 	} else
 #endif
 	{
@@ -621,6 +638,7 @@ static int network_tcp_server_worker(struct network_tcp *n)
 	}
 
 	Network_OnConnect();
+	Network_OnServerConnect();
 
 	return 0;
 }
@@ -651,6 +669,13 @@ int network_tcp_worker(struct network_tcp *n)
 		struct timeval tv;
 		int r, err;
 		socklen_t len;
+
+		if (n->cfd == SOCKET_INVALID) {
+			/* previous connection failed; just set it here
+			 * this logic is totally asinine, but just hear me out */
+			n->connecting = 0;
+			return -1;
+		}
 
 		FD_ZERO(&fds);
 		FD_SET(n->cfd, &fds);
