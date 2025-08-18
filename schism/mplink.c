@@ -224,8 +224,12 @@ int song_get_pattern_offset(int *pattern_number, song_note_t **buf, int *row, in
 {
 	int max_row_number;
 	if (song_get_mode() & MODE_PATTERN_LOOP) {
+		max_row_number = song_get_max_row_number_in_pattern(*pattern_number);
+
+		SCHISM_RUNTIME_ASSERT(max_row_number >= 0, "caller gave us a totally bogus pattern number");
+
 		// just wrap around current rows
-		*row = (*row + offset) % (song_get_max_row_number_in_pattern(*pattern_number) + 1);
+		*row = (*row + offset) % (max_row_number + 1);
 
 		return song_get_pattern(*pattern_number, buf);
 	}
@@ -316,7 +320,7 @@ int song_next_order_for_pattern(int pat)
 
 int song_get_max_row_number_in_pattern(int pattern)
 {
-	if (pattern >= MAX_PATTERNS)
+	if ((pattern < 0) || (pattern >= MAX_PATTERNS))
 		return -1;
 	return (current_song->pattern_size[pattern] ? current_song->pattern_size[pattern] : 64) - 1;
 }
