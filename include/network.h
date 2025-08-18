@@ -60,4 +60,7 @@ void Network_Worker(void);
  * actually write data) */
 int Network_OnConnect(void);
 
+/* server stuff (also call Network_OnConnect) */
+int Network_OnServerConnect(void);
+
 #endif /* SCHISM_NETWORK_H_ */
