@@ -201,8 +201,8 @@ testresult_t test_song_get_pattern_offset_from_middle_more_than_two_patterns(voi
 testresult_t test_song_get_pattern_offset_song_LAST(void)
 {
 	return test_song_get_pattern(
-		2, 15, // starting from
-	  113,    // advance by
+		2, 15,  // starting from
+		113,    // advance by
 		4, 63); // expect to be at
 }
 
