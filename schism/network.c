@@ -599,6 +599,7 @@ static int Network_ReceiveSampleData(const void *data_, size_t size)
 
 	/* prevent races */
 	memcpy((char *)smp->data + offset, data + 5, size - 5);
+	csf_adjust_sample_loop(smp); /* ;) */
 	song_unlock_audio();
 
 	return 0;
