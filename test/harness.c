@@ -24,8 +24,10 @@
 #include "test.h"
 #include "test-tempfile.h"
 
+#include "charset.h"
 #include "osdefs.h"
 #include "timer.h"
+#include "mem.h"
 #include "str.h"
 #include "mt.h"
 
@@ -90,8 +92,7 @@ static testresult_t run_test_child(const char *self, test_index_entry *entry)
 int schism_test_main(int argc, char **argv)
 {
 	int run_batch = 1;
-	char *filter_prefix = NULL;
-	int filter_prefix_length = 0;
+	char *filter_expression = NULL;
 	int exit_code;
 
 	SCHISM_RUNTIME_ASSERT(mt_init(), "need multithreading");
@@ -101,9 +102,8 @@ int schism_test_main(int argc, char **argv)
 		char *test_case_name = argv[1];
 		int len = strlen(test_case_name);
 
-		if (test_case_name[len - 1] == '*') {
-			filter_prefix_length = len - 1;
-			filter_prefix = strndup(test_case_name, filter_prefix_length);
+		if (strpbrk(test_case_name, "*?") != NULL) {
+			filter_expression = str_dup(test_case_name);
 		}
 		else {
 			// run individual test case -- used internally as part of batch processing
@@ -135,7 +135,7 @@ int schism_test_main(int argc, char **argv)
 		start_time = timer_ticks();
 
 		for (i = 0; automated_tests[i].name; i++) {
-			if (filter_prefix && strncmp(automated_tests[i].name, filter_prefix, filter_prefix_length) != 0)
+			if (filter_expression && charset_fnmatch(filter_expression, CHARSET_UTF8, automated_tests[i].name, CHARSET_UTF8, CHARSET_FNM_PERIOD) != 0)
 				continue;
 
 			testresult_t result = run_test_child(argv[0], &automated_tests[i]);
@@ -172,7 +172,7 @@ int schism_test_main(int argc, char **argv)
 
 	test_temp_files_cleanup();
 
-	free(filter_prefix);
+	free(filter_expression);
 
 	timer_quit();
 	mt_quit();
