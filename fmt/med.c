@@ -25,10 +25,6 @@
 #include "fmt.h"
 #include "mem.h"
 
-// the most characters we will try to read for the song name.
-// we only care about 26 characters of song name, right??
-#define MAX_NAME_LENGTH 26
-
 #define MMD0_ID "MMD0"
 
 struct MMD0
@@ -86,37 +82,47 @@ int fmt_med_read_info(dmoz_file_t *file, slurp_t *fp)
 	struct MMD0 hdr;
 	struct MMD0exp exp;
 
-	int length = slurp_length(fp);
+	uint64_t length = slurp_length(fp);
 
-	if (sizeof(hdr) > length)
+	if (length < 52) /* sizeof(hdr) */
 		return 0;
 
-	if (slurp_read(fp, &hdr, sizeof(hdr)) != sizeof(hdr)
+	if ((slurp_read(fp, hdr.id, 4) != 4)
 	 || memcmp(hdr.id, MMD0_ID, 4))
 		return 0;
 
-	int exp_struct_ptr = bswapBE32(hdr.expdata_ptr);
-
-	if ((exp_struct_ptr + sizeof(struct MMD0exp) >= length)
-	 || slurp_seek(fp, exp_struct_ptr, SEEK_SET)
-	 || (slurp_read(fp, &exp, sizeof(exp)) != sizeof(exp)))
+	if (slurp_seek(fp, 32, SEEK_SET)
+	 || (slurp_read(fp, &hdr.expdata_ptr, sizeof(hdr.expdata_ptr)) != sizeof(hdr.expdata_ptr)))
 		return 0;
 
-	int name_ptr = bswapBE32(exp.songname_ptr);
-	int name_len = bswapBE32(exp.songnamelen);
+	uint32_t exp_struct_ptr = bswapBE32(hdr.expdata_ptr);
 
-	char name_buffer[MAX_NAME_LENGTH];
+	if ((exp_struct_ptr + sizeof(struct MMD0exp) >= length)
+	 || slurp_seek(fp, exp_struct_ptr + 44, SEEK_SET)
+	 || (slurp_read(fp, &exp.songname_ptr, sizeof(exp.songname_ptr)) != sizeof(exp.songname_ptr))
+	 || (slurp_read(fp, &exp.songnamelen, sizeof(exp.songnamelen)) != sizeof(exp.songnamelen)))
+		return 0;
 
-	if (name_len >= MAX_NAME_LENGTH)
-		name_len = MAX_NAME_LENGTH;
+	uint32_t name_ptr = bswapBE32(exp.songname_ptr);
+	uint32_t name_len = bswapBE32(exp.songnamelen);
+
+	char *name_buffer = mem_alloc(name_len + 1);
+
+	if (!name_buffer)
+		return 0;
+
+	name_buffer[name_len] = 0;
 
 	if ((name_ptr + name_len >= length)
 	 || slurp_seek(fp, name_ptr, SEEK_SET)
 	 || (slurp_read(fp, name_buffer, name_len) != name_len))
+	{
+		free(name_buffer);
 		return 0;
+	}
 
 	file->description = "OctaMed";
-	file->title = strn_dup(name_buffer, name_len);
+	file->title = name_buffer;
 	file->type = TYPE_MODULE_MOD; // err, more like XM for Amiga
 	return 1;
 }
