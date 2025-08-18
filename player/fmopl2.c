@@ -73,6 +73,8 @@ Revision History:
 
 #include "player/fmopl.h"
 
+#include "bits.h"
+
 // XXX why is this here?
 #include "log.h"
 
@@ -1652,7 +1654,7 @@ static void OPLWriteReg(FM_OPL *OPL, int r, int v)
 }
 
 /* lock/unlock for common table */
-static int OPL_LockTable()
+static int OPL_LockTable(void)
 {
 	num_lock++;
 	if(num_lock>1) return 0;
@@ -2053,7 +2055,7 @@ do { \
 	OPL->output[0] = 0; \
 	BLOCK \
 \
-	ab = safe_abs_32(OPL->output[0]); \
+	ab = babs32(OPL->output[0]); \
 \
 	vu_max[CHN] = MAX(vu_max[CHN], ab); \
 \
