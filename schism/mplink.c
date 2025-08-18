@@ -220,49 +220,50 @@ int song_find_last_channel(void)
 // returns length of selected patter, or 0 on error.
 // if song mode is pattern loop (MODE_PATTERN_LOOP), offset is mod calculated
 // in current pattern.
-int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset)
+int song_get_pattern_offset(int *pattern_number, song_note_t **buf, int *row, int offset)
 {
-	int tot;
+	int max_row_number;
 	if (song_get_mode() & MODE_PATTERN_LOOP) {
 		// just wrap around current rows
-		*row = (*row + offset) % (song_get_max_row_number_in_pattern(*n) + 1);
+		*row = (*row + offset) % (song_get_max_row_number_in_pattern(*pattern_number) + 1);
 
-		return song_get_pattern(*n, buf);
+		return song_get_pattern(*pattern_number, buf);
 	}
 
-	tot = song_get_max_row_number_in_pattern(*n);
-	while (offset + *row > tot) {
-		offset -= (tot + 1);
-		(*n)++;
-		tot = song_get_max_row_number_in_pattern(*n);
-		if (tot < 0) { // n might eventually become out of range
+	max_row_number = song_get_max_row_number_in_pattern(*pattern_number);
+	while (offset + *row > max_row_number) {
+		offset -= (max_row_number + 1);
+		(*pattern_number)++;
+		max_row_number = song_get_max_row_number_in_pattern(*pattern_number);
+		if (max_row_number < 0) { // pattern_number might eventually become out of range
 			return 0;
 		}
 	}
 
 	*row += offset;
-	return song_get_pattern(*n, buf);
+
+	return song_get_pattern(*pattern_number, buf);
 }
 
 // returns length of the pattern, or 0 on error. (this can be used to
 // get a pattern's length by passing NULL for buf.)
-int song_get_pattern(int n, song_note_t ** buf)
+int song_get_pattern(int pattern_number, song_note_t ** buf)
 {
-	if (n >= MAX_PATTERNS)
+	if (pattern_number >= MAX_PATTERNS)
 		return 0;
 
 	if (buf) {
-		if (!current_song->patterns[n]) {
-			current_song->pattern_size[n] = 64;
-			current_song->pattern_alloc_size[n] = 64;
-			current_song->patterns[n] = csf_allocate_pattern(current_song->pattern_size[n]);
+		if (!current_song->patterns[pattern_number]) {
+			current_song->pattern_size[pattern_number] = 64;
+			current_song->pattern_alloc_size[pattern_number] = 64;
+			current_song->patterns[pattern_number] = csf_allocate_pattern(current_song->pattern_size[pattern_number]);
 		}
-		*buf = current_song->patterns[n];
+		*buf = current_song->patterns[pattern_number];
 	} else {
-		if (!current_song->patterns[n])
+		if (!current_song->patterns[pattern_number])
 			return 64;
 	}
-	return current_song->pattern_size[n];
+	return current_song->pattern_size[pattern_number];
 }
 song_note_t *song_pattern_allocate_copy(int patno, int *rows)
 {
