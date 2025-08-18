@@ -300,7 +300,7 @@ const char *events_describe_physical_key_for_qwerty_key(char qwerty_key)
 		case SCHISM_KEYSYM_DELETE: scancode = SCHISM_SCANCODE_DELETE; break;
 	}
 
-	key_name = events_backend->get_key_name_from_scancode(scancode);
+	key_name = events_backend->get_key_name_from_scancode(qwerty_key, scancode);
 
 	if (!shifted)
 		return key_name;

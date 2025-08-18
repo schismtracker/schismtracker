@@ -26,6 +26,7 @@
 #include "backend/events.h"
 #include "util.h"
 #include "video.h"
+#include "osdefs.h"
 
 #include "init.h"
 
@@ -804,8 +805,25 @@ static void sdl12_pump_events(void)
 	}
 }
 
-static const char *sdl12_get_key_name_from_scancode(int scancode)
+#ifdef SCHISM_WIN32
+# define SCHISM_USED_ON_WIN32
+#else
+# define SCHISM_USED_ON_WIN32 SCHISM_UNUSED
+#endif
+
+static const char *sdl12_get_key_name_from_scancode(SCHISM_USED_ON_WIN32 char qwerty_key, int scancode)
 {
+#ifdef SCHISM_WIN32
+	uint32_t vk;
+	int shifted;
+	static char name_buffer[100];
+
+	vk = win32_get_virtual_key_code_for_printable_char(qwerty_key, &shifted);
+
+	if (vk && win32_get_key_name(vk, shifted, name_buffer, sizeof(name_buffer)))
+		return name_buffer;
+#endif
+
 	switch (scancode)
 	{
 	/* USB keyboard page... */

@@ -142,6 +142,75 @@ int win32_ver_unicode(void)
 }
 
 /* ------------------------------------------------------------------------ */
+/* keyboard layout */
+
+uint32_t win32_get_virtual_key_code_for_printable_char(schism_keysym_t ch, int *shifted)
+{
+	*shifted = 0;
+
+	// Windows is funny like this
+	if ((ch >= '0') && (ch <= '9'))
+		return ch;
+	if ((ch >= 'A') && (ch <= 'Z'))
+		return ch;
+	if ((ch >= 'a') && (ch <= 'z'))
+		return toupper(ch);
+
+	switch (ch)
+	{
+		case ' ': return VK_SPACE;
+		case '!': *shifted = 1; return '1';
+		case '@': *shifted = 1; return '2';
+		case '#': *shifted = 1; return '3';
+		case '$': *shifted = 1; return '4';
+		case '%': *shifted = 1; return '5';
+		case '^': *shifted = 1; return '6';
+		case '&': *shifted = 1; return '7';
+		case '*': *shifted = 1; return '8';
+		case '(': *shifted = 1; return '9';
+		case ')': *shifted = 1; return '0';
+
+		case '+': *shifted = 1; case '=': return VK_OEM_PLUS;
+		case '<': *shifted = 1; case ',': return VK_OEM_COMMA;
+		case '_': *shifted = 1; case '-': return VK_OEM_MINUS;
+		case '>': *shifted = 1; case '.': return VK_OEM_PERIOD;
+
+		// what is this nonsense
+		case ':': *shifted = 1; case ';':  return VK_OEM_1;
+		case '?': *shifted = 1; case '/':  return VK_OEM_2;
+		case '~': *shifted = 1; case '`':  return VK_OEM_3;
+		case '{': *shifted = 1; case '[':  return VK_OEM_4;
+		case '|': *shifted = 1; case '\\': return VK_OEM_5;
+		case '}': *shifted = 1; case ']':  return VK_OEM_6;
+		case '"': *shifted = 1; case '\'': return VK_OEM_7;
+
+		default: return 0;
+	}
+}
+
+int win32_get_key_name(uint32_t scan_code, int shifted, char *name_buffer, int buffer_length)
+{
+	LONG lParam = (scan_code & 0x7F) << 16;
+	char *key_text = name_buffer;
+
+	if (buffer_length < 10) // enough space for "<unknown>"
+		return 0;
+
+	if (shifted) {
+		strcpy(name_buffer, "Shift-");
+		key_text = name_buffer + 6;
+		buffer_length -= 6;
+	}
+
+	int result = GetKeyNameTextA(lParam, key_text, buffer_length);
+
+	if (result == 0)
+		strcpy(name_buffer, "<unknown>");
+
+	return result;
+}
+
+/* ------------------------------------------------------------------------ */
 /* key modifiers */
 
 void win32_get_modkey(schism_keymod_t *mk)

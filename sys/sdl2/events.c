@@ -620,7 +620,7 @@ static void sdl2_pump_events(void)
 	pop_pending_keydown(NULL);
 }
 
-static const char *sdl2_get_key_name_from_scancode(int scancode)
+static const char *sdl2_get_key_name_from_scancode(SCHISM_UNUSED char qwerty_key, int scancode)
 {
 	return sdl2_GetKeyName(sdl2_GetKeyFromScancode(scancode));
 }
