@@ -24,8 +24,10 @@
 #include "test.h"
 #include "test-tempfile.h"
 
+#include "charset.h"
 #include "osdefs.h"
 #include "timer.h"
+#include "mem.h"
 #include "str.h"
 #include "mt.h"
 
@@ -89,12 +91,39 @@ static testresult_t run_test_child(const char *self, test_index_entry *entry)
 
 int schism_test_main(int argc, char **argv)
 {
+	int run_batch = 1;
+	char *filter_expression = NULL;
 	int exit_code;
 
 	SCHISM_RUNTIME_ASSERT(mt_init(), "need multithreading");
 	SCHISM_RUNTIME_ASSERT(timer_init(), "need timers");
 
-	if (argc <= 1) {
+	if (argc > 1) {
+		char *test_case_name = argv[1];
+		int len = strlen(test_case_name);
+
+		if (strpbrk(test_case_name, "*?") != NULL) {
+			filter_expression = str_dup(test_case_name);
+		}
+		else {
+			// run individual test case -- used internally as part of batch processing
+			run_batch = 0;
+
+			test_index_entry *test_case = test_get_case(test_case_name);
+			testresult_t result;
+
+			if (!test_case) {
+				fprintf(stderr, "%s (test build): no such test was found: %s\n", argv[0], argv[1]);
+				return 3;
+			}
+
+			result = run_test(test_case);
+
+			exit_code = result_to_exit_code(result);
+		}
+	}
+
+	if (run_batch) {
 		timer_ticks_t start_time, end_time, diff_time;
 
 		int passed_tests = 0;
@@ -106,6 +135,9 @@ int schism_test_main(int argc, char **argv)
 		start_time = timer_ticks();
 
 		for (i = 0; automated_tests[i].name; i++) {
+			if (filter_expression && charset_fnmatch(filter_expression, CHARSET_UTF8, automated_tests[i].name, CHARSET_UTF8, CHARSET_FNM_PERIOD) != 0)
+				continue;
+
 			testresult_t result = run_test_child(argv[0], &automated_tests[i]);
 
 			if (result == SCHISM_TESTRESULT_PASS) {
@@ -137,21 +169,10 @@ int schism_test_main(int argc, char **argv)
 
 		exit_code = (failed_tests == 0) ? 0 : 1;
 	}
-	else {
-		test_index_entry *test_case = test_get_case(argv[1]);
-		testresult_t result;
-
-		if (!test_case) {
-			fprintf(stderr, "%s (test build): no such test was found: %s\n", argv[0], argv[1]);
-			return 3;
-		}
-
-		result = run_test(test_case);
-
-		exit_code = result_to_exit_code(result);
-	}
 
 	test_temp_files_cleanup();
+
+	free(filter_expression);
 
 	timer_quit();
 	mt_quit();
