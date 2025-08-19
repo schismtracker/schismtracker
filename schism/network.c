@@ -42,6 +42,7 @@
  *  * This code is currently completely untested. */
 
 static struct network_tcp tcp = {0};
+static int ninit = 0;
 
 enum {
 	/* extra data:
@@ -123,6 +124,9 @@ static int Network_SendData(uint8_t type, const void *data, uint16_t size)
 	uint8_t *buf;
 	uint16_t i;
 	uint8_t dh, dl;
+
+	if (!ninit)
+		return -1; /* dont do anything if we're not even initialized */
 
 	/* IT_NET.ASM says this has a max of 65000 bytes
 	 * NOTE: we should definitely be able to handle samples that
@@ -869,6 +873,7 @@ int Network_ReceiveData(const void *data, size_t size)
 void Network_Close(void)
 {
 	network_tcp_close(&tcp);
+	ninit = 0;
 }
 
 int Network_StartServer(uint16_t port)
@@ -884,6 +889,8 @@ int Network_StartServer(uint16_t port)
 	r = network_tcp_start_server(&tcp, port);
 	if (r < 0)
 		return -1;
+
+	ninit = 1;
 
 	return 0;
 }
@@ -907,6 +914,8 @@ int Network_StartClient(const char *host, uint16_t port)
 	if (r < 0)
 		return -1;
 
+	ninit = 1;
+
 	return 0;
 }
 
@@ -927,11 +936,8 @@ int Network_OnConnect(void)
 	int r;
 
 	r = Network_SendHandshake("Unregistered", "MOTD");
-	if (r < 0)
-		return r;
+	if (r < 0) return -1;
 
-	/* TODO once we're connected, the server should send
-	 * all of the song data to the clients. */
 	return 0;
 }
 

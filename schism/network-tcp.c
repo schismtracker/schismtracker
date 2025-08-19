@@ -313,6 +313,8 @@ int network_tcp_start_server(struct network_tcp *n, uint16_t port)
 	return 0;
 }
 
+/* to be honest, this is probably the best way we can handle getaddrinfo()
+ * and gethostbyname(), without having to repeat everything unnecessarily. */
 static int network_tcp_enumerate_host_ips(const char *node, uint16_t port,
 	int (*cb)(struct sockaddr *addr, size_t addrlen, void *userdata),
 	void *userdata)
