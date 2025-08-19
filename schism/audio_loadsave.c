@@ -360,6 +360,11 @@ int song_load_unchecked(const char *file)
 		*strrchr(fmt, ',') = 0; // cut off 'instruments'
 	log_appendf(5, fmt, csf_get_num_patterns(current_song), nsmp, nins);
 
+#ifdef USE_NETWORK
+	/* ok */
+	Network_OnServerConnect();
+#endif
+
 	return 1;
 }
 
@@ -455,7 +460,8 @@ static char *mangle_filename(const char *in, const char *mid, const char *ext)
 	char *ret = mem_alloc(baselen + midlen + extlen + 1); /* room for terminating \0 */
 
 	memcpy(ret, in, baselen);
-	memcpy(ret + baselen, mid, midlen);
+	if (mid)
+		memcpy(ret + baselen, mid, midlen);
 	if (*iext)
 		memcpy(ret + baselen + midlen, iext, extlen);
 	else if (ext)

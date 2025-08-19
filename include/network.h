@@ -43,6 +43,9 @@ int Network_SendNewSample(uint8_t num);
 int Network_SendSampleData(uint8_t num);
 int Network_SendHandshake(const char *username, const char *motd);
 
+/* "helper" sending functions: */
+int Network_SendOrderList(void);
+
 /* this likely shouldn't be extern (but whatever) */
 int Network_ReceiveData(const void *data, size_t size);
 

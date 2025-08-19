@@ -149,8 +149,11 @@ int32_t huffman_decompress(slurp_t *slurp, disko_t *disko);
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-/* shared by the .it, .its, and .iti saving functions */
-void save_its_header(disko_t *fp, song_sample_t *smp);
+/* shared by the .it, .its, and .iti saving functions, and the networking stuff */
+int it_save_song_header(disko_t *fp, song_t *song, int *pnord, int *pnins,
+	int *pnsmp, int *pnpat, int *pmsglen, int songdata);
+int it_load_song_header(song_t *song, slurp_t *fp);
+void save_its_header(disko_t *fp, song_sample_t *smp, int adlib);
 void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int iti_file);
 int load_its_header(slurp_t *fp, song_sample_t *smp);
 int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv);
