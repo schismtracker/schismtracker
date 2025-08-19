@@ -535,11 +535,16 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		csf_check_nna(current_song, chan_internal, ins, note, 0);
 	if (s) {
 		if (c->flags & CHN_ADLIB) {
+			// get rid of previous OPL activity
 			OPL_NoteOff(current_song, chan_internal);
+		}
+		if (s->flags & CHN_ADLIB) {
+			// set up for OPL call if the sample needs it, regardless of where the channel is at
 			OPL_Patch(current_song, chan_internal, s->adlib_bytes);
 		}
 
 		c->flags = (s->flags & CHN_SAMPLE_FLAGS) | (c->flags & CHN_MUTE);
+
 		if (c->flags & CHN_MUTE) {
 			c->flags |= CHN_NNAMUTE;
 		}
