@@ -194,7 +194,7 @@ void wii_sysexit(void); // close filesystem
 int win32_event(schism_event_t *event);
 void win32_sysinit(int *pargc, char ***pargv);
 void win32_sysexit(void);
-uint32_t win32_get_virtual_key_code_for_printable_char(char ch, int *shifted);
+uint32_t win32_get_scan_code_for_qwerty_key(char ch, int *shifted);
 int win32_get_key_name(uint32_t scan_code, int shifted, char *name_buffer, int name_buffer_length);
 void win32_get_modkey(schism_keymod_t *m);
 void win32_filecreated_callback(const char *filename);

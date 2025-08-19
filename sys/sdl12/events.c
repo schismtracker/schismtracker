@@ -818,7 +818,7 @@ static const char *sdl12_get_key_name_from_scancode(SCHISM_USED_ON_WIN32 char qw
 	int shifted;
 	static char name_buffer[100];
 
-	vk = win32_get_virtual_key_code_for_printable_char(qwerty_key, &shifted);
+	vk = win32_get_scan_code_for_qwerty_key(qwerty_key, &shifted);
 
 	if (vk && win32_get_key_name(vk, shifted, name_buffer, sizeof(name_buffer)))
 		return name_buffer;

@@ -144,46 +144,80 @@ int win32_ver_unicode(void)
 /* ------------------------------------------------------------------------ */
 /* keyboard layout */
 
-uint32_t win32_get_virtual_key_code_for_printable_char(schism_keysym_t ch, int *shifted)
+uint32_t win32_get_scan_code_for_qwerty_key(char ch, int *shifted)
 {
 	*shifted = 0;
 
-	// Windows is funny like this
-	if ((ch >= '0') && (ch <= '9'))
-		return ch;
-	if ((ch >= 'A') && (ch <= 'Z'))
-		return ch;
-	if ((ch >= 'a') && (ch <= 'z'))
-		return toupper(ch);
-
 	switch (ch)
 	{
-		case ' ': return VK_SPACE;
-		case '!': *shifted = 1; return '1';
-		case '@': *shifted = 1; return '2';
-		case '#': *shifted = 1; return '3';
-		case '$': *shifted = 1; return '4';
-		case '%': *shifted = 1; return '5';
-		case '^': *shifted = 1; return '6';
-		case '&': *shifted = 1; return '7';
-		case '*': *shifted = 1; return '8';
-		case '(': *shifted = 1; return '9';
-		case ')': *shifted = 1; return '0';
-
-		case '+': *shifted = 1; case '=': return VK_OEM_PLUS;
-		case '<': *shifted = 1; case ',': return VK_OEM_COMMA;
-		case '_': *shifted = 1; case '-': return VK_OEM_MINUS;
-		case '>': *shifted = 1; case '.': return VK_OEM_PERIOD;
-
-		// what is this nonsense
-		case ':': *shifted = 1; case ';':  return VK_OEM_1;
-		case '?': *shifted = 1; case '/':  return VK_OEM_2;
-		case '~': *shifted = 1; case '`':  return VK_OEM_3;
-		case '{': *shifted = 1; case '[':  return VK_OEM_4;
-		case '|': *shifted = 1; case '\\': return VK_OEM_5;
-		case '}': *shifted = 1; case ']':  return VK_OEM_6;
-		case '"': *shifted = 1; case '\'': return VK_OEM_7;
-
+		case '!': *shifted = 1;
+		case '1': return 2;
+		case '@': *shifted = 1;
+		case '2': return 3;
+		case '#': *shifted = 1;
+		case '3': return 4;
+		case '$': *shifted = 1;
+		case '4': return 5;
+		case '%': *shifted = 1;
+		case '5': return 6;
+		case '^': *shifted = 1;
+		case '6': return 7;
+		case '&': *shifted = 1;
+		case '7': return 8;
+		case '*': *shifted = 1;
+		case '8': return 9;
+		case '(': *shifted = 1;
+		case '9': return 10;
+		case ')': *shifted = 1;
+		case '0': return 11;
+		case '_': *shifted = 1;
+		case '-': return 12;
+		case '+': *shifted = 1;
+		case '=': return 13;
+		case 'Q': case 'q': return 16;
+		case 'W': case 'w': return 17;
+		case 'E': case 'e': return 18;
+		case 'R': case 'r': return 19;
+		case 'T': case 't': return 20;
+		case 'Y': case 'y': return 21;
+		case 'U': case 'u': return 22;
+		case 'I': case 'i': return 23;
+		case 'O': case 'o': return 24;
+		case 'P': case 'p': return 25;
+		case '{': *shifted = 1;
+		case '[': return 26;
+		case '}': *shifted = 1;
+		case ']': return 27;
+		case 'A': case 'a': return 30;
+		case 'S': case 's': return 31;
+		case 'D': case 'd': return 32;
+		case 'F': case 'f': return 33;
+		case 'G': case 'g': return 34;
+		case 'H': case 'h': return 35;
+		case 'J': case 'j': return 36;
+		case 'K': case 'k': return 37;
+		case 'L': case 'l': return 38;
+		case ':': *shifted = 1;
+		case ';': return 39;
+		case '"': *shifted = 1;
+		case '\'': return 40;
+		case '~': *shifted = 1;
+		case '`': return 41;
+		case '|': *shifted = 1;
+		case '\\': return 43;
+		case 'Z': case 'z': return 44;
+		case 'X': case 'x': return 45;
+		case 'C': case 'c': return 46;
+		case 'V': case 'v': return 47;
+		case 'B': case 'b': return 48;
+		case 'N': case 'n': return 49;
+		case 'M': case 'm': return 50;
+		case '<': *shifted = 1;
+		case ',': return 51;
+		case '>': *shifted = 1;
+		case '.': return 52;
+		case '?': *shifted = 1;
+		case '/': return 53;
 		default: return 0;
 	}
 }
