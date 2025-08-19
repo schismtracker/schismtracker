@@ -198,6 +198,9 @@ int fmt_sf2_read_info(dmoz_file_t *file, slurp_t *fp)
 		file->title[cs[SF2_CHUNK_INAM].size] = '\0';
 	}
 
+	file->sampsize = cs[SF2_CHUNK_shdr].size / 46;
+	/* file->sampsize = MIN(file->sampsize, MAX_SAMPLES); -- some samples may be ignored */
+
 	return 1;
 }
 

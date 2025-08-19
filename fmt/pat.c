@@ -218,6 +218,7 @@ int fmt_pat_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->description = "Gravis Patch File";
 	file->title = strn_dup(hdr.insname, 16);
 	file->type = TYPE_INST_OTHER;
+	file->sampsize = CLAMP(hdr.smpnum, 1, 16);
 	return 1;
 }
 
