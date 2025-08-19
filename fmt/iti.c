@@ -617,7 +617,7 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 
 			iti_map[o] = pos;
 			pos += 80; /* header is 80 bytes */
-			save_its_header(fp, song->samples + o);
+			save_its_header(fp, song->samples + o, 0);
 		}
 
 		for (int j = 0; j < iti_nalloc; j++) {

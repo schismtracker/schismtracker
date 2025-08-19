@@ -30,6 +30,9 @@
 #include "vgamem.h"
 #include "keyboard.h"
 #include "str.h"
+#ifdef USE_NETWORK
+# include "network.h"
+#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -212,6 +215,10 @@ static void orderlist_insert_pos(void)
 	current_song->orderlist[current_order] = ORDER_LAST;
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+
+#ifdef USE_NETWORK
+	Network_SendOrderList();
+#endif
 }
 
 static void orderlist_save(void)
@@ -226,6 +233,10 @@ static void orderlist_restore(void)
 	memcpy(oldlist, current_song->orderlist, 255);
 	memcpy(current_song->orderlist, saved_orderlist, 255);
 	memcpy(saved_orderlist, oldlist, 255);
+
+#ifdef USE_NETWORK
+	Network_SendOrderList();
+#endif
 }
 
 static void orderlist_delete_pos(void)
@@ -236,6 +247,10 @@ static void orderlist_delete_pos(void)
 	current_song->orderlist[255] = ORDER_LAST;
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+
+#ifdef USE_NETWORK
+	Network_SendOrderList();
+#endif
 }
 
 static void orderlist_insert_next(void)
@@ -253,6 +268,10 @@ static void orderlist_insert_next(void)
 	orderlist_reposition();
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+
+#ifdef USE_NETWORK
+	Network_SendOrderList();
+#endif
 }
 
 static void orderlist_add_unused_patterns(void)
@@ -299,6 +318,10 @@ static void orderlist_add_unused_patterns(void)
 	}
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+
+#ifdef USE_NETWORK
+	Network_SendOrderList();
+#endif
 }
 
 static void orderlist_reorder(void)
@@ -339,6 +362,10 @@ static void orderlist_reorder(void)
 
 	song_stop_unlocked(0);
 
+#ifdef USE_NETWORK
+	Network_SendOrderList();
+#endif
+
 	song_unlock_audio();
 }
 
@@ -355,12 +382,18 @@ static int orderlist_handle_char(char sym)
 		status.flags |= SONG_NEEDS_SAVE;
 		current_song->orderlist[current_order] = ORDER_SKIP;
 		orderlist_cursor_pos = 2;
+#ifdef USE_NETWORK
+		Network_SendOrderList();
+#endif
 		break;
 	case '.':
 	case '-':
 		status.flags |= SONG_NEEDS_SAVE;
 		current_song->orderlist[current_order] = ORDER_LAST;
 		orderlist_cursor_pos = 2;
+#ifdef USE_NETWORK
+		Network_SendOrderList();
+#endif
 		break;
 	default:
 		if (sym >= '0' && sym <= '9')
@@ -381,6 +414,9 @@ static int orderlist_handle_char(char sym)
 		cur_pattern = CLAMP(cur_pattern, 0, 199);
 		song_get_pattern(cur_pattern, &tmp); /* make sure it exists */
 		current_song->orderlist[current_order] = cur_pattern;
+#ifdef USE_NETWORK
+		Network_SendOrderList();
+#endif
 		break;
 	};
 
@@ -474,6 +510,9 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			set_current_pattern(n);
 			set_page(PAGE_PATTERN_EDITOR);
 		}
+#ifdef USE_NETWORK
+		Network_SendOrderList();
+#endif
 		return 1;
 
 	case SCHISM_KEYSYM_TAB:

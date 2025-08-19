@@ -26,6 +26,9 @@
 #include "it.h"
 #include "song.h"
 #include "slurp.h"
+#ifdef USE_NETWORK
+# include "network.h"
+#endif
 
 // ------------------------------------------------------------------------
 // variables
@@ -269,6 +272,7 @@ int song_get_pattern(int pattern_number, song_note_t ** buf)
 	}
 	return current_song->pattern_size[pattern_number];
 }
+
 song_note_t *song_pattern_allocate_copy(int patno, int *rows)
 {
 	int len = current_song->pattern_size[patno];
@@ -282,6 +286,7 @@ song_note_t *song_pattern_allocate_copy(int patno, int *rows)
 		*rows = len;
 	return newdata;
 }
+
 void song_pattern_install(int patno, song_note_t *n, int rows)
 {
 	song_lock_audio();
@@ -294,6 +299,10 @@ void song_pattern_install(int patno, song_note_t *n, int rows)
 	current_song->pattern_size[patno] = rows;
 
 	song_unlock_audio();
+
+#ifdef USE_NETWORK
+	/* TODO send pattern data */
+#endif
 }
 
 // ------------------------------------------------------------------------
@@ -337,7 +346,6 @@ void song_pattern_resize(int pattern, int newsize)
 	if (!current_song->patterns[pattern] && newsize != 64) {
 		current_song->patterns[pattern] = csf_allocate_pattern(newsize);
 		current_song->pattern_alloc_size[pattern] = newsize;
-
 	} else if (oldsize < newsize) {
 		song_note_t *olddata = current_song->patterns[pattern];
 		song_note_t *newdata = csf_allocate_pattern(newsize);
@@ -350,6 +358,10 @@ void song_pattern_resize(int pattern, int newsize)
 	}
 	current_song->pattern_size[pattern] = newsize;
 	song_unlock_audio();
+
+#ifdef USE_NETWORK
+	/* TODO send pattern data */
+#endif
 }
 
 // ------------------------------------------------------------------------
@@ -357,26 +369,46 @@ void song_pattern_resize(int pattern, int newsize)
 void song_set_initial_speed(int new_speed)
 {
 	current_song->initial_speed = CLAMP(new_speed, 1, 255);
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 void song_set_initial_tempo(int new_tempo)
 {
 	current_song->initial_tempo = CLAMP(new_tempo, 31, 255);
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 void song_set_initial_global_volume(int new_vol)
 {
 	current_song->initial_global_volume = CLAMP(new_vol, 0, 128);
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 void song_set_mixing_volume(int new_vol)
 {
 	current_song->mixing_volume = CLAMP(new_vol, 0, 128);
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 void song_set_separation(int new_sep)
 {
 	current_song->pan_separation = CLAMP(new_sep, 0, 128);
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 int song_is_stereo(void)
@@ -388,16 +420,28 @@ void song_toggle_stereo(void)
 {
 	current_song->flags ^= SONG_NOSTEREO;
 	song_vars_sync_stereo();
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 void song_set_mono(void)
 {
 	current_song->flags |= SONG_NOSTEREO;
 	song_vars_sync_stereo();
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 void song_set_stereo(void)
 {
 	current_song->flags &= ~SONG_NOSTEREO;
 	song_vars_sync_stereo();
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 int song_has_old_effects(void)
@@ -411,6 +455,10 @@ void song_set_old_effects(int value)
 		current_song->flags |= SONG_ITOLDEFFECTS;
 	else
 		current_song->flags &= ~SONG_ITOLDEFFECTS;
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 int song_has_compatible_gxx(void)
@@ -424,6 +472,10 @@ void song_set_compatible_gxx(int value)
 		current_song->flags |= SONG_COMPATGXX;
 	else
 		current_song->flags &= ~SONG_COMPATGXX;
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 int song_has_linear_pitch_slides(void)
@@ -437,6 +489,10 @@ void song_set_linear_pitch_slides(int value)
 		current_song->flags |= SONG_LINEARSLIDES;
 	else
 		current_song->flags &= ~SONG_LINEARSLIDES;
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 int song_is_instrument_mode(void)
@@ -463,6 +519,10 @@ void song_set_instrument_mode(int value)
 	} else if (!value && oldvalue) {
 		current_song->flags &= ~SONG_INSTRUMENTMODE;
 	}
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 int song_get_current_instrument(void)
@@ -484,6 +544,20 @@ void song_exchange_samples(int a, int b)
 	memcpy(current_song->samples + b, &tmp, sizeof(song_sample_t));
 	status.flags |= SONG_NEEDS_SAVE;
 	song_unlock_audio();
+
+#ifdef USE_NETWORK
+	if (a > 0) {
+		Network_SendSample(a - 1);
+		Network_SendNewSample(a - 1);
+		Network_SendSampleData(a - 1);
+	}
+
+	if (b > 0) {
+		Network_SendSample(b - 1);
+		Network_SendNewSample(b - 1);
+		Network_SendSampleData(b - 1);
+	}
+#endif
 }
 
 void song_copy_instrument(int dst, int src)
@@ -491,11 +565,17 @@ void song_copy_instrument(int dst, int src)
 	if (src == dst) return;
 
 	song_lock_audio();
+	/* why are these here? */
 	song_get_instrument(dst);
 	song_get_instrument(src);
 	*(current_song->instruments[dst]) = *(current_song->instruments[src]);
 	status.flags |= SONG_NEEDS_SAVE;
 	song_unlock_audio();
+
+#ifdef USE_NETWORK
+	if (dst > 0)
+		Network_SendInstrument(dst - 1);
+#endif
 }
 
 void song_exchange_instruments(int a, int b)
@@ -511,6 +591,13 @@ void song_exchange_instruments(int a, int b)
 	current_song->instruments[b] = tmp;
 	status.flags |= SONG_NEEDS_SAVE;
 	song_unlock_audio();
+
+#ifdef USE_NETWORK
+	if (a > 0)
+		Network_SendInstrument(a - 1);
+	if (b > 0)
+		Network_SendInstrument(b - 1);
+#endif
 }
 
 // instrument, sample, whatever.
@@ -618,6 +705,10 @@ void song_init_instrument_from_sample(int insn, int samp)
 	// IT doesn't set instrument filenames unless loading an instrument from disk
 	//memcpy(ins->filename, current_song->samples[samp].filename, 12);
 	memcpy(ins->name, current_song->samples[samp].name, 32);
+
+#ifdef USE_NETWORK
+	Network_SendInstrument(insn - 1);
+#endif
 }
 
 void song_init_instruments(int qq)
@@ -680,8 +771,12 @@ void song_insert_instrument_slot(int n)
 
 	status.flags |= SONG_NEEDS_SAVE;
 	song_lock_audio();
-	for (i = MAX_INSTRUMENTS - 1; i > n; i--)
+	for (i = MAX_INSTRUMENTS - 1; i > n; i--) {
 		current_song->instruments[i] = current_song->instruments[i-1];
+#ifdef USE_NETWORK
+		Network_SendInstrument(i - 1);
+#endif
+	}
 	current_song->instruments[n] = NULL;
 	_adjust_instruments_in_patterns(n, 1);
 	song_unlock_audio();
@@ -695,8 +790,12 @@ void song_remove_instrument_slot(int n)
 		return;
 
 	song_lock_audio();
-	for (i = n; i < MAX_INSTRUMENTS; i++)
+	for (i = n; i < MAX_INSTRUMENTS; i++) {
 		current_song->instruments[i] = current_song->instruments[i+1];
+#ifdef USE_NETWORK
+		Network_SendInstrument(i - 1);
+#endif
+	}
 	current_song->instruments[MAX_INSTRUMENTS - 1] = NULL;
 	_adjust_instruments_in_patterns(n, -1);
 	song_unlock_audio();
@@ -715,6 +814,10 @@ void song_wipe_instrument(int n)
 	csf_free_instrument(current_song->instruments[n]);
 	current_song->instruments[n] = NULL;
 	song_unlock_audio();
+
+#ifdef USE_NETWORK
+	Network_SendInstrument(n);
+#endif
 }
 
 // Returns 1 if sample `n` is used by the specified instrument; 0 otherwise.
@@ -798,6 +901,10 @@ void song_replace_sample(int num, int with)
 				if ((int) ins->sample_map[j] == num)
 					ins->sample_map[j] = with;
 			}
+
+#ifdef USE_NETWORK
+			Network_SendInstrument(i - 1);
+#endif
 		}
 	} else {
 		// for each pattern, for each note, replace 'smp' with 'with'
@@ -810,6 +917,10 @@ void song_replace_sample(int num, int with)
 					note->instrument = with;
 			}
 		}
+
+#ifdef USE_NETWORK
+	/* TODO send pattern data */
+#endif
 	}
 }
 
@@ -833,5 +944,9 @@ void song_replace_instrument(int num, int with)
 				note->instrument = with;
 		}
 	}
+
+#ifdef USE_NETWORK
+	/* TODO send pattern data */
+#endif
 }
 
