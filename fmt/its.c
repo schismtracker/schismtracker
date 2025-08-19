@@ -194,12 +194,21 @@ int load_its_header(slurp_t *fp, song_sample_t *smp)
 	if (!load_its_header_impl(&its, fp, smp, 0x0214))
 		return 0;
 
-	/* eh, this is stupid */
-	if (its.flags & 4) smp->flags |= CHN_STEREO;
-	else smp->flags &= ~CHN_STEREO;
+	/* fuck */
+	smp->flags = 0;
 
-	if (its.flags & 2) smp->flags |= CHN_16BIT;
-	else smp->flags &= ~CHN_16BIT;
+	/* eh, this is stupid */
+	if (its.cvt == 64 && its.length == 12) {
+		smp->flags |= CHN_ADLIB;
+	} else {
+		smp->flags &= ~CHN_ADLIB;
+
+		if (its.flags & 4) smp->flags |= CHN_STEREO;
+		else smp->flags &= ~CHN_STEREO;
+
+		if (its.flags & 2) smp->flags |= CHN_16BIT;
+		else smp->flags &= ~CHN_16BIT;
+	}
 
 	return 1;
 }
@@ -267,9 +276,12 @@ int fmt_its_load_sample(slurp_t *fp, song_sample_t *smp)
 	return load_its_sample(fp, smp, 0x0214);
 }
 
-void save_its_header(disko_t *fp, song_sample_t *smp)
+void save_its_header(disko_t *fp, song_sample_t *smp, int adlib /* whether to save adlib or not */)
 {
 	struct it_sample its = {0};
+
+	if ((smp->flags & CHN_ADLIB) && !adlib)
+		return;
 
 	its.id = bswapLE32(0x53504D49); // IMPS
 	memcpy(its.filename, smp->filename, MIN(sizeof(smp->filename), sizeof(its.filename)));
@@ -291,11 +303,17 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	its.vol = smp->volume / 4;
 	memcpy(its.name, smp->name, MIN(sizeof(smp->name), sizeof(its.name)));
 	its.name[25] = 0;
-	its.cvt = 1;                    // signed samples
+	if (smp->flags & CHN_ADLIB) {
+		its.cvt = 64; // openmpt magic
+		its.length = 12;
+	} else {
+		its.cvt = 1; // signed samples
+		its.length = bswapLE32(smp->length);
+	}
+
 	its.dfp = smp->panning / 4;
 	if (smp->flags & CHN_PANNING)
 		its.dfp |= 0x80;
-	its.length = bswapLE32(smp->length);
 	its.loopbegin = bswapLE32(smp->loop_start);
 	its.loopend = bswapLE32(smp->loop_end);
 	its.c5speed = bswapLE32(smp->c5speed);
@@ -344,7 +362,7 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 	if (smp->flags & CHN_ADLIB)
 		return SAVE_UNSUPPORTED;
 
-	save_its_header(fp, smp);
+	save_its_header(fp, smp, 0);
 	csf_write_sample(fp, smp, SF_LE | SF_PCMS
 			| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
 			| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),

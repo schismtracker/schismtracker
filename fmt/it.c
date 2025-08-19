@@ -360,72 +360,69 @@ int it_read_midi_config(midi_config_t *midi, slurp_t *fp)
 	return 1;
 }
 
-int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+static int it_load_song_header_impl(struct it_file *hdr, song_t *song, slurp_t *fp, int *pignoremidi, uint8_t pad)
 {
-	struct it_file hdr;
-	uint32_t para_smp[MAX_SAMPLES], para_ins[MAX_INSTRUMENTS], para_pat[MAX_PATTERNS], para_min;
-	int n;
-	int modplug = 0;
-	int ignoremidi = 0;
 	song_channel_t *channel;
-	song_sample_t *sample;
-	uint16_t hist = 0; // save history (for IT only)
-	const char *tid = NULL;
+	int ignoremidi = 0;
+	int n;
 
-	if (!it_load_header(&hdr, fp))
+	if (!it_load_header(hdr, fp))
 		return LOAD_UNSUPPORTED;
 
 	// Screwy limits?
-	if (hdr.insnum > MAX_INSTRUMENTS || hdr.smpnum > MAX_SAMPLES
-		|| hdr.patnum > MAX_PATTERNS) {
+	if (hdr->insnum > MAX_INSTRUMENTS || hdr->smpnum > MAX_SAMPLES
+		|| hdr->patnum > MAX_PATTERNS) {
 		return LOAD_FORMAT_ERROR;
 	}
 
-	strncpy(song->title, (char *)hdr.songname, sizeof(song->title));
-
+	memcpy(song->title, (char *)hdr->songname, MIN(sizeof(song->title), sizeof(hdr->songname)));
+	/* XXX isn't this already done in audio_loadsave.c? */
 	str_rtrim(song->title);
 
-	if (hdr.cmwt < 0x0214 && hdr.cwtv < 0x0214)
+	if (hdr->cmwt < 0x0214 && hdr->cwtv < 0x0214)
 		ignoremidi = 1;
-	if (hdr.special & 4) {
+	if (hdr->special & 4) {
 		/* "reserved" bit, experimentally determined to indicate presence of otherwise-documented row
 		highlight information - introduced in IT 2.13. Formerly checked cwtv here, but that's lame :)
 		XXX does any tracker save highlight but *not* set this bit? (old Schism versions maybe?) */
-		song->row_highlight_minor = hdr.hilight_minor;
-		song->row_highlight_major = hdr.hilight_major;
+		song->row_highlight_minor = hdr->hilight_minor;
+		song->row_highlight_major = hdr->hilight_major;
 	} else {
 		song->row_highlight_minor = 4;
 		song->row_highlight_major = 16;
 	}
 
-	if (!(hdr.flags & 1))
+	song->flags &= ~(SONG_NOSTEREO | SONG_INSTRUMENTMODE | SONG_LINEARSLIDES
+		| SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_EMBEDMIDICFG);
+
+	if (!(hdr->flags & 1))
 		song->flags |= SONG_NOSTEREO;
-	// (hdr.flags & 2) no longer used (was vol0 optimizations)
-	if (hdr.flags & 4)
+	// (hdr->flags & 2) no longer used (was vol0 optimizations)
+	if (hdr->flags & 4)
 		song->flags |= SONG_INSTRUMENTMODE;
-	if (hdr.flags & 8)
+	if (hdr->flags & 8)
 		song->flags |= SONG_LINEARSLIDES;
-	if (hdr.flags & 16)
+	if (hdr->flags & 16)
 		song->flags |= SONG_ITOLDEFFECTS;
-	if (hdr.flags & 32)
+	if (hdr->flags & 32)
 		song->flags |= SONG_COMPATGXX;
-	if (hdr.flags & 64) {
+	if (hdr->flags & 64) {
 		midi_flags |= MIDI_PITCHBEND;
-		midi_pitch_depth = hdr.pwd;
+		midi_pitch_depth = hdr->pwd;
 	}
-	if ((hdr.flags & 128) && !ignoremidi)
+	if ((hdr->flags & 128) && !ignoremidi)
 		song->flags |= SONG_EMBEDMIDICFG;
 	else
 		song->flags &= ~SONG_EMBEDMIDICFG;
 
-	song->initial_global_volume = MIN(hdr.globalvol, 128);
-	song->mixing_volume = MIN(hdr.mv, 128);
-	song->initial_speed = hdr.speed ? hdr.speed : 6;
-	song->initial_tempo = MAX(hdr.tempo, 31);
-	song->pan_separation = hdr.sep;
+	song->initial_global_volume = MIN(hdr->globalvol, 128);
+	song->mixing_volume = MIN(hdr->mv, 128);
+	song->initial_speed = hdr->speed ? hdr->speed : 6;
+	song->initial_tempo = MAX(hdr->tempo, 31);
+	song->pan_separation = hdr->sep;
 
 	for (n = 0, channel = song->channels; n < IT_CHANNELS; n++, channel++) {
-		int pan = hdr.chnpan[n];
+		int pan = hdr->chnpan[n];
 		if (pan & 128) {
 			channel->flags |= CHN_MUTE;
 			pan &= ~128;
@@ -437,11 +434,41 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			channel->panning = MIN(pan, 64);
 		}
 		channel->panning *= 4; //mphack
-		channel->volume = MIN(hdr.chnvol[n], 64);
+		channel->volume = MIN(hdr->chnvol[n], 64);
 	}
 
+	/* padding between header and orderlist; used for network crap */
+	slurp_seek(fp, pad, SEEK_CUR);
+
 	/* only read what we can and ignore the rest */
-	slurp_read(fp, song->orderlist, MIN(hdr.ordnum, MAX_ORDERS));
+	slurp_read(fp, song->orderlist, MIN(hdr->ordnum, MAX_ORDERS));
+
+	if (pignoremidi) *pignoremidi = ignoremidi;
+
+	return 1;
+}
+
+int it_load_song_header(song_t *song, slurp_t *fp)
+{
+	struct it_file hdr;
+
+	/* ehhhhh */
+	return it_load_song_header_impl(&hdr, song, fp, NULL, 64);
+}
+
+int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+{
+	struct it_file hdr;
+	song_sample_t *sample;
+	uint32_t para_smp[MAX_SAMPLES], para_ins[MAX_INSTRUMENTS], para_pat[MAX_PATTERNS], para_min;
+	int n;
+	int modplug = 0;
+	int ignoremidi;
+	uint16_t hist = 0; // save history (for IT only)
+	const char *tid = NULL;
+
+	if (!it_load_song_header_impl(&hdr, song, fp, &ignoremidi, 0))
+		return LOAD_UNSUPPORTED;
 
 	/* show a warning in the message log if there's too many orders */
 	if (hdr.ordnum > MAX_ORDERS) {
@@ -888,28 +915,32 @@ static void save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 	disko_write(fp, data, pos);
 }
 
-int fmt_it_save_song(disko_t *fp, song_t *song)
+/* pnord, pnins, pnsmp, and pnpat are filled with the number of orders,
+ * instruments, samples, and patterns to be saved, if the passed pointers
+ * are not NULL.
+ *
+ * 'songdata' changes whether it always saves exactly 512 bytes (256 bytes
+ * for the actual header, and 256 bytes for the orderlist) */
+int it_save_song_header(disko_t *fp, song_t *song, int *pnord, int *pnins,
+	int *pnsmp, int *pnpat, int *pmsglen, int songdata)
 {
 	struct it_file hdr = {0};
 	int n;
 	int nord, nins, nsmp, npat;
-	int msglen = strlen(song->message);
-	uint32_t para_ins[256], para_smp[256], para_pat[256];
-	// how much extra data is stuffed between the parapointers and the rest of the file
-	// (2 bytes for edit history length, and 8 per entry including the current session)
+	int msglen;
 	uint32_t extra = 2 + 8 * song->histlen + 8;
-	// warnings for unsupported features
-	uint32_t warn = 0;
-
-	// TODO complain about nonstandard stuff? or just stop saving it to begin with
 
 	/* IT always saves at least two orders -- and requires an extra order at the end (which gets chopped!)
 	However, the loader refuses to load files with too much data in the orderlist, so in the pathological
 	case where order 255 has data, writing an extra 0xFF at the end will result in a file that can't be
 	loaded back (for now). Eventually this can be fixed, but at least for a while it's probably a great
 	idea not to save things that other versions won't load. */
-	nord = csf_get_num_orders(song);
-	nord = CLAMP(nord + 1, 2, MAX_ORDERS);
+	if (songdata) {
+		nord = 256;
+	} else {
+		nord = csf_get_num_orders(song);
+		nord = CLAMP(nord + 1, 2, MAX_ORDERS);
+	}
 
 	nins = csf_get_num_instruments(song);
 	nsmp = csf_get_num_samples(song);
@@ -919,8 +950,16 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	if (!npat)
 		npat = 1;
 
+	msglen = strlen(song->message);
+
+	if (pnord) *pnord = nord;
+	if (pnins) *pnins = nins;
+	if (pnsmp) *pnsmp = nsmp;
+	if (pnpat) *pnpat = npat;
+	if (pmsglen) *pmsglen = msglen;
+
 	hdr.id = bswapLE32(0x4D504D49); // IMPM
-	strncpy((char *) hdr.songname, song->title, 25);
+	memcpy((char *) hdr.songname, song->title, 25);
 	hdr.songname[25] = 0; // why ?
 	hdr.hilight_major = song->row_highlight_major;
 	hdr.hilight_minor = song->row_highlight_minor;
@@ -994,13 +1033,35 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	}
 
 	it_write_header(&hdr, fp);
+
+	if (songdata) {
+		disko_seek(fp, 64, SEEK_CUR);
+		SCHISM_RUNTIME_ASSERT(disko_tell(fp) == 256, "must be aligned to 256 bytes for songdata");
+	}
+
 	disko_write(fp, song->orderlist, nord);
+
+	return 1;
+}
+
+int fmt_it_save_song(disko_t *fp, song_t *song)
+{
+	int n;
+	int nord, nins, nsmp, npat;
+	int msglen;
+	uint32_t para_ins[256], para_smp[256], para_pat[256];
+	// warnings for unsupported features
+	uint32_t warn = 0;
+
+	if (!it_save_song_header(fp, song, &nord, &nins, &nsmp, &npat, &msglen, 0))
+		return SAVE_INTERNAL_ERROR;
+
+	// TODO complain about nonstandard stuff? or just stop saving it to begin with
 
 	// we'll get back to these later
 	disko_write(fp, para_ins, 4*nins);
 	disko_write(fp, para_smp, 4*nsmp);
 	disko_write(fp, para_pat, 4*npat);
-
 
 	uint16_t h;
 
@@ -1060,7 +1121,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	for (n = 0; n < nsmp; n++) {
 		// the sample parapointers are byte-swapped later
 		para_smp[n] = disko_tell(fp);
-		save_its_header(fp, song->samples + n + 1);
+		save_its_header(fp, song->samples + n + 1, 0);
 	}
 
 	for (n = 0; n < npat; n++) {

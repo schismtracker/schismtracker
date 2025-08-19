@@ -30,6 +30,9 @@
 #include "song.h"
 #include "vgamem.h"
 #include "widget.h"
+#ifdef USE_NETWORK
+# include "network.h"
+#endif
 
 /* --------------------------------------------------------------------- */
 /* static variables */
@@ -45,6 +48,9 @@ static char Amiga[6] = "Amiga";
 static void update_song_title(void)
 {
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+#ifdef USE_NETWORK
+	Network_SendSongData(26, 4);
+#endif
 }
 
 /* --------------------------------------------------------------------- */
@@ -112,7 +118,11 @@ static void update_values_in_song(void)
 		}
 	}
 	song_set_linear_pitch_slides(widgets_vars[12].d.togglebutton.state);
-	status.flags |= SONG_NEEDS_SAVE;
+	status.flags |= NEED_UPDATE;
+
+#ifdef USE_NETWORK
+	Network_SendSongData(512, 0);
+#endif
 }
 
 
@@ -162,7 +172,6 @@ static void song_changed_cb(void)
 	else
 		widget_togglebutton_set(widgets_vars, 13, 0);
 
-	/* XXX wtf is going on here */
 	for (b = strpbrk(song_get_basename(), "Aa"),
 	c = 12632; c && b && b[1]; c >>= 4, b++)
 	if ((c & 15) != b[1] - *b) return;

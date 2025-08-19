@@ -360,6 +360,11 @@ int song_load_unchecked(const char *file)
 		*strrchr(fmt, ',') = 0; // cut off 'instruments'
 	log_appendf(5, fmt, csf_get_num_patterns(current_song), nsmp, nins);
 
+#ifdef USE_NETWORK
+	/* ok */
+	Network_OnServerConnect();
+#endif
+
 	return 1;
 }
 

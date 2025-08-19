@@ -358,9 +358,8 @@ int csf_last_order(song_t *csf)
 // Total count of orders in orderlist before end of data
 int csf_get_num_orders(song_t *csf)
 {
-	int n = MAX_ORDERS;
-	while (n >= 0 && csf->orderlist[--n] == ORDER_LAST) {
-	}
+	int n;
+	for (n = MAX_ORDERS; n >= 0 && csf->orderlist[n] == ORDER_LAST; n--);
 	return n + 1;
 }
 

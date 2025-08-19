@@ -29,6 +29,7 @@
 #include "song.h"
 #include "mem.h"
 #include "log.h"
+#include "it.h"
 
 /* Notes:
  *  * The IPX driver seems to work on port 18757 ("IT"), so we should
@@ -184,16 +185,48 @@ int Network_SendRequestPattern(uint8_t num)
 
 int Network_SendSongData(uint16_t length, uint16_t offset)
 {
-	uint16_t x[2];
+	unsigned char buf[512 + 2 + 2];
+	uint16_t w;
 
 	if ((length + offset) > 512)
 		return -1;
 
-	x[0] = bswapLE16(length);
-	x[1] = bswapLE16(offset);
+	w = bswapLE16(length);
+	memcpy(buf, &w, sizeof(w));
+	w = bswapLE16(offset);
+	memcpy(buf + 2, &w, sizeof(w));
 
-	/* TODO */
-	return 0;
+	if (offset == 256 && length == 256) {
+		/* fast path for just the orderlist */
+		song_lock_audio();
+		memcpy(buf + 2 + 2, current_song->orderlist, 256);
+		song_unlock_audio();
+	} else {
+		/* slow path for everything else */
+		disko_t ds;
+
+		if (disko_memopen_estimate(&ds, 512) < 0)
+			return -1;
+
+		song_lock_audio();
+		it_save_song_header(&ds, current_song, NULL, NULL, NULL, NULL, NULL, 1);
+		song_unlock_audio();
+
+		SCHISM_RUNTIME_ASSERT(ds.length == 512, "exactly 512 bytes needed");
+
+		/* copy the bytes we actually want to send */
+		memcpy(buf + 2 + 2, (char *)ds.data + offset, length);
+
+		disko_memclose(&ds, 0);
+	}
+
+	return Network_SendData(NETWORK_BLOCKTYPE_SONGDATA, buf, 2 + 2 + length);
+}
+
+int Network_SendOrderList(void)
+{
+	/* helper function */
+	return Network_SendSongData(256, 256);
 }
 
 int Network_SendInstrument(uint8_t num)
@@ -236,7 +269,7 @@ int Network_SendSample(uint8_t num)
 
 	song_lock_audio();
 	smp = current_song->samples + num + 1;
-	save_its_header(&memfp, smp);
+	save_its_header(&memfp, smp, 1);
 	song_unlock_audio();
 
 	r = Network_SendData(NETWORK_BLOCKTYPE_SAMPLE, memfp.data, memfp.length);
@@ -274,6 +307,9 @@ int Network_SendNewSample(uint8_t num)
 
 	smp = current_song->samples + num + 1;
 
+	if (smp->flags & CHN_ADLIB)
+		return 0; /* hmm */
+
 	len = smp->length;
 	len = bswapLE32(len);
 
@@ -294,7 +330,6 @@ int Network_SendSampleData(uint8_t num)
 	/* hm. probably shouldn't be using a static buffer here ... whatever */
 	static uint8_t membuf[65000];
 	song_sample_t *smp;
-	uint32_t len, dw, i;
 
 	if (num >= MAX_SAMPLES)
 		return -1;
@@ -304,24 +339,35 @@ int Network_SendSampleData(uint8_t num)
 	if (!smp->data)
 		return -1; /* no sample data to send */
 
-	len = smp->length
-		* ((smp->flags & CHN_16BIT) ? 2 : 1)
-		* ((smp->flags & CHN_STEREO) ? 2 : 1);
-
 	membuf[0] = num;
 
-	/* FIXME we're actually sending this as interleaved stereo (not to
-	 * spec with IT sample definition) */
-	for (i = 0; i < len; i += NETWORK_SENDSAMPLE_BLOCKSIZE) {
-		uint32_t blksize = MIN(NETWORK_SENDSAMPLE_BLOCKSIZE, len - i);
+	if (smp->flags & CHN_ADLIB) {
+		/* special case for adlib */
+		memset(membuf + 1, 0, 4);
+		memcpy(membuf + 5, smp->adlib_bytes, 12);
 
-		dw = bswapLE32(i);
-		memcpy(membuf + 1, &dw, 4);
-
-		memcpy(membuf + 5, (char *)smp->data + i, blksize);
-
-		if (Network_SendData(NETWORK_BLOCKTYPE_SAMPLE_DATA, membuf, blksize + 5) < 0)
+		if (Network_SendData(NETWORK_BLOCKTYPE_SAMPLE_DATA, membuf, 12 + 5) < 0)
 			return -1;
+	} else {
+		uint32_t len, dw, i;
+
+		len = smp->length
+			* ((smp->flags & CHN_16BIT) ? 2 : 1)
+			* ((smp->flags & CHN_STEREO) ? 2 : 1);
+
+		/* FIXME we're actually sending this as interleaved stereo (not to
+		 * spec with IT sample definition) */
+		for (i = 0; i < len; i += NETWORK_SENDSAMPLE_BLOCKSIZE) {
+			uint32_t blksize = MIN(NETWORK_SENDSAMPLE_BLOCKSIZE, len - i);
+
+			dw = bswapLE32(i);
+			memcpy(membuf + 1, &dw, 4);
+
+			memcpy(membuf + 5, (char *)smp->data + i, blksize);
+
+			if (Network_SendData(NETWORK_BLOCKTYPE_SAMPLE_DATA, membuf, blksize + 5) < 0)
+				return -1;
+		}
 	}
 
 	return 0;
@@ -419,26 +465,64 @@ static int Network_ReceiveRequestPattern(const void *data_, size_t size)
 
 static int Network_ReceiveSongData(const void *data_, size_t size)
 {
-	uint16_t x[2];
+	uint16_t offset, length;
 
 	if (size < 4)
 		return -1; /* invalid */
 
-	memcpy(x, data_, 4);
-
-	x[0] = bswapLE16(x[0]);
-	x[1] = bswapLE16(x[1]);
-
-	/* x[0] == length
-	 * x[1] == offset */
+	memcpy(&length, (char *)data_, 2);
+	length = bswapLE16(length);
+	memcpy(&offset, (char *)data_ + 2, 2);
+	offset = bswapLE16(offset);
 
 	/* from IT_NET.ASM: "Sanity check" */
-	if (x[0] + x[1] > 512)
+	if ((offset + length) > 512 || ((length + 4) > size))
 		return -1;
 
-	/* This contains the header of an IT file, plus 64 bytes of padding,
-	 * with the order list right behind it. */
-	return -1;
+	song_lock_audio();
+
+	if (/*offset == 0 && */length == 512) {
+		slurp_t sl;
+
+		slurp_memstream(&sl, (uint8_t *)data_ + 4, 512);
+		it_load_song_header(current_song, &sl);
+
+		/* this is ugly */
+		main_song_changed_cb();
+	} else if (offset == 256 && length == 256) {
+		/* Only contains order-list */
+		memcpy(current_song->orderlist, (char *)data_ + 4, 256);
+	} else {
+		disko_t ds;
+		slurp_t sl;
+
+		if (disko_memopen_estimate(&ds, 512) < 0) {
+			song_unlock_audio();
+			return -1;
+		}
+
+		/* ok, we have to save our existing state, then overwrite parts with
+		 * the data we received, and THEN import it back in. */
+		it_save_song_header(&ds, current_song, NULL, NULL, NULL, NULL, NULL, 1);
+		SCHISM_RUNTIME_ASSERT(ds.length == 512, "size must be 512 always");
+
+		/* copy new data in */
+		memcpy((char *)ds.data + offset, (char *)data_ + 4, length);
+
+		slurp_memstream(&sl, ds.data, ds.length);
+
+		/* load it */
+		it_load_song_header(current_song, &sl);
+
+		disko_memclose(&ds, 0);
+
+		/* tell everything else HEY WE'VE CHANGED */
+		main_song_changed_cb();
+	}
+
+	song_unlock_audio();
+
+	return 0;
 }
 
 static int Network_ReceiveInstrument(const void *data_, size_t size)
@@ -470,8 +554,6 @@ static int Network_ReceiveInstrument(const void *data_, size_t size)
 
 static int Network_ReceiveSample(const void *data_, size_t size)
 {
-	/* TODO ditto with the above, probably IT sample header.
-	 * We could use the MPTM extension for AdLib samples */
 	slurp_t fp;
 	song_sample_t *smp;
 	int num;
@@ -528,7 +610,6 @@ static int Network_ReceiveNewSample(const void *data_, size_t size)
 {
 	const unsigned char *data = data_;
 	uint8_t smpnum;
-	uint32_t len;
 	song_sample_t *smp;
 
 	if (size < 5)
@@ -540,23 +621,36 @@ static int Network_ReceiveNewSample(const void *data_, size_t size)
 	if (smpnum >= MAX_SAMPLES)
 		return -1;
 
-	memcpy(&len, data + 1, 4);
-	len = bswapLE32(len);
-
 	song_lock_audio();
 
-	/* kill any sample thats already there */
-	csf_destroy_sample(current_song, smpnum + 1);
+	/* kill any sample thats already there
+	 * (dont clear the flags though!) */
+	if (current_song->samples[smpnum + 1].data) {
+		csf_free_sample(current_song->samples[smpnum + 1].data);
+		current_song->samples[smpnum + 1].data = NULL;
+	}
+	//csf_destroy_sample(current_song, smpnum + 1);
 
 	/* put in the length; we'll read in the sample later once
 	 * the sample data event arrives */
 	smp = current_song->samples + smpnum + 1;
-	smp->length = len;
+	if (smp->flags & CHN_ADLIB) {
+		// dumb hackaround that ought to someday be fixed:
+		smp->length = 1;
+		smp->data = csf_allocate_sample(1);
+	} else {
+		uint32_t len;
 
-	len *= (smp->flags & CHN_16BIT)  ? 2 : 1;
-	len *= (smp->flags & CHN_STEREO) ? 2 : 1;
+		memcpy(&len, data + 1, 4);
+		len = bswapLE32(len);
 
-	smp->data = csf_allocate_sample(len);
+		smp->length = len;
+
+		len *= (smp->flags & CHN_16BIT)  ? 2 : 1;
+		len *= (smp->flags & CHN_STEREO) ? 2 : 1;
+
+		smp->data = csf_allocate_sample(len);
+	}
 
 	song_unlock_audio();
 
@@ -587,19 +681,30 @@ static int Network_ReceiveSampleData(const void *data_, size_t size)
 
 	smp = current_song->samples + smpnum + 1;
 
-	fulllength = smp->length
-		* ((smp->flags & CHN_16BIT) ? 2 : 1)
-		* ((smp->flags & CHN_STEREO) ? 2 : 1);
+	if (smp->flags & CHN_ADLIB) {
+		/* I hope this is good enough to prevent against overflow */
+		if ((offset > 12) || ((offset + (size - 5)) > 12)) {
+			song_unlock_audio();
+			return -1;
+		}
 
-	/* I hope this is good enough to prevent against overflow */
-	if (!smp->data || (offset > fulllength) || ((offset + (size - 5)) > fulllength)) {
-		song_unlock_audio();
-		return -1;
+		memcpy(smp->adlib_bytes + offset, data + 5, size - 5);
+	} else {
+		fulllength = smp->length
+			* ((smp->flags & CHN_16BIT) ? 2 : 1)
+			* ((smp->flags & CHN_STEREO) ? 2 : 1);
+
+		/* I hope this is good enough to prevent against overflow */
+		if (!smp->data || (offset > fulllength) || ((offset + (size - 5)) > fulllength)) {
+			song_unlock_audio();
+			return -1;
+		}
+
+		/* prevent races */
+		memcpy((char *)smp->data + offset, data + 5, size - 5);
+		csf_adjust_sample_loop(smp); /* ;) */
 	}
 
-	/* prevent races */
-	memcpy((char *)smp->data + offset, data + 5, size - 5);
-	csf_adjust_sample_loop(smp); /* ;) */
 	song_unlock_audio();
 
 	return 0;
@@ -837,12 +942,12 @@ int Network_OnServerConnect(void)
 	 * to the client */
 	int r, n;
 
-	//r = Network_SendSongData(512, 0);
-	//if (r < 0) return -1;
+	r = Network_SendSongData(512, 0);
+	if (r < 0) return -1;
 
 	for (n = 0; n < MAX_SAMPLES; n++) {
 		Network_SendSample(n);
-		if (current_song->samples[n + 1].data) {
+		if (current_song->samples[n + 1].data || (current_song->samples[n+1].flags & CHN_ADLIB)) {
 			Network_SendNewSample(n);
 			Network_SendSampleData(n);
 		}
