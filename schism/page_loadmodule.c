@@ -575,7 +575,7 @@ static void file_list_draw(void)
 	if (flist.num_files > 0) {
 		if (top_file < 0) top_file = 0;
 		if (current_file < 0) current_file = 0;
-		for (n = top_file, pos = 13; n < flist.num_files && pos < 44; n++, pos++) {
+		for (n = top_file, pos = 13; n < flist.num_files && pos < (VGAMEM_ROWS - 6); n++, pos++) {
 			file = flist.files[n];
 
 			if (n == current_file && ACTIVE_PAGE.selected_widget == 0) {
