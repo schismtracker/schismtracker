@@ -317,9 +317,21 @@ void midi_engine_stop(void)
 	mt_mutex_lock(midi_mutex);
 	_connected = 0;
 	for (n = port_providers; n; ) {
+		uint32_t ln = 0;
+		int f = 0; /* this is stupid and i hate it */
+
 		q = NULL;
-		while (midi_port_foreach(n, &q))
-			midi_port_unregister(q->num);
+		while (midi_port_foreach(n, &q)) {
+			/* We have to do it this way to avoid use-after-free. */
+			if (f)
+				midi_port_unregister(ln);
+
+			ln = q->num;
+			f = 1;
+		}
+
+		if (f)
+			midi_port_unregister(ln);
 
 		if (n->thread) {
 			n->cancelled = 1;
