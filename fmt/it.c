@@ -438,7 +438,7 @@ static int it_load_song_header_impl(struct it_file *hdr, song_t *song, slurp_t *
 	}
 
 	/* padding between header and orderlist; used for network crap */
-	slurp_seek(fp, pad, SEEK_CUR);
+	if (pad) slurp_seek(fp, pad, SEEK_CUR);
 
 	/* only read what we can and ignore the rest */
 	slurp_read(fp, song->orderlist, MIN(hdr->ordnum, MAX_ORDERS));
