@@ -687,10 +687,11 @@ schismtrackertest_SOURCES = \
 	test/log.c                  \
 	test/index.c                \
 	test/tempfile.c             \
-	test/cases/bits.c         \
+	test/cases/bits.c           \
+	test/cases/config-parser.c  \
+	test/cases/mplink.c         \
 	test/cases/slurp.c          \
-	test/cases/str.c            \
-	test/cases/config-parser.c
+	test/cases/str.c
 
 # err, this is flaky, but okay for now i guess
 mains =									\
