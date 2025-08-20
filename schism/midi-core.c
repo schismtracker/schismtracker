@@ -476,7 +476,6 @@ static void midi_engine_worker_thread_start(void)
 
 	mt_mutex_lock(midi_mutex);
 
-	printf("hi\n");
 	midi_worker_thread_cancel = 0;
 	midi_worker_thread = mt_thread_create(midi_engine_worker_thread_func,
 		"MIDI worker thread", NULL);

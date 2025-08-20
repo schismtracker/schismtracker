@@ -35,6 +35,10 @@
 #ifdef SCHISM_WIN32
 #include <ws2tcpip.h>
 #include <windows.h>
+
+typedef UINT_PTR sock_t;
+
+# define SOCKET_INVALID INVALID_SOCKET
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -43,18 +47,19 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 
+# define SOCKET_INVALID (-1)
 # define SOCKET_ERROR (-1)
 # define closesocket close
+
+typedef int sock_t;
 #endif
 
 #define DEFAULT_IP_PORT_COUNT   5
 #define MIDI_IP_BASE    21928
 #define MAX_DGRAM_SIZE  1280
 
-/* TODO need to use SOCKET or whatever the hell windows has */
-
 struct midi_ip {
-	int fd;
+	sock_t fd;
 
 	int pb;
 };
@@ -64,7 +69,7 @@ struct midi_ip_provider {
 	 * and set in midi_ip_setports */
 	volatile int num_ports;
 	/* socket used for output */
-	int out_fd;
+	sock_t out_fd;
 #define MIDIBUF_SIZE (65536)
 	/* midi buffer */
 	unsigned char midibuf[MIDIBUF_SIZE];
@@ -80,46 +85,48 @@ static void do_wake_main(void)
 	events_push_event(&e);
 }
 
-static int _get_fd(int pb, int isout)
+static sock_t _get_fd(int pb, int isout)
 {
 	struct ip_mreq mreq = {0};
 	struct sockaddr_in asin = {0};
 	unsigned char *ipcopy;
-	int fd, opt;
+	sock_t fd;
+	int opt;
 
 #if !defined(PF_INET) && defined(AF_INET)
 #define PF_INET AF_INET
 #endif
 	fd = socket(PF_INET, SOCK_DGRAM, 0);
-	if (fd == -1) return -1;
+	if (fd == SOCKET_INVALID)
+		return SOCKET_INVALID;
 
 	opt = 1;
 	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(int));
 
 	/* don't loop back what we generate */
 	opt = !isout;
-	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void*)&opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void*)&opt, sizeof(opt)) == SOCKET_ERROR) {
 		closesocket(fd);
-		return -1;
+		return SOCKET_INVALID;
 	}
 
 	opt = 31;
-	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&opt, sizeof(opt)) == SOCKET_ERROR) {
 		closesocket(fd);
-		return -1;
+		return SOCKET_INVALID;
 	}
 
 	ipcopy = (unsigned char *)&mreq.imr_multiaddr;
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
-	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) < 0) {
+	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) == SOCKET_ERROR) {
 		closesocket(fd);
-		return -1;
+		return SOCKET_INVALID;
 	}
 
 	opt = 1;
-	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void*)&opt, sizeof(opt)) < 0) {
+	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void*)&opt, sizeof(opt)) == SOCKET_ERROR) {
 		closesocket(fd);
-		return -1;
+		return SOCKET_INVALID;
 	}
 
 	asin.sin_family = AF_INET;
@@ -135,7 +142,7 @@ static int _get_fd(int pb, int isout)
 #endif
 		asin.sin_port = htons(MIDI_IP_BASE+pb);
 	}
-	if (bind(fd, (struct sockaddr *)&asin, sizeof(asin)) < 0) {
+	if (bind(fd, (struct sockaddr *)&asin, sizeof(asin)) == SOCKET_ERROR) {
 #ifdef SCHISM_WIN32
 		int asdf = WSAGetLastError();
 		perror("binderror");
@@ -154,7 +161,7 @@ static int _get_fd(int pb, int isout)
 		}
 #endif
 		closesocket(fd);
-		return -1;
+		return SOCKET_INVALID;
 	}
 
 	return fd;
@@ -180,8 +187,8 @@ static void _readin(struct midi_provider *p, struct midi_port *q)
 
 static int _ip_work(struct midi_provider *p)
 {
-	/* hm, can't seem to get this to work, at least on linux.
-	 * I probably broke something when ripping out threads.  --paper */
+	/* this seems to not work on linux? or VMPK's implementation
+	 * is wrong there maybe. it works fine on windows.  --paper */
 	struct timeval tv;
 	fd_set rfds;
 	int i, m, r;
@@ -276,11 +283,9 @@ static void _ip_userdata_destroy(void *userdata)
 
 static void _ip_poll(struct midi_provider *p)
 {
-	static int last_buildout = 0;
 	struct midi_port *q;
 	struct midi_ip *data;
 	struct midi_ip_provider *mip;
-	char *buffer;
 	long i, m;
 
 	mip = p->userdata;
@@ -290,7 +295,6 @@ static void _ip_poll(struct midi_provider *p)
 	m = mip->num_ports;
 
 	q = NULL;
-	i = 0;
 	for (i = 0; midi_port_foreach(p, &q) && i < m; i++)
 		q->mark = 0;
 
@@ -301,7 +305,7 @@ static void _ip_poll(struct midi_provider *p)
 
 		data = mem_alloc(sizeof(struct midi_ip));
 		data->fd = _get_fd(i, 0);
-		if (data->fd == -1) {
+		if (data->fd == SOCKET_INVALID) {
 			free(data);
 			break; /* what? */
 		}
@@ -321,7 +325,7 @@ static void _ip_destroy_userdata(void *x)
 {
 	struct midi_ip_provider *mip = x;
 
-	if (mip->out_fd != -1)
+	if (mip->out_fd != SOCKET_INVALID)
 		closesocket(mip->out_fd);
 
 	free(mip);
@@ -340,7 +344,7 @@ int ip_midi_setup(void)
 	mip = mem_calloc(1, sizeof(*mip));
 
 	mip->out_fd = _get_fd(-1, 1);
-	if (mip->out_fd == -1) {
+	if (mip->out_fd == SOCKET_INVALID) {
 		free(mip);
 		return 0;
 	}
@@ -369,7 +373,7 @@ int ip_midi_getports(void)
 	struct midi_port *q;
 	int i;
 
-	if (mip->out_fd == -1) return 0;
+	if (mip->out_fd == SOCKET_INVALID) return 0;
 	if (status.flags & NO_NETWORK) return 0;
 
 	for (i = 0, q = NULL; midi_port_foreach(midi_ip_prov, &q); i++);
@@ -381,7 +385,7 @@ void ip_midi_setports(int n)
 {
 	struct midi_ip_provider *mip = midi_ip_prov->userdata;
 
-	if (mip->out_fd == -1) return;
+	if (mip->out_fd == SOCKET_INVALID) return;
 	if (status.flags & NO_NETWORK) return;
 
 	mip->num_ports = n;

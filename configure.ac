@@ -445,9 +445,11 @@ cygwin*|mingw*)
 	AC_CHECK_HEADERS([winsock.h winsock2.h])
 	if test "x$ac_cv_header_winsock_h" = "xyes"; then
 		AC_SUBST([NETWORK_LIBS], [-lwsock32])
+		AC_DEFINE([USE_NETWORK], [1], [Networking])
 		use_network=yes
 	elif test "x$ac_cv_header_winsock2_h" = "xyes"; then
 		AC_SUBST([NETWORK_LIBS], [-lws2_32])
+		AC_DEFINE([USE_NETWORK], [1], [Networking])
 		use_network=yes
 	else
 		AC_MSG_ERROR([*** Couldn't find winsock (how)])
