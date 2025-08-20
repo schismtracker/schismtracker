@@ -68,7 +68,7 @@ void timer_msleep(uint32_t ms)
 }
 
 static mt_thread_t *timer_oneshot_thread = NULL;
-static int timer_oneshot_thread_cancelled = 0;
+static volatile int timer_oneshot_thread_cancelled = 0;
 
 // A linked list of timers.
 struct timer_oneshot_data_ {
