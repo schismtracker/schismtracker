@@ -31,6 +31,7 @@
 #include <CoreMIDI/MIDIServices.h>
 #include <CoreAudio/HostTime.h>
 
+/* TODO move these into a structure! */
 static MIDIClientRef    client = 0;
 static MIDIPortRef      portIn = 0;
 static MIDIPortRef      portOut = 0;
@@ -210,7 +211,8 @@ int macosx_midi_setup(void)
 	if (MIDIOutputPortCreate(client, CFSTR("Output port"), &portOut) != noErr)
 		return 0;
 
-	if (!midi_provider_register("Mac OS X", &driver)) return 0;
+	/* TODO move statics into a structure */
+	if (!midi_provider_register("Mac OS X", &driver, NULL)) return 0;
 
 	return 1;
 }

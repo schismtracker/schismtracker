@@ -51,28 +51,24 @@
 #define MIDI_IP_BASE    21928
 #define MAX_DGRAM_SIZE  1280
 
+/* TODO need to use SOCKET or whatever the hell windows has */
+
 struct midi_ip {
-	/* currently only stores fd state, maybe we
-	 * could save IP or something ... idk.
-	 *
-	 * from what I can tell, other programs simply
-	 * dump out the port number -- maybe we should
-	 * do that too? */
 	int fd;
+
+	int pb;
 };
 
-/* TODO all of these statics, for every midi driver,
- * should be inside of midi_provider. */
-
-/* this is for ip_midi_setports, so it can set the
- * number of ports to poll. */
-static int num_ports = 0;
-/* XXX this should be in midi_provider */
-static int out_fd = -1;
-/* no idea if this is still needed, since I converted
- * everything to use the normal MIDI stuff like all of
- * the other drivers  --paper */
-static mt_mutex_t *blocker = NULL;
+struct midi_ip_provider {
+	/* this is read by the midi-poll function,
+	 * and set in midi_ip_setports */
+	volatile int num_ports;
+	/* socket used for output */
+	int out_fd;
+#define MIDIBUF_SIZE (65536)
+	/* midi buffer */
+	unsigned char midibuf[MIDIBUF_SIZE];
+};
 
 /* tells the main function to poll for midi devices */
 static void do_wake_main(void)
@@ -164,36 +160,28 @@ static int _get_fd(int pb, int isout)
 	return fd;
 }
 
-void ip_midi_setports(int n)
-{
-	if (out_fd == -1) return;
-	if (status.flags & NO_NETWORK) return;
-
-	mt_mutex_lock(blocker);
-	num_ports = n;
-	mt_mutex_unlock(blocker);
-}
-
 static void _readin(struct midi_provider *p, struct midi_port *q)
 {
 	/* FIXME move this into midi_provider? */
-	static unsigned char buffer[65536];
+	struct midi_ip_provider *mip;
 	struct midi_ip *data;
 	int r;
 
+	mip = p->userdata;
 	data = q->userdata;
 
 	/* NOTE: original code did recvfrom, and got the address,
 	 * but did literally nothing with it.  --paper */
-	r = recv(data->fd, (char *)buffer, sizeof(buffer), 0);
+	r = recv(data->fd, (char *)mip->midibuf, sizeof(mip->midibuf), 0);
 	if (r > 0) {
-		midi_received_cb(q, buffer, r);
+		midi_received_cb(q, mip->midibuf, r);
 	}
 }
 
 static int _ip_work(struct midi_provider *p)
 {
-	/* this function should be called periodically */
+	/* hm, can't seem to get this to work, at least on linux.
+	 * I probably broke something when ripping out threads.  --paper */
 	struct timeval tv;
 	fd_set rfds;
 	int i, m, r;
@@ -216,10 +204,11 @@ static int _ip_work(struct midi_provider *p)
 
 	/* TODO use non-blocking sockets instead of select */
 	r = select(m + 1, &rfds, NULL, NULL, &tv);
-	if (r == SOCKET_ERROR)
+	if (r == SOCKET_ERROR) {
 		return -1; /* what? */
-	else if (r == 0)
+	} else if (r == 0) {
 		return 0; /* nothing to process */
+	}
 
 	q = NULL;
 	for (i = 0; midi_port_foreach(p, &q); i++) {
@@ -227,16 +216,6 @@ static int _ip_work(struct midi_provider *p)
 
 		if ((q->io & MIDI_INPUT) && FD_ISSET(data->fd, &rfds))
 			_readin(p, q);
-	}
-
-	return 0;
-}
-
-static int _ip_thread(struct midi_provider *p)
-{
-	while (!p->cancelled) {
-		_ip_work(p);
-		timer_msleep(1);
 	}
 
 	return 0;
@@ -259,11 +238,10 @@ static void _ip_send(struct midi_port *p, const unsigned char *data, uint32_t le
 	struct sockaddr_in asin = {0};
 	struct midi_ip *userdata;
 	unsigned char *ipcopy;
-	int n;
-	int ss;
+	struct midi_ip_provider *mip;
 
+	mip = p->provider->userdata;
 	userdata = p->userdata;
-	n = userdata->fd;
 
 	if (len == 0) return;
 	if (!(p->io & MIDI_OUTPUT)) return; /* is this still needed ?  --paper */
@@ -272,11 +250,13 @@ static void _ip_send(struct midi_port *p, const unsigned char *data, uint32_t le
 	ipcopy = (unsigned char *)&asin.sin_addr.s_addr;
 	/* 255.0.0.37 -- UDP multicast MIDI IP */
 	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
-	asin.sin_port = htons(MIDI_IP_BASE+n);
+	asin.sin_port = htons(MIDI_IP_BASE + userdata->pb);
 
 	while (len) {
+		int ss;
+
 		ss = (len > MAX_DGRAM_SIZE) ?  MAX_DGRAM_SIZE : len;
-		if (sendto(out_fd, (const char*)data, ss, 0,
+		if (sendto(mip->out_fd, (const char*)data, ss, 0,
 				(struct sockaddr *)&asin,sizeof(asin)) < 0) {
 			p->io &= ~(MIDI_OUTPUT);
 			break;
@@ -299,13 +279,15 @@ static void _ip_poll(struct midi_provider *p)
 	static int last_buildout = 0;
 	struct midi_port *q;
 	struct midi_ip *data;
+	struct midi_ip_provider *mip;
 	char *buffer;
 	long i, m;
 
+	mip = p->userdata;
+
 	midi_provider_mark_ports(p);
 
-	mt_mutex_lock(blocker);
-	m = (volatile int)num_ports;
+	m = mip->num_ports;
 
 	q = NULL;
 	i = 0;
@@ -323,6 +305,7 @@ static void _ip_poll(struct midi_provider *p)
 			free(data);
 			break; /* what? */
 		}
+		data->pb = i;
 
 		if (snprintf(buf, sizeof(buf), " Multicast/IP MIDI %ld", i+1) == -1) {
 			perror("snprintf");
@@ -332,8 +315,16 @@ static void _ip_poll(struct midi_provider *p)
 		midi_port_register(p, MIDI_INPUT|MIDI_OUTPUT, buf,
 			data, _ip_userdata_destroy);
 	}
+}
 
-	mt_mutex_unlock(blocker);
+static void _ip_destroy_userdata(void *x)
+{
+	struct midi_ip_provider *mip = x;
+
+	if (mip->out_fd != -1)
+		closesocket(mip->out_fd);
+
+	free(mip);
 }
 
 /* dumb hack for ip_midi_getports */
@@ -342,26 +333,27 @@ static struct midi_provider *midi_ip_prov;
 int ip_midi_setup(void)
 {
 	static struct midi_driver driver;
+	struct midi_ip_provider *mip;
 
 	if (status.flags & NO_NETWORK) return 0;
 
-	blocker = mt_mutex_create();
-	if (!blocker)
-		return 0;
+	mip = mem_calloc(1, sizeof(*mip));
 
-	if (out_fd == -1) {
-		out_fd = _get_fd(-1, 1);
-		if (out_fd == -1) return 0;
+	mip->out_fd = _get_fd(-1, 1);
+	if (mip->out_fd == -1) {
+		free(mip);
+		return 0;
 	}
 
 	driver.flags = 0;
 	driver.poll = _ip_poll;
-	driver.thread = _ip_thread;
+	driver.work = _ip_work;
 	driver.send = _ip_send;
 	driver.enable = _ip_start;
 	driver.disable = _ip_stop;
+	driver.destroy_userdata = _ip_destroy_userdata;
 
-	midi_ip_prov = midi_provider_register("IP", &driver);
+	midi_ip_prov = midi_provider_register("IP", &driver, mip);
 	if (!midi_ip_prov)
 		return 0;
 
@@ -373,17 +365,26 @@ int ip_midi_setup(void)
 
 int ip_midi_getports(void)
 {
+	struct midi_ip_provider *mip = midi_ip_prov->userdata;
 	struct midi_port *q;
 	int i;
 
-	if (out_fd == -1) return 0;
+	if (mip->out_fd == -1) return 0;
 	if (status.flags & NO_NETWORK) return 0;
 
-	mt_mutex_lock(blocker);
 	for (i = 0, q = NULL; midi_port_foreach(midi_ip_prov, &q); i++);
-	mt_mutex_unlock(blocker);
 
 	return i;
+}
+
+void ip_midi_setports(int n)
+{
+	struct midi_ip_provider *mip = midi_ip_prov->userdata;
+
+	if (mip->out_fd == -1) return;
+	if (status.flags & NO_NETWORK) return;
+
+	mip->num_ports = n;
 }
 
 #else

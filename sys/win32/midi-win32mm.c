@@ -298,7 +298,8 @@ int win32mm_midi_setup(void)
 		.send = _win32mm_send,
 	};
 
-	if (!midi_provider_register("Win32MM", &driver)) return 0;
+	/* lucky day! we don't HAVE any statics! */
+	if (!midi_provider_register("Win32MM", &driver, NULL)) return 0;
 
 	return 1;
 }

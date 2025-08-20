@@ -47,6 +47,9 @@ static mt_mutex_t *midi_mutex = NULL;
 static mt_mutex_t *midi_port_mutex = NULL;
 static mt_mutex_t *midi_record_mutex = NULL;
 
+static mt_thread_t *midi_worker_thread = NULL;
+static volatile int midi_worker_thread_cancel = 0;
+
 static struct midi_provider *port_providers = NULL;
 
 /* configurable midi stuff */
@@ -272,7 +275,8 @@ void midi_engine_poll_ports(void)
 
 	mt_mutex_lock(midi_mutex);
 	for (n = port_providers; n; n = n->next) {
-		if (n->poll) n->poll(n);
+		if (n->poll)
+			n->poll(n);
 	}
 	mt_mutex_unlock(midi_mutex);
 }
@@ -316,6 +320,15 @@ void midi_engine_stop(void)
 
 	mt_mutex_lock(midi_mutex);
 	_connected = 0;
+
+	if (midi_worker_thread) {
+		midi_worker_thread_cancel = 1;
+		mt_thread_wait(midi_worker_thread, NULL);
+		/* reset ... */
+		midi_worker_thread_cancel = 0;
+		midi_worker_thread = NULL;
+	}
+
 	for (n = port_providers; n; ) {
 		uint32_t ln = 0;
 		int f = 0; /* this is stupid and i hate it */
@@ -337,6 +350,9 @@ void midi_engine_stop(void)
 			n->cancelled = 1;
 			mt_thread_wait(n->thread, NULL);
 		}
+
+		if (n->destroy_userdata)
+			n->destroy_userdata(n->userdata);
 
 		free(n->name);
 
@@ -423,14 +439,59 @@ void midi_engine_port_unlock(void)
 	mt_mutex_unlock(midi_port_mutex);
 }
 
-/* ------------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
+
+void midi_engine_worker(void)
+{
+	struct midi_provider *n;
+
+	if (!_connected)
+		return;
+
+	mt_mutex_lock(midi_mutex);
+
+	for (n = port_providers; n; n = n->next) {
+		if (n->work)
+			n->work(n);
+	}
+
+	mt_mutex_unlock(midi_mutex);
+}
+
+static int midi_engine_worker_thread_func(SCHISM_UNUSED void *z)
+{
+	while (!midi_worker_thread_cancel) {
+		midi_engine_worker();
+		/* sleep as to not hog the CPU */
+		timer_msleep(1);
+	}
+
+	return 0;
+}
+
+static void midi_engine_worker_thread_start(void)
+{
+	if (midi_worker_thread)
+		return;
+
+	mt_mutex_lock(midi_mutex);
+
+	printf("hi\n");
+	midi_worker_thread_cancel = 0;
+	midi_worker_thread = mt_thread_create(midi_engine_worker_thread_func,
+		"MIDI worker thread", NULL);
+
+	mt_mutex_unlock(midi_mutex);
+}
+
+/* ------------------------------------------------------------------------ */
 
 struct midi_provider_thread_info {
 	const struct midi_driver *d;
 	struct midi_provider *n;
 };
 
-int midi_provider_thread_func(void *z)
+static int midi_provider_thread_func(void *z)
 {
 	struct midi_provider_thread_info *i = z;
 
@@ -444,7 +505,7 @@ int midi_provider_thread_func(void *z)
 
 /* midi engines register a provider (one each!) */
 struct midi_provider *midi_provider_register(const char *name,
-	const struct midi_driver *driver)
+	const struct midi_driver *driver, void *userdata)
 {
 	struct midi_provider *n;
 
@@ -455,6 +516,8 @@ struct midi_provider *midi_provider_register(const char *name,
 	n->poll = driver->poll;
 	n->enable = driver->enable;
 	n->disable = driver->disable;
+	n->destroy_userdata = driver->destroy_userdata;
+	n->userdata = userdata;
 	if (driver->flags & MIDI_PORT_CAN_SCHEDULE) {
 		n->send_later = driver->send;
 		n->drain = driver->drain;
@@ -474,6 +537,12 @@ struct midi_provider *midi_provider_register(const char *name,
 		i->n = n;
 
 		n->thread = mt_thread_create(midi_provider_thread_func, n->name, i);
+	}
+
+	if (driver->work) {
+		n->work = driver->work;
+
+		midi_engine_worker_thread_start();
 	}
 
 	mt_mutex_unlock(midi_mutex);

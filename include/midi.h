@@ -24,6 +24,8 @@
 #ifndef SCHISM_MIDI_H_
 #define SCHISM_MIDI_H_
 
+#include "headers.h"
+
 struct midi_provider;
 struct midi_port;
 
@@ -32,7 +34,17 @@ struct midi_driver {
 	uint32_t flags;
 
 	void (*poll)(struct midi_provider *m);
+	/* these next two should be mutually exclusive.
+	 * if you need both, you are almost certainly doing things wrong. */
+
+	/* thread function */
 	int (*thread)(struct midi_provider *m);
+	/* worker function (you should probably be implementing this one,
+	 * and not the former)
+	 *
+	 * the return value of this function isn't really significant,
+	 * and in fact it's not even checked in the midi worker. */
+	int (*work)(struct midi_provider *m);
 
 	/* return: 1 on success, 0 on failure */
 	int (*enable)(struct midi_port *d);
@@ -41,6 +53,9 @@ struct midi_driver {
 	void (*send)(struct midi_port *d,
 			const unsigned char *seq, uint32_t len, uint32_t delay);
 	void (*drain)(struct midi_port *d);
+
+	/* Function to destroy the userdata given to midi_provider_register */
+	void (*destroy_userdata)(void *);
 };
 
 // implemented in each backend
@@ -49,6 +64,8 @@ struct mt_thread;
 struct midi_provider {
 	char *name;
 	void (*poll)(struct midi_provider *);
+	int (*work)(struct midi_provider *);
+	/* thread crap */
 	struct mt_thread *thread;
 	volatile int cancelled;
 
@@ -63,6 +80,10 @@ struct midi_provider {
 	void (*send_later)(struct midi_port *d,
 			const unsigned char *seq, uint32_t len, uint32_t delay);
 	void (*drain)(struct midi_port *d);
+
+	void *userdata;
+	/* copied from midi_driver */
+	void (*destroy_userdata)(void *);
 };
 
 enum {
@@ -128,7 +149,8 @@ void midi_engine_port_lock(void);
 void midi_engine_port_unlock(void);
 
 /* midi engines register a provider (one each!) */
-struct midi_provider *midi_provider_register(const char *name, const struct midi_driver *f);
+struct midi_provider *midi_provider_register(const char *name, const struct midi_driver *f,
+	void *userdata);
 
 /* midi engines list ports this way */
 uint32_t midi_port_register(struct midi_provider *p,

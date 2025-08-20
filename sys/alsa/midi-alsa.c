@@ -38,13 +38,20 @@
 
 #define PORT_NAME       "Schism Tracker"
 
-
-static snd_seq_t *seq;
-static int local_port = -1;
+struct alsa_midi_provider {
+	snd_seq_t *seq;
+	int local_port;
 
 #define MIDI_BUFSIZE    65536
-static unsigned char big_midi_buf[MIDI_BUFSIZE];
-static int alsa_queue;
+	unsigned char big_midi_buf[MIDI_BUFSIZE];
+	int alsa_queue;
+
+	int npfd;
+	struct pollfd *pfd;
+
+	/* event */
+	snd_midi_event_t *ev;
+};
 
 struct alsa_midi {
 	int c, p;
@@ -91,6 +98,9 @@ static const char * (*ALSA_snd_seq_client_info_get_name)(snd_seq_client_info_t*i
 static const char * (*ALSA_snd_seq_port_info_get_name)(const snd_seq_port_info_t*inf);
 static int (*ALSA_snd_seq_open)(snd_seq_t**h,const char *name,int str, int mode);
 static int (*ALSA_snd_seq_set_client_name)(snd_seq_t*seeq,const char *name);
+static int (*ALSA_snd_seq_delete_simple_port)(snd_seq_t *seq, int port);
+static int (*ALSA_snd_seq_close)(snd_seq_t *);
+static void (*ALSA_snd_midi_event_free)(snd_midi_event_t *dev);
 
 /* these are inline functions; prefix them anyway */
 #define ALSA_snd_seq_ev_clear snd_seq_ev_clear
@@ -204,14 +214,19 @@ static int load_alsa_syms(void) {
 	SCHISM_ALSA_SYM(snd_seq_port_info_get_name);
 	SCHISM_ALSA_SYM(snd_seq_open);
 	SCHISM_ALSA_SYM(snd_seq_set_client_name);
+	SCHISM_ALSA_SYM(snd_seq_delete_simple_port);
+	SCHISM_ALSA_SYM(snd_seq_close);
+	SCHISM_ALSA_SYM(snd_midi_event_free);
 
 	return 0;
 }
 
-static void _alsa_drain(struct midi_port *p SCHISM_UNUSED)
+static void _alsa_drain(struct midi_port *p)
 {
+	struct alsa_midi_provider *amp = p->provider->userdata;
+
 	/* not port specific */
-	ALSA_snd_seq_drain_output(seq);
+	ALSA_snd_seq_drain_output(amp->seq);
 }
 
 static void _alsa_send(struct midi_port *p, const unsigned char *data, uint32_t len, uint32_t delay)
@@ -219,17 +234,19 @@ static void _alsa_send(struct midi_port *p, const unsigned char *data, uint32_t 
 	struct alsa_midi *ex;
 	snd_seq_event_t ev;
 	long rr;
+	struct alsa_midi_provider *amp;
 
 	ex = (struct alsa_midi *)p->userdata;
+	amp = p->provider->userdata;
 
 	while (len > 0) {
 		ALSA_snd_seq_ev_clear(&ev);
-		ALSA_snd_seq_ev_set_source(&ev, local_port);
+		ALSA_snd_seq_ev_set_source(&ev, amp->local_port);
 		ALSA_snd_seq_ev_set_subs(&ev);
 		if (!delay) {
 			ALSA_snd_seq_ev_set_direct(&ev);
 		} else {
-			ALSA_snd_seq_ev_schedule_tick(&ev, alsa_queue, 1, delay);
+			ALSA_snd_seq_ev_schedule_tick(&ev, amp->alsa_queue, 1, delay);
 		}
 
 		/* we handle our own */
@@ -238,7 +255,7 @@ static void _alsa_send(struct midi_port *p, const unsigned char *data, uint32_t 
 
 		rr = ALSA_snd_midi_event_encode(ex->dev, data, len, &ev);
 		if (rr < 1) break;
-		ALSA_snd_seq_event_output(seq, &ev);
+		ALSA_snd_seq_event_output(amp->seq, &ev);
 		ALSA_snd_seq_free_event(&ev);
 		data += rr;
 		len -= rr;
@@ -248,16 +265,18 @@ static void _alsa_send(struct midi_port *p, const unsigned char *data, uint32_t 
 static int _alsa_start(struct midi_port *p)
 {
 	struct alsa_midi *data;
+	struct alsa_midi_provider *amp;
 	int err;
 
 	err = 0;
 	data = (struct alsa_midi *)p->userdata;
+	amp = p->provider->userdata;
 
 	if (p->io & MIDI_INPUT)
-		err = ALSA_snd_seq_connect_from(seq, 0, data->c, data->p);
+		err = ALSA_snd_seq_connect_from(amp->seq, 0, data->c, data->p);
 
 	if (p->io & MIDI_OUTPUT)
-		err = ALSA_snd_seq_connect_to(seq, 0, data->c, data->p);
+		err = ALSA_snd_seq_connect_to(amp->seq, 0, data->c, data->p);
 
 	if (err < 0) {
 		log_appendf(4, "ALSA: %s", ALSA_snd_strerror(err));
@@ -269,15 +288,17 @@ static int _alsa_start(struct midi_port *p)
 static int _alsa_stop(struct midi_port *p)
 {
 	struct alsa_midi *data;
+	struct alsa_midi_provider *amp;
 	int err;
 
 	err = 0;
 	data = (struct alsa_midi *)p->userdata;
+	amp = p->provider->userdata;
 	if (p->io & MIDI_OUTPUT)
-		err = ALSA_snd_seq_disconnect_to(seq, 0, data->c, data->p);
+		err = ALSA_snd_seq_disconnect_to(amp->seq, 0, data->c, data->p);
 
 	if (p->io & MIDI_INPUT)
-		err = ALSA_snd_seq_disconnect_from(seq, 0, data->c, data->p);
+		err = ALSA_snd_seq_disconnect_from(amp->seq, 0, data->c, data->p);
 
 	if (err < 0) {
 		log_appendf(4, "ALSA: %s", ALSA_snd_strerror(err));
@@ -286,65 +307,63 @@ static int _alsa_stop(struct midi_port *p)
 	return 1;
 }
 
-static int _alsa_thread(struct midi_provider *p)
+static int _alsa_work(struct midi_provider *p)
 {
-	int npfd;
-	struct pollfd *pfd;
-	struct midi_port *ptr, *src;
-	struct alsa_midi *data;
-	static snd_midi_event_t *dev = NULL;
+	struct alsa_midi_provider *amp = p->userdata;
 	snd_seq_event_t *ev;
 	long s;
 
-	npfd = ALSA_snd_seq_poll_descriptors_count(seq, POLLIN);
-	if (npfd <= 0) return 0;
+	if (!amp || !amp->pfd) return 0;
 
-	pfd = (struct pollfd *)mem_alloc(npfd * sizeof(struct pollfd));
-	if (!pfd) return 0;
+	if (ALSA_snd_seq_poll_descriptors(amp->seq, amp->pfd, amp->npfd, POLLIN) != amp->npfd) {
+		free(amp->pfd);
+		amp->pfd = NULL;
+		return 0;
+	}
 
-	while (!p->cancelled) {
-		if (ALSA_snd_seq_poll_descriptors(seq, pfd, npfd, POLLIN) != npfd) {
-			free(pfd);
-			return 0;
+	if (poll(amp->pfd, amp->npfd, 0) <= 0)
+		return 0; /* nothing to do */
+
+	do {
+		struct midi_port *ptr, *src;
+		struct alsa_midi *data;
+
+		if (ALSA_snd_seq_event_input(amp->seq, &ev) < 0)
+			break;
+
+		if (!ev) continue;
+
+		ptr = src = NULL;
+		while (midi_port_foreach(p, &ptr)) {
+			data = (struct alsa_midi *)ptr->userdata;
+			if (ev->source.client == data->c
+					&& ev->source.port == data->p
+					&& (ptr->io & MIDI_INPUT)) {
+				src = ptr;
+			}
+		}
+		if (!src || !ev) {
+			ALSA_snd_seq_free_event(ev);
+			continue;
 		}
 
-		// wait 10 msec for a midi event
-		if (!poll(pfd, npfd, 10))
-			continue;
+		s = ALSA_snd_midi_event_decode(amp->ev, amp->big_midi_buf,
+				sizeof(amp->big_midi_buf), ev);
+		if (s > 0)
+			midi_received_cb(src, amp->big_midi_buf, s);
+		ALSA_snd_midi_event_reset_decode(amp->ev);
+		ALSA_snd_seq_free_event(ev);
+	} while (ALSA_snd_seq_event_input_pending(amp->seq, 0) > 0);
 
-		do {
-			if (ALSA_snd_seq_event_input(seq, &ev) < 0)
-				break;
-
-			if (!ev) continue;
-
-			ptr = src = NULL;
-			while (midi_port_foreach(p, &ptr)) {
-				data = (struct alsa_midi *)ptr->userdata;
-				if (ev->source.client == data->c
-				&& ev->source.port == data->p
-				&& (ptr->io & MIDI_INPUT)) {
-					src = ptr;
-				}
-			}
-			if (!src || !ev) {
-				ALSA_snd_seq_free_event(ev);
-				continue;
-			}
-
-			if (!dev && ALSA_snd_midi_event_new(sizeof(big_midi_buf), &dev) < 0) {
-				/* err... */
-				break;
-			}
-
-			s = ALSA_snd_midi_event_decode(dev, big_midi_buf,
-					sizeof(big_midi_buf), ev);
-			if (s > 0) midi_received_cb(src, big_midi_buf, s);
-			ALSA_snd_midi_event_reset_decode(dev);
-			ALSA_snd_seq_free_event(ev);
-		} while (ALSA_snd_seq_event_input_pending(seq, 0) > 0);
-	}
 	return 0;
+}
+
+static void _alsa_port_destroy_userdata(void *x)
+{
+	struct alsa_midi *am = x;
+
+	ALSA_snd_midi_event_free(am->dev);
+	free(am);
 }
 
 static void _alsa_poll(struct midi_provider *_alsa_provider)
@@ -354,9 +373,11 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 	char *buffer;
 	int c, p, ok, io;
 	const char *ctext, *ptext;
-
+	struct alsa_midi_provider *amp;
 	snd_seq_client_info_t *cinfo;
 	snd_seq_port_info_t *pinfo;
+
+	amp = _alsa_provider->userdata;
 
 	midi_provider_mark_ports(_alsa_provider);
 
@@ -365,11 +386,11 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 	ALSA_snd_seq_port_info_alloca(&pinfo);
 
 	ALSA_snd_seq_client_info_set_client(cinfo, -1);
-	while (ALSA_snd_seq_query_next_client(seq, cinfo) >= 0) {
+	while (ALSA_snd_seq_query_next_client(amp->seq, cinfo) >= 0) {
 		int cn = ALSA_snd_seq_client_info_get_client(cinfo);
 		ALSA_snd_seq_port_info_set_client(pinfo, cn);
 		ALSA_snd_seq_port_info_set_port(pinfo, -1);
-		while (ALSA_snd_seq_query_next_port(seq, pinfo) >= 0) {
+		while (ALSA_snd_seq_query_next_port(amp->seq, pinfo) >= 0) {
 			io = 0;
 
 			if ((ALSA_snd_seq_port_info_get_capability(pinfo)
@@ -404,8 +425,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 
 			ctext = ALSA_snd_seq_client_info_get_name(cinfo);
 			ptext = ALSA_snd_seq_port_info_get_name(pinfo);
-			if (strcmp(ctext, PORT_NAME) == 0
-			&& strcmp(ptext, PORT_NAME) == 0) {
+			if (strcmp(ctext, PORT_NAME) == 0 && strcmp(ptext, PORT_NAME) == 0) {
 				continue;
 			}
 			data = mem_alloc(sizeof(struct alsa_midi));
@@ -427,7 +447,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 				continue;
 			}
 
-			midi_port_register(_alsa_provider, io, buffer, data, free);
+			midi_port_register(_alsa_provider, io, buffer, data, _alsa_port_destroy_userdata);
 			free(buffer);
 		}
 	}
@@ -436,19 +456,36 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 	midi_provider_remove_marked_ports(_alsa_provider);
 }
 
+static void _alsa_destroy_userdata(void *ud)
+{
+	struct alsa_midi_provider *amp = ud;
+
+	if (!amp) return; /* what */
+
+	ALSA_snd_midi_event_free(amp->ev);
+	ALSA_snd_seq_delete_simple_port(amp->seq, amp->local_port);
+	ALSA_snd_seq_close(amp->seq);
+	free(amp->pfd);
+	free(amp);
+}
+
 int alsa_midi_setup(void)
 {
 	static const struct midi_driver alsa_driver = {
 		.poll = _alsa_poll,
-		.thread = _alsa_thread,
+		.work = _alsa_work,
 		.enable = _alsa_start,
 		.disable = _alsa_stop,
 		.send = _alsa_send,
 		.flags = MIDI_PORT_CAN_SCHEDULE,
 		.drain = _alsa_drain,
+		.destroy_userdata = _alsa_destroy_userdata,
 	};
-
+	/* it really whips the llama's ass */
+	struct alsa_midi_provider *amp;
 	snd_seq_queue_tempo_t *tempo;
+
+	amp = mem_calloc(1, sizeof(*amp));
 
 	/* only bother if alsa midi actually exists, otherwise this will
 	 * produce useless and annoying error messages on systems where alsa
@@ -463,20 +500,36 @@ int alsa_midi_setup(void)
 		if (alsa_dlinit())
 			return 0;
 
-	if (ALSA_snd_seq_open(&seq, "default", SND_SEQ_OPEN_DUPLEX, 0) < 0
-	|| ALSA_snd_seq_set_client_name(seq, PORT_NAME) < 0)
+	if (ALSA_snd_seq_open(&amp->seq, "default", SND_SEQ_OPEN_DUPLEX, 0) < 0) {
+		free(amp);
 		return 0;
+	}
 
-	alsa_queue = ALSA_snd_seq_alloc_queue(seq);
+	if (ALSA_snd_seq_set_client_name(amp->seq, PORT_NAME) < 0) {
+		/* XXX we should just be able to call _alsa_destroy_userdata ... */
+		ALSA_snd_seq_close(amp->seq);
+		free(amp);
+		return 0;
+	}
+
+	/* init queue */
+	amp->alsa_queue = ALSA_snd_seq_alloc_queue(amp->seq);
+	if (amp->alsa_queue < 0) {
+		ALSA_snd_seq_close(amp->seq);
+		free(amp);
+		return 0;
+	}
+
+	/* set tempo (???) */
 	ALSA_snd_seq_queue_tempo_alloca(&tempo);
 	ALSA_snd_seq_queue_tempo_set_tempo(tempo, 480000);
 	ALSA_snd_seq_queue_tempo_set_ppq(tempo, 480);
-	ALSA_snd_seq_set_queue_tempo(seq, alsa_queue, tempo);
-	ALSA_snd_seq_start_queue(seq, alsa_queue, NULL);
-	ALSA_snd_seq_drain_output(seq);
+	ALSA_snd_seq_set_queue_tempo(amp->seq, amp->alsa_queue, tempo);
+	ALSA_snd_seq_start_queue(amp->seq, amp->alsa_queue, NULL);
+	ALSA_snd_seq_drain_output(amp->seq);
 
-	local_port = ALSA_snd_seq_create_simple_port(
-		seq,
+	amp->local_port = ALSA_snd_seq_create_simple_port(
+		amp->seq,
 		PORT_NAME,
 		SND_SEQ_PORT_CAP_READ
 		| SND_SEQ_PORT_CAP_WRITE
@@ -493,12 +546,34 @@ int alsa_midi_setup(void)
 		| SND_SEQ_PORT_TYPE_MIDI_XG
 		| SND_SEQ_PORT_TYPE_MIDI_MT32
 	);
-	if (local_port < 0) {
-		log_appendf(4, "ALSA: %s", ALSA_snd_strerror(local_port));
+	if (amp->local_port < 0) {
+		log_appendf(4, "ALSA: %s", ALSA_snd_strerror(amp->local_port));
+		ALSA_snd_seq_close(amp->seq);
+		free(amp);
 		return 0;
 	}
 
-	if (!midi_provider_register("ALSA", &alsa_driver)) return 0;
+	amp->npfd = ALSA_snd_seq_poll_descriptors_count(amp->seq, POLLIN);
+	if (amp->npfd <= 0) {
+		ALSA_snd_seq_delete_simple_port(amp->seq, amp->local_port);
+		ALSA_snd_seq_close(amp->seq);
+		free(amp);
+		return 0;
+	}
+
+	amp->pfd = (struct pollfd *)mem_alloc(amp->npfd * sizeof(struct pollfd));
+
+	if (ALSA_snd_midi_event_new(sizeof(amp->big_midi_buf), &amp->ev) < 0) {
+		ALSA_snd_seq_delete_simple_port(amp->seq, amp->local_port);
+		ALSA_snd_seq_close(amp->seq);
+		free(amp->pfd);
+		free(amp);
+		return 0;
+	}
+
+	if (!midi_provider_register("ALSA", &alsa_driver, amp))
+		return 0;
+
 	return 1;
 }
 

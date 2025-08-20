@@ -25,6 +25,7 @@
 
 #include "midi.h"
 #include "util.h"
+#include "mem.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -43,25 +44,44 @@
 #define MAX_OSS_MIDI    64
 
 #define MAX_MIDI_PORTS  (MAX_OSS_MIDI + 2)
-static int opened[MAX_MIDI_PORTS];
+
+#define MIDIBUF_SIZE (65536)
+
+struct oss_midi_provider {
+	int opened[MAX_MIDI_PORTS];
+
+	unsigned char midi_buf[MIDIBUF_SIZE];
+};
 
 static void _oss_send(struct midi_port *p, const unsigned char *data, uint32_t len,
 	SCHISM_UNUSED uint32_t delay)
 {
-	int fd, r, n;
-	fd = opened[ n = INT_SHAPED_PTR(p->userdata) ];
-	if (fd < 0) return;
+	int fd, n;
+	ssize_t r;
+	struct oss_midi_provider *omp = p->provider->userdata;
+
+	n = INT_SHAPED_PTR(p->userdata);
+	if (n < 0) /* this can happen if write() returns size of 0 */
+		return;
+
+	fd = omp->opened[n];
+	if (fd < 0)
+		return;
+
 	while (len > 0) {
 		r = write(fd, data, len);
-		if (r < -1 && errno == EINTR) continue;
+		if (r < -1 && errno == EINTR)
+			continue;
+
 		if (r < 1) {
 			/* err, can't happen? */
-			(void)close(opened[n]);
-			opened[n] = -1;
+			(void)close(omp->opened[n]);
+			omp->opened[n] = -1;
 			p->userdata = PTR_SHAPED_INT(-1);
 			p->io = 0; /* failure! */
 			return;
 		}
+
 		data += r;
 		len -= r;
 	}
@@ -69,63 +89,74 @@ static void _oss_send(struct midi_port *p, const unsigned char *data, uint32_t l
 
 static int _oss_start_stop(SCHISM_UNUSED struct midi_port *p) { return 1; /* do nothing */ }
 
-static int _oss_thread(struct midi_provider *p)
+static int _oss_work(struct midi_provider *p)
 {
 	struct pollfd pfd[MAX_MIDI_PORTS];
 	struct midi_port *ptr, *src;
-	unsigned char midi_buf[4096];
-	int i, j, r;
+	int i, j;
+	ssize_t r;
+	struct oss_midi_provider *omp = p->userdata;
 
-	while (!p->cancelled) {
-		ptr = NULL;
-		j = 0;
-		while (midi_port_foreach(p, &ptr)) {
-			i = INT_SHAPED_PTR(ptr->userdata);
-			if (i == -1) continue; /* err... */
-			if (!(ptr->io & MIDI_INPUT)) continue;
-			pfd[j].fd = i;
-			pfd[j].events = POLLIN;
-			pfd[j].revents = 0; /* RH 5 bug */
-			j++;
-		}
-		if (!j || poll(pfd, j, -1) < 1) {
-			sleep(1);
+	ptr = NULL;
+	j = 0;
+	while (midi_port_foreach(p, &ptr)) {
+		i = INT_SHAPED_PTR(ptr->userdata);
+		if (i == -1)
+			continue; /* err... */
+
+		if (!(ptr->io & MIDI_INPUT))
 			continue;
-		}
-		for (i = 0; i < j; i++) {
-			if (!(pfd[i].revents & POLLIN)) continue;
-			do {
-				r = read(pfd[i].fd, midi_buf, sizeof(midi_buf));
-			} while (r == -1 && errno == EINTR);
-			if (r > 0) {
-				ptr = src = NULL;
-				while (midi_port_foreach(p, &ptr)) {
-					if (INT_SHAPED_PTR(ptr->userdata) == pfd[i].fd) {
-						src = ptr;
-					}
+
+		SCHISM_RUNTIME_ASSERT(i < MAX_MIDI_PORTS, "somethings very wrong");
+
+		/* umm, this was just setting it to 'i' before, but that's totally
+		 * wrong. how the hell did this work? does anyone actually use OSS
+		 * MIDI anymore? lmao... */
+		pfd[j].fd = omp->opened[i];
+		pfd[j].events = POLLIN;
+		pfd[j].revents = 0; /* RH 5 bug */ /* LOL WOW THIS CODE IS OLD */
+		j++;
+	}
+
+	if (!j || poll(pfd, j, 0) <= 0)
+		return 0;
+
+	for (i = 0; i < j; i++) {
+		if (!(pfd[i].revents & POLLIN))
+			continue;
+
+		do {
+			r = read(pfd[i].fd, omp->midi_buf, sizeof(omp->midi_buf));
+		} while (r == -1 && errno == EINTR);
+
+		if (r > 0) {
+			ptr = src = NULL;
+			while (midi_port_foreach(p, &ptr)) {
+				if (INT_SHAPED_PTR(ptr->userdata) == pfd[i].fd) {
+					src = ptr;
 				}
-				midi_received_cb(src, midi_buf, r);
 			}
+			midi_received_cb(src, omp->midi_buf, r);
 		}
 	}
-	/* stupid gcc */
+
 	return 0;
 }
-
 
 static int _tryopen(int n, const char *name, struct midi_provider *_oss_provider)
 {
 	int io;
 	char *ptr;
+	struct oss_midi_provider *omp = _oss_provider->userdata;
 
-	if (opened[n] != -1)
+	if (omp->opened[n] != -1)
 		return 1;
 
-	if ((opened[n] = open(name, O_RDWR|O_NOCTTY|O_NONBLOCK)) != -1) {
+	if ((omp->opened[n] = open(name, O_RDWR|O_NOCTTY|O_NONBLOCK)) != -1) {
 		io = MIDI_INPUT | MIDI_OUTPUT;
-	} else if ((opened[n] = open(name, O_RDONLY|O_NOCTTY|O_NONBLOCK)) != -1) {
+	} else if ((omp->opened[n] = open(name, O_RDONLY|O_NOCTTY|O_NONBLOCK)) != -1) {
 		io = MIDI_INPUT;
-	} else if ((opened[n] = open(name, O_WRONLY|O_NOCTTY|O_NONBLOCK)) != -1) {
+	} else if ((omp->opened[n] = open(name, O_WRONLY|O_NOCTTY|O_NONBLOCK)) != -1) {
 		io = MIDI_OUTPUT;
 	} else {
 		return 2;
@@ -135,18 +166,19 @@ static int _tryopen(int n, const char *name, struct midi_provider *_oss_provider
 	if (asprintf(&ptr, " %-16s (OSS)", name) == -1)
 		return 3;
 
-	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT((long)n), NULL);
+	midi_port_register(_oss_provider, io, ptr, PTR_SHAPED_INT(n), NULL);
 	free(ptr);
 	return 0;
 }
 
 static void _oss_poll(struct midi_provider *_oss_provider)
 {
-	char sbuf[64];
 	int i;
 
 	_tryopen(0, "/dev/midi", _oss_provider);
 	for (i = 0; i < MAX_OSS_MIDI; i++) {
+		char sbuf[64];
+
 		sprintf(sbuf, "/dev/midi%d", i);
 		if (!_tryopen(i + 1, sbuf, _oss_provider))
 			continue;
@@ -156,19 +188,40 @@ static void _oss_poll(struct midi_provider *_oss_provider)
 			continue;
 	}
 }
+
+static void _oss_destroy_userdata(void *x)
+{
+	struct oss_midi_provider *omp = x;
+	int i;
+
+	for (i = 0; i < MAX_MIDI_PORTS; i++)
+		if (omp->opened[i] >= 0)
+			close(omp->opened[i]);
+
+	free(omp);
+}
+
 int oss_midi_setup(void)
 {
 	static const struct midi_driver driver = {
 		.flags = 0,
 		.poll = _oss_poll,
-		.thread = _oss_thread,
+		.work = _oss_work,
 		.enable = _oss_start_stop,
 		.disable = _oss_start_stop,
 		.send = _oss_send,
+		.destroy_userdata = _oss_destroy_userdata,
 	};
+	struct oss_midi_provider *omp;
 	int i;
 
-	for (i = 0; i < MAX_MIDI_PORTS; i++) opened[i] = -1;
-	if (!midi_provider_register("OSS", &driver)) return 0;
+	omp = mem_calloc(1, sizeof(*omp));
+
+	for (i = 0; i < MAX_MIDI_PORTS; i++)
+		omp->opened[i] = -1;
+
+	if (!midi_provider_register("OSS", &driver, omp))
+		return 0;
+
 	return 1;
 }
