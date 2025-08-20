@@ -64,7 +64,8 @@ struct _sdl3_timer_oneshot_curry {
 	void *param;
 };
 
-static uint32_t SDLCALL _sdl3_timer_oneshot_callback(void *param, SCHISM_UNUSED SDL_TimerID timerID, SCHISM_UNUSED uint32_t interval)
+static uint32_t SDLCALL _sdl3_timer_oneshot_callback(void *param,
+	SCHISM_UNUSED SDL_TimerID timerID, SCHISM_UNUSED uint32_t interval)
 {
 	struct _sdl3_timer_oneshot_curry *curry = (struct _sdl3_timer_oneshot_curry *)param;
 
@@ -74,7 +75,8 @@ static uint32_t SDLCALL _sdl3_timer_oneshot_callback(void *param, SCHISM_UNUSED 
 	return 0;
 }
 
-static int sdl3_timer_oneshot(uint32_t interval, void (*callback)(void *param), void *param)
+static int sdl3_timer_oneshot(uint32_t interval, void (*callback)(void *param),
+	void *param)
 {
 	struct _sdl3_timer_oneshot_curry *curry = mem_alloc(sizeof(*curry));
 
@@ -129,5 +131,6 @@ const schism_timer_backend_t schism_timer_backend_sdl3 = {
 	.usleep = sdl3_timer_usleep,
 	.msleep = sdl3_timer_msleep,
 
-	.oneshot = sdl3_timer_oneshot,
+	// this has a memleak?  --paper
+	//.oneshot = sdl3_timer_oneshot,
 };
