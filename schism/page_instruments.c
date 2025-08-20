@@ -2641,7 +2641,7 @@ static void instrument_list_pitch_update_values(void)
 	}
 	ins->midi_channel_mask = widgets_pitch[16].d.bitset.value;
 	ins->midi_program = widgets_pitch[17].d.thumbbar.value;
-	ins->midi_bank = ((widgets_pitch[19].d.thumbbar.value << 8)
+	ins->midi_bank = ((lshift_signed(widgets_pitch[19].d.thumbbar.value, 8))
 			  | (widgets_pitch[18].d.thumbbar.value & 0xff));
 
 	song_update_playing_instrument(current_instrument);
