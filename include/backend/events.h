@@ -44,6 +44,7 @@ typedef struct {
 
 	void (*pump_events)(void);
 	schism_keymod_t (*keymod_state)(void);
+	const char *(*get_key_name_from_scancode)(char, int);
 } schism_events_backend_t;
 
 #ifdef SCHISM_SDL12
