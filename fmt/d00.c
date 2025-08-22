@@ -235,9 +235,9 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 
 		for (c = 0; c < 9; c++) {
 			/* ... sigh */
-			int ord_transpose[MAX_ORDERS] = {0};
+			int16_t ord_transpose[MAX_ORDERS] = {0};
 			int transpose_set = 0; /* stupid hack */
-			uint16_t ords[MAX_ORDERS];
+			uint16_t ords[MAX_ORDERS - 2]; /* need space for ORDER_LAST */
 			uint16_t patt_paraptr;
 			uint16_t mem_instr = 0; /* current instrument for the channel */
 			uint16_t mem_volfx = VOLFX_NONE;
@@ -332,13 +332,17 @@ D00_readnote: /* this goto is kind of ugly... */
 						int r;
 
 						/* note event; data is stored in the low byte */
-						switch (note) {
+						switch (note & 0x7F) {
 						case 0: /* "REST" */
-						case 0x80: /* "REST" & 0x80 */
 							sn->note = NOTE_OFF;
 							row += count + 1;
+							if (c == 3 && pattern == 0)
+								printf("REST - c: %d, pattern: %d, count: %d, row: %d\n", c, pattern, count, row);
 							break;
 						case 0x7E: /* "HOLD" */
+							if (c == 3 && pattern == 0)
+								printf("HOLD - c: %d, pattern: %d, count: %d, row: %d\n", c, pattern, count, row);
+
 							/* copy the last effect... */
 							for (r = 0; pattern < MAX_PATTERNS && r <= count; r++, row++, d00_fix_row(&pattern, &row)) {
 								sn = d00_get_note(song, pattern, row, c);
@@ -355,6 +359,7 @@ D00_readnote: /* this goto is kind of ugly... */
 								note += ord_transpose[n % nords];
 							}
 
+							/* reset fx */
 							mem_effect = FX_NONE;
 							mem_param = 0;
 
@@ -374,16 +379,22 @@ D00_readnote: /* this goto is kind of ugly... */
 
 							row += count + 1;
 
+							if (c == 3 && pattern == 0)
+								printf("NOTE - c: %d, pattern: %d, count: %d, row: %d\n", c, pattern, count, row);
+
 							break;
 						}
 						continue;
 					} else {
+						/* it's probably possible to have multiple effects
+						 * on one track. we should be able to handle this! */
 						uint8_t fx = (event >> 12);
 						uint16_t fxop = (event & 0x0FFF);
 
 						switch (fx) {
 						case 6: /* Cut/Stop Voice */
 							sn->note = NOTE_CUT;
+							row += fxop + 1;
 							continue;
 						case 7: /* Vibrato */
 							mem_effect = FX_VIBRATO;
@@ -391,8 +402,8 @@ D00_readnote: /* this goto is kind of ugly... */
 							{
 								/* this is a total guess, mostly just based
 								 * on what sounds "correct" */
-								uint8_t depth = ((fxop >> 8) & 0xFF) * 2 / 3;
-								uint8_t speed = (fxop & 0xFF) * 2 / 3;
+								uint8_t depth = ((fxop >> 8) & 0xFF) * 4 / 3;
+								uint8_t speed = (fxop & 0xFF) * 4 / 3;
 
 								depth = MIN(depth, 0xF);
 								speed = MIN(speed, 0xF);
@@ -413,9 +424,7 @@ D00_readnote: /* this goto is kind of ugly... */
 								 * points to the next spfx structure to process. This is
 								 * terrible for us, but we can at least haphazardly
 								 * grab the instrument number from the first one, and
-								 * hope it fits...
-								 *
-								 * FIXME: The other things in */
+								 * hope it fits... */
 								int64_t oldpos = slurp_tell(fp);
 
 								slurp_seek(fp, hdr.spfx_paraptr + fxop, SEEK_SET);
@@ -429,7 +438,8 @@ D00_readnote: /* this goto is kind of ugly... */
 								 *  - uint8_t modlev;
 								 *  - int8_t modlevadd;
 								 *  - uint8_t duration;
-								 *  - uint16_t ptr; (seriously?) */
+								 *  - uint16_t ptr; (seriously?)
+								 * it's likely that we can transform these into an instrument. */
 
 								slurp_seek(fp, oldpos, SEEK_SET);
 							}
@@ -441,11 +451,11 @@ D00_readnote: /* this goto is kind of ugly... */
 							break;
 						case 0xD: /* Pitch slide up */
 							mem_effect = FX_PORTAMENTOUP;
-							mem_param = fxop;
+							mem_param = fxop * 5 / 2;
 							break;
 						case 0xE: /* Pitch slide down */
 							mem_effect = FX_PORTAMENTODOWN;
-							mem_param = fxop;
+							mem_param = fxop * 5 / 2;
 							break;
 						default:
 							break;
@@ -475,12 +485,14 @@ D00_readnote: /* this goto is kind of ugly... */
 			for (c = max_pattern + 1; c < MAX_PATTERNS; c++) {
 				csf_free_pattern(song->patterns[c]);
 				song->patterns[c] = NULL;
-				song->pattern_size[c] = 64;
+				song->pattern_size[c] = song->pattern_alloc_size[c] = 64;
 			}
 		}
 
 		if (song->pattern_size[max_pattern] != max_row) {
-			/* insert an effect to jump back to the start */
+			/* insert an effect to jump back to the start
+			 * this effect may be on the 10th channel if we can't
+			 * fit it anywhere else. */
 			song_note_t *row = song->patterns[max_pattern] + (max_row * MAX_CHANNELS);
 
 			for (c = 0; c < MAX_CHANNELS; c++) {
@@ -492,9 +504,9 @@ D00_readnote: /* this goto is kind of ugly... */
 			}
 		}
 
-		for (c = 0; c < (int)max_pattern; c++)
+		for (c = 0; c <= (int)max_pattern; c++)
 			song->orderlist[c] = c;
-		song->orderlist[max_pattern] = ORDER_LAST;
+		song->orderlist[max_pattern + 1] = ORDER_LAST;
 	}
 
 	/* -------------------------------------------------------------------- */
@@ -502,7 +514,12 @@ D00_readnote: /* this goto is kind of ugly... */
 
 	{
 		/* FIXME: this isn't very good, we should be doing per-channel
-		 * speed stuff or else we get broken modules */
+		 * speed stuff or else we get broken modules
+		 *
+		 * basically each channel ought to have an increment. if each speed
+		 * is the same this is okay, and we can probably just ignore the
+		 * "song speed" altogether. though i don't know how many songs
+		 * actually use different speeds for each channel. */
 		int max_count = 1, count = 1;
 		uint16_t mode = speeds[0];
 
@@ -531,9 +548,11 @@ D00_readnote: /* this goto is kind of ugly... */
 	if (slurp_seek(fp, hdr.instrument_paraptr, SEEK_SET))
 		return LOAD_UNSUPPORTED;
 
+	ninst = MIN(ninst, MAX_SAMPLES);
+
 	for (c = 0; c < ninst; c++) {
 		unsigned char bytes[11];
-		song_sample_t *smp = &song->samples[c + 1];
+		song_sample_t *smp = song->samples + c + 1;
 
 		if (slurp_read(fp, bytes, 11) != 11)
 			continue; /* wut? */
@@ -571,9 +590,11 @@ D00_readnote: /* this goto is kind of ugly... */
 
 		/* It's probably safe to ignore these */
 #if 0
+		log_appendf(1, "inst: %d", c);
 		log_appendf(1, "timer: %d", slurp_getc(fp));
 		log_appendf(1, "sr: %d", slurp_getc(fp));
 		log_appendf(1, "unknown bytes: %d, %d", slurp_getc(fp), slurp_getc(fp));
+		log_nl();
 #else
 		slurp_seek(fp, 1, SEEK_CUR); /* "timer" */
 		slurp_seek(fp, 1, SEEK_CUR); /* "sr" */
