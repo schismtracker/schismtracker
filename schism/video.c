@@ -429,8 +429,7 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 		uint32_t x;
 		uint64_t fixedx;
 
-		/* add (1ul << 31) to round to nearest */
-		const uint32_t scaled_y = ((fixedy + (1ul << 31)) >> 32);
+		const uint32_t scaled_y = fixedy >> 32;
 
 		// only scan again if we have to or if this the first scan
 		if (scaled_y != last_scaled_y || y == 0) {
@@ -453,7 +452,7 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 		}
 
 		for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
-			const uint32_t scaled_x = ((fixedx + (1ul << 31)) >> 32);
+			const uint32_t scaled_x = fixedx >> 32;
 
 			switch (bpp) {
 			case 1: *pixels = pixels_u.uc[scaled_x]; break;
