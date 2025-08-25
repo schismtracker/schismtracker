@@ -830,48 +830,31 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 					const int32_t oldcount = smpcount;
 					const int32_t pos_dest = rshift_signed((channel->position << 16) + (channel->increment * (nsamples - 1)) + channel->position_frac, 16);
 					const int at_loop_start = (channel->position >= channel->loop_start && channel->position < channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
-					int checkdest = 1;
 					if (!at_loop_start)
 						channel->flags &= ~(CHN_LOOP_WRAPPED);
 
 					channel->current_sample_data = smp_ptr;
 					if (channel->position >= lookahead_start) {
 						if (channel->increment < 0) {
-							// going backwards and we're in the loop
+							// going backwards and we're in the loop. We have to set the sample count
+							// from the position from lookahead buffer start...
 							smpcount = samples_to_buffer_length((int32_t)channel->position - lookahead_start, channel);
 							channel->current_sample_data = lookahead_ptr;
-							checkdest = 0;
 						} else if (channel->position <= channel->loop_end) {
 							// going forwards and we're in the loop
 							smpcount = samples_to_buffer_length(channel->loop_end - (int32_t)channel->position, channel);
 							channel->current_sample_data = lookahead_ptr;
-							checkdest = 0;
 						} else {
-							// loop has ended
+							// loop has ended, fix the position and keep going
 							smpcount = samples_to_buffer_length(channel->length - (int32_t)channel->position, channel);
-							checkdest = 1;
 						}
 					} else if ((channel->flags & CHN_LOOP_WRAPPED) && at_loop_start) {
 						// Interpolate properly after looping
 						smpcount = samples_to_buffer_length((channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) - channel->position, channel);
 						channel->current_sample_data = lookahead_ptr + ((channel->length - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
-						checkdest = 0;
 					} else if (channel->increment >= 0 && pos_dest >= (int32_t)lookahead_start && smpcount > 1) {
 						// Don't go past the loop start!
 						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
-						checkdest = 0;
-					}
-
-					if (checkdest) {
-						if ((int32_t)channel->increment < 0) {
-							if (pos_dest < channel->loop_start) {
-								smpcount = samples_to_buffer_length((int32_t)channel->position - channel->loop_start, channel);
-							}
-						} else {
-							if (pos_dest >= (int32_t)channel->length) {
-								smpcount = samples_to_buffer_length((int32_t)channel->length - channel->position, channel);
-							}
-						}
 					}
 
 					smpcount = CLAMP(smpcount, 1u, oldcount);
