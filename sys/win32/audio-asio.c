@@ -297,7 +297,7 @@ static int asio_init_driver(const char *driver)
 	if (!fnd)
 		return -1;
 
-	(void)asio_device_count();
+	(void)asio_device_count(0);
 	return 0;
 }
 

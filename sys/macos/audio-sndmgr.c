@@ -94,7 +94,7 @@ static int sndmgr_audio_init_driver(const char *name)
 	 * do anything anyway.. */
 
 	/* refresh the audio devices */
-	sndmgr_audio_device_count();
+	sndmgr_audio_device_count(0);
 	return 0;
 }
 

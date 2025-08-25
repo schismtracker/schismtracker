@@ -314,7 +314,7 @@ static int macosx_audio_init_driver(const char *driver)
 	if (!fnd)
 		return -1;
 
-	(void)macosx_audio_device_count();
+	(void)macosx_audio_device_count(0);
 	return 0;
 }
 

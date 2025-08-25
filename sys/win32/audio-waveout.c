@@ -200,7 +200,7 @@ static int waveout_audio_init_driver(const char *driver)
 		return -1;
 
 	/* Get the devices */
-	(void)waveout_audio_device_count();
+	(void)waveout_audio_device_count(0);
 	return 0;
 }
 

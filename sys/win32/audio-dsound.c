@@ -243,7 +243,7 @@ static int dsound_audio_init_driver(const char *driver)
 	for (int i = 0; i < ARRAY_SIZE(drivers); i++) {
 		if (!strcmp(drivers[i], driver)) {
 			/* Get the devices */
-			(void)dsound_audio_device_count();
+			(void)dsound_audio_device_count(0);
 			return 0;
 		}
 	}
