@@ -1272,10 +1272,10 @@ uint32_t csf_get_length(song_t *csf)
 		/* This is nasty, but it fixes inaccuracies with SB0 SB1 SB1. (Simultaneous
 		loops in multiple channels are still wildly incorrect, though.) */
 		if (!row)
-			setloop = ~0;
+			setloop = ~(uint64_t)0;
 		if (setloop) {
 			for (n = 0; n < MAX_CHANNELS; n++)
-				if (setloop & (1 << n))
+				if (setloop & (UINT64_C(1) << n))
 					patloop[n] = elapsed;
 			setloop = 0;
 		}
