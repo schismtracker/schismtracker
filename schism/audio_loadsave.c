@@ -433,7 +433,8 @@ static char *mangle_filename(const char *in, const char *mid, const char *ext)
 	char *ret = mem_alloc(baselen + midlen + extlen + 1); /* room for terminating \0 */
 
 	memcpy(ret, in, baselen);
-	memcpy(ret + baselen, mid, midlen);
+	if (mid)
+		memcpy(ret + baselen, mid, midlen);
 	if (*iext)
 		memcpy(ret + baselen + midlen, iext, extlen);
 	else if (ext)
