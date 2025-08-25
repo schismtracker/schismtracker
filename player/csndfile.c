@@ -1336,11 +1336,13 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		int##bits##_t *after_smp_start = smp_data + smp->length * channels; \
 		int##bits##_t *loop_lookahead_start = after_smp_start + copy_samples; \
 		int##bits##_t *sustain_lookahead_start = loop_lookahead_start + 4 * copy_samples; \
+		int i; \
+		int c; \
 		\
 		/* Hold sample on the same level as the last sampling point at the end to prevent extra pops with interpolation.
 		 * Do the same at the sample start, too. */ \
-		for (int i = 0; i < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE; i++) { \
-			for (int c = 0; c < channels; c++) { \
+		for (i = 0; i < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE; i++) { \
+			for (c = 0; c < channels; c++) { \
 				after_smp_start[i * channels + c] = after_smp_start[-channels + c]; \
 				smp_data[-(i + 1) * channels + c] = smp_data[c]; \
 			} \
@@ -1353,8 +1355,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				channels, \
 				smp->flags & CHN_PINGPONGLOOP); \
 		} \
-		if(smp->flags & CHN_SUSTAINLOOP) \
-		{ \
+		if(smp->flags & CHN_SUSTAINLOOP) { \
 			csf_precompute_loop_impl_##bits##_(sustain_lookahead_start, \
 				smp_data + smp->sustain_start * channels, \
 				smp->sustain_end - smp->sustain_start, \
