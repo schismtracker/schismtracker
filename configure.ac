@@ -329,6 +329,7 @@ AC_TYPE_UINTPTR_T
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_TYPE_MODE_T
+AC_TYPE_SSIZE_T
 AC_STRUCT_TM
 
 dnl --------------------------------------------------------------------------
