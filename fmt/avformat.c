@@ -65,6 +65,7 @@ static int (*schism_avcodec_send_packet)(AVCodecContext *avctx, const AVPacket *
 static int (*schism_avcodec_receive_frame)(AVCodecContext *avctx, AVFrame *frame);
 static int (*schism_av_get_bytes_per_sample)(enum AVSampleFormat sample_fmt);
 static void (*schism_avcodec_free_context)(AVCodecContext **avctx);
+static void (*schism_avio_context_free)(AVIOContext **s);
 
 static int avformat_wasinit = 0;
 
@@ -157,10 +158,15 @@ static int avfmt_read_packet(void *opaque, uint8_t *buf, int buf_size)
 	slurp_t *s = opaque;
 	size_t r;
 
+	/* weird, EOF gets unset after read ??????????
+	 * (this shouldn't happen, but whatever) */
+	if (slurp_eof(s))
+		return AVERROR_EOF;
+
 	/* cast to int is safe here */
 	r = slurp_read(s, buf, buf_size);
 	if (!r)
-		return (slurp_eof(s) ? AVERROR_EOF : AVERROR(errno));
+		return (slurp_eof(s) ? AVERROR_EOF : AVERROR_EXTERNAL);
 
 	return r;
 }
@@ -187,8 +193,7 @@ static int64_t avfmt_seek(void *opaque, int64_t offset, int whence)
 
 	r = slurp_seek(s, offset, whence);
 
-	/* do we even set errno ?? */
-	return (r < 0) ? AVERROR(errno) : r;
+	return (r < 0) ? AVERROR_EXTERNAL : slurp_tell(s);
 }
 
 static int sample_fmt_to_sfflags(enum AVSampleFormat fmt, int channels, uint32_t *flags)
@@ -399,7 +404,6 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	AVIOContext *ioctx = NULL;
 	AVFormatContext *fmtctx = NULL;
 	int astr;
-	int use_ioctx = !(file && file->path);
 
 	/* nope */
 	if (!avformat_wasinit)
@@ -409,17 +413,9 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	if (!buffer)
 		goto fail;
 
-	/* UGLY HACK: For whatever reason, when we use the slurp avio context,
-	 * schism completely hangs when reading some files. My workaround for
-	 * now is just to ignore the slurp context and use ffmpeg's builtin one,
-	 * which seems to get around it -- but ideally we would do something
-	 * other than this, because this is stupid.
-	 *   --paper */
-	if (use_ioctx) {
-		ioctx = schism_avio_alloc_context(buffer, SCHISM_AVFORMAT_BUFFER_SIZE, 0, s, avfmt_read_packet, NULL, avfmt_seek);
-		if (!ioctx)
-			goto fail;
-	}
+	ioctx = schism_avio_alloc_context(buffer, SCHISM_AVFORMAT_BUFFER_SIZE, 0, s, avfmt_read_packet, NULL, avfmt_seek);
+	if (!ioctx)
+		goto fail;
 
 	fmtctx = schism_avformat_alloc_context();
 	if (!fmtctx)
@@ -469,13 +465,14 @@ fail:
 	if (ioctx) {
 		schism_av_free(ioctx->buffer);
 		ioctx->buffer = NULL;
-		/* ummm... avio_context_free? */
-		schism_av_free(ioctx);
-		ioctx = NULL;
+		/* ehhhh */
+		schism_avio_context_free(&ioctx);
+	} else if (buffer) {
+		/* `else if` to avoid double free, since
+		 * the ioctx also frees the buffer given to it
+		 * (at least, i think it does ...) */
+		schism_av_free(buffer);
 	}
-
-	/* no need to free the original allocated buffer because it's free'd with
-	 * everything else */
 
 	return success;
 
@@ -599,6 +596,7 @@ static int load_avformat_syms(void)
 	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avformat_alloc_context);
 	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avformat_free_context);
 	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avio_alloc_context);
+	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avio_context_free);
 	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avformat_find_stream_info);
 	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avformat_open_input);
 	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avformat_close_input);
