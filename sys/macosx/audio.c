@@ -148,7 +148,7 @@ static char *_macosx_cfstring_to_utf8(CFStringRef cfstr)
 	return buf;
 }
 
-static uint32_t macosx_audio_device_count(void)
+static uint32_t macosx_audio_device_count(uint32_t flags)
 {
 	OSStatus result;
 	UInt32 size;
@@ -162,6 +162,9 @@ static uint32_t macosx_audio_device_count(void)
 		kAudioObjectPropertyElementMain
 	};
 #endif
+
+	if (flags & AUDIO_BACKEND_CAPTURE)
+		return 0;
 
 	_macosx_audio_free_devices();
 

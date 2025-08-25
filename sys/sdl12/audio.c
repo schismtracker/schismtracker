@@ -187,7 +187,7 @@ static const char *sdl12_audio_driver_name(int x)
 /* --------------------------------------------------------------- */
 
 /* SDL 1.2 doesn't have a concept of audio devices */
-static uint32_t sdl12_audio_device_count(void)
+static uint32_t sdl12_audio_device_count(uint32_t flags)
 {
 	return 0;
 }

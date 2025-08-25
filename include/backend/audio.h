@@ -26,18 +26,34 @@
 
 #include "../song.h"
 
-// Pass this to open_device to get a default audio device
-#define AUDIO_BACKEND_DEFAULT ~((uint32_t)0)
+/* constants */
 
-// defines the interface for each audio backend
+/* pass this to open_device to get the default audio interface for the
+ * system. this may be one of the audio devices listed, but it can also
+ * be something entirely different. */
+#define AUDIO_BACKEND_DEFAULT UINT32_C(0x7FFFFFFF)
+/* this is a flag, bitwise OR it with an audio device ID, and you will
+ * receive an input device. */
+#define AUDIO_BACKEND_CAPTURE UINT32_C(0x80000000)
+
+#define AUDIO_BACKEND_DEVICE_MASK UINT32_C(0x7FFFFFFF)
+
+/* flag: audio backend supports input devices */
+#define AUDIO_BACKEND_FLAG_SUPPORTS_INPUT UINT32_C(1)
+
+/* audio backend vtable */
 typedef struct {
+	/* flags, AUDIO_BACKEND_FLAG_* */
+	uint32_t flags;
+
 	int (*init)(void);
 	void (*quit)(void);
 
 	int (*driver_count)(void);
 	const char *(*driver_name)(int i);
 
-	uint32_t (*device_count)(void);
+	/* flags should be either AUDIO_BACKEND_CAPTURE or 0 */
+	uint32_t (*device_count)(uint32_t flags);
 	const char *(*device_name)(uint32_t i);
 
 	int (*init_driver)(const char *driver);

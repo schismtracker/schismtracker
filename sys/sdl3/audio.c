@@ -53,6 +53,7 @@ static const char *(SDLCALL *sdl3_GetAudioDriver)(int i) = NULL;
 static bool (SDLCALL *sdl3_GetAudioDeviceFormat)(SDL_AudioDeviceID devid, SDL_AudioSpec *spec, int *sample_frames) = NULL;
 static const char * (SDLCALL *sdl3_GetAudioDeviceName)(SDL_AudioDeviceID devid) = NULL;
 static SDL_AudioDeviceID * (SDLCALL *sdl3_GetAudioPlaybackDevices)(int *count) = NULL;
+static SDL_AudioDeviceID * (SDLCALL *sdl3_GetAudioRecordingDevices)(int *count) = NULL;
 
 static SDL_AudioStream *(SDLCALL *sdl3_OpenAudioDeviceStream)(SDL_AudioDeviceID devid, const SDL_AudioSpec *spec, SDL_AudioStreamCallback callback, void *userdata) = NULL;
 static void (SDLCALL *sdl3_DestroyAudioStream)(SDL_AudioStream *stream) = NULL;
@@ -60,6 +61,7 @@ static bool (SDLCALL *sdl3_PauseAudioDevice)(SDL_AudioDeviceID dev) = NULL;
 static bool (SDLCALL *sdl3_ResumeAudioDevice)(SDL_AudioDeviceID dev) = NULL;
 static SDL_AudioDeviceID (SDLCALL *sdl3_GetAudioStreamDevice)(SDL_AudioStream *stream) = NULL;
 static bool (SDLCALL *sdl3_PutAudioStreamData)(SDL_AudioStream *stream, const void *buf, int len) = NULL;
+static int (SDLCALL *sdl3_GetAudioStreamData)(SDL_AudioStream *stream, void *buf, int len) = NULL;
 
 // used to request a specific sample frame size
 static bool (SDLCALL *sdl3_SetHint)(const char *name, const char *value);
@@ -104,32 +106,65 @@ static const char *sdl3_audio_driver_name(int i)
 
 /* ------------------------------------------------------------------------ */
 
-static SDL_AudioDeviceID *devices = NULL;
-static int device_count = 0;
+enum {
+	DEVICES_OUT,
+	DEVICES_IN,
+
+	DEVICES_MAX_
+};
+
+static struct {
+	SDL_AudioDeviceID *arr;
+	int size;
+} devices[DEVICES_MAX_] = {0};
 
 static inline SCHISM_ALWAYS_INLINE void _free_devices(void)
 {
-	if (devices) {
-		sdl3_free(devices);
-		devices = NULL;
+	size_t i;
+
+	for (i = 0; i < DEVICES_MAX_; i++) {
+		if (devices[i].arr)
+			free(devices[i].arr);
+
+		/* zero it out */
+		memset(devices + i, 0, sizeof(*devices));
 	}
 }
 
-static uint32_t sdl3_audio_device_count(void)
+static uint32_t sdl3_audio_device_count(uint32_t flags)
 {
+	int off;
+
 	_free_devices();
 
-	devices = sdl3_GetAudioPlaybackDevices(&device_count);
+	/* get array offset */
+	off = (flags & AUDIO_BACKEND_CAPTURE) ? DEVICES_IN : DEVICES_OUT;
 
-	return device_count;
+	/* select function to call based on capture bit */
+	devices[off].arr = ((flags & AUDIO_BACKEND_CAPTURE)
+		? sdl3_GetAudioRecordingDevices
+		: sdl3_GetAudioPlaybackDevices)(&devices[off].size);
+
+	return devices[off].size;
 }
 
 static const char *sdl3_audio_device_name(uint32_t i)
 {
-	if (i >= INT_MAX) return NULL;
-	if ((int)i >= device_count) return NULL;
+	int off;
 
-	return sdl3_GetAudioDeviceName(devices[i]);
+	if ((i & AUDIO_BACKEND_DEVICE_MASK) >= (uint32_t)INT_MAX)
+		return NULL;
+
+	/* get array offset */
+	off = (i & AUDIO_BACKEND_CAPTURE) ? DEVICES_IN : DEVICES_OUT;
+
+	/* shave off capture bit; we don't need it anymore */
+	i &= AUDIO_BACKEND_DEVICE_MASK;
+
+	if ((int)i >= devices[off].size)
+		return NULL;
+
+	return sdl3_GetAudioDeviceName(devices[off].arr[i]);
 }
 
 /* ---------------------------------------------------------- */
@@ -140,7 +175,7 @@ static int sdl3_audio_init_driver(const char *driver)
 		return -1;
 
 	// force poll for audio devices
-	sdl3_audio_device_count();
+	sdl3_audio_device_count(0);
 
 	return 0;
 }
@@ -149,39 +184,81 @@ static void sdl3_audio_quit_driver(void)
 {
 	schism_quit_audio_impl();
 
-	devices = NULL;
+	_free_devices();
 }
 
 /* -------------------------------------------------------- */
 
-static void SDLCALL sdl3_audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, SCHISM_UNUSED int total_amount)
+/* XXX need to adapt this callback for input devices */
+
+static void SDLCALL sdl3_audio_output_callback(void *userdata,
+	SDL_AudioStream *stream, int additional_amount,
+	SCHISM_UNUSED int total_amount)
 {
 	schism_audio_device_t *dev = (schism_audio_device_t *)userdata;
 
-	SCHISM_RUNTIME_ASSERT(dev->stream == stream, "streams should never differ");
+	SCHISM_RUNTIME_ASSERT(dev->stream == stream,
+		"streams should never differ");
 
-	if (additional_amount > 0) {
-		if (additional_amount > dev->buflen) {
-			dev->buf = mem_realloc(dev->buf, additional_amount);
-			dev->buflen = additional_amount;
-		}
+	if (additional_amount <= 0)
+		return;
 
-		mt_mutex_lock(dev->mutex);
-		dev->callback(dev->buf, additional_amount);
-		mt_mutex_unlock(dev->mutex);
-
-		sdl3_PutAudioStreamData(stream, dev->buf, additional_amount);
+	if (additional_amount > dev->buflen) {
+		dev->buf = mem_realloc(dev->buf, additional_amount);
+		dev->buflen = additional_amount;
 	}
+
+	mt_mutex_lock(dev->mutex);
+	dev->callback(dev->buf, additional_amount);
+	mt_mutex_unlock(dev->mutex);
+
+	sdl3_PutAudioStreamData(stream, dev->buf, additional_amount);
 }
+
+static void SDLCALL sdl3_audio_input_callback(void *userdata,
+	SDL_AudioStream *stream, int additional_amount,
+	SCHISM_UNUSED int total_amount)
+{
+	schism_audio_device_t *dev = (schism_audio_device_t *)userdata;
+	int len;
+
+	SCHISM_RUNTIME_ASSERT(dev->stream == stream,
+		"streams should never differ");
+
+	if (additional_amount <= 0)
+		return;
+
+	/* reallocate internal buffer if necessary */
+	if (additional_amount > dev->buflen) {
+		dev->buf = mem_realloc(dev->buf, additional_amount);
+		dev->buflen = additional_amount;
+	}
+
+	len = sdl3_GetAudioStreamData(stream, dev->buf, additional_amount);
+
+	mt_mutex_lock(dev->mutex);
+	dev->callback(dev->buf, len);
+	mt_mutex_unlock(dev->mutex);
+}
+
+static const SDL_AudioStreamCallback callbacks[DEVICES_MAX_] = {
+	[DEVICES_OUT] = sdl3_audio_output_callback,
+	[DEVICES_IN]  = sdl3_audio_input_callback,
+};
 
 static void sdl3_audio_close_device(schism_audio_device_t *dev);
 
-static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *sdl3_audio_open_device(uint32_t id,
+	const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
-	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
-	dev->callback = desired->callback;
-
+	schism_audio_device_t *dev;
+	SDL_AudioDeviceID sdl_dev_id;
 	uint32_t format;
+	uint32_t mid;
+	int off;
+
+	dev = mem_calloc(1, sizeof(*dev));
+	dev->callback = desired->callback;
 
 	switch (desired->bits) {
 	case 8: format = SDL_AUDIO_U8; break;
@@ -201,39 +278,44 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 		goto fail;
 
 	{
-		// As it turns out, SDL is still just a shell script in disguise, and requires you to
-		// pass everything as strings in order to change behavior. As for why they don't just
-		// include this in the spec structure anymore is beyond me.
+		/* As it turns out, SDL is still just a shell script in disguise, and requires you to
+		 * pass everything as strings in order to change behavior. As for why they don't just
+		 * include this in the spec structure anymore is beyond me. */
 		char buf[64];
 		str_from_num(0, desired->samples, buf);
 		sdl3_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, buf);
 	}
 
-	SDL_AudioDeviceID sdl_device_id = (id == AUDIO_BACKEND_DEFAULT || id >= (uint32_t)device_count)
-		? SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK
-		: devices[id];
+	off = (id & AUDIO_BACKEND_CAPTURE) ? DEVICES_IN : DEVICES_OUT;
 
-	dev->stream = sdl3_OpenAudioDeviceStream(sdl_device_id, &sdl_desired, sdl3_audio_callback, dev);
+	mid = (id & AUDIO_BACKEND_DEVICE_MASK);
 
-	// reset this before checking if opening succeeded
+	sdl_dev_id = (mid >= (uint32_t)devices[off].size || mid == AUDIO_BACKEND_DEFAULT)
+		? ((id & AUDIO_BACKEND_CAPTURE)
+			? SDL_AUDIO_DEVICE_DEFAULT_RECORDING
+			: SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK)
+		: devices[off].arr[mid];
+
+	dev->stream = sdl3_OpenAudioDeviceStream(sdl_dev_id, &sdl_desired, callbacks[off], dev);
+
+	/* reset this before checking if opening succeeded */
 	sdl3_ResetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES);
 
 	if (!dev->stream)
 		goto fail;
 
-	// PAUSE!
-	sdl3_PauseAudioDevice(sdl3_GetAudioStreamDevice(dev->stream));
-
-	// lolwut
+	/* For the most part we can just copy everything */
 	memcpy(obtained, desired, sizeof(schism_audio_spec_t));
 
-	// Retrieve the actual buffer size SDL is using (i.e., don't lie to the user)
-	int samples;
+	/* Retrieve the actual buffer size SDL is using (i.e., don't lie to the user)
+	 * This can also improve speeds since we won't have to deal with different
+	 * buffer sizes clashing ;) */
 	{
+		int samples;
 		SDL_AudioSpec xyzzy;
-		sdl3_GetAudioDeviceFormat(sdl_device_id, &xyzzy, &samples);
+		if (sdl3_GetAudioDeviceFormat(sdl_dev_id, &xyzzy, &samples))
+			obtained->samples = samples;
 	}
-	obtained->samples = samples;
 
 	/* before we hop into the callback, allocate an estimate of what SDL
 	 * is going to want */
@@ -243,8 +325,7 @@ static schism_audio_device_t *sdl3_audio_open_device(uint32_t id, const schism_a
 	return dev;
 
 fail:
-	if (dev)
-		sdl3_audio_close_device(dev);
+	sdl3_audio_close_device(dev);
 
 	return NULL;
 }
@@ -301,6 +382,7 @@ static int sdl3_audio_load_syms(void)
 	SCHISM_SDL3_SYM(GetAudioDriver);
 
 	SCHISM_SDL3_SYM(GetAudioPlaybackDevices);
+	SCHISM_SDL3_SYM(GetAudioRecordingDevices);
 	SCHISM_SDL3_SYM(GetAudioDeviceName);
 
 	SCHISM_SDL3_SYM(OpenAudioDeviceStream);
@@ -310,6 +392,7 @@ static int sdl3_audio_load_syms(void)
 	SCHISM_SDL3_SYM(GetAudioStreamDevice);
 	SCHISM_SDL3_SYM(GetAudioDeviceFormat);
 	SCHISM_SDL3_SYM(PutAudioStreamData);
+	SCHISM_SDL3_SYM(GetAudioStreamData);
 
 	SCHISM_SDL3_SYM(SetHint);
 	SCHISM_SDL3_SYM(ResetHint);

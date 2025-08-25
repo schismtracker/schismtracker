@@ -115,9 +115,14 @@ static size_t devices_size = 0;
  * The only thing I can think of is opening literally every single
  * device and then calling waveOutGetID() to check if it changed,
  * which is obviously stupid and a waste of resources. */
-static uint32_t waveout_audio_device_count(void)
+static uint32_t waveout_audio_device_count(uint32_t flags)
 {
-	const UINT devs = waveOutGetNumDevs();
+	UINT devs;
+
+	if (flags & AUDIO_BACKEND_CAPTURE)
+		return 0;
+
+	devs = waveOutGetNumDevs();
 
 	if (devices) {
 		for (size_t i = 0; i < devices_size; i++)

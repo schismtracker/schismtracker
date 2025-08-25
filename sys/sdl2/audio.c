@@ -100,16 +100,18 @@ static const char *sdl2_audio_driver_name(int i)
 
 /* --------------------------------------------------------------- */
 
-static uint32_t sdl2_audio_device_count(void)
+static uint32_t sdl2_audio_device_count(uint32_t flags)
 {
-	int x = sdl2_GetNumAudioDevices(0);
+	int x;
+
+	x = sdl2_GetNumAudioDevices(!!(flags & AUDIO_BACKEND_CAPTURE));
 
 	return MAX(x, 0);
 }
 
 static const char *sdl2_audio_device_name(uint32_t i)
 {
-	return sdl2_GetAudioDeviceName(i, 0);
+	return sdl2_GetAudioDeviceName(i & AUDIO_BACKEND_DEVICE_MASK, !!(i & AUDIO_BACKEND_CAPTURE));
 }
 
 /* ---------------------------------------------------------- */
@@ -144,14 +146,16 @@ static void SDLCALL sdl2_dummy_callback(void *userdata, uint8_t *stream, int len
 }
 
 // nonzero on success
-static inline int sdl2_audio_open_device_impl(schism_audio_device_t *dev, const char *name, const SDL_AudioSpec *desired, SDL_AudioSpec *obtained, int change)
+static inline int sdl2_audio_open_device_impl(schism_audio_device_t *dev,
+	const char *name, const SDL_AudioSpec *desired, SDL_AudioSpec *obtained,
+	int change, int isinput)
 {
 	// cache the current error
 	const char *err = sdl2_GetError();
 
 	sdl2_ClearError();
 
-	SDL_AudioDeviceID id = sdl2_OpenAudioDevice(name, 0, desired, obtained, change);
+	SDL_AudioDeviceID id = sdl2_OpenAudioDevice(name, !!isinput, desired, obtained, change);
 
 	const char *new_err = sdl2_GetError();
 
@@ -172,6 +176,7 @@ static schism_audio_device_t *sdl2_audio_open_device(uint32_t id, const schism_a
 {
 	schism_audio_device_t *dev;
 	uint32_t format;
+	int change;
 
 	dev = mem_calloc(1, sizeof(*dev));
 	dev->callback = desired->callback;
@@ -193,22 +198,26 @@ static schism_audio_device_t *sdl2_audio_open_device(uint32_t id, const schism_a
 
 	SDL_AudioSpec sdl_obtained;
 
-	const char *name = (id != AUDIO_BACKEND_DEFAULT) ? sdl2_GetAudioDeviceName(id, 0) : NULL;
+	const char *name = ((id & AUDIO_BACKEND_DEVICE_MASK) != AUDIO_BACKEND_DEFAULT)
+		? sdl2_GetAudioDeviceName(id & AUDIO_BACKEND_DEVICE_MASK, !!(id & AUDIO_BACKEND_CAPTURE))
+		: NULL;
+
+	change = SDL_AUDIO_ALLOW_FREQUENCY_CHANGE;
 
 	// First try opening the device without any change at all
 	// (well, except frequencies ;))
-	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE))
+	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change, !!(id & AUDIO_BACKEND_CAPTURE)))
 		goto got_device;
 
-	// Ok, try opening it until we find something that fits.
-	int change = SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE;
+	change = SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE;
 
 	// !!! FIXME: SDL_GetAudioDeviceName might change
-	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change)) {
+	if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change, !!(id & AUDIO_BACKEND_CAPTURE))) {
 		int need_reopen = 0;
 
 		switch (sdl_obtained.format) {
 		case AUDIO_U8: case AUDIO_S16SYS: case AUDIO_S32SYS: break;
+		// TODO we actually can do float32 now
 		default: change &= ~(SDL_AUDIO_ALLOW_FORMAT_CHANGE); need_reopen = 1; break;
 		}
 
@@ -222,7 +231,7 @@ static schism_audio_device_t *sdl2_audio_open_device(uint32_t id, const schism_a
 
 		sdl2_CloseAudioDevice(dev->id);
 
-		if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change))
+		if (sdl2_audio_open_device_impl(dev, name, &sdl_desired, &sdl_obtained, change, !!(id & AUDIO_BACKEND_CAPTURE)))
 			goto got_device;
 	}
 

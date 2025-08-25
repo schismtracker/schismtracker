@@ -275,7 +275,7 @@ void free_audio_device_list(void) {
 int refresh_audio_device_list(void) {
 	free_audio_device_list();
 
-	const uint32_t count = backend ? backend->device_count() : 0;
+	const uint32_t count = backend ? backend->device_count(0) : 0;
 
 	audio_device_list = mem_alloc(count * sizeof(*audio_device_list));
 
@@ -1376,7 +1376,7 @@ uint32_t song_audio_device_id(void)
 
 static int audio_lookup_device_name(const char *device, uint32_t *pdevid)
 {
-	const uint32_t devices_size = backend->device_count();
+	const uint32_t devices_size = backend->device_count(0);
 	uint32_t i;
 
 	for (i = 0; i < devices_size; i++) {

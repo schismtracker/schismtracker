@@ -65,7 +65,7 @@ static void asio_free_devices(void)
 }
 
 /* "drivers" are refreshed every time this is called */
-static uint32_t asio_device_count(void)
+static uint32_t asio_device_count(uint32_t flags)
 {
 	/* this function is one of the unholiest of spaghettis ive ever written */
 	LONG lstatus; /* LSTATUS isn't defined in older MinGW headers */
@@ -79,6 +79,9 @@ static uint32_t asio_device_count(void)
 		WCHAR *w;
 		void *v; /* for allocation */
 	} subkey, dev_desc;
+
+	if (flags & AUDIO_BACKEND_CAPTURE)
+		return 0;
 
 	/* free any existing devices */
 	asio_free_devices();

@@ -209,8 +209,11 @@ DSOUND_ENUMERATE_CALLBACK_VARIANT(LPCWSTR, CHARSET_WCHAR_T, w)
 
 #undef DSOUND_ENUMERATE_CALLBACK_VARIANT
 
-static uint32_t dsound_audio_device_count(void)
+static uint32_t dsound_audio_device_count(uint32_t flags)
 {
+	if (flags & AUDIO_BACKEND_CAPTURE)
+		return 0;
+
 	/* Prefer Unicode */
 	if (DSOUND_DirectSoundEnumerateW && DSOUND_DirectSoundEnumerateW(_dsound_enumerate_callback_w, NULL) == DS_OK)
 		return devices_size;

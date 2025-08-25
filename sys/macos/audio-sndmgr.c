@@ -65,7 +65,7 @@ struct schism_audio_device {
 };
 
 static void sndmgr_free_devices(void);
-static uint32_t sndmgr_audio_device_count(void);
+static uint32_t sndmgr_audio_device_count(uint32_t);
 
 /* ---------------------------------------------------------- */
 /* drivers */
@@ -139,13 +139,16 @@ static void sndmgr_free_devices(void)
 	free(devices);
 }
 
-static uint32_t sndmgr_audio_device_count(void)
+static uint32_t sndmgr_audio_device_count(uint32_t flags)
 {
 	Component lcpnt;
 	ComponentDescription cdesc = {0};
 	long ncomponents;
 	long i;
 	OSErr err;
+
+	if (flags & AUDIO_BACKEND_CAPTURE)
+		return 0;
 
 	cdesc.componentType = kSoundOutputDeviceType;
 
