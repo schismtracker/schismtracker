@@ -1407,7 +1407,8 @@ void csf_stop_sample(song_t *csf, song_sample_t *smp)
 			v->fadeout_volume = 0;
 			v->flags |= CHN_KEYOFF | CHN_NOTEFADE;
 			v->frequency = 0;
-			v->position = v->length = 0;
+			v->position = csf_smp_pos(0,0);
+			v->length = 0;
 			v->loop_start = 0;
 			v->loop_end = 0;
 			v->rofs = v->lofs = 0;

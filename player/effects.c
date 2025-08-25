@@ -99,7 +99,7 @@ void fx_note_cut(song_t *csf, uint32_t nchan, SCHISM_UNUSED int clear_note)
 	chan->flags |= CHN_NOTEFADE | CHN_FASTVOLRAMP;
 	//if (chan->ptr_instrument) chan->volume = 0;
 	//chan->frequency = 0;
-	chan->increment = 0;
+	chan->increment = csf_smp_pos(0,0);
 	chan->fadeout_volume = 0;
 	//chan->length = 0;
 
@@ -155,8 +155,8 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 			chan->loop_start = psmp->loop_start;
 			chan->loop_end = psmp->loop_end;
 			if (chan->length > chan->loop_end) chan->length = chan->loop_end;
-			if (chan->position >= chan->length)
-				chan->position = chan->position - chan->length + chan->loop_start;
+			if (csf_smp_pos_ge(chan->position, csf_smp_pos(chan->length, 0)))
+				chan->position = csf_smp_pos_add(csf_smp_pos_sub(chan->position, csf_smp_pos(chan->length, 0)), csf_smp_pos(chan->loop_start, 0));
 		} else {
 			chan->flags &= ~(CHN_LOOP|CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
 			chan->length = psmp->length;
@@ -576,7 +576,7 @@ static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
 		chan->cd_retrig = param & 0xf;
 	} else if (--chan->cd_retrig <= 0) {
 		// in Impulse Tracker, retrig only works if a sample is currently playing in the channel
-		if (!chan->position && BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG))
+		if (csf_smp_pos_equals_zero(chan->position) && BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG))
 			return;
 		
 		chan->cd_retrig = param & 0xf;
@@ -598,7 +598,7 @@ static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
 		csf_note_change(csf, nchan, note, 1, 1, 0);
 		if (frequency && chan->row_note == NOTE_NONE)
 			chan->frequency = frequency;
-		chan->position = chan->position_frac = 0;
+		chan->position = csf_smp_pos(0,0);
 	}
 }
 
@@ -1447,7 +1447,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	 *
 	 * OpenMPT test cases:
 	 * PortaInsNumCompat.it, PortaSampleCompat.it, PortaCutCompat.it */
-	if (chan->ptr_sample && psmp != chan->ptr_sample && porta && chan->increment && csf->flags & SONG_COMPATGXX)
+	if (chan->ptr_sample && psmp != chan->ptr_sample && porta && !csf_smp_pos_equals_zero(chan->increment) && csf->flags & SONG_COMPATGXX)
 		psmp = chan->ptr_sample;
 
 	/* OpenMPT test case InstrAfterMultisamplePorta.it:
@@ -1529,7 +1529,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	}
 
 	if (porta && !chan->length)
-		chan->increment = 0;
+		chan->increment = csf_smp_pos(0,0);
 
 	chan->flags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE
 			   | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
@@ -1553,7 +1553,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 			chan->panning = psmp->panning;
 		chan->instrument_volume = old_instrument_volume;
 		chan->volume = psmp->volume;
-		chan->position = 0;
+		chan->position = csf_smp_pos(0,0);
 		return;
 	}
 
@@ -1573,7 +1573,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	chan->loop_end = psmp->loop_end;
 	chan->c5speed = psmp->c5speed;
 	chan->current_sample_data = psmp->data;
-	chan->position = 0;
+	chan->position = csf_smp_pos(0,0);
 
 	if ((chan->flags & CHN_SUSTAINLOOP) && (!porta || (penv && !was_key_off))) {
 		chan->loop_start = psmp->sustain_start;
@@ -1640,7 +1640,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	if(!porta && pins)
 		chan->c5speed = pins->c5speed;
 
-	if (porta && !chan->increment)
+	if (porta && csf_smp_pos_equals_zero(chan->increment))
 		porta = 0;
 
 	note = CLAMP(note, NOTE_FIRST, NOTE_LAST);
@@ -1675,10 +1675,10 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 				chan->loop_end = pins->loop_end;
 				if (chan->length > chan->loop_end) chan->length = chan->loop_end;
 			}
-			chan->position = chan->position_frac = 0;
+			chan->position = csf_smp_pos(0,0);
 		}
-		if (chan->position >= chan->length)
-			chan->position = chan->loop_start;
+		if (csf_smp_pos_ge(chan->position, csf_smp_pos(chan->length, 0)))
+			chan->position = csf_smp_pos(chan->loop_start, 0);
 	} else {
 		porta = 0;
 	}
@@ -1810,7 +1810,8 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 		p->fadeout_volume = 0;
 		p->flags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
 		// Stop this channel
-		chan->length = chan->position = chan->position_frac = 0;
+		chan->length = 0;
+		chan->position = csf_smp_pos(0,0);
 		chan->rofs = chan->lofs = 0;
 		chan->left_volume = chan->right_volume = 0;
 		if (chan->flags & CHN_ADLIB) {
@@ -1888,7 +1889,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 		return;
 
 	// New Note Action
-	if (chan->increment && chan->length) {
+	if (!csf_smp_pos_equals_zero(chan->increment) && chan->length) {
 		uint32_t n = csf_get_nna_channel(csf, nchan);
 		if (n) {
 			p = &csf->voices[n];
@@ -1916,7 +1917,8 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 				p->flags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
 			}
 			// Stop this channel
-			chan->length = chan->position = chan->position_frac = 0;
+			chan->length = 0;
+			chan->position = csf_smp_pos(0,0);
 			chan->rofs = chan->lofs = 0;
 		}
 	}
@@ -2008,10 +2010,9 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		if (param)
 			chan->mem_offset = (chan->mem_offset & ~0xff00) | (param << 8);
 		if (NOTE_IS_NOTE(chan->row_instr ? chan->new_note : chan->row_note)) {
-			chan->position = chan->mem_offset;
-			if (chan->position > chan->length) {
-				chan->position = (csf->flags & SONG_ITOLDEFFECTS) ? chan->length : 0;
-			}
+			chan->position = csf_smp_pos(chan->mem_offset, 0);
+			if (csf_smp_pos_gt(chan->position, csf_smp_pos(chan->length, 0)))
+				chan->position = csf_smp_pos((csf->flags & SONG_ITOLDEFFECTS) ? chan->length : 0, 0);
 		}
 		break;
 
@@ -2430,9 +2431,8 @@ void csf_process_effects(song_t *csf, int firsttick)
 					chan->new_instrument = 0;
 
 				if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_PORTAMENTO_SWAP_RESETS_POSITION)) {
-					if (NOTE_IS_NOTE(note) && psmp != chan->ptr_sample) {
-						chan->position = chan->position_frac = 0;
-					}
+					if (NOTE_IS_NOTE(note) && psmp != chan->ptr_sample)
+						chan->position = csf_smp_pos(0,0);
 				} else if (psmp != chan->ptr_sample && NOTE_IS_NOTE(note)) {
 					// Special IT case: portamento+note causes sample change -> ignore portamento
 					porta = 0;

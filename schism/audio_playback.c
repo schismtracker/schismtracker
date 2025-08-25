@@ -618,8 +618,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		// an instrument that has no sample mapped for the given note. In this case, ignore the note.
 		note = NOTE_NONE;
 	}
-	if (c->increment < 0)
-		c->increment = -c->increment; // lousy hack
+	if (csf_smp_pos_is_negative(c->increment))
+		c->increment = csf_smp_pos_negate(c->increment); // lousy hack
 	csf_note_change(current_song, chan_internal, note, 0, 0, 1);
 
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {

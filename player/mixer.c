@@ -104,40 +104,49 @@
 
 #define SNDMIX_BEGINSAMPLELOOP(bits) \
 	register song_voice_t * const chan = channel; \
-	position = chan->position_frac; \
-	const int##bits##_t *p = (int##bits##_t *)(chan->current_sample_data) + chan->position; \
-	if (chan->flags & CHN_STEREO) p += chan->position; \
+	position = chan->position; \
+	const int##bits##_t *p = (int##bits##_t *)chan->current_sample_data; \
 	int32_t *pvol = pbuffer; \
 	uint32_t max = chan->vu_meter; \
 	do {
 
 
 #define SNDMIX_ENDSAMPLELOOP \
-		position += chan->increment; \
+		position = csf_smp_pos_add(position, chan->increment); \
 	} while (pvol < pbufmax); \
 	chan->vu_meter = max; \
-	chan->position  += position >> 16; \
-	chan->position_frac = position & 0xFFFF;
+	chan->position = position;
 
 //////////////////////////////////////////////////////////////////////////////
 // Mono
 
+#define SNDMIX_GETLINEARPOS \
+	int32_t poshi   = csf_smp_pos_get_whole(position); \
+	int32_t poslo   = csf_smp_pos_get_frac(position) >> 24;
+
+#define SNDMIX_GETSPLINEPOS \
+	int32_t poshi = csf_smp_pos_get_whole(position); \
+	/* FIXME this is stupid */ \
+	int32_t poslo = rshift_signed(rshift_signed(csf_smp_pos_get_full(position), 16), SPLINE_FRACSHIFT) & SPLINE_FRACMASK;
+
+#define SNDMIX_GETFIRFILTERPOS \
+	int32_t poshi  = csf_smp_pos_get_whole(position); \
+	int32_t poslo  = csf_smp_pos_get_frac(position) >> 16;
+
 // No interpolation
 #define SNDMIX_GETMONOVOLNOIDO(bits) \
-	int32_t vol = lshift_signed(p[position >> 16], -bits + 16);
+	int32_t vol = lshift_signed(p[csf_smp_pos_get_whole(position)], -bits + 16);
 
 // Linear Interpolation
 #define SNDMIX_GETMONOVOLLINEAR(bits) \
-	int32_t poshi  = position >> 16; \
-	int32_t poslo   = (position >> 8) & 0xFF; \
+	SNDMIX_GETLINEARPOS \
 	int32_t srcvol  = p[poshi]; \
 	int32_t destvol = p[poshi + 1]; \
 	int32_t vol     = lshift_signed(srcvol, -bits + 16) + rshift_signed(poslo * (destvol - srcvol), bits - 8);
 
 // spline interpolation (2 guard bits should be enough???)
 #define SNDMIX_GETMONOVOLSPLINE(bits) \
-	int32_t poshi = position >> 16; \
-	int32_t poslo = rshift_signed(position, SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
+	SNDMIX_GETSPLINEPOS \
 	int32_t vol   = rshift_signed( \
 		  cubic_spline_lut[poslo + 0] * (int32_t)p[poshi - 1] \
 		+ cubic_spline_lut[poslo + 1] * (int32_t)p[poshi + 0] \
@@ -147,8 +156,7 @@
 
 // fir interpolation
 #define SNDMIX_GETMONOVOLFIRFILTER(bits) \
-	int32_t poshi  = position >> 16; \
-	int32_t poslo  = (position & 0xFFFF); \
+	SNDMIX_GETFIRFILTERPOS \
 	int32_t firidx = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
 	int32_t vol = rshift_signed( \
 		rshift_signed( \
@@ -169,12 +177,11 @@
 // Stereo
 
 #define SNDMIX_GETSTEREOVOLNOIDO(bits) \
-	int32_t vol_l = lshift_signed(p[(position >> 16) * 2 + 0], -bits + 16); \
-	int32_t vol_r = lshift_signed(p[(position >> 16) * 2 + 1], -bits + 16);
+	int32_t vol_l = lshift_signed(p[(csf_smp_pos_get_whole(position)) * 2 + 0], -bits + 16); \
+	int32_t vol_r = lshift_signed(p[(csf_smp_pos_get_whole(position)) * 2 + 1], -bits + 16);
 
 #define SNDMIX_GETSTEREOVOLLINEAR(bits) \
-	int32_t poshi    = position >> 16; \
-	int32_t poslo    = (position >> 8) & 0xFF; \
+	SNDMIX_GETLINEARPOS \
 	int32_t srcvol_l = p[poshi * 2 + 0]; \
 	int32_t srcvol_r = p[poshi * 2 + 1]; \
 	int32_t vol_l    = lshift_signed(srcvol_l, -bits + 16) + rshift_signed(poslo * (p[poshi * 2 + 2] - srcvol_l), bits - 8); \
@@ -182,8 +189,7 @@
 
 // Spline Interpolation
 #define SNDMIX_GETSTEREOVOLSPLINE(bits) \
-	int32_t poshi   = position >> 16; \
-	int32_t poslo   = (position >> SPLINE_FRACSHIFT) & SPLINE_FRACMASK; \
+	SNDMIX_GETSPLINEPOS \
 	int32_t vol_l   = rshift_signed( \
 			cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2] + \
 			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2] + \
@@ -199,8 +205,7 @@
 
 // fir interpolation
 #define SNDMIX_GETSTEREOVOLFIRFILTER(bits) \
-	int32_t poshi   = position >> 16; \
-	int32_t poslo   = (position & 0xFFFF); \
+	SNDMIX_GETFIRFILTERPOS \
 	int32_t firidx  = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
 	int32_t vol_l = rshift_signed( \
 		rshift_signed( \
@@ -315,7 +320,7 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 #define BEGIN_MIX_INTERFACE(func) \
 	static void func(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
 	{ \
-		int32_t position;
+		struct song_smp_pos position;
 
 
 #define END_MIX_INTERFACE() \
@@ -398,17 +403,17 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 #define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \
 	SCHISM_SIMD void func(sampletype *oldbuf, sampletype *newbuf, uint32_t oldlen, uint32_t newlen) \
 	{ \
-		uint64_t position = 0; \
+		struct song_smp_pos position = csf_smp_pos(0,0); \
 		const sampletype *p = oldbuf; \
 		sampletype *pvol = newbuf; \
 		const sampletype *pbufmax = &newbuf[newlen* numchannels]; \
-		uint64_t increment = (((uint64_t)oldlen) << 16) / newlen; \
+		struct song_smp_pos increment = csf_smp_pos_div_whole(csf_smp_pos(oldlen, 0), newlen); \
 		do {
 
 #define END_RESAMPLE_INTERFACE_MONO() \
 			*pvol = vol; \
 			pvol++; \
-			position += increment; \
+			position = csf_smp_pos_add(position, increment); \
 		} while (pvol < pbufmax); \
 	}
 
@@ -416,7 +421,7 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 			pvol[0] = vol_l; \
 			pvol[1] = vol_r; \
 			pvol += 2; \
-			position += increment; \
+			position = csf_smp_pos_add(position, increment); \
 		} while (pvol < pbufmax); \
 	}
 
@@ -518,156 +523,219 @@ static const mix_interface_t mix_functions[2 * 2 * 16] = {
 	BUILD_MIX_FUNCTION_TABLE(FirFilter)
 };
 
-static inline SCHISM_ALWAYS_INLINE int32_t buffer_length_to_samples(uint32_t mix_buf_cnt, song_voice_t *chan)
+/* yap */
+static inline SCHISM_ALWAYS_INLINE
+uint32_t distance_to_buffer_length(struct song_smp_pos from, struct song_smp_pos to, struct song_smp_pos increment)
 {
-	return (chan->increment * (int32_t)mix_buf_cnt) + chan->position_frac;
+	return ((uint32_t)csf_smp_pos_div(csf_smp_pos_sub(csf_smp_pos_sub(to, from), csf_smp_pos(1,0)), increment)) + 1;
 }
 
-static inline SCHISM_ALWAYS_INLINE uint32_t samples_to_buffer_length(int32_t samples, song_voice_t *chan)
+struct mix_loop_state {
+	int8_t *smp_ptr;
+	int8_t *lookahead_ptr;
+	uint32_t lookahead_start;
+	int32_t maxsamples;
+};
+
+static void mix_loop_state_update_lookahead_ptrs(struct mix_loop_state *mls, song_voice_t *channel)
 {
-	return (uint32_t)((lshift_signed(samples - 1, 16)) / safe_abs_32(chan->increment)) + 1u;
+	// Our loop lookahead buffer is basically the exact same as OpenMPT's.
+	// (in essence, it is mostly just a backport)
+	//
+	// This means that it has the same bugs that are notated in OpenMPT's
+	// `soundlib/Fastmix.cpp' file, which are the following:
+	//
+	// - Playing samples backwards should reverse interpolation LUTs for interpolation modes
+	//   with more than two taps since they're not symmetric. We might need separate LUTs
+	//   because otherwise we will add tons of branches.
+	// - Loop wraparound works pretty well in general, but not at the start of bidi samples.
+	// - The loop lookahead stuff might still fail for samples with backward loops.
+	mls->smp_ptr = channel->ptr_sample ? (int8_t *const)(channel->ptr_sample->data) : NULL;
+	mls->lookahead_ptr = NULL;
+	mls->lookahead_start = (channel->loop_end < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
+		? channel->loop_start
+		: MAX(channel->loop_start, channel->loop_end - MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
+	// This shouldn't be necessary with interpolation disabled but with that conditional
+	// it causes weird precision loss within the sample, hence why I've removed it. This
+	// shouldn't be that heavy anyway :p
+	if (channel->ptr_sample && (channel->flags & CHN_LOOP)) {
+		song_sample_t *pins = channel->ptr_sample;
+
+		uint32_t lookahead_offset = (((channel->flags & CHN_SUSTAINLOOP) ? 7 : 3) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
+			+ (pins->length - channel->loop_end);
+
+		mls->lookahead_ptr = mls->smp_ptr + (lookahead_offset
+			* ((pins->flags & CHN_STEREO) ? 2 : 1)
+			* ((pins->flags & CHN_16BIT)  ? 2 : 1));
+	}
 }
 
-static int32_t get_sample_count(song_voice_t *chan, int32_t samples)
+static void mix_loop_state_init(struct mix_loop_state *mls, song_voice_t *chan)
+{
+	if (!chan->current_sample_data)
+		return;
+
+	memset(mls, 0, sizeof(*mls));
+
+	mix_loop_state_update_lookahead_ptrs(mls, chan);
+
+	struct song_smp_pos inv = chan->increment;
+	if (csf_smp_pos_is_negative(inv))
+		inv = csf_smp_pos_negate(inv);
+
+	mls->maxsamples = 16384u / (csf_smp_pos_get_whole(inv) + 1u);
+	mls->maxsamples = MAX(mls->maxsamples, 2);
+}
+
+static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, int32_t samples)
 {
 	int32_t loop_start = (chan->flags & CHN_LOOP) ? chan->loop_start : 0;
-	int32_t increment = chan->increment;
+	struct song_smp_pos increment = chan->increment;
 
-	if (samples <= 0 || !increment || !chan->length)
+	if (samples <= 0 || csf_smp_pos_equals_zero(increment) || !chan->length)
 		return 0;
 
-	// Under zero ?
-	if ((int32_t)chan->position < loop_start) {
-		if (increment < 0) {
-			// Invert loop for bidi loops
-			int32_t delta = ((loop_start - chan->position) << 16) - (chan->position_frac & 0xFFFF);
-			chan->position = loop_start + (delta >> 16);
-			chan->position_frac = delta & 0xFFFF;
+	/* reset this */
+	chan->current_sample_data = mls->smp_ptr;
 
-			if ((int32_t) chan->position < loop_start ||
-				chan->position >= (loop_start + chan->length) / 2) {
-				chan->position = loop_start;
-				chan->position_frac = 0;
+	// Under zero ?
+
+	if (csf_smp_pos_lt(chan->position, csf_smp_pos(loop_start, 0))) {
+		if (csf_smp_pos_is_negative(increment)) {
+			// Invert loop for bidi loops
+			struct song_smp_pos delta = csf_smp_pos_sub(csf_smp_pos(loop_start, 0), chan->position); 
+			chan->position = csf_smp_pos_add(csf_smp_pos(loop_start, 0), delta);
+
+			if (csf_smp_pos_lt(chan->position, csf_smp_pos(loop_start, 0))
+				|| csf_smp_pos_ge(chan->position, csf_smp_pos((loop_start + chan->length) / 2, 0))) {
+				chan->position = csf_smp_pos(loop_start, 0);
 			}
 
-			increment = -increment;
+			increment = csf_smp_pos_negate(increment);
 			chan->increment = increment;
 			// go forward
 			chan->flags &= ~(CHN_PINGPONGFLAG);
 
 			if ((!(chan->flags & CHN_LOOP)) ||
-				(chan->position >= chan->length)) {
-				chan->position = chan->length;
-				chan->position_frac = 0;
+				(csf_smp_pos_ge(chan->position, csf_smp_pos(chan->length, 0)))) {
+				chan->position = csf_smp_pos(chan->length, 0);
 				return 0;
 			}
 		} else {
 			// We probably didn't hit the loop end yet (first loop), so we do nothing
-			if ((int32_t)chan->position < 0)
-				chan->position = 0;
+			if (csf_smp_pos_is_negative(chan->position))
+				chan->position = csf_smp_pos(0, 0);
 		}
 	}
 	// Past the end
-	else if (chan->position >= chan->length) {
+	else if (csf_smp_pos_ge(chan->position, csf_smp_pos(chan->length, 0))) {
 		// not looping -> stop this channel
 		if (!(chan->flags & CHN_LOOP))
 			return 0;
 
 		if (chan->flags & CHN_PINGPONGLOOP) {
 			// Invert loop
-			if (increment > 0) {
-				increment = -increment;
+			if (csf_smp_pos_is_positive(increment)) {
+				increment = csf_smp_pos_negate(increment);
 				chan->increment = increment;
 			}
 
 			chan->flags |= CHN_PINGPONGFLAG;
 			// adjust loop position
-			uint64_t overshoot = (uint64_t)((chan->position - chan->length) << 16) + chan->position_frac;
-			uint64_t loop_length = (uint64_t)(chan->loop_end - chan->loop_start - PINGPONG_OFFSET) << 16;
-			if (overshoot < loop_length) {
-				uint64_t new_position = ((uint64_t)(chan->length - PINGPONG_OFFSET) << 16) - overshoot;
-				chan->position = (uint32_t)(new_position >> 16);
-				chan->position_frac = (uint32_t)(new_position & 0xFFFF);
+			struct song_smp_pos overshoot = csf_smp_pos_sub(chan->position, csf_smp_pos(chan->length, 0));
+			struct song_smp_pos loop_length = csf_smp_pos(chan->loop_end - chan->loop_start - PINGPONG_OFFSET, 0);
+			if (csf_smp_pos_lt(overshoot, loop_length)) {
+				chan->position = csf_smp_pos_sub(csf_smp_pos(chan->length - PINGPONG_OFFSET, 0), overshoot);
+			} else {
+				/* not 100% accurate, but only matters for extremely small loops played at extremely high frequencies */
+				chan->position = csf_smp_pos(chan->loop_start, 0);
 			}
-			else {
-				chan->position = chan->loop_start; /* not 100% accurate, but only matters for extremely small loops played at extremely high frequencies */
-				chan->position_frac = 0;
-			}
-		}
-		else {
+		} else {
 			// This is a bug
-			if (increment < 0) {
-				increment = -increment;
+			if (csf_smp_pos_is_negative(increment)) {
+				increment = csf_smp_pos_negate(increment);
 				chan->increment = increment;
 			}
 
 			// Restart at loop start
-			chan->position += loop_start - chan->length;
+			chan->position = csf_smp_pos_add(chan->position, csf_smp_pos(loop_start - chan->length, 0));
 
-			if ((int) chan->position < loop_start)
-				chan->position = chan->loop_start;
+			if (csf_smp_pos_lt(chan->position, csf_smp_pos(loop_start, 0)))
+				chan->position = csf_smp_pos(chan->loop_start, 0);
 
 			chan->flags |= CHN_LOOP_WRAPPED;
 		}
 	}
 
-	int32_t position = chan->position;
+	int32_t position = csf_smp_pos_get_whole(chan->position);
 
 	// too big increment, and/or too small loop length
 	if (position < loop_start) {
-		if (position < 0 || increment < 0)
+		if (position < 0 || csf_smp_pos_is_negative(increment))
 			return 0;
 	}
 
 	if (position < 0 || position >= (int32_t)chan->length)
 		return 0;
 
-	int32_t position_frac = (uint16_t) chan->position_frac,
-		 sample_count = samples;
+	//int32_t position_frac = csf_smp_pos_get_frac(chan->position);
+	int32_t sample_count = samples;
 
-	if (increment < 0) {
-		int32_t inv = -increment;
-		int32_t maxsamples = 16384 / ((inv >> 16) + 1);
+	struct song_smp_pos inv = increment;
+	if (csf_smp_pos_is_negative(inv))
+		inv = csf_smp_pos_negate(inv);
 
-		if (maxsamples < 2)
-			maxsamples = 2;
+	sample_count = MIN(sample_count, mls->maxsamples);
 
-		if (samples > maxsamples)
-			samples = maxsamples;
+	struct song_smp_pos inc_samples = csf_smp_pos_mul_whole(increment, sample_count - 1);
+	int32_t pos_dest = csf_smp_pos_get_whole(csf_smp_pos_add(chan->position, inc_samples));
 
-		int32_t delta_hi = (inv >> 16) * (samples - 1);
-		int32_t delta_lo = (inv & 0xffff) * (samples - 1);
-		int32_t pos_dest = position - delta_hi + ((position_frac - delta_lo) >> 16);
+	const int at_loop_start = (csf_smp_pos_ge(chan->position, csf_smp_pos(chan->loop_start, 0))
+		&& csf_smp_pos_lt(chan->position, csf_smp_pos(chan->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE, 0)));
+	if (!at_loop_start)
+		chan->flags &= ~(CHN_LOOP_WRAPPED);
 
-		if (pos_dest < loop_start) {
-			sample_count =
-				(uint32_t) (((((int64_t) position -
-					loop_start) << 16) + position_frac -
-					  1) / inv) + 1;
-		}
-	} else {
-		int32_t maxsamples = 16384 / ((increment >> 16) + 1);
-
-		if (maxsamples < 2)
-			maxsamples = 2;
-
-		if (samples > maxsamples)
-			samples = maxsamples;
-
-		int32_t delta_hi = (increment >> 16) * (samples - 1);
-		int32_t delta_lo = (increment & 0xffff) * (samples - 1);
-		int32_t pos_dest = position + delta_hi + ((position_frac + delta_lo) >> 16);
-
-		if (pos_dest >= (int32_t) chan->length) {
-			sample_count = (uint32_t)
-				(((((int64_t) chan->length - position) << 16) - position_frac - 1) / increment) + 1;
+	int checkdest = 1;
+	// Loop wrap-around magic. (yummers)
+	if (mls->lookahead_ptr) {
+		if (csf_smp_pos_ge(chan->position, csf_smp_pos(mls->lookahead_start, 0))) {
+			if (csf_smp_pos_is_negative(chan->increment)) {
+				// going backwards and we're in the loop. We have to set the sample count
+				// from the position from lookahead buffer start...
+				sample_count = distance_to_buffer_length(csf_smp_pos(mls->lookahead_start, 0), chan->position, inv);
+				chan->current_sample_data = mls->lookahead_ptr;
+			} else if (csf_smp_pos_le(chan->position, csf_smp_pos(chan->loop_end, 0))) {
+				// going forwards, and we're in the loop
+				sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(chan->loop_end, 0), inv);
+				chan->current_sample_data = mls->lookahead_ptr;
+			} else {
+				// loop has ended, fix the position and keep going
+				sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(chan->length, 0), inv);
+			}
+			checkdest = 0;
+		} else if ((chan->flags & CHN_LOOP_WRAPPED) && at_loop_start) {
+			// Interpolate properly after looping
+			sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE, 0), inv);
+			chan->current_sample_data = mls->lookahead_ptr + ((chan->length - loop_start) * ((chan->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((chan->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
+			checkdest = 0;
+		} else if (csf_smp_pos_is_positive(chan->increment) && pos_dest >= (int32_t)mls->lookahead_start && sample_count > 1) {
+			// Don't go past the loop start!
+			sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(mls->lookahead_start, 0), inv);
+			checkdest = 0;
 		}
 	}
 
-	if (sample_count <= 1)
-		return 1;
-	else if (sample_count > samples)
-		return samples;
+	if (checkdest) {
+		if (csf_smp_pos_is_negative(increment)) {
+			if (pos_dest < loop_start)
+				sample_count = distance_to_buffer_length(csf_smp_pos(loop_start, 0), chan->position, inv);
+		} else {
+			if (pos_dest >= (int32_t)chan->length)
+				sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(chan->length, 0), inv);
+		}
+	}
+
+	sample_count = CLAMP(sample_count, 1, samples);
 
 	return sample_count;
 }
@@ -739,39 +807,10 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 		nchused++;
 
-		// Our loop lookahead buffer is basically the exact same as OpenMPT's.
-		// (in essence, it is mostly just a backport)
-		//
-		// This means that it has the same bugs that are notated in OpenMPT's
-		// `soundlib/Fastmix.cpp' file, which are the following:
-		//
-		// - Playing samples backwards should reverse interpolation LUTs for interpolation modes
-		//   with more than two taps since they're not symmetric. We might need separate LUTs
-		//   because otherwise we will add tons of branches.
-		// - Loop wraparound works pretty well in general, but not at the start of bidi samples.
-		// - The loop lookahead stuff might still fail for samples with backward loops.
-		int8_t *const smp_ptr = channel->ptr_sample ? (int8_t *const)(channel->ptr_sample->data) : NULL;
-		int8_t *lookahead_ptr = NULL;
-		const uint32_t lookahead_start = (channel->loop_end < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
-			? channel->loop_start
-			: MAX(channel->loop_start, channel->loop_end - MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
-		// This shouldn't be necessary with interpolation disabled but with that conditional
-		// it causes weird precision loss within the sample, hence why I've removed it. This
-		// shouldn't be that heavy anyway :p
-		if (channel->ptr_sample && (channel->flags & CHN_LOOP)) {
-			song_sample_t *pins = channel->ptr_sample;
-
-			uint32_t lookahead_offset = (((channel->flags & CHN_SUSTAINLOOP) ? 7 : 3) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
-				+ (pins->length - channel->loop_end);
-
-			lookahead_ptr = smp_ptr + (lookahead_offset
-				* ((pins->flags & CHN_STEREO) ? 2 : 1)
-				* ((pins->flags & CHN_16BIT)  ? 2 : 1));
-		}
-
 		////////////////////////////////////////////////////
 		uint32_t naddmix = 0;
-
+		struct mix_loop_state mls;
+		mix_loop_state_init(&mls, channel);
 		channel->vu_meter <<= 16;
 
 		do {
@@ -789,15 +828,14 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 			 * artificial KeyOffs)
 			 */
 			if (!(channel->flags & CHN_ADLIB)) {
-				smpcount = get_sample_count(channel, nrampsamples);
+				smpcount = get_sample_count(&mls, channel, nrampsamples);
 			}
 
 			if (smpcount <= 0) {
 				// Stopping the channel
 				channel->current_sample_data = NULL;
 				channel->length = 0;
-				channel->position = 0;
-				channel->position_frac = 0;
+				channel->position = csf_smp_pos(0,0);
 				channel->ramp_length = 0;
 				end_channel_ofs(channel, pbuffer, nsamples);
 				*ofsr += channel->rofs;
@@ -811,9 +849,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 			if ((nchmixed >= csf->max_voices && !(csf->mix_flags & SNDMIX_DIRECTTODISK))
 				|| (!channel->ramp_length && !(channel->left_volume | channel->right_volume))) {
-				int32_t delta = buffer_length_to_samples(smpcount, channel);
-				channel->position_frac = delta & 0xFFFF;
-				channel->position += (delta >> 16);
+				channel->position = csf_smp_pos_add(channel->position, csf_smp_pos_mul_whole(channel->increment, smpcount));
 				channel->rofs = channel->lofs = 0;
 				pbuffer += smpcount * 2;
 			} else if (!(channel->flags & CHN_ADLIB)) {
@@ -824,41 +860,6 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				mix_func = channel->ramp_length
 					? mix_functions[flags | MIXNDX_RAMP]
 					: mix_functions[flags];
-
-				// Loop wrap-around magic
-				if (lookahead_ptr) {
-					const int32_t oldcount = smpcount;
-					const int32_t pos_dest = rshift_signed((channel->position << 16) + (channel->increment * (nsamples - 1)) + channel->position_frac, 16);
-					const int at_loop_start = (channel->position >= channel->loop_start && channel->position < channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
-					if (!at_loop_start)
-						channel->flags &= ~(CHN_LOOP_WRAPPED);
-
-					channel->current_sample_data = smp_ptr;
-					if (channel->position >= lookahead_start) {
-						if (channel->increment < 0) {
-							// going backwards and we're in the loop. We have to set the sample count
-							// from the position from lookahead buffer start...
-							smpcount = samples_to_buffer_length((int32_t)channel->position - lookahead_start, channel);
-							channel->current_sample_data = lookahead_ptr;
-						} else if (channel->position <= channel->loop_end) {
-							// going forwards and we're in the loop
-							smpcount = samples_to_buffer_length(channel->loop_end - (int32_t)channel->position, channel);
-							channel->current_sample_data = lookahead_ptr;
-						} else {
-							// loop has ended, fix the position and keep going
-							smpcount = samples_to_buffer_length(channel->length - (int32_t)channel->position, channel);
-						}
-					} else if ((channel->flags & CHN_LOOP_WRAPPED) && at_loop_start) {
-						// Interpolate properly after looping
-						smpcount = samples_to_buffer_length((channel->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE) - channel->position, channel);
-						channel->current_sample_data = lookahead_ptr + ((channel->length - channel->loop_start) * ((channel->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((channel->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
-					} else if (channel->increment >= 0 && pos_dest >= (int32_t)lookahead_start && smpcount > 1) {
-						// Don't go past the loop start!
-						smpcount = samples_to_buffer_length(lookahead_start - channel->position, channel);
-					}
-
-					smpcount = CLAMP(smpcount, 1u, oldcount);
-				}
 
 				int32_t *pbufmax = pbuffer + (smpcount * 2);
 				channel->rofs = -*(pbufmax - 2);
@@ -891,6 +892,9 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				}
 			}
 		} while (nsamples > 0);
+
+		/* Restore sample pointer in case it got changed through loop wrap-around */
+		channel->current_sample_data = mls.smp_ptr;
 
 		channel->vu_meter >>= 16;
 		if (channel->vu_meter > 0xFF)

@@ -302,6 +302,159 @@ enum {
 #define SF(a,b,c,d) (SF_ ## a | SF_ ## b| SF_ ## c | SF_ ## d)
 
 // ------------------------------------------------------------------------------------------------------------
+/* this might seem totally insane, but it makes this shit easier to change when
+ * it needs to be changed (see: 32.16 precision to 32.32 precision) */
+
+struct song_smp_pos {
+	int64_t v;
+};
+
+/* constructor */
+static inline SCHISM_ALWAYS_INLINE
+struct song_smp_pos csf_smp_pos(int32_t whole, uint32_t frac)
+{
+	struct song_smp_pos pos;
+	pos.v = lshift_signed((int64_t)whole, 32) | frac;
+	return pos;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int64_t csf_smp_pos_get_full(struct song_smp_pos v)
+{
+	return v.v; /* breaking: hit new emoticon */
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int32_t csf_smp_pos_get_whole(struct song_smp_pos pos)
+{
+	return rshift_signed(pos.v, 32);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+uint32_t csf_smp_pos_get_frac(struct song_smp_pos pos)
+{
+	return (pos.v & 0xFFFFFFFF);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_equals_one(struct song_smp_pos pos)
+{
+	return (pos.v == INT64_C(0x100000000));
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_equals_zero(struct song_smp_pos pos)
+{
+	return !pos.v;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_is_positive(struct song_smp_pos pos)
+{
+	/* what about zero? */
+	return pos.v > 0;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_is_negative(struct song_smp_pos pos)
+{
+	return pos.v < 0;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+struct song_smp_pos csf_smp_pos_add(struct song_smp_pos a, struct song_smp_pos b)
+{
+	a.v += b.v;
+	return a;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+struct song_smp_pos csf_smp_pos_sub(struct song_smp_pos a, struct song_smp_pos b)
+{
+	a.v -= b.v;
+	return a;
+}
+
+/* multiplication by scalar */
+static inline SCHISM_ALWAYS_INLINE
+struct song_smp_pos csf_smp_pos_mul_whole(struct song_smp_pos a, int64_t b)
+{
+	a.v *= b;
+	return a;
+}
+
+/* division by another smp pos, returns scalar */
+static inline SCHISM_ALWAYS_INLINE
+int64_t csf_smp_pos_div(struct song_smp_pos a, struct song_smp_pos b)
+{
+	return (a.v / b.v);
+}
+
+/* division by scalar, returns smp pos */
+static inline SCHISM_ALWAYS_INLINE
+struct song_smp_pos csf_smp_pos_div_whole(struct song_smp_pos a, int64_t b)
+{
+	a.v /= b;
+	return a;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_lt(struct song_smp_pos a, struct song_smp_pos b)
+{
+	return (a.v < b.v);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_gt(struct song_smp_pos a, struct song_smp_pos b)
+{
+	return (a.v > b.v);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_le(struct song_smp_pos a, struct song_smp_pos b)
+{
+	return (a.v <= b.v);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_ge(struct song_smp_pos a, struct song_smp_pos b)
+{
+	return (a.v >= b.v);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_equ(struct song_smp_pos a, struct song_smp_pos b)
+{
+	return (a.v == b.v);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int csf_smp_pos_neq(struct song_smp_pos a, struct song_smp_pos b)
+{
+	return (a.v != b.v);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+struct song_smp_pos csf_smp_pos_negate(struct song_smp_pos v)
+{
+	v.v = -v.v;
+	return v;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+struct song_smp_pos csf_smp_pos_ratio(int32_t dividend, uint32_t divisor)
+{
+	return csf_smp_pos_div_whole(csf_smp_pos(dividend, 0), divisor);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+struct song_smp_pos csf_smp_pos_muldiv(struct song_smp_pos v, uint32_t mul, uint32_t div)
+{
+	v.v = (v.v * mul) / div;
+	return v;
+}
+
+/* ------------------------------------------------------------------------ */
 
 typedef struct song_sample {
 	uint32_t length;
@@ -372,9 +525,8 @@ typedef struct song_instrument {
 typedef struct song_voice {
 	// First 32-bytes: Most used mixing information: don't change it
 	signed char * current_sample_data;
-	uint32_t position; // sample position, fixed-point -- integer part
-	uint32_t position_frac; // fractional part
-	int32_t increment; // 16.16 fixed point, how much to add to position per sample-frame of output
+	struct song_smp_pos position;
+	struct song_smp_pos increment;
 	int32_t right_volume; // volume of the left channel
 	int32_t left_volume; // volume of the right channel
 	int32_t right_ramp; // amount to ramp the left channel
@@ -812,17 +964,19 @@ void csf_forget_history(song_t *csf); // Send the edit log down the memory hole.
 /* apply a preset Adlib patch */
 void adlib_patch_apply(song_sample_t *smp, int32_t patchnum);
 
-///////////////////////////////////////////////////////////
+/* ------------------------------------------------------------------------ */
 
 // Return (a*b)/c - no divide error
-static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldiv(int32_t a, int32_t b, int32_t c)
+static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldiv(int32_t a,
+	int32_t b, int32_t c)
 {
 	return ((int64_t) a * (int64_t) b ) / c;
 }
 
 
 // Return (a*b+c/2)/c - no divide error
-static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldivr(int32_t a, int32_t b, int32_t c)
+static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldivr(int32_t a,
+	int32_t b, int32_t c)
 {
 	return ((int64_t) a * (int64_t) b + rshift_signed(c, 1)) / c;
 }

@@ -897,7 +897,7 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t * sa
 			continue;
 		if (!channel->final_volume) continue;
 		c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? SAMPLE_BGMARK_COLOR : SAMPLE_MARK_COLOR;
-		x = channel->position * (r->width - 1) / sample->length;
+		x = csf_smp_pos_get_whole(channel->position) * (r->width - 1) / sample->length;
 		if (x >= r->width) {
 			/* this does, in fact, happen :( */
 			continue;

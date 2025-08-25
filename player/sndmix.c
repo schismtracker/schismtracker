@@ -557,13 +557,13 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 		chan->flags |= CHN_NOIDO;
 		break;
 	case SRCMODE_LINEAR:
-		if (chan->increment >= 0xFF00) {
+		if (csf_smp_pos_ge(chan->increment, csf_smp_pos(0, 0xFF000000U))) {
 			chan->flags |= CHN_NOIDO;
 			break;
 		}
 		SCHISM_FALLTHROUGH;
 	default:
-		if (chan->increment == 0x10000)
+		if (csf_smp_pos_equ(chan->increment, csf_smp_pos(1, 0)))
 			chan->flags |= CHN_NOIDO;
 	}
 
@@ -574,7 +574,7 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 
 	// Checking Ping-Pong Loops
 	if (chan->flags & CHN_PINGPONGFLAG)
-		chan->increment = -chan->increment;
+		chan->increment = csf_smp_pos_negate(chan->increment);
 
 	if (chan->flags & CHN_MUTE) {
 		chan->left_volume = chan->right_volume = 0;
@@ -1115,7 +1115,7 @@ int32_t csf_read_note(song_t *csf)
 				continue;
 
 		// Reset channel data
-		chan->increment = 0;
+		chan->increment = csf_smp_pos(0,0);
 		chan->final_volume = 0;
 		chan->final_panning = chan->panning + chan->pan_swing;
 
@@ -1217,12 +1217,15 @@ int32_t csf_read_note(song_t *csf)
 
 			chan->sample_freq = frequency;
 
-			int32_t ninc = _muldiv(frequency, 0x10000, csf->mix_frequency);
+			struct song_smp_pos ninc = csf_smp_pos_ratio(frequency, csf->mix_frequency);
 
 			if (csf->freq_factor != 128)
-				ninc = (ninc * csf->freq_factor) >> 7;
+				ninc = csf_smp_pos_muldiv(ninc, csf->freq_factor, 128);
 
-			chan->increment = MAX(1, ninc);
+			if (csf_smp_pos_equals_zero(ninc))
+				ninc = csf_smp_pos(0, 1);
+
+			chan->increment = ninc;
 		} else {
 			/* ... */
 			rn_process_midi_macro(csf, chan);
@@ -1240,11 +1243,11 @@ int32_t csf_read_note(song_t *csf)
 			chan->strike--;
 
 		// Check for too big increment
-		if ((rshift_signed(chan->increment, 16) + 1) >= (int32_t)(chan->loop_end - chan->loop_start))
+		if (csf_smp_pos_get_whole(chan->increment) + 1 >= (int32_t)(chan->loop_end - chan->loop_start))
 			chan->flags &= ~CHN_LOOP;
 
 		chan->right_volume_new = chan->left_volume_new = 0;
-		if (!(chan->length && chan->increment))
+		if (!(chan->length && !csf_smp_pos_equals_zero(chan->increment)))
 			chan->current_sample_data = NULL;
 
 		if (chan->current_sample_data) {
