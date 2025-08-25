@@ -273,7 +273,18 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	} else {
 		/* updated this to be able to work with the mixing buffer
 		 * directly  --paper */
-		OPLUpdateOne(csf->opl, csf->mix_buffer, count, vu_max);
+		uint32_t j;
+		int32_t *buffers[18] = {0};
+
+		for (i = 0; i < 9; i++) {
+			int32_t opl_v = csf->opl_to_chan[i];
+			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
+				continue;
+
+			buffers[i] = (csf->voices[opl_v].flags & CHN_MUTE) ? NULL : csf->mix_buffer;
+		}
+
+		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
 	}
 
 	for (i = 0; i < 9 /*18*/; i++) {
