@@ -120,13 +120,13 @@ static int read_mid_mtrk(struct mtrk *mtrk, slurp_t *fp)
 }
 
 struct event {
-	unsigned int pulse; // the PPQN-tick, counting from zero, when this midi-event happens
+	uint32_t pulse; // the PPQN-tick, counting from zero, when this midi-event happens
 	uint8_t chan; // target channel (0-based!)
 	song_note_t note; // the note data (new data will overwrite old data in same channel+row)
 	struct event *next;
 };
 
-static struct event *alloc_event(unsigned int pulse, uint8_t chan, const song_note_t *note, struct event *next)
+static struct event *alloc_event(uint32_t pulse, uint8_t chan, const song_note_t *note, struct event *next)
 {
 	struct event *ev = mem_alloc(sizeof(struct event));
 	ev->pulse = pulse;
@@ -139,10 +139,10 @@ static struct event *alloc_event(unsigned int pulse, uint8_t chan, const song_no
 /* --------------------------------------------------------------------------------------------------------- */
 // support functions
 
-static unsigned int read_varlen(slurp_t *fp)
+static uint32_t read_varlen(slurp_t *fp)
 {
 	int b;
-	unsigned int v = 0;
+	uint32_t v = 0;
 
 	// This will fail tremendously if a value overflows. I don't care.
 	do {
@@ -192,8 +192,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		uint8_t instrument;
 	} midich[16] = {{NOTE_NONE, NOTE_NONE, 0}};
 	char *message_cur = song->message;
-	unsigned int message_left = MAX_MESSAGE;
-	unsigned int pulse = 0; // cumulative time from start of track
+	uint32_t message_left = MAX_MESSAGE;
+	uint32_t pulse = 0; // cumulative time from start of track
 	uint8_t patch_samples[128] = {0};
 	uint8_t nsmp = 1; // Next free sample
 
@@ -215,14 +215,14 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	event_queue = alloc_event(0, 0, &note, NULL);
 
 	for (int trknum = 0; trknum < mthd.num_tracks; trknum++) {
-		unsigned int delta; // time since last event (read from file)
-		unsigned int vlen; // some other generic varlen number
-		unsigned char rs = 0; // running status byte
-		unsigned char status; // THIS status byte (as opposed to rs)
-		unsigned char hi, lo, cn, x, y;
-		unsigned int bpm; // stupid
+		uint32_t delta; // time since last event (read from file)
+		uint32_t vlen; // some other generic varlen number
+		uint8_t rs = 0; // running status byte
+		uint8_t status; // THIS status byte (as opposed to rs)
+		uint8_t hi, lo, cn, x, y;
+		uint32_t bpm; // stupid
 		int found_end = 0;
-		long nextpos;
+		int64_t nextpos;
 
 		cur = event_queue->next;
 		prev = event_queue;
@@ -491,7 +491,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		it'd be nice to aim for the "middle" of ticks instead of the start of them, that way if an
 			event is just barely off, it won't end up shifted way ahead.
 		*/
-		unsigned int delta = cur->pulse - pulse;
+		uint32_t delta = cur->pulse - pulse;
 
 		if (delta) {
 			// Increment position
