@@ -152,7 +152,7 @@ char *str_from_num(int digits, uint32_t n, char buf[11])
 		snprintf(buf, digits + 1, fmt, n);
 		buf[digits] = 0;
 	} else {
-		snprintf(buf, 3, "%" PRIu32, n);
+		snprintf(buf, 11, "%" PRIu32, n);
 	}
 	return buf;
 }
