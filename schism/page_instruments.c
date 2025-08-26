@@ -38,6 +38,9 @@
 #include "osdefs.h"
 #include "mem.h"
 #include "str.h"
+#ifdef USE_NETWORK
+# include "network.h"
+#endif
 
 /* --------------------------------------------------------------------- */
 /* just one global variable... */
@@ -148,6 +151,10 @@ static void save_envelope(int slot, song_envelope_t *e, unsigned int sec)
 		|       (ins->flags & ENV_FILTER);
 		break;
 	};
+
+#ifdef USE_NETWORK
+	Network_SendInstrument(current_instrument - 1);
+#endif
 }
 static void restore_envelope(int slot, song_envelope_t *e, unsigned int sec)
 {
@@ -185,6 +192,10 @@ static void restore_envelope(int slot, song_envelope_t *e, unsigned int sec)
 		break;
 
 	};
+
+#ifdef USE_NETWORK
+	Network_SendInstrument(current_instrument - 1);
+#endif
 
 	song_unlock_audio();
 
@@ -311,6 +322,9 @@ static int instrument_list_add_char(int c)
 	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
+#ifdef USE_NETWORK
+	Network_SendInstrument(current_instrument - 1);
+#endif
 	return 1;
 }
 
@@ -322,6 +336,9 @@ static void instrument_list_delete_char(void)
 	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
+#ifdef USE_NETWORK
+	Network_SendInstrument(current_instrument - 1);
+#endif
 }
 
 static void instrument_list_delete_next_char(void)
@@ -332,6 +349,9 @@ static void instrument_list_delete_next_char(void)
 	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
+#ifdef USE_NETWORK
+	Network_SendInstrument(current_instrument - 1);
+#endif
 }
 
 static void clear_instrument_text(void)
@@ -346,6 +366,9 @@ static void clear_instrument_text(void)
 	get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
 	status.flags |= NEED_UPDATE;
 	status.flags |= SONG_NEEDS_SAVE;
+#ifdef USE_NETWORK
+	Network_SendInstrument(current_instrument - 1);
+#endif
 }
 
 /* --------------------------------------------------------------------- */

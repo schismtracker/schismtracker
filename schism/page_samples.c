@@ -38,6 +38,9 @@
 #include "mem.h"
 #include "str.h"
 #include "fakemem.h"
+#ifdef USE_NETWORK
+# include "network.h"
+#endif
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -670,6 +673,13 @@ static void do_post_loop_cut(SCHISM_UNUSED void *bweh) /* I'm already using 'dat
 
 	sample->length = pos;
 	csf_adjust_sample_loop(sample);
+#ifdef USE_NETWORK
+	if (current_sample > 0) {
+		Network_SendSample(current_sample - 1);
+		Network_SendNewSample(current_sample - 1);
+		Network_SendSampleData(current_sample - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -711,6 +721,13 @@ static void do_pre_loop_cut(SCHISM_UNUSED void *bweh)
 	else
 		sample->sustain_end = 0;
 	csf_adjust_sample_loop(sample);
+#ifdef USE_NETWORK
+	if (current_sample > 0) {
+		Network_SendSample(current_sample - 1);
+		Network_SendNewSample(current_sample - 1);
+		Network_SendSampleData(current_sample - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -776,6 +793,13 @@ static void do_txtsynth(SCHISM_UNUSED void *data)
 	sample->flags &= ~(CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN
 			   | CHN_16BIT | CHN_STEREO | CHN_ADLIB);
 	csf_adjust_sample_loop(sample);
+#ifdef USE_NETWORK
+	if (current_sample > 0) {
+		Network_SendSample(current_sample - 1);
+		Network_SendNewSample(current_sample - 1);
+		Network_SendSampleData(current_sample - 1);
+	}
+#endif
 	sample_host_dialog(-1);
 
 	status.flags |= SONG_NEEDS_SAVE;
@@ -878,6 +902,14 @@ static void do_adlibconfig(SCHISM_UNUSED void *data)
 		sample->global_volume = 64;
 	}
 	sample_host_dialog(-1);
+
+#ifdef USE_NETWORK
+	if (current_sample > 0) {
+		Network_SendSample(current_sample - 1);
+		Network_SendNewSample(current_sample - 1);
+		Network_SendSampleData(current_sample - 1);
+	}
+#endif
 
 	status.flags |= SONG_NEEDS_SAVE;
 }
@@ -1858,6 +1890,11 @@ static void update_sample_loop_flags(void)
 	/* update any samples currently playing */
 	song_update_playing_sample(current_sample);
 
+#ifdef USE_NETWORK
+	if (current_sample > 0)
+		Network_SendSample(current_sample - 1);
+#endif
+
 	song_unlock_audio();
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
@@ -1910,8 +1947,15 @@ static void update_sample_loop_points(void)
 		&widgets_samplelist[14].d.numentry.value,
 		&flags_changed, sample->length);
 
-	if (flags_changed)
+	if (flags_changed) {
 		update_sample_loop_flags();
+	} else {
+#ifdef USE_NETWORK
+		/* need to send sample data */
+		if (current_sample > 0)
+			Network_SendSample(current_sample - 1);
+#endif
+	}
 
 	csf_adjust_sample_loop(sample);
 

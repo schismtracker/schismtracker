@@ -29,6 +29,9 @@
 #include "song.h"
 #include "sample-edit.h"
 #include "fakemem.h"
+#ifdef USE_NETWORK
+# include "network.h"
+#endif
 
 #include "player/cmixer.h"
 
@@ -85,6 +88,10 @@ void sample_sign_convert(song_sample_t * sample)
 	else
 		_sign_convert_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 	csf_adjust_sample_loop(sample);
+#ifdef USE_NETWORK
+	/* ehhhhhhh */
+	Network_SendSampleData(sample - current_song->samples - 1);
+#endif
 	song_unlock_audio();
 }
 
@@ -140,6 +147,13 @@ void sample_reverse(song_sample_t * sample)
 	sample->sustain_end = tmp;
 
 	csf_adjust_sample_loop(sample);
+
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		/* ehhhhhhh */
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 
 	song_unlock_audio();
 }
@@ -208,6 +222,12 @@ void sample_toggle_quality(song_sample_t * sample, int convert_data)
 	}
 	csf_adjust_sample_loop(sample);
 	memused_songchanged();
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		/* ehhhhhhh */
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -250,6 +270,12 @@ void sample_centralise(song_sample_t * sample)
 		_centralise_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 	csf_adjust_sample_loop(sample);
 	memused_songchanged();
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		/* ehhhhhhh */
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -282,6 +308,13 @@ void sample_downmix(song_sample_t *sample)
 	sample->flags &= ~CHN_STEREO;
 	csf_adjust_sample_loop(sample);
 	memused_songchanged();
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		Network_SendSample(sample - current_song->samples - 1);
+		Network_SendNewSample(sample - current_song->samples - 1);
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -316,6 +349,12 @@ void sample_amplify(song_sample_t * sample, int32_t percent)
 	else
 		_amplify_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1), percent);
 	csf_adjust_sample_loop(sample);
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		/* ehhhhhhh */
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -379,6 +418,12 @@ void sample_delta_decode(song_sample_t * sample)
 	else
 		_delta_decode_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 	csf_adjust_sample_loop(sample);
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		/* ehhhhhhh */
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -411,6 +456,12 @@ void sample_invert(song_sample_t * sample)
 	else
 		_invert_8(sample->data, sample->length * ((sample->flags & CHN_STEREO) ? 2 : 1));
 	csf_adjust_sample_loop(sample);
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		/* ehhhhhhh */
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -517,6 +568,13 @@ void sample_resize(song_sample_t * sample, uint32_t newlen, int aa)
 	csf_adjust_sample_loop(sample);
 
 	memused_songchanged();
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		Network_SendSample(sample - current_song->samples - 1);
+		Network_SendNewSample(sample - current_song->samples - 1);
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 
 	song_unlock_audio();
 }
@@ -549,6 +607,13 @@ static inline void sample_mono_(song_sample_t *sample, int off)
 	}
 	csf_adjust_sample_loop(sample);
 	memused_songchanged();
+#ifdef USE_NETWORK
+	if (sample - current_song->samples > 0) {
+		Network_SendSample(sample - current_song->samples - 1);
+		Network_SendNewSample(sample - current_song->samples - 1);
+		Network_SendSampleData(sample - current_song->samples - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -615,5 +680,10 @@ void sample_crossfade(song_sample_t *smp, uint32_t fade_length, int32_t law, int
 	}
 
 	csf_adjust_sample_loop(smp);
+#ifdef USE_NETWORK
+	if (smp - current_song->samples > 0) {
+		Network_SendSampleData(smp - current_song->samples - 1);
+	}
+#endif
 	song_unlock_audio();
 }

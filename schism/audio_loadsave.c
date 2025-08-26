@@ -35,6 +35,9 @@
 #include "osdefs.h"
 #include "mem.h"
 #include "str.h"
+#ifdef USE_NETWORK
+# include "network.h"
+#endif
 
 #include "fmt.h"
 #include "dmoz.h"
@@ -128,6 +131,8 @@ void song_new(int flags)
 			}
 			current_song->pattern_size[i] = 64;
 			current_song->pattern_alloc_size[i] = 64;
+
+			/* XXX send patterns */
 		}
 	}
 	if ((flags & KEEP_SAMPLES) == 0) {
@@ -135,12 +140,20 @@ void song_new(int flags)
 			if (current_song->samples[i].data) {
 				csf_free_sample(current_song->samples[i].data);
 			}
+
+#ifdef USE_NETWORK
+			Network_SendDeleteSample(i - 1);
+#endif
 		}
 		memset(current_song->samples, 0, sizeof(current_song->samples));
 		for (i = 1; i < MAX_SAMPLES; i++) {
 			current_song->samples[i].c5speed = 8363;
 			current_song->samples[i].volume = 64 * 4;
 			current_song->samples[i].global_volume = 64;
+
+#ifdef USE_NETWORK
+			Network_SendSample(i - 1);
+#endif
 		}
 	}
 	if ((flags & KEEP_INSTRUMENTS) == 0) {
@@ -148,6 +161,10 @@ void song_new(int flags)
 			if (current_song->instruments[i]) {
 				csf_free_instrument(current_song->instruments[i]);
 				current_song->instruments[i] = NULL;
+
+#ifdef USE_NETWORK
+				Network_SendInstrument(i - 1);
+#endif
 			}
 		}
 	}
@@ -166,6 +183,11 @@ void song_new(int flags)
 			current_song->voices[i].flags = current_song->channels[i].flags;
 			current_song->voices[i].cutoff = 0x7F;
 		}
+
+#ifdef USE_NETWORK
+		/* send ALL song data */
+		Network_SendSongData(512, 0);
+#endif
 	}
 
 	current_song->repeat_count = 0;
@@ -337,6 +359,11 @@ int song_load_unchecked(const char *file)
 	if (!nins)
 		*strrchr(fmt, ',') = 0; // cut off 'instruments'
 	log_appendf(5, fmt, csf_get_num_patterns(current_song), nsmp, nins);
+
+#ifdef USE_NETWORK
+	/* ok */
+	Network_OnServerConnect();
+#endif
 
 	return 1;
 }
@@ -634,6 +661,12 @@ void song_clear_sample(int n)
 	current_song->samples[n].c5speed = 8363;
 	current_song->samples[n].volume = 64 * 4;
 	current_song->samples[n].global_volume = 64;
+#ifdef USE_NETWORK
+	if (n > 0) {
+		Network_SendDeleteSample(n - 1);
+		Network_SendSample(n - 1);
+	}
+#endif
 	song_unlock_audio();
 }
 
@@ -656,6 +689,14 @@ void song_copy_sample(int n, song_sample_t *src)
 		memcpy(current_song->samples[n].data, src->data, bytelength);
 		csf_adjust_sample_loop(current_song->samples + n);
 	}
+
+#ifdef USE_NETWORK
+	if (n > 0) {
+		Network_SendSample(n - 1);
+		Network_SendNewSample(n - 1);
+		Network_SendSampleData(n - 1);
+	}
+#endif
 
 	song_unlock_audio();
 }
@@ -762,6 +803,13 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 	unslurp(&s);
 	song_unlock_audio();
+
+#ifdef USE_NETWORK
+	/* sample is already sent in song_copy_sample, so
+	 * we only have to handle instruments */
+	if (target > 0)
+		Network_SendInstrument(target - 1);
+#endif
 
 	return r;
 }
@@ -870,6 +918,17 @@ int song_load_sample(int n, const char *file)
 
 	memcpy(&(current_song->samples[n]), &smp, sizeof(song_sample_t));
 	song_unlock_audio();
+
+#ifdef USE_NETWORK
+	if (n > 0) {
+		/* sample header */
+		Network_SendSample(n - 1);
+		/* sample length */
+		Network_SendNewSample(n - 1);
+		/* sample data */
+		Network_SendSampleData(n - 1);
+	}
+#endif
 
 	unslurp(&s);
 

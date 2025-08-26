@@ -53,6 +53,9 @@
 #include "timer.h"
 #include "mt.h"
 #include "mem.h"
+#ifdef USE_NETWORK
+# include "network.h"
+#endif
 
 #include "osdefs.h"
 
@@ -835,6 +838,10 @@ SCHISM_NORETURN static void event_loop(void)
 			while (start + 10 > timer_ticks() && dmoz_worker() && !events_have_event());
 		}
 
+#ifdef USE_NETWORK
+		Network_Worker();
+#endif
+
 		/* sleep for a little bit to not hog CPU time */
 		if (!events_have_event())
 			timer_msleep(5);
@@ -997,6 +1004,10 @@ void schism_exit(int x)
 #endif
 #ifdef USE_AVFORMAT
 	avformat_quit();
+#endif
+#ifdef USE_NETWORK
+	/* close any open network stuff */
+	Network_Close();
 #endif
 
 	if (shutdown_process & EXIT_SAVECFG)
@@ -1164,9 +1175,9 @@ int schism_main(int argc, char** argv)
 #endif
 
 #if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2) && !defined(SCHISM_XBOX)
-	signal(SIGINT, exit);
-	signal(SIGQUIT, exit);
-	signal(SIGTERM, exit);
+	signal(SIGINT, schism_exit);
+	signal(SIGQUIT, schism_exit);
+	signal(SIGTERM, schism_exit);
 #endif
 
 	video_mousecursor(cfg_video_mousecursor);
@@ -1223,6 +1234,17 @@ int schism_main(int argc, char** argv)
 #endif
 	/* poll once */
 	midi_engine_poll_ports();
+
+#ifdef USE_NETWORK
+	/* this is stupid hacky, but it gets the job done for testing */
+	if (argc >= 2) {
+		if (!strcmp(argv[1], "client")) {
+			Network_StartClient("localhost", NETWORK_DEFAULT_PORT);
+		} else if (!strcmp(argv[1], "server")) {
+			Network_StartServer(NETWORK_DEFAULT_PORT);
+		}
+	}
+#endif
 
 	event_loop();
 
