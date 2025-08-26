@@ -65,6 +65,13 @@ static inline void OPLUpdateOne(void *chip, int32_t *buffer, int length, uint32_
 	OPLUpdateMulti(chip, buffers, length, vu_max);
 }
 
+/* Schismtracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
+fmopl works in 16bits, although tested output used to range +-10000 instead of
+	+-20000 from adlibtracker/screamtracker in dosbox. So we need 11 bits + 1 extra bit.
+Also note when comparing volumes, that Screamtracker output on mono with PCM samples is not reduced by half.
+*/
+#define OPL_VOLUME 2274
+
 /*
 The documentation in this file regarding the output ports,
 including the comment "Don't ask me why", are attributed
@@ -257,34 +264,38 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
 	// and do the panning here.
-	if (csf->multi_write) {
+	{
 		uint32_t j;
 		int32_t *buffers[OPL_CHANNELS] = {0};
 
-		for (i = 0; i < OPL_CHANNELS; i++) {
-			int32_t opl_v = csf->opl_to_chan[i];
-			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
-				continue;
+		if (csf->multi_write) {
+			for (i = 0; i < OPL_CHANNELS; i++) {
+				int32_t opl_v = csf->opl_to_chan[i];
+				if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
+					continue;
 
-			buffers[i] = csf->multi_write[opl_v].buffer;
+				buffers[i] = csf->multi_write[opl_v].buffer;
+			}
+		} else {
+			/* updated this to be able to work with the mixing buffer
+			* directly  --paper */
+			for (i = 0; i < ARRAY_SIZE(buffers); i++) {
+				int32_t opl_v = csf->opl_to_chan[i];
+				if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
+					continue;
+
+				buffers[i] = (csf->voices[opl_v].flags & CHN_MUTE) ? NULL : csf->mix_buffer;
+			}
 		}
 
 		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
-	} else {
-		/* updated this to be able to work with the mixing buffer
-		 * directly  --paper */
-		uint32_t j;
-		int32_t *buffers[OPL_CHANNELS] = {0};
 
-		for (i = 0; i < OPL_CHANNELS; i++) {
-			int32_t opl_v = csf->opl_to_chan[i];
-			if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
-				continue;
+		for (i = 0; i < ARRAY_SIZE(buffers); i++) {
+			if (!buffers[i]) continue;
 
-			buffers[i] = (csf->voices[opl_v].flags & CHN_MUTE) ? NULL : csf->mix_buffer;
+			for (j = 0; j < sz; j++)
+				buffers[i][j] *= OPL_VOLUME;
 		}
-
-		OPLUpdateMulti(csf->opl, buffers, count, vu_max);
 	}
 
 	for (i = 0; i < OPL_CHANNELS; i++) {
@@ -575,7 +586,7 @@ void OPL_Patch(song_t *csf, int32_t c, const unsigned char *D)
 	SendByte(csf, WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
 
 	/* feedback, additive synthesis and Panning... */
-	SendByte(csf, FEEDBACK_CONNECTION+oplc,
+	SendByte(csf, FEEDBACK_CONNECTION+(oplc % OPL_BANK_SIZE),
 		(D[10] & ~STEREO_BITS)
 		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
 			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
@@ -596,6 +607,7 @@ void OPL_Reset(song_t *csf)
 	for(a = 0; a < MAX_VOICES; ++a) {
 		csf->opl_from_chan[a]=-1;
 	}
+
 	for(a = 0; a < OPL_CHANNELS; ++a) {
 		csf->opl_to_chan[a]= -1;
 		csf->opl_dtab[a] = NULL;

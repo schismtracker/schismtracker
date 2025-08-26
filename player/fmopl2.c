@@ -2060,7 +2060,7 @@ do { \
 	vu_max[CHN] = MAX(vu_max[CHN], ab); \
 \
 	if (buffers[CHN]) { \
-		int32_t sample = OPL->output[0] * OPL_VOLUME; \
+		int32_t sample = OPL->output[0]; \
 		buffers[CHN][i*2+0] += sample; \
 		buffers[CHN][i*2+1] += sample; \
 	} \
