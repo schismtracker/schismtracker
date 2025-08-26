@@ -325,7 +325,8 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		song->channels[n].flags |= CHN_MUTE;
 	song->pan_separation = 64;
 
-	sprintf(song->tracker_id, "ST Music Interface Kit (1.%d)", subversion);
+	snprintf(song->tracker_id, sizeof(song->tracker_id),
+		"ST Music Interface Kit (1.%d)", subversion);
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;

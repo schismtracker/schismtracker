@@ -284,7 +284,7 @@ static void sample_list_predraw_hook(void)
 	widgets_samplelist[19].d.thumbbar.value = sample->vib_rate;
 
 	if (has_data) {
-		sprintf(buf, "%d bit%s",
+		snprintf(buf, sizeof(buf), "%d bit%s",
 			(sample->flags & CHN_16BIT) ? 16 : 8,
 			(sample->flags & CHN_STEREO) ? " Stereo" : "");
 	} else {

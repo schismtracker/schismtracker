@@ -235,7 +235,7 @@ static void file_list_draw(void)
 		}
 
 		if (file->sampsize > 1) {
-			sprintf(sbuf, "%d Samples", file->sampsize);
+			snprintf(sbuf, sizeof(sbuf), "%d Samples", file->sampsize);
 			draw_text_len(sbuf, 10, 51, pos, fg, bg);
 		} else if (file->sampsize == 1) {
 			draw_text("1 Sample  ", 51, pos, fg, bg);
@@ -245,11 +245,11 @@ static void file_list_draw(void)
 			draw_text("          ", 51, pos, fg, bg);
 		}
 		if (file->filesize > 1048576) {
-			sprintf(sbuf, "%llum", (unsigned long long)(file->filesize / 1048576));
+			snprintf(sbuf, sizeof(sbuf), "%llum", (unsigned long long)(file->filesize / 1048576));
 		} else if (file->filesize > 1024) {
-			sprintf(sbuf, "%lluk", (unsigned long long)(file->filesize / 1024));
+			snprintf(sbuf, sizeof(sbuf), "%lluk", (unsigned long long)(file->filesize / 1024));
 		} else if (file->filesize > 0) {
-			sprintf(sbuf, "%llu", (unsigned long long)(file->filesize));
+			snprintf(sbuf, sizeof(sbuf), "%llu", (unsigned long long)(file->filesize));
 		} else {
 			*sbuf = 0;
 		}

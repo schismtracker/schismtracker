@@ -504,6 +504,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 				tid = "Imago Orpheus %" PRIu8 ".%02" PRIx8;
 			break;
 		case 3:
+			/* TODO this stuff is duped in fmt/it.c, move it elsewhere ? */
 			if (trkvers <= 0x3214) {
 				tid = "Impulse Tracker %" PRIu8 ".%02" PRIx8;
 			} else if (trkvers == 0x3320) {
@@ -511,7 +512,8 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			} else if(trkvers >= 0x3215 && trkvers <= 0x3217) {
 				tid = NULL;
 				const char *versions[] = { "1-2", "3", "4-5" };
-				sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[trkvers - 0x3215]);
+				snprintf(song->tracker_id, sizeof(song->tracker_id),
+					"Impulse Tracker 2.14p%s", versions[trkvers - 0x3215]);
 			}
 
 			if (trkvers >= 0x3207 && trkvers <= 0x3217 && reserved32)
@@ -543,9 +545,14 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			} else if (trkvers == 0x5447) {
 				strcpy(song->tracker_id, "Graoumf Tracker");
 			} else if (trkvers >= 0x5129 && reserved16low) {
-				/* e.x. 1.29.01.12 <-> 0x1290112 */
+				/* e.x. 1.29.01.12 <-> 0x01290112 */
 				const uint32_t ver = (((trkvers & 0xfff) << 16) | reserved16low);
-				sprintf(song->tracker_id, "OpenMPT %" PRIu32 ".%02" PRIX32 ".%02" PRIX32 ".%02" PRIX32, ver >> 24, (ver >> 16) & 0xFF, (ver >> 8) & 0xFF, (ver) & 0xFF);
+				snprintf(song->tracker_id, sizeof(song->tracker_id),
+					"OpenMPT %" PRIu32 ".%02" PRIX32 ".%02" PRIX32 ".%02" PRIX32,
+					ver >> 24,
+					(ver >> 16) & 0xFF,
+					(ver >> 8) & 0xFF,
+					(ver) & 0xFF);
 				if (ver >= UINT32_C(0x01320031))
 					s3m_import_edittime(song, 0x0000, reserved32);
 			} else {
@@ -567,7 +574,9 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		}
 	}
 	if (tid)
-		sprintf(song->tracker_id, tid, (uint8_t)((trkvers & 0xf00) >> 8), (uint8_t)(trkvers & 0xff));
+		snprintf(song->tracker_id, sizeof(song->tracker_id),
+			tid, (uint8_t)((trkvers & 0xf00) >> 8),
+			(uint8_t)(trkvers & 0xff));
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;

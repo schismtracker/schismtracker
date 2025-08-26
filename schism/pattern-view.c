@@ -65,7 +65,7 @@ static const char mask_chars[] = {
 void draw_channel_header_13(int chan, int x, int y, int fg)
 {
 	char buf[16];
-	sprintf(buf, " Channel %02d ", chan);
+	snprintf(buf, sizeof(buf), " Channel %02d ", chan);
 	draw_text(buf, x, y, fg, 1);
 }
 
@@ -148,7 +148,7 @@ void draw_mask_13(int x, int y, int mask, int cursor_pos, int fg, int bg)
 void draw_channel_header_10(int chan, int x, int y, int fg)
 {
 	char buf[16];
-	sprintf(buf, "Channel %02d", chan);
+	snprintf(buf, sizeof(buf), "Channel %02d", chan);
 	draw_text(buf, x, y, fg, 1);
 }
 
@@ -165,7 +165,7 @@ void draw_note_10(int x, int y, const song_note_t *note, int cursor_pos, SCHISM_
 		ins_buf[2] = 0;
 	}
 	get_volume_string(note->volparam, note->voleffect, vol_buf);
-	sprintf(effect_buf, "%c%02X", get_effect_char(note->effect),
+	snprintf(effect_buf, sizeof(effect_buf), "%c%02X", get_effect_char(note->effect),
 		note->param);
 
 	draw_text(note_buf, x, y, 6, bg);
@@ -220,7 +220,7 @@ void draw_mask_10(int x, int y, int mask, int cursor_pos, int fg, int bg)
 void draw_channel_header_8(int chan, int x, int y, int fg)
 {
 	char buf[8];
-	sprintf(buf, "  %02d  ", chan);
+	snprintf(buf, sizeof(buf), "  %02d  ", chan);
 	draw_text(buf, x, y, fg, 1);
 }
 
@@ -250,7 +250,7 @@ void draw_note_8(int x, int y, const song_note_t *note, SCHISM_UNUSED int cursor
 void draw_channel_header_7(int chan, int x, int y, int fg)
 {
 	char buf[8];
-	sprintf(buf, "Chnl %02d", chan);
+	snprintf(buf, sizeof(buf), "Chnl %02d", chan);
 	draw_text(buf, x, y, fg, 1);
 }
 
@@ -429,12 +429,12 @@ void draw_note_3(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	case 7:
 	case 8:
 		cursor_pos -= 6;
-		sprintf(buf, "%c%02X", get_effect_char(note->effect), note->param);
+		snprintf(buf, sizeof(buf), "%c%02X", get_effect_char(note->effect), note->param);
 		draw_text(buf, x, y, 2, bg);
 		draw_char(buf[cursor_pos], x + cursor_pos, y, 0, 3);
 		return;
 	case 9:
-		sprintf(buf, "%c%02X", get_effect_char(note->effect), note->param);
+		snprintf(buf, sizeof(buf), "%c%02X", get_effect_char(note->effect), note->param);
 		draw_text(buf, x, y, 0, 3);
 		return;
 	default:
@@ -457,7 +457,7 @@ void draw_note_3(int x, int y, const song_note_t *note, int cursor_pos, int fg, 
 	} else if (note->effect || note->param) {
 		if (cursor_pos != 0)
 			fg = 2;
-		sprintf(buf, "%c%02X", get_effect_char(note->effect), note->param);
+		snprintf(buf, sizeof(buf), "%c%02X", get_effect_char(note->effect), note->param);
 		draw_text(buf, x, y, fg, bg);
 	} else {
 		buf[0] = buf[1] = buf[2] = '\xAD';
@@ -816,7 +816,7 @@ void draw_mask_1(int x, int y, int mask, int cursor_pos, int fg, int bg)
 void draw_channel_header_6(int chan, int x, int y, int fg)
 {
 	char buf[8];
-	sprintf(buf, "Chnl%02d", chan);
+	snprintf(buf, sizeof(buf), "Chnl%02d", chan);
 	draw_text(buf, x, y, fg, 1);
 }
 

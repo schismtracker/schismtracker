@@ -1223,7 +1223,8 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lfla
 
 	song->flags |= SONG_ITOLDEFFECTS | SONG_COMPATGXX | SONG_INSTRUMENTMODE | SONG_LINEARSLIDES;
 
-	sprintf(song->tracker_id, "Digitrakker %s",
+	snprintf(song->tracker_id, sizeof(song->tracker_id),
+		"Digitrakker %s",
 		(fmtver == 0x11) ? "3" // really could be 2.99b -- but close enough for me
 		: (fmtver == 0x10) ? "2.3"
 		: (fmtver == 0x00) ? "2.0 - 2.2b" // there was no 1.x release

@@ -248,7 +248,7 @@ static void load_sample_draw_const(void)
 	if (current_file >= 0 && current_file < flist.num_files && flist.files[current_file]) {
 		f = flist.files[current_file];
 
-		sprintf(sbuf, "%07u", f->smp_length);
+		snprintf(sbuf, sizeof(sbuf), "%07u", f->smp_length);
 		draw_text_len(sbuf, 13, 64, 22, 2, 0);
 
 		if (!f->smp_length && !f->smp_filename && !f->smp_flags) {
@@ -280,7 +280,7 @@ static void load_sample_draw_const(void)
 				break;
 			};
 		}
-		sprintf(sbuf, "%07llu", (unsigned long long)f->filesize);
+		snprintf(sbuf, sizeof(sbuf), "%07llu", (unsigned long long)f->filesize);
 		draw_text(sbuf, 59, 45, 5,0);
 		str_from_date(f->timestamp, sbuf, cfg_str_date_format);
 		draw_text(sbuf, 59, 46, 5,0);

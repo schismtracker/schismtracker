@@ -468,7 +468,7 @@ static void multichannel_draw_const(void)
 	int i;
 
 	for (i = 0; i < MAX_CHANNELS; i++) {
-		sprintf(sbuf, "Channel %02d", i+1);
+		snprintf(sbuf, sizeof(sbuf), "Channel %02d", i+1);
 		draw_text(sbuf,
 			9 + ((i / 16) * 16), /* X */
 			22 + (i % 16),  /* Y */
@@ -872,10 +872,10 @@ static void pattern_selection_system_copyout(void)
 			}
 			len += 3;
 			if (cur_note->instrument)
-				sprintf(str+len, "%02d", cur_note->instrument);
+				snprintf(str+len, 3, "%02d", cur_note->instrument);
 			else
 				str[len] = str[len+1] = '.';
-			sprintf(str+len+3, "%02d", cur_note->volparam);
+			snprintf(str+len+3, 3, "%02d", cur_note->volparam);
 			switch (cur_note->voleffect) {
 			case VOLFX_VOLUME:         str[len+2] = 'v';break;
 			case VOLFX_PANNING:        str[len+2] = 'p';break;
@@ -896,7 +896,7 @@ static void pattern_selection_system_copyout(void)
 							str[len+4] = '.';
 			};
 			len += 5;
-			sprintf(str+len, "%c%02X",
+			snprintf(str+len, 4, "%c%02X",
 					get_effect_char(cur_note->effect),
 					cur_note->param);
 			if (str[len] == '.' || str[len] == '?') {
@@ -1749,7 +1749,7 @@ static void selection_vary(int fast, int depth, int how)
 		if (fast) status_text_flash("Fast panning vary");
 		break;
 	default:
-		sprintf(last_vary, "%-28s  (Ctrl-K)",
+		snprintf(last_vary, sizeof(last_vary), "%-28s  (Ctrl-K)",
 			"Undo Xxx effect-value vary");
 		last_vary[5] = common_variable_group(how);
 		if (fast) status_text_flash("Fast %-21s", last_vary+5);
@@ -2622,7 +2622,7 @@ void set_current_pattern(int n)
 	}
 
 	/* save pattern */
-	sprintf(undostr, "Pattern %d", current_pattern);
+	snprintf(undostr, sizeof(undostr), "Pattern %d", current_pattern);
 	pated_save(undostr);
 	fast_save_update();
 

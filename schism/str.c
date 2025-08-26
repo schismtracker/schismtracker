@@ -129,10 +129,10 @@ char *str_from_num99(int32_t n, char buf[3])
 	if (n < 0) {
 		/* This is a bug */
 	} else if (n < 100) {
-		sprintf(buf, "%02d", n);
+		snprintf(buf, 3, "%02d", n);
 	} else if (n <= 256) {
 		n -= 100;
-		sprintf(buf, "%c%d",
+		snprintf(buf, 3, "%c%d",
 			qv[(n/10)], (n % 10));
 	}
 	return buf;
@@ -152,7 +152,7 @@ char *str_from_num(int digits, uint32_t n, char buf[11])
 		snprintf(buf, digits + 1, fmt, n);
 		buf[digits] = 0;
 	} else {
-		sprintf(buf, "%" PRIu32, n);
+		snprintf(buf, 3, "%" PRIu32, n);
 	}
 	return buf;
 }
@@ -171,7 +171,7 @@ char *str_from_num_signed(int digits, int32_t n, char buf[12])
 		snprintf(buf, digits + 1, fmt, n);
 		buf[digits] = 0;
 	} else {
-		sprintf(buf, "%" PRId32, n);
+		snprintf(buf, 12, "%" PRId32, n);
 	}
 	return buf;
 }

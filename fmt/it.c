@@ -620,7 +620,12 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		else if (hdr.cwtv < 0x5129 || !(hdr.reserved & 0xffff))
 			tid = "OpenMPT %d.%02x (compat.)";
 		else
-			sprintf(song->tracker_id, "OpenMPT %d.%02x.%02x.%02x (compat.)", (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff, (hdr.reserved >> 8) & 0xff, (hdr.reserved & 0xff));
+			snprintf(song->tracker_id, sizeof(song->tracker_id),
+				"OpenMPT %d.%02x.%02x.%02x (compat.)",
+				(hdr.cwtv & 0xf00) >> 8,
+				hdr.cwtv & 0xff,
+				(hdr.reserved >> 8) & 0xff, 
+				(hdr.reserved & 0xff));
 		modplug = 1;
 	} else if (hdr.cwtv == 0x0888 && hdr.cmwt == 0x0888 && hdr.reserved == 0/* && hdr.ordnum == 256*/) {
 		// erh.
@@ -687,7 +692,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		} else if (hdr.cwtv >= 0x0215 && hdr.cwtv <= 0x0217) {
 			tid = NULL;
 			const char *versions[] = { "1-2", "3", "4-5" };
-			sprintf(song->tracker_id, "Impulse Tracker 2.14p%s", versions[hdr.cwtv - 0x0215]);
+			snprintf(song->tracker_id, sizeof(song->tracker_id),
+				"Impulse Tracker 2.14p%s", versions[hdr.cwtv - 0x0215]);
 		}
 
 		if (hdr.cwtv >= 0x0207 && !song->histlen && hdr.reserved) {
@@ -703,7 +709,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 		//"saved %d time%s", hist, (hist == 1) ? "" : "s"
 	}
 	if (tid) {
-		sprintf(song->tracker_id, tid, (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff);
+		snprintf(song->tracker_id, sizeof(song->tracker_id),
+			tid, (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff);
 	}
 
 	if (modplug) {

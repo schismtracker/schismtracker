@@ -109,7 +109,8 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	if (memcmp(b, "MTM", 3) != 0)
 		return LOAD_UNSUPPORTED;
 	n = slurp_getc(fp);
-	sprintf(song->tracker_id, "MultiTracker %d.%d", n >> 4, n & 0xf);
+	snprintf(song->tracker_id, sizeof(song->tracker_id),
+		"MultiTracker %d.%d", n >> 4, n & 0xf);
 	slurp_read(fp, song->title, 20);
 	song->title[20] = 0;
 	slurp_read(fp, &ntrk, 2);

@@ -179,11 +179,11 @@ static void _oss_poll(struct midi_provider *_oss_provider)
 	for (i = 0; i < MAX_OSS_MIDI; i++) {
 		char sbuf[64];
 
-		sprintf(sbuf, "/dev/midi%d", i);
+		snprintf(sbuf, sizeof(sbuf), "/dev/midi%d", i);
 		if (!_tryopen(i + 1, sbuf, _oss_provider))
 			continue;
 
-		sprintf(sbuf, "/dev/midi%02d", i);
+		snprintf(sbuf, sizeof(sbuf), "/dev/midi%02d", i);
 		if (!_tryopen(i + 1, sbuf, _oss_provider))
 			continue;
 	}

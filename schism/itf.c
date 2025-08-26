@@ -273,7 +273,7 @@ static inline void draw_editbox(void)
 	}
 	draw_char(current_char, INNER_X(EDITBOX_X), INNER_Y(EDITBOX_Y), 5, 0);
 
-	sprintf(buf, "%3d $%02X", current_char, current_char);
+	snprintf(buf, sizeof(buf), "%3d $%02X", current_char, current_char);
 	draw_text(buf, INNER_X(EDITBOX_X) + 2, INNER_Y(EDITBOX_Y), 5, 0);
 }
 
@@ -430,7 +430,7 @@ static inline void draw_helptext(void)
 static inline void draw_time(void)
 {
 	char buf[16];
-	sprintf(buf, "%.2d:%.2d:%.2d", status.tmnow.tm_hour, status.tmnow.tm_min, status.tmnow.tm_sec);
+	snprintf(buf, sizeof(buf), "%.2d:%.2d:%.2d", status.tmnow.tm_hour, status.tmnow.tm_min, status.tmnow.tm_sec);
 	draw_text(buf, 3, 46, 1, 0);
 }
 

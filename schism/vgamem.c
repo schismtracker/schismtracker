@@ -938,14 +938,16 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 		draw_text_len("Mod", 3, 55,y1+1, 0,2);
 		draw_text_len("Car", 3, 55,y1+2, 0,2);
 
-		sprintf(buf1, "%02X %02X %02X %02X %02X %02X", // length:6*3-1=17
+		snprintf(buf1, sizeof(buf1),
+			"%02X %02X %02X %02X %02X %02X", // length:6*3-1=17
 			sample->adlib_bytes[0],
 			sample->adlib_bytes[2],
 			sample->adlib_bytes[4],
 			sample->adlib_bytes[6],
 			sample->adlib_bytes[8],
 			sample->adlib_bytes[10]);
-		sprintf(buf2, "%02X %02X %02X %02X %02X",      // length: 5*3-1=14
+		snprintf(buf2, sizeof(buf2),
+			"%02X %02X %02X %02X %02X",      // length: 5*3-1=14
 			sample->adlib_bytes[1],
 			sample->adlib_bytes[3],
 			sample->adlib_bytes[5],

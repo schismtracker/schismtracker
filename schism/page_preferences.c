@@ -307,7 +307,7 @@ void preferences_load_page(struct page *page)
 
 
 	for (i = 0; interpolation_modes[i]; i++) {
-		sprintf(buf, "%d Bit, %s", audio_settings.bits, interpolation_modes[i]);
+		snprintf(buf, sizeof(buf), "%d Bit, %s", audio_settings.bits, interpolation_modes[i]);
 		ptr = str_dup(buf);
 		widget_create_togglebutton(widgets_preferences+i+2,
 					6, 20 + (i * 3), 26,

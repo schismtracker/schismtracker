@@ -438,7 +438,7 @@ int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	song->pan_separation = 128;
 	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
 
-	sprintf(song->tracker_id, "Digital Sound Interface Kit");
+	snprintf(song->tracker_id, sizeof(song->tracker_id), "Digital Sound Interface Kit");
 
 	return LOAD_SUCCESS;
 }

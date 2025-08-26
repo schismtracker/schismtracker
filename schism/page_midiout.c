@@ -67,7 +67,7 @@ static void midiout_draw_const(void)
 	draw_box(16, 41, 60, 49, BOX_THIN|BOX_INNER|BOX_INSET);
 
 	for (i = 0; i < 7; i++) {
-		sprintf(buf, "Z%02X", i + zxx_top + 0x80);
+		snprintf(buf, sizeof(buf), "Z%02X", i + zxx_top + 0x80);
 		draw_text(buf, 13, i + 42, 0, 2);
 	}
 }

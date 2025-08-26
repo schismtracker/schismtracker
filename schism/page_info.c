@@ -182,10 +182,10 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 		}
 
 		// Frequency
-		sprintf(buf, "%10" PRIu32, voice->sample_freq);
+		snprintf(buf, sizeof(buf), "%10" PRIu32, voice->sample_freq);
 		draw_text(buf, 5, pos, 2, 0);
 		// Position
-		sprintf(buf, "%10" PRIu32, csf_smp_pos_get_whole(voice->position));
+		snprintf(buf, sizeof(buf), "%10" PRIu32, csf_smp_pos_get_whole(voice->position));
 		draw_text(buf, 16, pos, 2, 0);
 
 		draw_text(str_from_num(3, smp, buf), 27, pos, 2, 0); // Smp

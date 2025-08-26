@@ -174,7 +174,7 @@ static inline void draw_time(void)
 		}
 	}
 
-	sprintf(buf, "%3d:%02d:%02d", current_time.h % 1000,
+	snprintf(buf, sizeof(buf), "%3d:%02d:%02d", current_time.h % 1000,
 		current_time.m % 60, current_time.s % 60);
 	draw_text(buf, 69, 9, 0, 2);
 }
@@ -1458,18 +1458,18 @@ static void vis_fakemem(void)
 		conv >>= 10;
 		ems >>= 10;
 
-		sprintf(buf, "FreeMem %uk", conv);
+		snprintf(buf, sizeof(buf), "FreeMem %uk", conv);
 		draw_text(buf, 63, 6, 0, 2);
-		sprintf(buf, "FreeEMS %uk", ems);
+		snprintf(buf, sizeof(buf), "FreeEMS %uk", ems);
 		draw_text(buf, 63, 7, 0, 2);
 	} else {
-		sprintf(buf, "   Song %uk",
+		snprintf(buf, sizeof(buf), "   Song %uk",
 				(unsigned)(
 					(memused_patterns()
 					 +memused_instruments()
 					 +memused_songmessage()) >> 10));
 		draw_text(buf, 63, 6, 0, 2);
-		sprintf(buf, "Samples %uk", (unsigned)(memused_samples() >> 10));
+		snprintf(buf, sizeof(buf), "Samples %uk", (unsigned)(memused_samples() >> 10));
 		draw_text(buf, 63, 7, 0, 2);
 	}
 }

@@ -520,7 +520,7 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 
 	sample = current_song->samples + smpnum;
 	if (close_and_bind(&dwsong, &ds, sample, bps) == DW_OK) {
-		sprintf(sample->name, "Pattern %03d", pattern);
+		snprintf(sample->name, sizeof(sample->name), "Pattern %03d", pattern);
 		if (dobind) {
 			/* This is hideous */
 			sample->name[23] = 0xff;
@@ -628,7 +628,7 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 			break;
 		sample = current_song->samples + smpnum;
 		if (close_and_bind(&dwsong, &ds[n], sample, bps) == DW_OK) {
-			sprintf(sample->name, "Pattern %03d, channel %02d", pattern, n + 1);
+			snprintf(sample->name, sizeof(sample->name), "Pattern %03d, channel %02d", pattern, n + 1);
 		} else {
 			/* Balls. Something died. */
 			err = errno;

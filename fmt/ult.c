@@ -309,7 +309,8 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 	buf[25] = '\0';
 	strcpy(song->title, buf);
 
-	sprintf(song->tracker_id, "Ultra Tracker %s", verstr[ver - 1]);
+	snprintf(song->tracker_id, sizeof(song->tracker_id),
+		"Ultra Tracker %s", verstr[ver - 1]);
 	song->flags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
 
 	nmsg = slurp_getc(fp);

@@ -167,7 +167,7 @@ void adlib_patch_apply(song_sample_t *smp, int32_t patchnum)
 	memcpy(smp->adlib_bytes, patches[patchnum], 11);
 	strncpy(smp->name, midi_program_names[patchnum], sizeof(smp->name) - 1);
 	smp->name[sizeof(smp->name) - 1] = '\0'; // Paranoid.
-	sprintf(smp->filename, "MIDI#%03d", patchnum + 1);
+	snprintf(smp->filename, sizeof(smp->filename), "MIDI#%03d", patchnum + 1);
 	smp->flags |= CHN_ADLIB;
 	if (smp->data) {
 		csf_free_sample(smp->data);

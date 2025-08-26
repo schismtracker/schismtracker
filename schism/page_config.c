@@ -160,7 +160,7 @@ static void video_dialog_draw_const(void)
 	}
 
 	draw_text("Your video settings have been changed.", 21,19,0,2);
-	sprintf(buf, "In %2d seconds, your changes will be", countdown);
+	snprintf(buf, sizeof(buf), "In %2d seconds, your changes will be", countdown);
 	draw_text(buf, 23, 21, 0, 2);
 	draw_text("reverted to the last known-good", 21, 22, 0, 2);
 	draw_text("settings.", 21, 23, 0, 2);

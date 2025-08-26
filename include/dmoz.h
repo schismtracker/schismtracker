@@ -100,19 +100,19 @@ struct dmoz_file {
 
 	/* loader MAY fill this stuff in */
 	char *smp_filename;
-	unsigned int smp_speed;
-	unsigned int smp_loop_start;
-	unsigned int smp_loop_end;
-	unsigned int smp_sustain_start;
-	unsigned int smp_sustain_end;
-	unsigned int smp_length;
-	unsigned int smp_flags;
+	uint32_t smp_speed;
+	uint32_t smp_loop_start;
+	uint32_t smp_loop_end;
+	uint32_t smp_sustain_start;
+	uint32_t smp_sustain_end;
+	uint32_t smp_length;
+	uint32_t smp_flags;
 
-	unsigned int smp_defvol;
-	unsigned int smp_gblvol;
-	unsigned int smp_vibrato_speed;
-	unsigned int smp_vibrato_depth;
-	unsigned int smp_vibrato_rate;
+	uint32_t smp_defvol;
+	uint32_t smp_gblvol;
+	uint32_t smp_vibrato_speed;
+	uint32_t smp_vibrato_depth;
+	uint32_t smp_vibrato_rate;
 };
 
 typedef struct dmoz_dir {

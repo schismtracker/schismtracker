@@ -1184,11 +1184,11 @@ static void _env_draw(const song_envelope_t *env, int middle, int current_node,
 	draw_fill_chars(65, 18, 76, 25, DEFAULT_FG, 0);
 	vgamem_ovl_apply(&env_overlay);
 
-	sprintf(buf, "Node %d/%d", current_node, env->nodes);
+	snprintf(buf, sizeof(buf), "Node %d/%d", current_node, env->nodes);
 	draw_text(buf, 66, 19, 2, 0);
-	sprintf(buf, "Tick %d", env->ticks[current_node]);
+	snprintf(buf, sizeof(buf), "Tick %d", env->ticks[current_node]);
 	draw_text(buf, 66, 21, 2, 0);
-	sprintf(buf, "Value %d", (int)(env->values[current_node] - (middle ? 32 : 0)));
+	snprintf(buf, sizeof(buf), "Value %d", (int)(env->values[current_node] - (middle ? 32 : 0)));
 	draw_text(buf, 66, 23, 2, 0);
 }
 

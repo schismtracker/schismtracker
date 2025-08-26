@@ -536,21 +536,23 @@ char *dmoz_path_get_parent_directory(const char *dirname)
 /* 0 = success, !0 = failed (check errno) */
 int dmoz_path_make_backup(const char *filename, int numbered)
 {
-	char *buf = mem_alloc(strlen(filename) + 7 + 1);
+	size_t buflen = strlen(filename) + 7 + 1;
+	char *buf = mem_alloc(buflen);
 
 	if (numbered) {
 		/* If some crazy person needs more than 65536 backup files,
 		   they probably have more serious issues to tend to. */
-		int n = 1, ret;
+		uint32_t n = 1;
+		int ret;
 		do {
-			sprintf(buf, "%s.%d~", filename, n++);
+			snprintf(buf, buflen, "%s.%" PRIu32 "~", filename, n++);
 			ret = dmoz_path_rename(filename, buf, 0);
 		} while (ret != 0 && errno == EEXIST && n < 65536);
 		free(buf);
 		return ret;
 	} else {
 		int ret;
-		sprintf(buf, "%s~", filename);
+		snprintf(buf, buflen, "%s~", filename);
 		ret = dmoz_path_rename(filename, buf, 1);
 		free(buf);
 		return ret;

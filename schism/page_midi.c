@@ -314,7 +314,7 @@ static void midi_page_draw_portlist(void)
 			uint32_t j;
 
 			for (j = 0; j < 21 && j < status.last_midi_len; j++)
-				sprintf(buffer + (j * 3), "%02X ", status.last_midi_event[j]);
+				snprintf(buffer + (j * 3), 4, "%02X ", status.last_midi_event[j]);
 
 			draw_text(buffer, 77 - strlen(buffer), 15+i,
 				status.last_midi_port ? 4 : 10, 0);
