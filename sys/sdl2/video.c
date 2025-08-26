@@ -23,8 +23,6 @@
 
 #include "init.h"
 
-#define NATIVE_SCREEN_WIDTH		640
-#define NATIVE_SCREEN_HEIGHT	400
 #define WINDOW_TITLE			"Schism Tracker"
 
 #include "headers.h"
