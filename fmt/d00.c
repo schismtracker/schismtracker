@@ -336,13 +336,8 @@ D00_readnote: /* this goto is kind of ugly... */
 						case 0: /* "REST" */
 							sn->note = NOTE_OFF;
 							row += count + 1;
-							if (c == 3 && pattern == 0)
-								printf("REST - c: %d, pattern: %d, count: %d, row: %d\n", c, pattern, count, row);
 							break;
 						case 0x7E: /* "HOLD" */
-							if (c == 3 && pattern == 0)
-								printf("HOLD - c: %d, pattern: %d, count: %d, row: %d\n", c, pattern, count, row);
-
 							/* copy the last effect... */
 							for (r = 0; pattern < MAX_PATTERNS && r <= count; r++, row++, d00_fix_row(&pattern, &row)) {
 								sn = d00_get_note(song, pattern, row, c);
@@ -378,9 +373,6 @@ D00_readnote: /* this goto is kind of ugly... */
 							}
 
 							row += count + 1;
-
-							if (c == 3 && pattern == 0)
-								printf("NOTE - c: %d, pattern: %d, count: %d, row: %d\n", c, pattern, count, row);
 
 							break;
 						}
