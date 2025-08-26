@@ -24,17 +24,17 @@
 #define SCHISM_FAKEMEM_H_
 
 /* memory usage */
-unsigned int memused_lowmem(void);
-unsigned int memused_ems(void);
-unsigned int memused_songmessage(void);
-unsigned int memused_instruments(void);
-unsigned int memused_samples(void);
-unsigned int memused_clipboard(void);
-unsigned int memused_patterns(void);
-unsigned int memused_history(void);
+uint32_t memused_lowmem(void);
+uint32_t memused_ems(void);
+uint32_t memused_songmessage(void);
+uint32_t memused_instruments(void);
+uint32_t memused_samples(void);
+uint32_t memused_clipboard(void);
+uint32_t memused_patterns(void);
+uint32_t memused_history(void);
 /* clears the memory lookup cache */
 void memused_songchanged(void);
 
-void memused_get_pattern_saved(unsigned int *a, unsigned int *b); /* wtf */
+void memused_get_pattern_saved(uint32_t *a, uint32_t *b); /* wtf */
 
 #endif /* SCHISM_FAKEMEM_H_ */

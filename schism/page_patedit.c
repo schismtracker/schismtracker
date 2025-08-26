@@ -188,7 +188,7 @@ static struct pattern_snap undo_history[10];
 static int undo_history_top = 0;
 
 /* this function is stupid, it doesn't belong here */
-void memused_get_pattern_saved(unsigned int *a, unsigned int *b)
+void memused_get_pattern_saved(uint32_t *a, uint32_t *b)
 {
 	int i;
 	if (b) {

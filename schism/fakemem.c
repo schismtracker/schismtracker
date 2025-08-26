@@ -33,10 +33,10 @@ void memused_songchanged(void)
 
 
 /* packed patterns */
-unsigned int memused_patterns(void)
+uint32_t memused_patterns(void)
 {
-	unsigned int i, nm, rows, q;
-	static unsigned int p_cached;
+	uint32_t i, nm, rows, q;
+	static uint32_t p_cached;
 	song_note_t *ptr;
 
 	if (_cache_ok & 1) return p_cached;
@@ -52,10 +52,10 @@ unsigned int memused_patterns(void)
 	return p_cached = q;
 }
 
-unsigned int memused_clipboard(void)
+uint32_t memused_clipboard(void)
 {
-	unsigned int q = 0;
-	static unsigned int c_cached;
+	uint32_t q = 0;
+	static uint32_t c_cached;
 
 	if (_cache_ok & 2) return c_cached;
 	_cache_ok |= 2;
@@ -64,20 +64,20 @@ unsigned int memused_clipboard(void)
 	c_cached = q*256;
 	return c_cached;
 }
-unsigned int memused_history(void)
+uint32_t memused_history(void)
 {
-	static unsigned int h_cached;
-	unsigned int q = 0;
+	static uint32_t h_cached;
+	uint32_t q = 0;
 	if (_cache_ok & 4) return h_cached;
 	_cache_ok |= 4;
 	memused_get_pattern_saved(NULL, &q);
 	return h_cached = (q * 256);
 }
-unsigned int memused_samples(void)
+uint32_t memused_samples(void)
 {
 	song_sample_t *s;
-	static unsigned int s_cache;
-	unsigned int q, qs;
+	static uint32_t s_cache;
+	uint32_t q, qs;
 	int i;
 
 	if (_cache_ok & 8) return s_cache;
@@ -93,10 +93,10 @@ unsigned int memused_samples(void)
 	}
 	return s_cache = q;
 }
-unsigned int memused_instruments(void)
+uint32_t memused_instruments(void)
 {
-	static unsigned int i_cache;
-	unsigned int q;
+	static uint32_t i_cache;
+	uint32_t q;
 	int i;
 
 	if (_cache_ok & 16) return i_cache;
@@ -109,9 +109,9 @@ unsigned int memused_instruments(void)
 	}
 	return i_cache = q;
 }
-unsigned int memused_songmessage(void)
+uint32_t memused_songmessage(void)
 {
-	static unsigned int m_cache;
+	static uint32_t m_cache;
 	if (_cache_ok & 32) return m_cache;
 	_cache_ok |= 32;
 	return m_cache = strlen(current_song->message);
@@ -123,16 +123,16 @@ is being taken up by the current song.
 
 it's pure, unadulterated crack, but the routines are useful for schism mode :)
 */
-static unsigned int _align4k(unsigned int q) {
-	return ((q + 0xfff) & ~0xfff);
+static uint32_t _align4k(uint32_t q) {
+	return ((q + 0xfff) & ~(uint32_t)0xfff);
 }
-unsigned int memused_ems(void)
+uint32_t memused_ems(void)
 {
 	return _align4k(memused_samples())
 		+ _align4k(memused_history())
 		+ _align4k(memused_patterns());
 }
-unsigned int memused_lowmem(void)
+uint32_t memused_lowmem(void)
 {
 	return memused_songmessage() + memused_instruments()
 		+ memused_clipboard();

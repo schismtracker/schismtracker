@@ -1443,10 +1443,11 @@ static void vis_vu_meter(void)
 static void vis_fakemem(void)
 {
 	char buf[32];
-	unsigned int conv;
-	unsigned int ems;
 
 	if (status.flags & CLASSIC_MODE) {
+		uint32_t conv;
+		uint32_t ems;
+
 		ems = memused_ems();
 		if (ems > 67108864) ems = 0;
 		else ems = 67108864 - ems;
@@ -1458,18 +1459,23 @@ static void vis_fakemem(void)
 		conv >>= 10;
 		ems >>= 10;
 
-		snprintf(buf, sizeof(buf), "FreeMem %uk", conv);
+		snprintf(buf, sizeof(buf), "FreeMem %" PRIu32 "k", conv);
 		draw_text(buf, 63, 6, 0, 2);
-		snprintf(buf, sizeof(buf), "FreeEMS %uk", ems);
+		snprintf(buf, sizeof(buf), "FreeEMS %" PRIu32 "k", ems);
 		draw_text(buf, 63, 7, 0, 2);
 	} else {
-		snprintf(buf, sizeof(buf), "   Song %uk",
-				(unsigned)(
-					(memused_patterns()
-					 +memused_instruments()
-					 +memused_songmessage()) >> 10));
+		uint32_t songmem;
+		uint32_t smpmem;
+
+		songmem = memused_patterns() + memused_instruments() + memused_songmessage();
+		songmem >>= 10;
+
+		smpmem = memused_samples();
+		smpmem >>= 10;
+
+		snprintf(buf, sizeof(buf), "   Song %" PRIu32 "k", songmem);
 		draw_text(buf, 63, 6, 0, 2);
-		snprintf(buf, sizeof(buf), "Samples %uk", (unsigned)(memused_samples() >> 10));
+		snprintf(buf, sizeof(buf), "Samples %" PRIu32 "k", smpmem);
 		draw_text(buf, 63, 7, 0, 2);
 	}
 }

@@ -37,6 +37,7 @@
 #include "osdefs.h"
 #include "mem.h"
 #include "str.h"
+#include "fakemem.h"
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -640,7 +641,8 @@ static void do_quality_toggle(SCHISM_UNUSED void *data)
 static void do_delete_sample(SCHISM_UNUSED void *data)
 {
 	song_clear_sample(current_sample);
-	status.flags |= SONG_NEEDS_SAVE;
+	memused_songchanged();
+	status.flags |= (NEED_UPDATE | SONG_NEEDS_SAVE);
 }
 
 static void do_downmix(SCHISM_UNUSED void *data)
@@ -652,7 +654,7 @@ static void do_downmix(SCHISM_UNUSED void *data)
 static void do_post_loop_cut(SCHISM_UNUSED void *bweh) /* I'm already using 'data'. */
 {
 	song_sample_t *sample = song_get_sample(current_sample);
-	unsigned long pos = ((sample->flags & CHN_SUSTAINLOOP)
+	uint32_t pos = ((sample->flags & CHN_SUSTAINLOOP)
 			     ? MAX(sample->loop_end, sample->sustain_end)
 			     : sample->loop_end);
 
