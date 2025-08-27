@@ -36,7 +36,6 @@ static const schism_mt_backend_t *mt_backend = NULL;
 mt_thread_t *mt_thread_create(schism_thread_function_t func, const char *name, void *userdata)
 {
 #ifdef USE_THREADS
-	return NULL;
 	return mt_backend ? mt_backend->thread_create(func, name, userdata) : NULL;
 #else
 	return NULL;
