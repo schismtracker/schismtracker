@@ -95,7 +95,8 @@ int schism_test_main(int argc, char **argv)
 	char *filter_expression = NULL;
 	int exit_code;
 
-	SCHISM_RUNTIME_ASSERT(mt_init(), "need multithreading");
+	/* oke */
+	mt_init();
 	SCHISM_RUNTIME_ASSERT(timer_init(), "need timers");
 
 	if (argc > 1) {
