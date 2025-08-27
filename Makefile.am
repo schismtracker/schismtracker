@@ -480,6 +480,10 @@ else
 files_opl = player/fmopl3.c
 endif
 
+if ENABLE_WAVEFORMVIS
+CFLAGS += -DENABLE_WAVEFORMVIS
+endif
+
 ## Replacement functions for crappy systems
 files_stdlib =
 if NEED_ASPRINTF

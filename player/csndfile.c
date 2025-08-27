@@ -34,7 +34,6 @@
 #include "fmt.h" // for it_decompress8 / it_decompress16
 #include "mem.h"
 
-
 static void _csf_reset(song_t *csf)
 {
 	unsigned int i;
@@ -100,9 +99,12 @@ static void _csf_reset(song_t *csf)
 	OPL_Close(csf);
 	GM_Reset(csf, 1);
 
+
 	/* all zeroes should be the default playing configuration,
 	 * anything else increases complexity unfortunately */
 	BITARRAY_FILL(csf->quirks);
+
+	csf->opl_buffer_data = NULL;
 
 	memset(csf->midi_note_tracker, 0, sizeof(csf->midi_note_tracker));
 	memset(csf->midi_vol_tracker, 0, sizeof(csf->midi_vol_tracker));
@@ -121,7 +123,14 @@ static void _csf_reset(song_t *csf)
 song_t *csf_allocate(void)
 {
 	song_t *csf = mem_calloc(1, sizeof(song_t));
+
 	_csf_reset(csf);
+
+	csf->opl_buffer_data = mem_calloc(OPL_CHANNELS, MIXBUFFERSIZE * 2 * sizeof(int32_t));
+
+	csf->recent_sample_buffer = mem_calloc(MAX_VOICES + 2, RECENT_SAMPLE_BUFFER_SIZE);
+	memset(csf->recent_sample_buffer, 0, (MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE);
+
 	return csf;
 }
 
@@ -198,6 +207,9 @@ void csf_destroy(song_t *csf)
 			csf->instruments[i] = NULL;
 		}
 	}
+
+	free(csf->recent_sample_buffer);
+	free(csf->opl_buffer_data);
 
 	_csf_reset(csf);
 }
@@ -492,6 +504,9 @@ static void set_current_pos_0(song_t *csf)
 			v->global_volume = 64;
 		}
 	}
+
+	memset(csf->recent_sample_buffer, 0, (MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE);
+
 	csf->current_global_volume = csf->initial_global_volume;
 	csf->current_speed = csf->initial_speed;
 	csf->current_tempo = csf->initial_tempo;
@@ -815,7 +830,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		SCHISM_FALLTHROUGH;
 	case SF(8,M,LE,PCMS):
 	case SF(8,M,LE,PCMU):
-	case SF(8,M,LE,PCMD): 
+	case SF(8,M,LE,PCMD):
 	case SF(8,M,BE,PCMS):
 	case SF(8,M,BE,PCMU):
 	case SF(8,M,BE,PCMD): {
@@ -842,7 +857,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	// 8-bit stereo samples
 	case SF(8,SS,LE,PCMS):
 	case SF(8,SS,LE,PCMU):
-	case SF(8,SS,LE,PCMD): 
+	case SF(8,SS,LE,PCMD):
 	case SF(8,SS,BE,PCMS):
 	case SF(8,SS,BE,PCMU):
 	case SF(8,SS,BE,PCMD): {

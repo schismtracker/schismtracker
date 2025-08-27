@@ -299,6 +299,37 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 	}
 }
 
+void vgamem_ovl_drawtext_halfwidth(struct vgamem_overlay *n, char *text, int x, int y, int colour)
+{
+	while (text[0]) {
+		uint8_t c0 = text[0] ? text[0] : 32;
+		uint8_t c1 = text[1] ? text[1] : 32;
+
+		int o0 = c0 * 4;
+		int o1 = c1 * 4;
+
+		for (int yy = 0; yy < 8; yy++) {
+			int b = yy / 2;
+			int s = 4 - (yy & 1) * 4;
+
+			const uint_fast8_t dg1 = 0xF & (font_half_data[o0 + b] >> s);
+			const uint_fast8_t dg2 = 0xF & (font_half_data[o1 + b] >> s);
+
+			const uint_fast8_t dg = dg1 << 4 | dg2;
+
+			for (int xx = 0, xb = 128; xx < 8; xx++, xb >>= 1)
+				if (dg & xb)
+					vgamem_ovl_drawpixel(n, x + xx, y + yy, colour);
+		}
+
+		if (!text[1])
+			break;
+
+		text += 2;
+		x += 8;
+	}
+}
+
 /* unknown character (basically an inverted '?') */
 static const uint8_t uFFFD[] = {
 	0x42, /* .X....X. */
@@ -768,70 +799,121 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 
 /* --------------------------------------------------------------------- */
 /* sample drawing
- * 
+ *
  * output channels = number of oscis
  * input channels = number of channels in data
-*/
+ */
 
-/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug
- *
- * TODO: vectorized sample drawing. */
-#define DRAW_SAMPLE_DATA_VARIANT(bits, doublebits) \
-	static void _draw_sample_data_##bits(struct vgamem_overlay *r, \
-		int##bits##_t *data, uint32_t length, unsigned int inputchans, unsigned int outputchans) \
+#define DRAW_SAMPLE_DATA_EX_VARIANT(BITS, SCALE, SIGNARG_DEF, SIGN_FLIP_DEF, SIGN_FLIP_DO) \
+	void draw_sample_data_ex_##BITS(struct vgamem_overlay *r, int x1, int y1, int x2, int y2, \
+		int##BITS##_t *data, uint32_t offset, uint32_t stride, uint32_t advance, uint32_t length, SIGNARG_DEF \
+		int##BITS##_t min_value, int##BITS##_t max_value, int colour, sample_draw_style_t draw_style) \
 	{ \
-		const int32_t nh = r->height / outputchans; \
-		int32_t np = r->height - nh / 2; \
-		uint32_t cc; \
-		uint64_t step; \
-	\
-		length /= inputchans; \
-		step = ((uint64_t)length << 32) / r->width; \
-	\
-		for (cc = 0; cc < outputchans; cc++) { \
-			int x; \
-			uint64_t poshi = 0, poslo = 0; \
-	\
-			for (x = 0; x < r->width; x++) { \
-				uint32_t scanlength, i; \
-				int##bits##_t min = INT##bits##_MAX, max = INT##bits##_MIN; \
-	\
-				poslo += step; \
-				scanlength = ((poslo + UINT32_C(0xFFFFFFFF)) >> 32); \
-				if (poshi >= length) poshi = length - 1; \
-				if (poshi + scanlength > length) scanlength = length - poshi; \
-				scanlength = MAX(scanlength, 1); \
-	\
-				for (i = 0; i < scanlength; i++) { \
-					uint32_t co = 0; \
-	\
-					do { \
-						int##bits##_t s = data[((poshi + i) * inputchans) + cc + co]; \
-						if (s < min) min = s; \
-						if (s > max) max = s; \
-					} while (co++ < inputchans - outputchans); \
+		int32_t mid = ((min_value >> (SCALE / 2)) + (max_value >> (SCALE / 2))) >> (1 + SCALE / 2); \
+\
+		max_value >>= SCALE; \
+		min_value >>= SCALE; \
+\
+		int32_t range = (int)max_value - min_value; \
+\
+		SIGN_FLIP_DEF \
+\
+		int ly = -1; \
+		int yy; \
+\
+		uint32_t walk = 0; \
+\
+		for (int x = x1, h = y2 - y1 + 1; x < x2; x++) { \
+			int y; \
+\
+			int32_t min, max, max_mag = 0; \
+\
+			if (draw_style == SAMPLE_DRAW_STYLE_FILLED) { \
+				min = INT32_MAX; \
+				max = INT32_MIN; \
+\
+				while (walk < advance) { \
+					int value; \
+\
+					if (offset >= length) \
+						offset -= length; \
+\
+					value = ((data[offset] >> SCALE) SIGN_FLIP_DO) - mid; \
+\
+					if (value < min) \
+						min = value; \
+					if (value > max) \
+						max = value; \
+\
+					offset += stride; \
+\
+					walk += 256; \
 				} \
-	\
-				/* XXX is doing this with integers faster than say, floating point?
-				 * I mean, it sure is a bit more ~accurate~ at least, and it'll work the same everywhere. */ \
-				min = rshift_signed((int##doublebits##_t)min * nh, bits); \
-				max = rshift_signed((int##doublebits##_t)max * nh, bits); \
-	\
-				vgamem_ovl_drawline(r, x, np - 1 - max, x, np - 1 - min, SAMPLE_DATA_COLOR); \
-	\
-				poshi += (poslo >> 32); \
-				poslo &= UINT32_C(0xFFFFFFFF); \
+\
+				walk -= advance; \
 			} \
-	\
-			np -= nh; \
+			else { \
+				max = 0; \
+\
+				while (walk < advance) { \
+					int scaled, magnitude; \
+\
+					if (offset >= length) \
+						offset -= length; \
+\
+					scaled = (data[offset] >> SCALE) SIGN_FLIP_DO; \
+					magnitude = scaled - mid; \
+\
+					if (magnitude < 0) \
+						magnitude = -magnitude; \
+\
+					if (magnitude > max_mag) { \
+						max = scaled; \
+						max_mag = magnitude; \
+					} \
+\
+					offset += stride; \
+\
+					walk += 256; \
+				} \
+\
+				walk -= advance; \
+			} \
+\
+			y = (int)max - min_value; \
+			y = y1 + (range - y) * h / range; \
+\
+			switch (draw_style) { \
+			case SAMPLE_DRAW_STYLE_DOTS: \
+				vgamem_ovl_drawpixel(r, x, y, colour); \
+				break; \
+			case SAMPLE_DRAW_STYLE_LINE: \
+				if (ly < 0) { \
+					vgamem_ovl_drawpixel(r, x, y, colour); \
+					ly = y; \
+				} \
+				else { \
+					vgamem_ovl_drawline(r, x, ly + (y > ly ? 1 : 0), x, y, colour); \
+					ly = y; \
+				} \
+				break; \
+			case SAMPLE_DRAW_STYLE_FILLED: \
+				yy = (int)min - min_value; \
+				yy = y1 + (range - yy) * h / range; \
+				vgamem_ovl_drawline(r, x, y, x, yy, colour); \
+				break; \
+			} \
 		} \
 	}
 
-DRAW_SAMPLE_DATA_VARIANT(8, 16)
-DRAW_SAMPLE_DATA_VARIANT(16, 32)
-DRAW_SAMPLE_DATA_VARIANT(32, 64)
+#define SIGN_ARG_DEF int signed_data,
+#define SIGN_FLIP_DEF int8_t sign_flip = signed_data ? 0 : 0x80;
+#define SIGN_FLIP_DO ^ sign_flip
+#define NOTHING
 
-#undef DRAW_SAMPLE_DATA_VARIANT
+DRAW_SAMPLE_DATA_EX_VARIANT(32, 16, NOTHING, NOTHING, NOTHING)
+DRAW_SAMPLE_DATA_EX_VARIANT(16, 0, NOTHING, NOTHING, NOTHING)
+DRAW_SAMPLE_DATA_EX_VARIANT(8, 0, SIGN_ARG_DEF, SIGN_FLIP_DEF, SIGN_FLIP_DO)
 
 /* --------------------------------------------------------------------- */
 /* these functions assume the screen is locked! */
@@ -922,6 +1004,9 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t * sa
 /* --------------------------------------------------------------------- */
 /* meat! */
 
+// limit CPU usage on hugemongous samples
+#define MAX_SAMPLES_PER_PIXEL 100
+
 void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 {
 	vgamem_ovl_clear(r, 0);
@@ -965,14 +1050,35 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 
 	/* do the actual drawing */
 	int chans = sample->flags & CHN_STEREO ? 2 : 1;
-	if (sample->flags & CHN_16BIT)
-		_draw_sample_data_16(r, (signed short *) sample->data,
-				sample->length * chans,
-				chans, chans);
-	else
-		_draw_sample_data_8(r, sample->data,
-				sample->length * chans,
-				chans, chans);
+	uint32_t stride = chans;
+
+	int32_t samples_per_pixel = sample->length / r->width;
+
+	if (samples_per_pixel > MAX_SAMPLES_PER_PIXEL) {
+		stride *= (1 + samples_per_pixel / MAX_SAMPLES_PER_PIXEL);
+	}
+
+	for (int chan = 0; chan < chans; chan++)
+	{
+		int fy1 = chan * r->height / chans;
+		int fy2 = (chan + 1) * r->height / chans - 1;
+		uint32_t advance = _muldiv(sample->length * chans, 256, r->width * stride);
+
+		if (sample->flags & CHN_16BIT)
+			draw_sample_data_ex_16(
+				r,
+				0, fy1, r->width, fy2,
+				(int16_t *)sample->data, chan, stride, advance, sample->length,
+				INT16_MIN, INT16_MAX,
+				SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
+		else
+			draw_sample_data_ex_8(
+				r,
+				0, fy1, r->width, fy2,
+				(int8_t *)sample->data, chan, stride, advance, sample->length, 1,
+				INT8_MIN, INT8_MAX,
+				SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED);
+	}
 
 	if ((status.flags & CLASSIC_MODE) == 0)
 		_draw_sample_play_marks(r, sample);
@@ -981,26 +1087,34 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 	vgamem_ovl_apply(r);
 }
 
-void draw_sample_data_rect_32(struct vgamem_overlay *r, int32_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
-{
-	vgamem_ovl_clear(r, 0);
-	_draw_sample_data_32(r, data, length, inputchans, outputchans);
-	vgamem_ovl_apply(r);
-}
+#define DRAW_SAMPLE_DATA_RECT_VARIANT(BITS, SIGNARG) \
+	void draw_sample_data_rect_##BITS(struct vgamem_overlay *r, int##BITS##_t *data, \
+		uint32_t length, unsigned int inputchans, uint32_t outputchans) \
+	{ \
+		uint32_t advance = _muldiv(length, 256, r->width); \
+		int chn; \
+\
+		vgamem_ovl_clear(r, 0); \
+\
+		for (chn = 0; chn < outputchans; chn++) \
+		{ \
+			int y1 = chn * r->height / outputchans; \
+			int y2 = (chn + 1) * r->height / outputchans - 1; \
+\
+			draw_sample_data_ex_##BITS( \
+				r, \
+				0, y1, r->width, y2, \
+				data, chn, outputchans, advance, length, SIGNARG \
+				INT##BITS##_MIN, INT##BITS##_MAX, \
+				SAMPLE_DATA_COLOR, SAMPLE_DRAW_STYLE_FILLED); \
+		} \
+\
+		vgamem_ovl_apply(r); \
+	}
 
-void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
-{
-	vgamem_ovl_clear(r, 0);
-	_draw_sample_data_16(r, data, length, inputchans, outputchans);
-	vgamem_ovl_apply(r);
-}
+#define SIGNARG_8B 1,
+#define SIGNARG_NONE
 
-void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
-{
-	vgamem_ovl_clear(r, 0);
-	_draw_sample_data_8(r, data, length, inputchans, outputchans);
-	vgamem_ovl_apply(r);
-}
+DRAW_SAMPLE_DATA_RECT_VARIANT(32, SIGNARG_NONE)
+DRAW_SAMPLE_DATA_RECT_VARIANT(16, SIGNARG_NONE)
+DRAW_SAMPLE_DATA_RECT_VARIANT(8, SIGNARG_8B)

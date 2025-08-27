@@ -33,6 +33,7 @@
 #include "config-parser.h"
 #include "keyboard.h"
 #include "str.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -47,11 +48,14 @@ static int instrument_names = 0;
 /* --------------------------------------------------------------------- */
 /* window setup */
 
+struct info_window;
+
 struct info_window_type {
 	const char *id;
 
-	void (*draw) (int base, int height, int active, int first_channel);
-	void (*click) (int x, int y, int num_vis_channel, int first_channel);
+	void (*recalculate) (struct info_window *window);
+	void (*draw) (struct info_window *window, int base, int height, int active, int first_channel);
+	void (*click) (struct info_window *window, int x, int y, int fx, int fy, int num_vis_channel, int first_channel);
 
 	/* if this is set, the first row contains actual text (not just the top part of a box) */
 	int first_row;
@@ -63,17 +67,24 @@ struct info_window_type {
 	uses -2.) confusing, almost to the point of being painful, but it works. (ok, i admit, it's not
 	the most brilliant idea i ever had ;) */
 	int channels;
+
+	/* if this is true, then this window is visualizing voices, not channels */
+	int shows_voices;
 };
 
 struct info_window {
 	int type;
-	int height;
+	int first_row, height;
+	const struct info_window_type *type_def;
 	int first_channel;
+	int hide_waveform_label; // for waveform windows, should the channel number be overlaid in the top-left?
+	struct vgamem_overlay overlay;
 };
 
 static int selected_window = 0;
 static int num_windows = 3;
 static int selected_channel = 1;
+static int selected_voice = 1;
 
 /* five, because that's Impulse Tracker's maximum */
 #define MAX_WINDOWS 5
@@ -86,7 +97,7 @@ static struct info_window windows[MAX_WINDOWS] = {
 /* --------------------------------------------------------------------- */
 /* the various stuff that can be drawn... */
 
-static void info_draw_technical(int base, int height, int active, int first_channel)
+static void info_draw_technical(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int smp, pos, fg, c = first_channel;
 	char buf[64];
@@ -218,7 +229,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 	}
 }
 
-static void info_draw_samples(int base, int height, int active, int first_channel)
+static void info_draw_samples(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int vu, smp, ins, n, pos, fg, fg2, c;
 	char buf[11];
@@ -509,7 +520,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 	}
 }
 
-static void info_draw_track_5(int base, int height, int active, int first_channel)
+static void info_draw_track_5(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
 
@@ -524,7 +535,7 @@ static void info_draw_track_5(int base, int height, int active, int first_channe
 	_draw_track_view(base, height, first_channel, 5, 13, 1, draw_note_13);
 }
 
-static void info_draw_track_8(int base, int height, int active, int first_channel)
+static void info_draw_track_8(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
 	char buf[11];
@@ -544,7 +555,7 @@ static void info_draw_track_8(int base, int height, int active, int first_channe
 	_draw_track_view(base, height, first_channel, 8, 8, 1, draw_note_8);
 }
 
-static void info_draw_track_10(int base, int height, int active, int first_channel)
+static void info_draw_track_10(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
 	char buf[11];
@@ -564,7 +575,7 @@ static void info_draw_track_10(int base, int height, int active, int first_chann
 	_draw_track_view(base, height, first_channel, 10, 7, 0, draw_note_7);
 }
 
-static void info_draw_track_12(int base, int height, int active, int first_channel)
+static void info_draw_track_12(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
 	char buf[11];
@@ -584,7 +595,7 @@ static void info_draw_track_12(int base, int height, int active, int first_chann
 	_draw_track_view(base, height, first_channel, 12, 6, 0, draw_note_6);
 }
 
-static void info_draw_track_18(int base, int height, int active, int first_channel)
+static void info_draw_track_18(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
 	char buf[11];
@@ -600,7 +611,7 @@ static void info_draw_track_18(int base, int height, int active, int first_chann
 	_draw_track_view(base, height, first_channel, 18, 3, 1, draw_note_3);
 }
 
-static void info_draw_track_24(int base, int height, int active, int first_channel)
+static void info_draw_track_24(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
 	char buf[11];
@@ -616,7 +627,7 @@ static void info_draw_track_24(int base, int height, int active, int first_chann
 	_draw_track_view(base, height, first_channel, 24, 3, 0, draw_note_3);
 }
 
-static void info_draw_track_36(int base, int height, int active, int first_channel)
+static void info_draw_track_36(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
 	char buf[11];
@@ -632,7 +643,7 @@ static void info_draw_track_36(int base, int height, int active, int first_chann
 	_draw_track_view(base, height, first_channel, 36, 2, 0, draw_note_2);
 }
 
-static void info_draw_track_64(int base, int height, int active, int first_channel)
+static void info_draw_track_64(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int chan, chan_pos, fg;
 	/* IT draws nine more blank "channels" on the right */
@@ -654,7 +665,7 @@ static void info_draw_track_64(int base, int height, int active, int first_chann
 	_draw_track_view(base, height, first_channel, nchan, 1, 0, draw_note_1);
 }
 
-static void info_draw_channels(int base, SCHISM_UNUSED int height, int active, SCHISM_UNUSED int first_channel)
+static void info_draw_channels(SCHISM_UNUSED struct info_window *window, int base, SCHISM_UNUSED int height, int active, SCHISM_UNUSED int first_channel)
 {
 	char buf[32];
 	int fg = (active ? 3 : 0);
@@ -668,7 +679,7 @@ static void info_draw_channels(int base, SCHISM_UNUSED int height, int active, S
 
 
 /* Yay it works, only took me forever and a day to get it right. */
-static void info_draw_note_dots(int base, int height, int active, int first_channel)
+static void info_draw_note_dots(SCHISM_UNUSED struct info_window *window, int base, int height, int active, int first_channel)
 {
 	int fg, v;
 	int c, pos;
@@ -729,10 +740,147 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 	}
 }
 
+#ifdef ENABLE_WAVEFORMVIS
+static void _calculate_channel_layout(int num_channels, int width, int height, int *num_rows, int *num_columns)
+{
+	for (*num_rows = 1; *num_rows < 8; (*num_rows)++)
+	{
+		int channel_width, channel_height;
+		int aspect; // scaled up by 100
+
+		*num_columns = (num_channels + *num_rows - 1) / *num_rows;
+
+		channel_width = width / *num_columns;
+		channel_height = height / *num_rows;
+
+		aspect = channel_height * 100 / channel_width;
+
+		if (aspect < 180)
+			break;
+	}
+}
+
+static void info_draw_waveform_recalculate(struct info_window *window)
+{
+	window->overlay.x1 = 3;
+	window->overlay.x2 = 77;
+	window->overlay.y1 = window->first_row + 1;
+	window->overlay.y2 = window->first_row + window->height - 2;
+
+	vgamem_ovl_alloc(&window->overlay);
+}
+
+#define WAVEFORM_BOX_OUTLINE_COLOUR 1
+#define WAVEFORM_COLOUR 5
+#define LABEL_COLOUR 6
+
+static void info_draw_waveform(struct info_window *window, int base, int height, int active, int first_channel)
+{
+	int num_channels = window->type_def->channels;
+
+	if (num_channels == 0) {
+		// mix output
+		first_channel = MAX_VOICES + 1;
+		num_channels = current_song->flags & SONG_NOSTEREO ? 1 : 2;
+	}
+	else {
+		first_channel = selected_voice; // we're not a list view
+	}
+
+	int num_rows, num_columns;
+	int chan, chan_pos;
+
+	if ((window->overlay.width <= 0) || (window->overlay.height <= 0))
+		return;
+
+	_calculate_channel_layout(num_channels, window->overlay.width, window->overlay.height, &num_rows, &num_columns);
+
+	if (num_rows * num_columns > num_channels) {
+		num_channels = MIN(num_rows * num_columns, MAX_VOICES);
+
+		if (first_channel + num_channels > MAX_VOICES) {
+			selected_voice = MAX(MAX_VOICES - num_channels + 1, 0);
+			first_channel = selected_voice;
+		}
+	}
+
+	vgamem_ovl_clear(&window->overlay, 0);
+
+	for (chan = MAX(0, first_channel - 1), chan_pos = 0; chan_pos < num_channels; chan++, chan_pos++) {
+		int row = chan_pos / num_columns;
+		int col = chan_pos % num_columns;
+
+		int x1 = col * window->overlay.width / num_columns;
+		int y1 = row * window->overlay.height / num_rows;
+		int x2 = (col + 1) * window->overlay.width / num_columns - 1;
+		int y2 = (row + 1) * window->overlay.height / num_rows - 1;
+
+		song_voice_t *voice = NULL;
+		uint8_t *recent_samples;
+		int idx;
+
+		for (int y = y1 | 1; y <= y2; y += 2)
+			vgamem_ovl_drawpixel(&window->overlay, x2, y, WAVEFORM_BOX_OUTLINE_COLOUR);
+		for (int x = x1 | 1; x <= x2; x += 2)
+			vgamem_ovl_drawpixel(&window->overlay, x, y2, WAVEFORM_BOX_OUTLINE_COLOUR);
+
+		if (chan < MAX_VOICES)
+			voice = &current_song->voices[chan];
+
+		if ((chan >= MAX_VOICES)
+			? current_song->mix_stat /* main mixer output -- is anything playing? */
+			: ((voice->current_sample_data && (voice->left_volume || voice->right_volume)) /* PCM */
+			|| ((voice->flags & CHN_ADLIB) && (current_song->opl_from_chan[chan] >= 0)))) /* FM */ {
+			recent_samples = RECENT_SAMPLE_BUFFER(current_song, chan);
+			idx = (chan >= MAX_VOICES) ? current_song->oldest_recent_output_sample : voice->oldest_recent_sample;
+
+			draw_sample_data_ex_8(
+				&window->overlay,
+				x1, y1, x2, y2,
+				recent_samples, idx, 1, 256, RECENT_SAMPLE_BUFFER_SIZE, 0,
+				-128, 127,
+				WAVEFORM_COLOUR, SAMPLE_DRAW_STYLE_DOTS);
+		}
+
+		if (!window->hide_waveform_label) {
+			char buf[11];
+
+			if (chan < MAX_VOICES) {
+				str_from_num(0, chan + 1, buf);
+			} else if (num_channels == 1) {
+				strcpy(buf, "LR");
+			} else {
+				buf[0] = "LR"[chan - MAX_VOICES];
+				buf[1] = 0;
+			}
+
+			vgamem_ovl_drawtext_halfwidth(&window->overlay, buf, x1 + 2, y1 + 2, LABEL_COLOUR);
+		}
+	}
+
+	draw_box(2, window->first_row, 78, window->first_row + window->height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+	vgamem_ovl_apply(&window->overlay);
+}
+
+static void waveform_channels_click(struct info_window *window, int x, int y, int fx, int fy, int nc, int fc)
+{
+	int num_rows, num_columns;
+	int row, col;
+
+	if ((window->overlay.width <= 0) || (window->overlay.height <= 0))
+		return;
+
+	col = (fx - 8 * window->overlay.x1) * num_columns / window->overlay.width;
+	row = (fy - 8 * window->overlay.y1) * num_rows / window->overlay.height;
+
+	selected_channel = 1 + CLAMP(row * num_columns + col, 0, 63);
+}
+#endif /* ENABLE_WAVEFORMVIS */
+
 /* --------------------------------------------------------------------- */
 /* click receivers */
 
-static void click_chn_x(int x, int w, int skip, int fc)
+static void click_chn_x(struct info_window *window, int x, int w, SCHISM_UNUSED int fx, SCHISM_UNUSED int fy, int skip, int fc)
 {
 	while (x > 0 && fc <= 64) {
 		if (x < w) {
@@ -745,47 +893,47 @@ static void click_chn_x(int x, int w, int skip, int fc)
 	}
 }
 
-static void click_chn_is_x(int x, SCHISM_UNUSED int y, int nc, int fc)
+static void click_chn_is_x(struct info_window *window, int x, SCHISM_UNUSED int y, SCHISM_UNUSED int fx, SCHISM_UNUSED int fy, int nc, int fc)
 {
 	if (x < 5) return;
 	x -= 4;
 	switch (nc) {
 	case 5:
-		click_chn_x(x, 13, 1, fc);
+		click_chn_x(window, x, 13, 0, 0, 1, fc);
 		break;
 	case 10:
-		click_chn_x(x, 7, 0, fc);
+		click_chn_x(window, x, 7, 0, 0, 0, fc);
 		break;
 	case 12:
-		click_chn_x(x, 6, 0, fc);
+		click_chn_x(window, x, 6, 0, 0, 0, fc);
 		break;
 	case 18:
-		click_chn_x(x, 3, 1, fc);
+		click_chn_x(window, x, 3, 0, 0, 1, fc);
 		break;
 	case 24:
-		click_chn_x(x, 3, 0, fc);
+		click_chn_x(window, x, 3, 0, 0, 0, fc);
 		break;
 	case 36:
-		click_chn_x(x, 2, 0, fc);
+		click_chn_x(window, x, 2, 0, 0, 0, fc);
 		break;
 	case 64:
-		click_chn_x(x, 1, 0, fc);
+		click_chn_x(window, x, 1, 0, 0, 0, fc);
 		break;
 	};
 }
 
-static void click_chn_is_y_nohead(SCHISM_UNUSED int x, int y, SCHISM_UNUSED int nc, int fc)
+static void click_chn_is_y_nohead(SCHISM_UNUSED struct info_window *window, SCHISM_UNUSED int x, int y, SCHISM_UNUSED int fx, SCHISM_UNUSED int fy, SCHISM_UNUSED int nc, int fc)
 {
 	selected_channel = CLAMP(y+fc, 1, 64);
 }
 
-static void click_chn_is_y(SCHISM_UNUSED int x, int y, SCHISM_UNUSED int nc, int fc)
+static void click_chn_is_y(SCHISM_UNUSED struct info_window *window, SCHISM_UNUSED int x, int y, SCHISM_UNUSED int fx, SCHISM_UNUSED int fy, SCHISM_UNUSED int nc, int fc)
 {
 	if (!y) return;
 	selected_channel = CLAMP((y+fc)-1, 1, 64);
 }
 
-static void click_chn_nil(SCHISM_UNUSED int x, SCHISM_UNUSED int y, SCHISM_UNUSED int nc, SCHISM_UNUSED int fc)
+static void click_chn_nil(SCHISM_UNUSED struct info_window *window, SCHISM_UNUSED int x, SCHISM_UNUSED int y, SCHISM_UNUSED int fx, SCHISM_UNUSED int fy, SCHISM_UNUSED int nc, SCHISM_UNUSED int fc)
 {
 	/* do nothing */
 }
@@ -793,9 +941,9 @@ static void click_chn_nil(SCHISM_UNUSED int x, SCHISM_UNUSED int y, SCHISM_UNUSE
 /* --------------------------------------------------------------------- */
 /* declarations of the window types */
 
-#define TRACK_VIEW(n) {"track" # n, info_draw_track_##n, click_chn_is_x, 1, n}
+#define TRACK_VIEW(n) {"track" # n, NULL, info_draw_track_##n, click_chn_is_x, 1, n}
 static const struct info_window_type window_types[] = {
-	{"samples", info_draw_samples, click_chn_is_y_nohead, 0, -2},
+	{"samples", NULL, info_draw_samples, click_chn_is_y_nohead, 0, -2},
 	TRACK_VIEW(5),
 	TRACK_VIEW(8),
 	TRACK_VIEW(10),
@@ -804,9 +952,17 @@ static const struct info_window_type window_types[] = {
 	TRACK_VIEW(24),
 	TRACK_VIEW(36),
 	TRACK_VIEW(64),
-	{"global", info_draw_channels, click_chn_nil, 1, 0},
-	{"dots", info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
-	{"tech", info_draw_technical, click_chn_is_y, 1, -2},
+	{"global", NULL, info_draw_channels, click_chn_nil, 1, 0},
+	{"dots", NULL, info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
+	{"tech", NULL, info_draw_technical, click_chn_is_y, 1, -2},
+#ifdef ENABLE_WAVEFORMVIS
+	{"waveform-channels-4", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 4, 1},
+	{"waveform-channels-8", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 8, 1},
+	{"waveform-channels-16", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 16, 1},
+	{"waveform-channels-32", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 32, 1},
+	{"waveform-channels-64", info_draw_waveform_recalculate, info_draw_waveform, waveform_channels_click, 0, 64, 1},
+	{"waveform-output", info_draw_waveform_recalculate, info_draw_waveform, click_chn_nil, 0, 0},
+#endif /* ENABLE_WAVEFORMVIS */
 };
 #undef TRACK_VIEW
 
@@ -836,7 +992,7 @@ static void _fix_channels(int n)
 	w->first_channel = CLAMP(w->first_channel, 1, MAX_CHANNELS - channels + 1);
 }
 
-static int info_handle_click(int x, int y)
+static int info_handle_click(int x, int y, int fx, int fy)
 {
 	int n;
 	if (y < 13) return 0; /* NA */
@@ -844,7 +1000,10 @@ static int info_handle_click(int x, int y)
 	for (n = 0; n < num_windows; n++) {
 		if (y < windows[n].height) {
 			window_types[windows[n].type].click(
+				&windows[n],
+
 				x, y,
+				fx, fy,
 
 				window_types[windows[n].type].channels,
 				windows[n].first_channel);
@@ -862,11 +1021,14 @@ static void recalculate_windows(void)
 	pos = 13;
 	for (n = 0; n < num_windows - 1; n++) {
 		_fix_channels(n);
+		windows[n].first_row = pos;
 		pos += windows[n].height;
 		if (pos > 50) {
 			/* Too big? Throw out the rest of the windows. */
 			num_windows = n;
 		}
+		if (windows[n].type_def->recalculate)
+			windows[n].type_def->recalculate(&windows[n]);
 	}
 	SCHISM_RUNTIME_ASSERT(num_windows > 0, "Should always have at least one window.");
 	windows[n].height = 50 - pos;
@@ -900,6 +1062,21 @@ void cfg_save_info(cfg_file_t *cfg)
 	cfg_set_string(cfg, "Info Page", "layout", buf + 1);
 }
 
+static void reset_window_layout(void)
+{
+	/* Fall back to defaults */
+	num_windows = 3;
+	windows[0].type = 0;    /* samples */
+	windows[0].type_def = &window_types[windows[0].type];
+	windows[0].height = 19;
+	windows[1].type = 9;    /* active channels */
+	windows[1].type_def = &window_types[windows[1].type];
+	windows[1].height = 3;
+	windows[2].type = 6;    /* 24chn track view */
+	windows[2].type_def = &window_types[windows[2].type];
+	windows[2].height = 15;
+}
+
 static void cfg_load_info_old(cfg_file_t *cfg)
 {
 	char key[] = "windowX";
@@ -927,20 +1104,15 @@ static void cfg_load_info_old(cfg_file_t *cfg)
 		if (windows[i].type < 0 || windows[i].type >= NUM_WINDOW_TYPES || windows[i].height < 3) {
 			/* Broken window? */
 			num_windows = -1;
+			windows[i].type_def = NULL;
 			break;
 		}
+		windows[num_windows].type_def = &window_types[windows[num_windows].type];
 	}
 	/* last window's size < 3 lines? */
 
 	if (num_windows == -1) {
-		/* Fall back to defaults */
-		num_windows = 3;
-		windows[0].type = 0;    /* samples */
-		windows[0].height = 19;
-		windows[1].type = 9;    /* active channels */
-		windows[1].height = 3;
-		windows[2].type = 6;    /* 24chn track view */
-		windows[2].height = 15;
+		reset_window_layout();
 	}
 
 	for (i = 0; i < num_windows; i++) {
@@ -979,6 +1151,7 @@ void cfg_load_info(cfg_file_t *cfg)
 		for (n = 0; n < NUM_WINDOW_TYPES; n++) {
 			if (strcasecmp(window_types[n].id, left) == 0) {
 				windows[num_windows].type = n;
+				windows[num_windows].type_def = &window_types[windows[num_windows].type];
 				break;
 			}
 		}
@@ -993,8 +1166,14 @@ void cfg_load_info(cfg_file_t *cfg)
 			// failed to parse any digits, or number is too small
 			break;
 		}
-		windows[num_windows++].height = n;
+		windows[num_windows].height = n;
+
+		num_windows++;
 	} while (num_windows < MAX_WINDOWS - 1);
+
+	if (num_windows <= 0) {
+		reset_window_layout();
+	}
 
 	recalculate_windows();
 	if (status.current_page == PAGE_INFO)
@@ -1011,12 +1190,12 @@ static void info_page_redraw(void)
 		height = windows[n].height;
 		if (pos == 12)
 			height++;
-		window_types[windows[n].type].draw(pos, height, (n == selected_window),
+		window_types[windows[n].type].draw(&windows[n], pos, height, (n == selected_window),
 						   windows[n].first_channel);
 		pos += height;
 	}
 	/* the last window takes up all the rest of the screen */
-	window_types[windows[n].type].draw(pos, 50 - pos, (n == selected_window), windows[n].first_channel);
+	window_types[windows[n].type].draw(&windows[n], pos, 50 - pos, (n == selected_window), windows[n].first_channel);
 }
 
 /* --------------------------------------------------------------------- */
@@ -1027,7 +1206,7 @@ static int info_page_handle_key(struct key_event * k)
 
 	if (k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) {
 		p = selected_channel;
-		n = info_handle_click(k->x, k->y);
+		n = info_handle_click(k->x, k->y, k->fx, k->fy);
 		if (k->mouse == MOUSE_DBLCLICK) {
 			/* TODO: should this only be handled if info_handle_click
 			 * actually returns 1 ? */
@@ -1107,6 +1286,10 @@ static int info_page_handle_key(struct key_event * k)
 			return 1;
 		}
 		return 0;
+	case SCHISM_KEYSYM_n:
+		if ((k->mod & SCHISM_KEYMOD_ALT) && (k->state == KEY_PRESS)) {
+			windows[selected_window].hide_waveform_label = !windows[selected_window].hide_waveform_label;
+		}
 	case SCHISM_KEYSYM_EQUALS:
 		if (!(k->mod & SCHISM_KEYMOD_SHIFT))
 			return 0;
@@ -1179,8 +1362,17 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (selected_channel > 1)
-			selected_channel--;
+
+		if (windows[selected_window].type_def->shows_voices) {
+			if (selected_voice > 1)
+				selected_voice--;
+			selected_channel = CLAMP(selected_voice, 1, MAX_CHANNELS);
+		}
+		else {
+			if (selected_channel > 1)
+				selected_channel--;
+			selected_voice = selected_channel;
+		}
 		break;
 	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
@@ -1207,14 +1399,16 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (selected_channel < MAX_CHANNELS)
-			selected_channel++;
+		if (selected_voice < MAX_VOICES)
+			selected_voice++;
+		selected_channel = CLAMP(selected_voice, 1, MAX_CHANNELS);
 		break;
 	case SCHISM_KEYSYM_HOME:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
+		selected_voice = 0;
 		selected_channel = 1;
 		break;
 	case SCHISM_KEYSYM_END:
@@ -1222,6 +1416,7 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
+		selected_voice = MAX_VOICES;
 		selected_channel = song_find_last_channel() + 1;
 		break;
 	case SCHISM_KEYSYM_INSERT:
@@ -1283,6 +1478,7 @@ static int info_page_handle_key(struct key_event * k)
 			n = NUM_WINDOW_TYPES;
 		n--;
 		windows[selected_window].type = n;
+		windows[selected_window].type_def = &window_types[windows[selected_window].type];
 		break;
 	case SCHISM_KEYSYM_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
@@ -1290,6 +1486,7 @@ static int info_page_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 1;
 		windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
+		windows[selected_window].type_def = &window_types[windows[selected_window].type];
 		break;
 	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
