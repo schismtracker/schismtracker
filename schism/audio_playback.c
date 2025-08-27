@@ -184,7 +184,7 @@ static void audio_reallocate_buffer(uint32_t samples)
 	audio_buffer_samples = samples;
 	if (samples > audio_buffer_samples_allocated) {
 		free(audio_buffer);
-		audio_buffer = mem_calloc(audio_buffer_samples, samples);
+		audio_buffer = mem_calloc(samples, audio_sample_size);
 	}
 }
 
