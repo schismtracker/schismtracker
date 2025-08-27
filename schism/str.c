@@ -448,6 +448,7 @@ int str_get_num_lines(const char *text)
 		ptr = strpbrk(ptr, "\015\012");
 		if (!ptr)
 			return n;
+		/* CRLF? */
 		if (ptr[0] == 13 && ptr[1] == 10)
 			ptr += 2;
 		else

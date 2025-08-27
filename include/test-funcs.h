@@ -77,6 +77,7 @@ TEST_FUNC(test_str_from_num_thousands_digits_9_negative)
 TEST_FUNC(test_str_from_num_thousands_digits_10_negative)
 TEST_FUNC(test_str_from_num)
 TEST_FUNC(test_str_from_num_signed)
+TEST_FUNC(test_str_get_num_lines)
 
 TEST_FUNC(test_str_concat)
 

@@ -284,4 +284,29 @@ testresult_t test_str_from_num_signed(void)
 	RETURN_PASS;
 }
 
+/* ------------------------------------------------------------------------ */
+
+testresult_t test_str_get_num_lines(void)
+{
+	static const struct {
+		const char *text;
+		int result;
+	} c[] = {
+		/* stress test */
+		{"wow\n", 1},
+		{"wow", 0 /* wait, what? */},
+		{"wow\r\n", 1},
+		{"wow\r\nhai\n", 2},
+		{"nice\n\r\n", 2},
+		{"awesome\r\n\n", 2},
+	};
+
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(c); i++)
+		ASSERT(str_get_num_lines(c[i].text) == c[i].result);
+
+	RETURN_PASS;
+}
+
 /* TODO test the rest of the str functions */
