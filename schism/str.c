@@ -260,7 +260,7 @@ int str_break(const char *s, char c, char **first, char **second)
 	if (!p)
 		return 0;
 	*first = mem_alloc(p - s + 1);
-	strncpy(*first, s, p - s);
+	memcpy(*first, s, p - s);
 	(*first)[p - s] = 0;
 	*second = str_dup(p + 1);
 	return 1;
