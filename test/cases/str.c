@@ -210,3 +210,78 @@ testresult_t test_str_concat(void)
 
 	RETURN_PASS;
 }
+
+/* ------------------------------------------------------------------------ */
+
+testresult_t test_str_from_num(void)
+{
+	static const struct {
+		int digits;
+		uint32_t num;
+		const char *result;
+	} c[] = {
+		{0, UINT32_C(1),          "1"},
+		{0, UINT32_C(10),         "10"},
+		{0, UINT32_C(100),        "100"},
+		{0, UINT32_C(1000),       "1000"},
+		{0, UINT32_C(10000),      "10000"},
+		{0, UINT32_C(100000),     "100000"},
+		{0, UINT32_C(1000000),    "1000000"},
+		{0, UINT32_C(10000000),   "10000000"},
+		{0, UINT32_C(100000000),  "100000000"},
+		{0, UINT32_C(1000000000), "1000000000"},
+		{2, UINT32_C(1),          "01"},
+		{4, UINT32_C(5),          "0005"},
+		{9, UINT32_C(9),          "000000009"},
+	};
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(c); i++) {
+		char buf[11];
+
+		str_from_num(c[i].digits, c[i].num, buf);
+
+		ASSERT(!strcmp(c[i].result, buf));
+	}
+
+	RETURN_PASS;
+}
+
+testresult_t test_str_from_num_signed(void)
+{
+	static const struct {
+		int digits;
+		int32_t num;
+		const char *result;
+	} c[] = {
+		{0, INT32_C(1),          "1"},
+		{0, INT32_C(10),         "10"},
+		{0, INT32_C(100),        "100"},
+		{0, INT32_C(1000),       "1000"},
+		{0, INT32_C(10000),      "10000"},
+		{0, INT32_C(100000),     "100000"},
+		{0, INT32_C(1000000),    "1000000"},
+		{0, INT32_C(10000000),   "10000000"},
+		{0, INT32_C(100000000),  "100000000"},
+		{0, INT32_C(1000000000), "1000000000"},
+		{2, INT32_C(1),          "01"},
+		{4, INT32_C(5),          "0005"},
+		{9, INT32_C(9),          "000000009"},
+		{3, INT32_C(-9),         "-09"},
+		{5, INT32_C(-9),         "-0009"},
+		{9, INT32_C(-9),         "-00000009"},
+	};
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(c); i++) {
+		char buf[12];
+
+		str_from_num_signed(c[i].digits, c[i].num, buf);
+
+		ASSERT(!strcmp(c[i].result, buf));
+	}
+
+	RETURN_PASS;
+}
+
+/* TODO test the rest of the str functions */
