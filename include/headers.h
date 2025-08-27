@@ -786,8 +786,6 @@ void *alloca(size_t size);
 
 #ifdef SCHISM_XBOX
 
-/* XXX why the hell is this here and not osdefs.c */
-
 struct tm *xbox_localtime(const time_t *t);
 
 # define localtime xbox_localtime
@@ -804,26 +802,6 @@ struct tm *xbox_localtime(const time_t *t);
 struct tm *win32_localtime(const time_t *t);
 
 #define localtime win32_localtime
-
-#endif
-
-#ifdef SCHISM_MACOS
-/* The Retro68 implementations of malloc, realloc, etc. are not
- * thread-safe, so we have to implement them ourselves using
- * Multiprocessing Services functions.
- *
- * The implementations are located in sys/macos/mt.c
- *   --paper */
-
-SCHISM_MALLOC SCHISM_ALLOC_SIZE(1) void *macos_malloc(size_t size);
-SCHISM_MALLOC SCHISM_ALLOC_SIZE_EX(1, 2) void *macos_calloc(size_t count, size_t nmemb);
-SCHISM_MALLOC SCHISM_ALLOC_SIZE(2) void *macos_realloc(void *ptr, size_t newsize);
-void macos_free(void *ptr);
-
-#define malloc macos_malloc
-#define calloc macos_calloc
-#define realloc macos_realloc
-#define free macos_free
 
 #endif
 

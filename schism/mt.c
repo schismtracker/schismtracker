@@ -183,9 +183,6 @@ int mt_init(void)
 #if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 		&schism_mt_backend_win32,
 #endif
-#ifdef SCHISM_MACOS
-		&schism_mt_backend_macos,
-#endif
 #ifdef SCHISM_SDL3
 		&schism_mt_backend_sdl3,
 #endif

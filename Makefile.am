@@ -426,17 +426,11 @@ libs_macos= \
 	-lControlStripLib \
 	-lControlsLib \
 	-lCursorDevicesGlue \
-	-lMPLibrary \
 	-lTextEncodingConverter \
 	-lTextCommon \
 	-lContextualMenu \
 	-lDrawSprocketLib \
 	-lDialogsLib
-
-if USE_THREADS
-# this should probably be removed, tbh
-files_mt += sys/macos/mt.c
-endif
 
 # Specific to the Retro68 toolchain to create MacBinary files
 schismtracker.bin: schismtracker.pef $(top_srcdir)/sys/macos/resource.r

@@ -55,9 +55,6 @@ typedef struct {
 #if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 extern const schism_mt_backend_t schism_mt_backend_win32;
 #endif
-#ifdef SCHISM_MACOS
-extern const schism_mt_backend_t schism_mt_backend_macos;
-#endif
 #ifdef SCHISM_SDL12
 extern const schism_mt_backend_t schism_mt_backend_sdl12;
 #endif
