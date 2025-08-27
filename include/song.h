@@ -38,9 +38,7 @@ extern char song_filename[]; /* the full path (as given to song_load) */
 extern char song_basename[]; /* everything after the last slash */
 
 /* milliseconds = (samples * 1000) / frequency */
-extern unsigned int samples_played;
-
-extern unsigned int max_channels_used;
+extern uint32_t max_channels_used;
 
 /* --------------------------------------------------------------------- */
 /* non-song-related structures */

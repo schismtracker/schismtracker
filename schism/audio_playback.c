@@ -57,23 +57,24 @@
 
 #define SMP_INIT (UINT_MAX - 1) /* for a click noise on init */
 
-/* XXX change to 32-bit */
-unsigned int samples_played = 0;
-unsigned int max_channels_used = 0;
+static uint32_t samples_played = 0;
+/* this crap being extern is really dumb */
+uint32_t max_channels_used = 0;
 
-signed short *audio_buffer = NULL;
-unsigned int audio_buffer_samples = 0; /* multiply by audio_sample_size to get bytes */
 static uint32_t audio_buffer_samples_allocated = 0;
 
-unsigned int audio_output_channels = 2;
-unsigned int audio_output_bits = 16;
+/* one of 8-bit, 16-bit, or 32-bit integer, depending on audio_output_bits */
+void *audio_buffer = NULL;
+uint32_t audio_buffer_samples = 0; /* multiply by audio_sample_size to get bytes */
+uint32_t audio_output_channels = 2;
+uint32_t audio_output_bits = 16;
 
 /* ... these are an ugly hack to be able to get floating-point output
  * don't try this at home */
-static unsigned int audio_output_bits_real = 16;
-static int audio_output_fp = 0;
+static uint32_t audio_output_bits_real = 16;
+static int audio_output_fp = 0; /* boolean */
 
-static unsigned int audio_sample_size;
+static uint32_t audio_sample_size;
 static int audio_buffers_per_second = 0;
 static int audio_writeout_count = 0;
 
@@ -243,7 +244,7 @@ static void audio_callback(uint8_t *stream, int len)
 	if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
 		// I don't really like this...
 		switch (audio_output_bits) {
-#define BITSCASE(BITS) case BITS: if (audio_output_channels == 2) { vis_work_##BITS##s((void *)audio_buffer, n / 2); } else { vis_work_##BITS##m((void *)audio_buffer, n); } break;
+#define BITSCASE(BITS) case BITS: if (audio_output_channels == 2) { vis_work_##BITS##s(audio_buffer, n / 2); } else { vis_work_##BITS##m(audio_buffer, n); } break;
 		BITSCASE(8)
 		BITSCASE(16)
 		BITSCASE(32)

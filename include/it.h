@@ -228,20 +228,14 @@ void text_add_char(char *text, uint8_t c, int *cursor_pos, int max_length);
 void text_delete_char(char *text, int *cursor_pos, int max_length);
 void text_delete_next_char(char *text, int *cursor_pos, int max_length);
 
-static inline unsigned char unicode_to_ascii(uint16_t unicode)
-{
-	return unicode & 0xff;
-//	return ((unicode & 0xff80) ? 0 : (unicode & 0x7f));
-}
-
 /* --------------------------------------------------------------------- */
 /* ... */
 
-/* these are in audio_playback.cc */
-extern signed short *audio_buffer;
-extern unsigned int audio_buffer_samples;
-extern unsigned int audio_output_channels;
-extern unsigned int audio_output_bits;
+/* these are in audio_playback.c */
+extern void *audio_buffer;
+extern uint32_t audio_buffer_samples;
+extern uint32_t audio_output_channels;
+extern uint32_t audio_output_bits;
 
 /* --------------------------------------------------------------------- */
 /* page functions */
