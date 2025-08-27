@@ -57,11 +57,13 @@
 
 #define SMP_INIT (UINT_MAX - 1) /* for a click noise on init */
 
+/* XXX change to 32-bit */
 unsigned int samples_played = 0;
 unsigned int max_channels_used = 0;
 
 signed short *audio_buffer = NULL;
 unsigned int audio_buffer_samples = 0; /* multiply by audio_sample_size to get bytes */
+static uint32_t audio_buffer_samples_allocated = 0;
 
 unsigned int audio_output_channels = 2;
 unsigned int audio_output_bits = 16;
@@ -176,6 +178,15 @@ uint32_t s32_to_s24(void *ptr, const int32_t *buffer, uint32_t samples)
 	return samples * 3;
 }
 
+static void audio_reallocate_buffer(uint32_t samples)
+{
+	audio_buffer_samples = samples;
+	if (samples > audio_buffer_samples_allocated) {
+		free(audio_buffer);
+		audio_buffer = mem_calloc(audio_buffer_samples, samples);
+	}
+}
+
 // this gets called from the backend
 static void audio_callback(uint8_t *stream, int len)
 {
@@ -184,6 +195,8 @@ static void audio_callback(uint8_t *stream, int len)
 	int i, n;
 
 	memset(stream, 0, len);
+
+	audio_reallocate_buffer(len / audio_sample_size);
 
 	if (!stream || !len || !current_song) {
 		if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT)
@@ -1488,7 +1501,7 @@ success:
 	audio_output_bits_real = obtained.bits;
 	audio_output_fp = obtained.fp;
 	audio_sample_size = audio_output_channels * (audio_output_bits / 8);
-	audio_buffer_samples = obtained.samples;
+	audio_reallocate_buffer(obtained.samples);
 
 	csf_set_wave_config(current_song, obtained.freq,
 		audio_output_bits,
@@ -1560,8 +1573,6 @@ static void _audio_quit(void)
 // (note: _audio_open will leave the device LOCKED)
 static void _audio_init_tail(void)
 {
-	free(audio_buffer);
-	audio_buffer = mem_calloc(audio_buffer_samples, audio_sample_size);
 	samples_played = (status.flags & CLASSIC_MODE) ? SMP_INIT : 0;
 
 	song_unlock_audio();

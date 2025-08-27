@@ -41,7 +41,7 @@ struct schism_audio_device {
 	/* heap-allocated buffer, grows if SDL requests more
 	 * space than we have space allocated */
 	uint8_t *buf;
-	int buflen;
+	uint32_t buflen;
 };
 
 static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
