@@ -402,14 +402,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
+        threads: [
+          { flag: '--disable-threads', name: '' },
+          { flag: '--enable-threads', name: '-threaded' },
+        ]
+        sys: [
           # MSYS2 doesn't make new 32-bit packages anymore. Now what?
-          - { sys: mingw64, env: x86_64 }
-          - { sys: ucrt64,  env: ucrt-x86_64 }
+          { sys: mingw64, env: x86_64 },
+          { sys: ucrt64,  env: ucrt-x86_64 },
+        ]
     concurrency:
-      group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys}}-${{matrix.env}}
+      group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.sys}}-${{matrix.sys.env}}${{matrix.threads.name}}
       cancel-in-progress: true
-    #name: ${{matrix.sys}}-${{matrix.env}} # the default name will work just fine
+    #name: ${{matrix.sys.sys}}-${{matrix.sys.env}} # the default name will work just fine
     defaults:
       run:
         shell: msys2 {0}
@@ -420,16 +425,18 @@ jobs:
       - name: 'Setup MSYS2'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: ${{ matrix.sys }}
+          msystem: ${{ matrix.sys.sys }}
           update: true
-          install: mingw-w64-${{ matrix.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.env }}-SDL2 mingw-w64-${{ matrix.env }}-libutf8proc zip dos2unix
+          install: mingw-w64-${{ matrix.sys.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.sys.env }}-SDL2 mingw-w64-${{ matrix.sys.env }}-libutf8proc zip dos2unix
 
       - name: 'Build package'
+        env:
+          CONFIGURE_FLAGS: ${{ matrix.threads.flag }}
         run: |
           autoreconf -i
           mkdir build
           cd build
-          ../configure --enable-tests
+          ../configure --enable-tests $CONFIGURE_FLAGS
           make
 
       - name: 'Run test suite'

@@ -381,24 +381,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Apple software now uses the 2 trailing digits of the year for
-          # the release number, making them non-Y2K compliant. Nice! 
-          - { host: macos-15, compiler: '26.0' }
-          - { host: macos-15, compiler: '16.4' }
-          - { host: macos-15, compiler: '16.3' }
-          - { host: macos-15, compiler: '16.2' }
-          - { host: macos-15, compiler: '16.1' }
-          - { host: macos-15, compiler: '16.0' }
-          - { host: macos-14, compiler: '15.4' }
-          - { host: macos-14, compiler: '15.3' }
-          - { host: macos-13, compiler: '15.2' }
-          - { host: macos-13, compiler: '14.2' }
-          - { host: macos-13, compiler: '14.1' }
+        threads: [
+          { flag: '--disable-threads', name: '' },
+          { flag: '--enable-threads', name: '-threaded' },
+        ]
+        sys: [
+          { host: macos-15, compiler: '26.0' },
+          { host: macos-15, compiler: '16.4' },
+          { host: macos-15, compiler: '16.3' },
+          { host: macos-15, compiler: '16.2' },
+          { host: macos-15, compiler: '16.1' },
+          { host: macos-15, compiler: '16.0' },
+          { host: macos-14, compiler: '15.4' },
+          { host: macos-14, compiler: '15.3' },
+          { host: macos-13, compiler: '15.2' },
+          { host: macos-13, compiler: '14.2' },
+          { host: macos-13, compiler: '14.1' },
+        ]
     concurrency:
-      group: ${{github.ref}}-${{github.workflow}}-${{matrix.host}}-${{matrix.compiler}}
+      group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.host}}-${{matrix.sys.compiler}}${{matrix.threads.name}}
       cancel-in-progress: true
-    runs-on: ${{matrix.host}}
+    runs-on: ${{matrix.sys.host}}
     steps:
     - uses: actions/checkout@v4
 
@@ -406,14 +409,16 @@ jobs:
       run: brew install autoconf automake utf8proc sdl2
 
     - name: 'Change current Xcode version'
-      run: sudo xcode-select --switch /Applications/Xcode_${{matrix.compiler}}.app
+      run: sudo xcode-select --switch /Applications/Xcode_${{matrix.sys.compiler}}.app
 
     - name: 'Build Schism'
+      env:
+        CONFIGURE_FLAGS: ${{ matrix.threads.flag }}
       run: |
         autoreconf -i
         mkdir build
         cd build
-        ../configure --enable-tests --enable-sdl2-linking
+        ../configure --enable-tests --enable-sdl2-linking $CONFIGURE_FLAGS
         make
 
     - name: 'Run test suite'

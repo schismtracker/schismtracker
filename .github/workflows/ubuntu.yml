@@ -33,6 +33,7 @@ jobs:
           make
           cd ..
 
+        # FIXME need to test this with --disable-threads as well.
       - name: 'Run test suite'
         run: |
           # this should fail with an error code if any of the tests fail.
