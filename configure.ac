@@ -185,6 +185,11 @@ AC_ARG_ENABLE(tests,
 	BUILD_TESTS=$enableval,
 	BUILD_TESTS=no)
 
+AC_ARG_ENABLE(threads,
+	AS_HELP_STRING([--enable-threads], [Use multithreading]),
+	THREADS=$enableval,
+	THREADS=yes)
+
 dnl These are used in the Win32 build so that we can intermix mingw32 and mingw-w64 parts.
 dnl This is really a hack, and it would be nicer if we could avoid this, but unfortunately
 dnl there is no real windows toolchain available that allows to target super old windows
@@ -632,6 +637,12 @@ AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 AM_CONDITIONAL([USE_XBOX], [test "x$use_xbox" = "xyes"])
 AM_CONDITIONAL([USE_ASIO], [test "x$use_asio" = "xyes"])
+
+if test "x$THREADS" = "xyes"; then
+	AC_DEFINE([USE_THREADS], [1], [Use multithreading])
+fi
+
+AM_CONDITIONAL([USE_THREADS], [test "x$THREADS" = "xyes"])
 
 dnl ------------------------------------------------------------------------
 

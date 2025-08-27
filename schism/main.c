@@ -835,6 +835,12 @@ SCHISM_NORETURN static void event_loop(void)
 			while (start + 10 > timer_ticks() && dmoz_worker() && !events_have_event());
 		}
 
+		if (!events_have_event())
+			midi_engine_worker();
+
+		if (!events_have_event())
+			timer_oneshot_worker();
+
 		/* sleep for a little bit to not hog CPU time */
 		if (!events_have_event())
 			timer_msleep(5);
@@ -1079,7 +1085,8 @@ int schism_main(int argc, char** argv)
 	}
 #endif
 
-	SCHISM_RUNTIME_ASSERT(mt_init(), "Failed to initialize a multithreading backend!");
+	/* no longer required  --paper */
+	mt_init();
 	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
 
 #ifndef HAVE_LOCALTIME_R

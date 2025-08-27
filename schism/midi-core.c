@@ -49,6 +49,7 @@ static mt_mutex_t *midi_record_mutex = NULL;
 
 static mt_thread_t *midi_worker_thread = NULL;
 static volatile int midi_worker_thread_cancel = 0;
+static volatile int midi_worker_thread_tried = 0;
 
 static struct midi_provider *port_providers = NULL;
 
@@ -441,7 +442,7 @@ void midi_engine_port_unlock(void)
 
 /* ------------------------------------------------------------------------ */
 
-void midi_engine_worker(void)
+static void midi_engine_worker_impl(void)
 {
 	struct midi_provider *n;
 
@@ -458,6 +459,15 @@ void midi_engine_worker(void)
 	mt_mutex_unlock(midi_mutex);
 }
 
+void midi_engine_worker(void)
+{
+	if (midi_worker_thread)
+		return;
+
+	midi_engine_worker_impl();
+}
+
+#ifdef USE_THREADS
 static int midi_engine_worker_thread_func(SCHISM_UNUSED void *z)
 {
 	while (!midi_worker_thread_cancel) {
@@ -482,9 +492,11 @@ static void midi_engine_worker_thread_start(void)
 
 	mt_mutex_unlock(midi_mutex);
 }
+#endif
 
 /* ------------------------------------------------------------------------ */
 
+#ifdef USE_THREADS
 struct midi_provider_thread_info {
 	const struct midi_driver *d;
 	struct midi_provider *n;
@@ -501,6 +513,7 @@ static int midi_provider_thread_func(void *z)
 
 	return d->thread(n);
 }
+#endif
 
 /* midi engines register a provider (one each!) */
 struct midi_provider *midi_provider_register(const char *name,
@@ -530,18 +543,28 @@ struct midi_provider *midi_provider_register(const char *name,
 	port_providers = n;
 
 	if (driver->thread) {
+#ifdef USE_THREADS
 		struct midi_provider_thread_info *i = mem_alloc(sizeof(*i));
 
 		i->d = driver;
 		i->n = n;
 
 		n->thread = mt_thread_create(midi_provider_thread_func, n->name, i);
+#else
+		log_appendf(1, "Internal error launching %s MIDI: threads not supported", n->name);
+		n->thread = NULL;
+		port_providers = n->next;
+		free(n);
+		return NULL;
+#endif
 	}
 
 	if (driver->work) {
 		n->work = driver->work;
 
+#ifdef USE_THREADS
 		midi_engine_worker_thread_start();
+#endif
 	}
 
 	mt_mutex_unlock(midi_mutex);

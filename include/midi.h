@@ -128,6 +128,7 @@ int midi_engine_start(void);
 void midi_engine_reset(void);
 void midi_engine_stop(void);
 void midi_engine_poll_ports(void);
+void midi_engine_worker(void);
 
 /* some parts of schism call this; it means "immediately" */
 void midi_send_now(const unsigned char *seq, uint32_t len);

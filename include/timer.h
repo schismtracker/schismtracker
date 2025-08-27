@@ -58,4 +58,6 @@ void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param);
 int timer_init(void);
 void timer_quit(void);
 
+int timer_oneshot_worker(void);
+
 #endif /* SCHISM_TIMER_H_ */

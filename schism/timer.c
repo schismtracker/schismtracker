@@ -67,9 +67,6 @@ void timer_msleep(uint32_t ms)
 	backend->msleep(ms);
 }
 
-static mt_thread_t *timer_oneshot_thread = NULL;
-static volatile int timer_oneshot_thread_cancelled = 0;
-
 // A linked list of timers.
 struct timer_oneshot_data_ {
 	void (*callback)(void *param);
@@ -84,13 +81,21 @@ struct timer_oneshot_data_ {
 // A list of pending timers that will be added to the real list
 // by the running thread.
 static struct timer_oneshot_data_ *oneshot_data_pending = NULL;
+
+// this should NEVER be touched outside of the worker/thread
+static struct timer_oneshot_data_ *oneshot_data_list = NULL;
+
+#ifdef USE_THREADS
+static mt_thread_t *timer_oneshot_thread = NULL;
+static volatile int timer_oneshot_thread_cancelled = 0;
+
+/* this protects the oneshot PENDING list, not the actual
+ * list itself (important!) */
 static mt_mutex_t *timer_oneshot_mutex = NULL;
 static mt_cond_t *timer_oneshot_cond = NULL;
 
 static int timer_oneshot_thread_func(SCHISM_UNUSED void *userdata)
 {
-	struct timer_oneshot_data_ *oneshot_data_list = NULL;
-
 	mt_mutex_lock(timer_oneshot_mutex);
 
 	mt_thread_set_priority(MT_THREAD_PRIORITY_HIGH);
@@ -153,6 +158,65 @@ static int timer_oneshot_thread_func(SCHISM_UNUSED void *userdata)
 
 	return 0;
 }
+#endif
+
+int timer_oneshot_worker(void)
+{
+#ifdef USE_THREADS
+	if (timer_oneshot_thread)
+		return 0; // do nothing
+
+	mt_mutex_lock(timer_oneshot_mutex);
+#endif
+
+	// Add any pending timers waiting to get added to the list.
+	if (oneshot_data_pending) {
+		if (oneshot_data_list) {
+			struct timer_oneshot_data_ *tail = oneshot_data_list;
+			while (tail->next)
+				tail = tail->next;
+			tail->next = oneshot_data_pending;
+		} else {
+			oneshot_data_list = oneshot_data_pending;
+		}
+
+		oneshot_data_pending = NULL;
+	}
+
+#ifdef USE_THREADS
+	mt_mutex_unlock(timer_oneshot_mutex);
+#endif
+
+	if (oneshot_data_list) {
+		struct timer_oneshot_data_ *data = oneshot_data_list, *prev = NULL;
+		timer_ticks_t now = timer_ticks_us();
+
+		while (data) {
+			if (timer_ticks_passed(now, data->trigger)) {
+				data->callback(data->param);
+
+				now = timer_ticks_us();
+
+				// Remove the timer from the list
+				if (prev) {
+					prev->next = data->next;
+				} else {
+					oneshot_data_list = data->next;
+				}
+
+				// free the data
+				void *old = data;
+				data = data->next;
+				free(old);
+			} else {
+				prev = data;
+				data = data->next;
+			}
+		}
+	}
+
+	return 0;
+}
 
 void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
 {
@@ -169,15 +233,9 @@ void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
 	data->trigger = timer_ticks_us() + (ms * UINT64_C(1000));
 	data->next = NULL;
 
+#ifdef USE_THREADS
 	mt_mutex_lock(timer_oneshot_mutex);
-
-	// initialize everything
-	if (!timer_oneshot_thread) {
-		oneshot_data_pending = NULL;
-
-		timer_oneshot_thread_cancelled = 0;
-		timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func, "Timer oneshot thread", NULL);
-	}
+#endif
 
 	// append it to the list
 	if (oneshot_data_pending) {
@@ -189,9 +247,12 @@ void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
 		oneshot_data_pending = data;
 	}
 
+#ifdef USE_THREADS
 	mt_mutex_unlock(timer_oneshot_mutex);
 
-	mt_cond_signal(timer_oneshot_cond);
+	if (timer_oneshot_thread)
+		mt_cond_signal(timer_oneshot_cond);
+#endif
 }
 
 int timer_init(void)
@@ -226,8 +287,25 @@ int timer_init(void)
 	if (!backend)
 		return 0;
 
+#ifdef USE_THREADS
 	timer_oneshot_mutex = mt_mutex_create();
 	timer_oneshot_cond = mt_cond_create();
+
+	timer_oneshot_thread_cancelled = 0;
+	timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func,
+		"Timer oneshot thread", NULL);
+
+	if (!timer_oneshot_thread)
+#endif
+	{
+		/* this block should be run if we EITHER
+		 *  1. have no threading support compiled
+		 *   OR
+		 *  2. starting up the thread failed */
+
+	}
+
+	oneshot_data_pending = NULL;
 
 	return 1;
 }
@@ -239,6 +317,7 @@ void timer_quit(void)
 		backend = NULL;
 	}
 
+#ifdef USE_THREADS
 	// Kill the oneshot stuff if needed.
 	if (timer_oneshot_thread) {
 		timer_oneshot_thread_cancelled = 1;
@@ -251,4 +330,5 @@ void timer_quit(void)
 		mt_mutex_delete(timer_oneshot_mutex);
 		timer_oneshot_mutex = NULL;
 	}
+#endif
 }

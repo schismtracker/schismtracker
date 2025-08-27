@@ -197,6 +197,10 @@ else
 	@echo "*** perl is required to regenerate $(@) ***"; exit 1;
 endif
 
+if USE_THREADS
+files_mt = 
+endif
+
 if USE_SDL3
 # hax: we want to use specific CFLAGS...
 sys/sdl3/schismtracker-audio.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
@@ -208,7 +212,11 @@ sys/sdl3/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
 sys/sdl3/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
 sys/sdl3/schismtracker-mt.$(OBJEXT): CFLAGS += $(SDL3_CFLAGS)
 
-files_sdl3 = sys/sdl3/audio.c sys/sdl3/dmoz.c sys/sdl3/clippy.c sys/sdl3/events.c sys/sdl3/init.c sys/sdl3/timer.c sys/sdl3/video.c sys/sdl3/mt.c
+files_sdl3 = sys/sdl3/audio.c sys/sdl3/dmoz.c sys/sdl3/clippy.c sys/sdl3/events.c sys/sdl3/init.c sys/sdl3/timer.c sys/sdl3/video.c
+
+if USE_THREADS
+files_mt += sys/sdl3/mt.c
+endif
 
 if LINK_TO_SDL3
 libs_sdl3 = $(SDL3_LIBS)
@@ -227,7 +235,11 @@ sys/sdl2/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
 sys/sdl2/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
 sys/sdl2/schismtracker-mt.$(OBJEXT): CFLAGS += $(SDL2_CFLAGS)
 
-files_sdl2 = sys/sdl2/audio.c sys/sdl2/dmoz.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c sys/sdl2/mt.c
+files_sdl2 = sys/sdl2/audio.c sys/sdl2/dmoz.c sys/sdl2/clippy.c sys/sdl2/events.c sys/sdl2/init.c sys/sdl2/timer.c sys/sdl2/video.c
+
+if USE_THREADS
+files_mt += sys/sdl2/mt.c
+endif
 
 if LINK_TO_SDL2
 libs_sdl2 = $(SDL2_LIBS)
@@ -243,10 +255,14 @@ sys/sdl12/schismtracker-timer.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
 sys/sdl12/schismtracker-video.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
 sys/sdl12/schismtracker-mt.$(OBJEXT): CFLAGS += $(SDL12_CFLAGS)
 
-files_sdl12 = sys/sdl12/audio.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c sys/sdl12/mt.c
+files_sdl12 = sys/sdl12/audio.c sys/sdl12/events.c sys/sdl12/init.c sys/sdl12/timer.c sys/sdl12/video.c
 
 if LINK_TO_SDL12
 libs_sdl12 = $(SDL12_LIBS)
+endif
+
+if USE_THREADS
+files_mt += sys/sdl12/mt.c
 endif
 
 endif
@@ -289,10 +305,13 @@ files_win32 = \
 	sys/win32/clippy.c \
 	sys/win32/timer.c \
 	sys/win32/audio-waveout.c \
-	sys/win32/audio-dsound.c \
-	sys/win32/mt.c
+	sys/win32/audio-dsound.c
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm -lgdi32 $(DSOUND_LIBS)
+
+if USE_THREADS
+files_win32 += sys/win32/mt.c
+endif
 
 if USE_MEDIAFOUNDATION
 fmt/schismtracker-win32mf.$(OBJEXT): CFLAGS += $(MEDIAFOUNDATION_CFLAGS)
@@ -363,10 +382,14 @@ endif
 
 if USE_XBOX
 files_xbox = \
-	sys/xbox/osdefs.c \
-	sys/win32/mt.c
+	sys/xbox/osdefs.c
 cflags_xbox =
 libs_xbox =
+
+if USE_THREADS
+files_mt += sys/win32/mt.c
+endif
+
 endif
 
 if USE_MACOSX
@@ -394,7 +417,6 @@ files_macos = \
 	sys/macos/audio-sndmgr.c \
 	sys/macos/osdefs.c \
 	sys/macos/dirent/macos-dirent.c \
-	sys/macos/mt.c \
 	sys/macos/dmoz.c \
 	sys/macos/clippy.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
@@ -410,6 +432,11 @@ libs_macos= \
 	-lContextualMenu \
 	-lDrawSprocketLib \
 	-lDialogsLib
+
+if USE_THREADS
+# this should probably be removed, tbh
+files_mt += sys/macos/mt.c
+endif
 
 # Specific to the Retro68 toolchain to create MacBinary files
 schismtracker.bin: schismtracker.pef $(top_srcdir)/sys/macos/resource.r
@@ -591,6 +618,7 @@ schismtracker_SOURCES = \
 	schism/midi-core.c		\
 	schism/midi-ip.c		\
 	schism/mplink.c			\
+	schism/mt.c				\
 	schism/page.c			\
 	schism/page_about.c		\
 	schism/page_blank.c		\
@@ -619,7 +647,6 @@ schismtracker_SOURCES = \
 	schism/slurp.c			\
 	schism/status.c			\
 	schism/str.c             \
-	schism/mt.c        \
 	schism/timer.c          \
 	schism/util.c			\
 	schism/version.c		\
@@ -650,7 +677,8 @@ schismtracker_SOURCES = \
 	$(files_os2)			\
 	$(files_xbox)			\
 	$(files_avformat)		\
-	$(files_asio)
+	$(files_asio)			\
+	$(files_mt)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtrackertest_OBJECTS)) $(HEADERS)
