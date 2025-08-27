@@ -34,21 +34,6 @@
 #include "fmt.h" // for it_decompress8 / it_decompress16
 #include "mem.h"
 
-#ifdef ENABLE_WAVEFORMVIS
-int8_t recent_sample_buffer[(MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE];
-static int oldest_recent_output_sample = 0;
-
-int csf_get_oldest_recent_sample_output(void)
-{
-	return oldest_recent_output_sample;
-}
-
-void csf_set_oldest_recent_sample_output(int new_value)
-{
-	oldest_recent_output_sample = new_value;
-}
-#endif
-
 static void _csf_reset(song_t *csf)
 {
 	unsigned int i;
@@ -138,8 +123,14 @@ static void _csf_reset(song_t *csf)
 song_t *csf_allocate(void)
 {
 	song_t *csf = mem_calloc(1, sizeof(song_t));
+
 	_csf_reset(csf);
-	csf->recent_sample_buffer = mem_calloc(MAX_VOICES + 2, NATIVE_SCREEN_WIDTH);
+
+	csf->opl_buffer_data = mem_calloc(OPL_CHANNELS, MIXBUFFERSIZE * 2 * sizeof(int32_t));
+
+	csf->recent_sample_buffer = mem_calloc(MAX_VOICES + 2, RECENT_SAMPLE_BUFFER_SIZE);
+	memset(csf->recent_sample_buffer, 0, (MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE);
+
 	return csf;
 }
 
@@ -513,6 +504,9 @@ static void set_current_pos_0(song_t *csf)
 			v->global_volume = 64;
 		}
 	}
+
+	memset(csf->recent_sample_buffer, 0, (MAX_VOICES + 2) * RECENT_SAMPLE_BUFFER_SIZE);
+
 	csf->current_global_volume = csf->initial_global_volume;
 	csf->current_speed = csf->initial_speed;
 	csf->current_tempo = csf->initial_tempo;

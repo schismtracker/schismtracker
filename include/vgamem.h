@@ -150,23 +150,23 @@ typedef enum {
  * - assumes you've already cleared the background
  */
 void draw_sample_data_ex_32(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
-	int32_t *data, int offset, int stride, int advance, int length,
+	int32_t *data, uint32_t offset, uint32_t stride, uint32_t advance, uint32_t length,
 	int32_t min_value, int32_t max_value, int colour, sample_draw_style_t draw_style);
 void draw_sample_data_ex_16(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
-	int16_t *data, int offset, int stride, int advance, int length,
+	int16_t *data, uint32_t offset, uint32_t stride, uint32_t advance, uint32_t length,
 	int16_t min_value, int16_t max_value, int colour, sample_draw_style_t draw_style);
 void draw_sample_data_ex_8(struct vgamem_overlay *r, int x1, int y1, int x2, int y2,
-	int8_t *data, int offset, int stride, int advance, int length, int signed_data,
+	int8_t *data, uint32_t offset, uint32_t stride, uint32_t advance, uint32_t length, int signed_data,
 	int8_t min_value, int8_t max_value, int colour, sample_draw_style_t draw_style);
 
 /* this works like draw_sample_data, just without having to allocate a
  * song_sample structure, and without caching the waveform.
  * mostly it's just for the oscilloscope view. */
-void draw_sample_data_rect_32(struct vgamem_overlay *r, int32_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans);
-void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data, int length,
+void draw_sample_data_rect_32(struct vgamem_overlay *r, int32_t *data, uint32_t length,
 	unsigned int inputchans, unsigned int outputchans);
-void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data, int length,
+void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data, uint32_t length,
+	unsigned int inputchans, unsigned int outputchans);
+void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data, uint32_t length,
 	unsigned int inputchans, unsigned int outputchans);
 
 /* ------------------------------------------------------------ */

@@ -806,7 +806,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 
 #define DRAW_SAMPLE_DATA_EX_VARIANT(BITS, SCALE, SIGNARG_DEF, SIGN_FLIP_DEF, SIGN_FLIP_DO) \
 	void draw_sample_data_ex_##BITS(struct vgamem_overlay *r, int x1, int y1, int x2, int y2, \
-		int##BITS##_t *data, int offset, int stride, int advance, int length, SIGNARG_DEF \
+		int##BITS##_t *data, uint32_t offset, uint32_t stride, uint32_t advance, uint32_t length, SIGNARG_DEF \
 		int##BITS##_t min_value, int##BITS##_t max_value, int colour, sample_draw_style_t draw_style) \
 	{ \
 		int32_t mid = ((min_value >> (SCALE / 2)) + (max_value >> (SCALE / 2))) >> (1 + SCALE / 2); \
@@ -821,7 +821,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 		int ly = -1; \
 		int yy; \
 \
-		int walk = 0; \
+		uint32_t walk = 0; \
 \
 		for (int x = x1, h = y2 - y1 + 1; x < x2; x++) { \
 			int y; \
@@ -1050,9 +1050,9 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 
 	/* do the actual drawing */
 	int chans = sample->flags & CHN_STEREO ? 2 : 1;
-	int stride = chans;
+	uint32_t stride = chans;
 
-	int samples_per_pixel = sample->length / r->width;
+	int32_t samples_per_pixel = sample->length / r->width;
 
 	if (samples_per_pixel > MAX_SAMPLES_PER_PIXEL) {
 		stride *= (1 + samples_per_pixel / MAX_SAMPLES_PER_PIXEL);
@@ -1062,7 +1062,7 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 	{
 		int fy1 = chan * r->height / chans;
 		int fy2 = (chan + 1) * r->height / chans - 1;
-		int advance = _muldiv(sample->length * chans, 256, r->width * stride);
+		uint32_t advance = _muldiv(sample->length * chans, 256, r->width * stride);
 
 		if (sample->flags & CHN_16BIT)
 			draw_sample_data_ex_16(
@@ -1089,9 +1089,9 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 
 #define DRAW_SAMPLE_DATA_RECT_VARIANT(BITS, SIGNARG) \
 	void draw_sample_data_rect_##BITS(struct vgamem_overlay *r, int##BITS##_t *data, \
-		int length, unsigned int inputchans, unsigned int outputchans) \
+		uint32_t length, unsigned int inputchans, uint32_t outputchans) \
 	{ \
-		int advance = _muldiv(length, 256, r->width); \
+		uint32_t advance = _muldiv(length, 256, r->width); \
 		int chn; \
 \
 		vgamem_ovl_clear(r, 0); \

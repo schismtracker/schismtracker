@@ -830,9 +830,9 @@ static void info_draw_waveform(struct info_window *window, int base, int height,
 		if ((chan >= MAX_VOICES)
 			? current_song->mix_stat /* main mixer output -- is anything playing? */
 			: ((voice->current_sample_data && (voice->left_volume || voice->right_volume)) /* PCM */
-		 || (current_song->opl_from_chan[chan] >= 0))) /* FM */ {
+			|| ((voice->flags & CHN_ADLIB) && (current_song->opl_from_chan[chan] >= 0)))) /* FM */ {
 			recent_samples = RECENT_SAMPLE_BUFFER(current_song, chan);
-			idx = (chan >= MAX_VOICES) ? csf_get_oldest_recent_sample_output() : voice->oldest_recent_sample;
+			idx = (chan >= MAX_VOICES) ? current_song->oldest_recent_output_sample : voice->oldest_recent_sample;
 
 			draw_sample_data_ex_8(
 				&window->overlay,

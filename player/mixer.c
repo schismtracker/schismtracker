@@ -911,7 +911,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				channel->lofs += *(pbufmax - 1);
 
 #ifdef ENABLE_WAVEFORMVIS
-				int oldest_recent_output_sample = csf_get_oldest_recent_sample_output();
+				int oldest_recent_output_sample = csf->oldest_recent_output_sample;
 				int8_t *recent_sample_buffer_l = RECENT_SAMPLE_BUFFER(csf, MAX_VOICES);
 				int8_t *recent_sample_buffer_r = RECENT_SAMPLE_BUFFER(csf, MAX_VOICES + 1);
 
@@ -926,7 +926,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 					oldest_recent_output_sample++;
 				}
 
-				csf_set_oldest_recent_sample_output(oldest_recent_output_sample);
+				csf->oldest_recent_output_sample = oldest_recent_output_sample;
 #else
 				pbuffer = pbufmax;
 #endif

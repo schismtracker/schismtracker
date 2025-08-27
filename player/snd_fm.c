@@ -265,11 +265,8 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		}
 	}
 	else {
-		if (!csf->opl_buffer_data) {
-			SCHISM_RUNTIME_ASSERT(sz <= MIXBUFFERSIZE * 2, "Fmdrv_Mix can only process up to MIXBUFFERSIZE samples at a time, caller requested more");
-			csf->opl_buffer_data = mem_calloc(OPL_CHANNELS, MIXBUFFERSIZE * 2 * sizeof(int32_t));
-		}
-
+		SCHISM_RUNTIME_ASSERT(sz <= MIXBUFFERSIZE * 2, "Fmdrv_Mix can only process up to MIXBUFFERSIZE samples at a time, caller requested more");
+\
 		memset(csf->opl_buffer_data, 0, OPL_CHANNELS * sz * sizeof(int32_t));
 
 		for (i = 0; i < OPL_CHANNELS; i++)
@@ -336,7 +333,7 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	}
 
 	/* main output recent samples */
-	int oldest_recent_output_sample = csf_get_oldest_recent_sample_output();
+	int oldest_recent_output_sample = csf->oldest_recent_output_sample;
 	int8_t *recent_sample_buffer_l = RECENT_SAMPLE_BUFFER(csf, MAX_VOICES);
 	int8_t *recent_sample_buffer_r = RECENT_SAMPLE_BUFFER(csf, MAX_VOICES + 1);
 
@@ -349,7 +346,7 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		oldest_recent_output_sample++;
 	}
 
-	csf_set_oldest_recent_sample_output(oldest_recent_output_sample);
+	csf->oldest_recent_output_sample = oldest_recent_output_sample;
 }
 
 
