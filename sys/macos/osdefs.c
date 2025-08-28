@@ -71,6 +71,38 @@ static inline SCHISM_ALWAYS_INLINE uint32_t time_convert_to_macintosh(time_t x)
 
 /* ------------------------------------------------------------------------ */
 
+static void macos_copy_to_pascal_convert_newlines(const char *o,
+	unsigned char s[256])
+{
+	unsigned char i, n;
+
+	for (n = 0, i = 0; n < 255 && o[i]; i++, n++) {
+		/* newline conversion */
+		if (o[i] == '\r' && o[i+1] == '\n') {
+			s[n] = '\r';
+			i++; /* skip '\n' */
+		} else if (o[i] == '\n') {
+			s[n] = '\r';
+		} else {
+			s[n] = o[i];
+		}
+	}
+
+	/* copy the size */
+	s[0] = n;
+}
+
+static void macos_copy_utf8_to_pascal(const char *utf8, unsigned char s[256])
+{
+	if (utf8 && *utf8) {
+		char *n = charset_iconv_easy(utf8, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
+		macos_copy_to_pascal_convert_newlines(n, s);
+		free(n);
+	} else {
+		s[0] = 0;
+	}
+}
+
 void macos_show_message_box(const char *title, const char *text, int style)
 {
 	const AlertType types[] = {
@@ -92,17 +124,8 @@ void macos_show_message_box(const char *title, const char *text, int style)
 	rec.cancelButton = 0; /* don't have one */
 	rec.position = kWindowDefaultPosition;
 
-	{
-		char *ntitle = charset_iconv_easy(title, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
-		str_to_pascal(ntitle, err, NULL);
-		free(ntitle);
-	}
-
-	{
-		char *ntext = charset_iconv_easy(text, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
-		str_to_pascal(ntext, explanation, NULL);
-		free(ntext);
-	}
+	macos_copy_utf8_to_pascal(title, err);
+	macos_copy_utf8_to_pascal(text, explanation);
 
 	StandardAlert(types[style], err, explanation, &rec, &hit);
 }
