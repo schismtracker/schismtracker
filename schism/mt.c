@@ -188,7 +188,7 @@ int mt_init(void)
 #ifdef SCHISM_SDL2
 		&schism_mt_backend_sdl2,
 #endif
-#ifdef SCHISM_SDL12
+#if defined(SCHISM_SDL12) && !defined(SCHISM_MACOS)
 		&schism_mt_backend_sdl12,
 #endif
 		NULL,
