@@ -122,7 +122,6 @@ TEST_FUNC(test_slurp_memstream)
 TEST_FUNC(test_slurp_2memstream)
 TEST_FUNC(test_slurp_sf2)
 TEST_FUNC(test_slurp_stdio)
-TEST_FUNC(test_slurp_win32)
 
 TEST_FUNC(test_config_file_defined_values)
 TEST_FUNC(test_config_file_undefined_values_in_defined_section)
