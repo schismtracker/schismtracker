@@ -198,7 +198,7 @@ testresult_t test_slurp_stdio(void)
 	 * this is a source for race conditions ... */
 	stdfp = fopen(tmp, "rb");
 
-	ASSERT(slurp_stdio(&fp, stdfp) == SLURP_OPEN_SUCCESS);
+	REQUIRE(slurp_stdio(&fp, stdfp) == SLURP_OPEN_SUCCESS);
 
 	r = test_slurp_common(&fp);
 
@@ -207,5 +207,24 @@ testresult_t test_slurp_stdio(void)
 
 	return r;
 }
+
+#ifdef SCHISM_WIN32
+testresult_t test_slurp_win32(void)
+{
+	slurp_t fp;
+	char tmp[TEST_TEMP_FILE_NAME_LENGTH];
+	testresult_t r;
+
+	REQUIRE(test_temp_file(tmp, expected_result, ARRAY_SIZE(expected_result) - 1));
+
+	REQUIRE(slurp_win32(&fp, tmp, 0) == SLURP_OPEN_SUCCESS);
+
+	r = test_slurp_common(&fp);
+
+	unslurp(&fp);
+
+	return r;
+}
+#endif
 
 /* TODO need to add slurp test functions for win32 */
