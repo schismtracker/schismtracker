@@ -190,7 +190,7 @@ testresult_t test_song_get_pattern_offset_from_middle_next_pattern(void)
 		3, 0); // expect to be at
 }
 
-testresult_t test_song_get_pattern_offset_from_middle_more_than_two_patterns(void)
+testresult_t test_song_get_pattern_offset_from_middle_over_two_patterns(void)
 {
 	return test_song_get_pattern(
 		2, 16, // starting from
