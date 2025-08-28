@@ -87,14 +87,6 @@ int schism_test_main(int argc, char *argv[]);
 # define ENTRYPOINT schism_main
 #endif
 
-/* declare functions */
-#include "test-funcs.h"
-
-/* make sure we don't overflow the terminal */
-#define TEST_FUNC(x) \
-	SCHISM_STATIC_ASSERT((6 + ARRAY_SIZE(#x)) < 78 - TESTRESULT_STR_MAX_LEN, \
-		"function name cannot overflow the terminal");
-
 #include "test-funcs.h"
 
 #endif /* SCHISM_TEST_H_ */
