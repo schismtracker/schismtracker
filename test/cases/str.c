@@ -23,11 +23,15 @@
 
 #include "test.h"
 #include "test-assertions.h"
+#include "test-format.h"
+#include "test-name.h"
 
 #include "str.h"
 
 static testresult_t test_str_from_num_thousands(int32_t n, const char *expect)
 {
+	test_set_name("%s (n == %d)", test_get_name(), n);
+
 	// Arrange
 	char buf[15];
 
@@ -35,9 +39,82 @@ static testresult_t test_str_from_num_thousands(int32_t n, const char *expect)
 	char *result = str_from_num_thousands(n, buf);
 
 	// Assert
-	ASSERT(result == &buf[0]);
-	ASSERT_PRINTF(strcmp(result, expect) == 0,
-		"result %s was not %s as expected for %" PRId32, result, expect, n);
+	ASSERT_EQUAL_P(result, &buf[0]);
+	ASSERT_EQUAL_S(result, expect);
+	RETURN_PASS;
+}
+
+/* ------------------------------------------------------------------------ */
+
+static testresult_t test_str_concat(const char *arg0, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *expected)
+{
+	test_set_name("%s(%s, %s, %s, %s, %s)",
+		test_get_name(),
+		test_format_string(arg0),
+		test_format_string(arg1),
+		test_format_string(arg2),
+		test_format_string(arg3),
+		test_format_string(arg4));
+
+	// Arrange
+	size_t i;
+	char *r;
+
+	// Act
+	r = str_concat(arg0, arg1, arg2, arg3, arg4, (char *)NULL);
+
+	// Assert
+	ASSERT_NOT_NULL(r);
+	ASSERT_EQUAL_S(r, expected);
+
+	free(r);
+
+	RETURN_PASS;
+}
+
+/* ------------------------------------------------------------------------ */
+
+static testresult_t test_str_from_num(int digits, uint32_t num, const char *expected_result)
+{
+	// Arrange
+	char buf[11];
+
+	// Act
+	str_from_num(digits, num, buf);
+
+	// Assert
+	ASSERT_EQUAL_S(buf, expected_result);
+
+	RETURN_PASS;
+}
+
+static testresult_t test_str_from_num_signed(int digits, int32_t num, const char *expected_result)
+{
+	// Arrange
+	char buf[12];
+
+	// Act
+	str_from_num_signed(digits, num, buf);
+
+	// Assert
+	ASSERT_EQUAL_S(buf, expected_result);
+
+	RETURN_PASS;
+}
+
+/* ------------------------------------------------------------------------ */
+
+static testresult_t test_str_get_num_lines(const char *text, int expected_result)
+{
+	// Arrange
+	int x;
+
+	// Act
+	x = str_get_num_lines(text);
+
+	// Assert
+	ASSERT_EQUAL_D(x, expected_result);
+
 	RETURN_PASS;
 }
 
@@ -188,141 +265,194 @@ testresult_t test_str_from_num_thousands_digits_10_negative(void)
 
 /* ------------------------------------------------------------------------ */
 
-testresult_t test_str_concat(void)
+testresult_t test_str_concat_123456789012(void)
 {
-	static const struct {
-		const char *args[5];
-		const char *expected;
-	} c[] = {
-		{{"123", "456", "789", "012"}, "123456789012"},
-		{{"123", "ok", "67"}, "123ok67"},
-	};
-	size_t i;
-	char *r;
+	return test_str_concat("123", "456", "789", "012", NULL, "123456789012");
+}
 
-	for (i = 0; i < ARRAY_SIZE(c); i++) {
-		r = str_concat(c[i].args[0], c[i].args[1], c[i].args[2], c[i].args[3], c[i].args[4], (char *)NULL);
-		REQUIRE(r);
-
-		ASSERT_PRINTF(!strcmp(c[i].expected, r), "result \"%s\" with args "
-			"(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\") was not \"%s\" as expected",
-			r,
-			c[i].args[0] ? c[i].args[0] : "NULL",
-			c[i].args[1] ? c[i].args[1] : "NULL",
-			c[i].args[2] ? c[i].args[2] : "NULL",
-			c[i].args[3] ? c[i].args[3] : "NULL",
-			c[i].args[4] ? c[i].args[4] : "NULL",
-			c[i].expected);
-
-		free(r);
-	}
-
-	RETURN_PASS;
+testresult_t test_str_concat_123ok67(void)
+{
+	return test_str_concat("123", "ok", "67", NULL, NULL, "123ok67");
 }
 
 /* ------------------------------------------------------------------------ */
 
-testresult_t test_str_from_num(void)
+testresult_t test_str_from_num_1(void)
 {
-	static const struct {
-		int digits;
-		uint32_t num;
-		const char *result;
-	} c[] = {
-		{0, UINT32_C(1),          "1"},
-		{0, UINT32_C(10),         "10"},
-		{0, UINT32_C(100),        "100"},
-		{0, UINT32_C(1000),       "1000"},
-		{0, UINT32_C(10000),      "10000"},
-		{0, UINT32_C(100000),     "100000"},
-		{0, UINT32_C(1000000),    "1000000"},
-		{0, UINT32_C(10000000),   "10000000"},
-		{0, UINT32_C(100000000),  "100000000"},
-		{0, UINT32_C(1000000000), "1000000000"},
-		{2, UINT32_C(1),          "01"},
-		{4, UINT32_C(5),          "0005"},
-		{9, UINT32_C(9),          "000000009"},
-	};
-	size_t i;
-
-	for (i = 0; i < ARRAY_SIZE(c); i++) {
-		char buf[11];
-
-		str_from_num(c[i].digits, c[i].num, buf);
-
-		ASSERT_PRINTF(!strcmp(c[i].result, buf), "result with integer %" PRIu32
-			" was \"%s\", not \"%s\" as expected", c[i].num, buf, c[i].result);
-	}
-
-	RETURN_PASS;
+	return test_str_from_num(0, UINT32_C(1),          "1");
 }
 
-testresult_t test_str_from_num_signed(void)
+testresult_t test_str_from_num_10(void)
 {
-	static const struct {
-		int digits;
-		int32_t num;
-		const char *result;
-	} c[] = {
-		{0, INT32_C(1),          "1"},
-		{0, INT32_C(10),         "10"},
-		{0, INT32_C(100),        "100"},
-		{0, INT32_C(1000),       "1000"},
-		{0, INT32_C(10000),      "10000"},
-		{0, INT32_C(100000),     "100000"},
-		{0, INT32_C(1000000),    "1000000"},
-		{0, INT32_C(10000000),   "10000000"},
-		{0, INT32_C(100000000),  "100000000"},
-		{0, INT32_C(1000000000), "1000000000"},
-		{2, INT32_C(1),          "01"},
-		{4, INT32_C(5),          "0005"},
-		{9, INT32_C(9),          "000000009"},
-		{3, INT32_C(-9),         "-09"},
-		{5, INT32_C(-9),         "-0009"},
-		{9, INT32_C(-9),         "-00000009"},
-	};
-	size_t i;
+	return test_str_from_num(0, UINT32_C(10),         "10");
+}
 
-	for (i = 0; i < ARRAY_SIZE(c); i++) {
-		char buf[12];
+testresult_t test_str_from_num_100(void)
+{
+	return test_str_from_num(0, UINT32_C(100),        "100");
+}
 
-		str_from_num_signed(c[i].digits, c[i].num, buf);
+testresult_t test_str_from_num_1000(void)
+{
+	return test_str_from_num(0, UINT32_C(1000),       "1000");
+}
 
-		ASSERT_PRINTF(!strcmp(c[i].result, buf), "result with integer %" PRId32
-			" was \"%s\", not \"%s\" as expected", c[i].num, buf, c[i].result);
-	}
+testresult_t test_str_from_num_10000(void)
+{
+	return test_str_from_num(0, UINT32_C(10000),      "10000");
+}
 
-	RETURN_PASS;
+testresult_t test_str_from_num_100000(void)
+{
+	return test_str_from_num(0, UINT32_C(100000),     "100000");
+}
+
+testresult_t test_str_from_num_1000000(void)
+{
+	return test_str_from_num(0, UINT32_C(1000000),    "1000000");
+}
+
+testresult_t test_str_from_num_10000000(void)
+{
+	return test_str_from_num(0, UINT32_C(10000000),   "10000000");
+}
+
+testresult_t test_str_from_num_100000000(void)
+{
+	return test_str_from_num(0, UINT32_C(100000000),  "100000000");
+}
+
+testresult_t test_str_from_num_1000000000(void)
+{
+	return test_str_from_num(0, UINT32_C(1000000000), "1000000000");
+}
+
+testresult_t test_str_from_num_01(void)
+{
+	return test_str_from_num(2, UINT32_C(1),          "01");
+}
+
+testresult_t test_str_from_num_0005(void)
+{
+	return test_str_from_num(4, UINT32_C(5),          "0005");
+}
+
+testresult_t test_str_from_num_000000009(void)
+{
+	return test_str_from_num(9, UINT32_C(9),          "000000009");
+}
+
+
+testresult_t test_str_from_num_signed_1(void)
+{
+	return test_str_from_num_signed(0, INT32_C(1),          "1");
+}
+
+testresult_t test_str_from_num_signed_10(void)
+{
+	return test_str_from_num_signed(0, INT32_C(10),         "10");
+}
+
+testresult_t test_str_from_num_signed_100(void)
+{
+	return test_str_from_num_signed(0, INT32_C(100),        "100");
+}
+
+testresult_t test_str_from_num_signed_1000(void)
+{
+	return test_str_from_num_signed(0, INT32_C(1000),       "1000");
+}
+
+testresult_t test_str_from_num_signed_10000(void)
+{
+	return test_str_from_num_signed(0, INT32_C(10000),      "10000");
+}
+
+testresult_t test_str_from_num_signed_100000(void)
+{
+	return test_str_from_num_signed(0, INT32_C(100000),     "100000");
+}
+
+testresult_t test_str_from_num_signed_1000000(void)
+{
+	return test_str_from_num_signed(0, INT32_C(1000000),    "1000000");
+}
+
+testresult_t test_str_from_num_signed_10000000(void)
+{
+	return test_str_from_num_signed(0, INT32_C(10000000),   "10000000");
+}
+
+testresult_t test_str_from_num_signed_100000000(void)
+{
+	return test_str_from_num_signed(0, INT32_C(100000000),  "100000000");
+}
+
+testresult_t test_str_from_num_signed_1000000000(void)
+{
+	return test_str_from_num_signed(0, INT32_C(1000000000), "1000000000");
+}
+
+testresult_t test_str_from_num_signed_01(void)
+{
+	return test_str_from_num_signed(2, INT32_C(1),          "01");
+}
+
+testresult_t test_str_from_num_signed_0005(void)
+{
+	return test_str_from_num_signed(4, INT32_C(5),          "0005");
+}
+
+testresult_t test_str_from_num_signed_000000009(void)
+{
+	return test_str_from_num_signed(9, INT32_C(9),          "000000009");
+}
+
+testresult_t test_str_from_num_signed_neg_09(void)
+{
+	return test_str_from_num_signed(3, INT32_C(-9),         "-09");
+}
+
+testresult_t test_str_from_num_signed_neg_0009(void)
+{
+	return test_str_from_num_signed(5, INT32_C(-9),         "-0009");
+}
+
+testresult_t test_str_from_num_signed_neg_000000009(void)
+{
+	return test_str_from_num_signed(9, INT32_C(-9),         "-00000009");
 }
 
 /* ------------------------------------------------------------------------ */
 
-testresult_t test_str_get_num_lines(void)
+testresult_t test_str_get_num_lines_1(void)
 {
-	static const struct {
-		const char *text;
-		int result;
-	} c[] = {
-		/* stress test */
-		{"wow\n", 1},
-		{"wow", 0 /* wait, what? */},
-		{"wow\r\n", 1},
-		{"wow\r\nhai\n", 2},
-		{"nice\n\r\n", 2},
-		{"awesome\r\n\n", 2},
-	};
+	return test_str_get_num_lines("wow\n", 1);
+}
 
-	size_t i;
+testresult_t test_str_get_num_lines_2(void)
+{
+	return test_str_get_num_lines("wow", 0 /* wait, what? */);
+}
 
-	for (i = 0; i < ARRAY_SIZE(c); i++) {
-		int x;
+testresult_t test_str_get_num_lines_3(void)
+{
+	return test_str_get_num_lines("wow\r\n", 1);
+}
 
-		x = str_get_num_lines(c[i].text);
+testresult_t test_str_get_num_lines_4(void)
+{
+	return test_str_get_num_lines("wow\r\nhai\n", 2);
+}
 
-		ASSERT_PRINTF(x == c[i].result, "result for string \"%s\" was %d, not %d as expected", c[i].text, x, c[i].result);
-	}
+testresult_t test_str_get_num_lines_5(void)
+{
+	return test_str_get_num_lines("nice\n\r\n", 2);
+}
 
-	RETURN_PASS;
+testresult_t test_str_get_num_lines_6(void)
+{
+	return test_str_get_num_lines("awesome\r\n\n", 2);
 }
 
 /* TODO test the rest of the str functions */

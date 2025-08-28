@@ -21,8 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+//#define EXERCISE_ASSERTIONS
+//#include "test-assertions.h"
+
 #include "test.h"
 #include "test-tempfile.h"
+#include "test-format.h"
+#include "test-name.h"
 
 #include "charset.h"
 #include "osdefs.h"
@@ -38,6 +43,7 @@
 static int run_test(test_index_entry *entry)
 {
 	timer_ticks_t start_time, end_time;
+	char *test_name;
 	testresult_t result;
 	int i;
 	char buf[15];
@@ -46,19 +52,26 @@ static int run_test(test_index_entry *entry)
 	 * global memory stream) */
 	test_log_clear();
 
-	printf("TEST: %s ", entry->name);
+	test_set_name("%s", entry->name);
+	test_name = str_dup(test_get_name()); // copy the computed name in case the test alters it
+
+	printf("TEST: %s ", test_name);
 	fflush(stdout); // in case the test crashes
 
 	start_time = timer_ticks();
 	result = entry->test();
 	end_time = timer_ticks();
 
-	for (i = 6 + strlen(entry->name) + 1; i < 78 - TESTRESULT_STR_MAX_LEN; i++)
+	for (i = 6 + strlen(test_name) + 1; i < 78 - TESTRESULT_STR_MAX_LEN; i++)
 		fputc('.', stdout);
 
 	printf(" %s (%s ms)\n", testresult_str(result), str_from_num_thousands(end_time - start_time, buf));
 
 	test_log_dump();
+
+	test_format_string_reset();
+
+	free(test_name);
 
 	return result;
 }
@@ -94,6 +107,10 @@ int schism_test_main(int argc, char **argv)
 	int run_batch = 1;
 	char *filter_expression = NULL;
 	int exit_code;
+
+#ifdef EXERCISE_ASSERTIONS
+	exercise_assertions();
+#endif
 
 	/* oke */
 	mt_init();

@@ -43,11 +43,12 @@ typedef enum {
 // See testresult.c / testresult_str
 #define TESTRESULT_STR_MAX_LEN 12
 
-typedef testresult_t (*testfunctor_t)(void);
+typedef testresult_t (*test_functor_t)(void);
+typedef testresult_t (*testcase_functor_t)(int n);
 
 typedef struct {
 	const char *name;
-	testfunctor_t test;
+	test_functor_t test;
 } test_index_entry;
 
 /* not sure if I like this being a global; whatever, it's fine for now */
@@ -87,6 +88,13 @@ int schism_test_main(int argc, char *argv[]);
 # define ENTRYPOINT schism_main
 #endif
 
+/* ------------------------------------------------------------------------ */
+/* test case declarations */
+
+#define TEST(name) testresult_t name(void);
+
 #include "test-funcs.h"
+
+#undef TEST
 
 #endif /* SCHISM_TEST_H_ */

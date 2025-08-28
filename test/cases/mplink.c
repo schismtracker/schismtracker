@@ -46,7 +46,8 @@ static testresult_t test_song_get_pattern_hook(
 	testresult_t (*pre_act)(song_t *csf),
 	int test_offset, // for act
 	testresult_t (*post_act)(song_t *csf),
-	int expected_pattern_number, int expected_row_number) // for assert
+	int expected_pattern_number, int expected_row_number, // for assert
+	testresult_t (*exit_act)(song_t *csf))
 {
 	// Arrange
 	song_t *csf = create_subject();
@@ -57,7 +58,7 @@ static testresult_t test_song_get_pattern_hook(
 
 	int start_pattern_length = song_get_pattern(start_pattern_number, &pattern);
 
-	REQUIRE(start_pattern_length = test_pattern_length[start_pattern_number]);
+	REQUIRE_EQUAL_D(start_pattern_length, test_pattern_length[start_pattern_number]);
 
 	int pattern_number = start_pattern_number;
 	int row_number = start_row_number;
@@ -66,8 +67,10 @@ static testresult_t test_song_get_pattern_hook(
 	if (pre_act != NULL) {
 		testresult_t pre_result = pre_act(csf);
 
-		if (pre_result != SCHISM_TESTRESULT_PASS)
+		if (pre_result != SCHISM_TESTRESULT_PASS) {
+			if (exit_act != NULL) exit_act(csf);
 			return pre_result;
+		}
 	}
 
 	// Act
@@ -77,22 +80,32 @@ static testresult_t test_song_get_pattern_hook(
 	if (post_act != NULL) {
 		testresult_t post_result = post_act(csf);
 
-		if (post_result != SCHISM_TESTRESULT_PASS)
+		if (post_result != SCHISM_TESTRESULT_PASS) {
+			if (exit_act != NULL) exit_act(csf);
 			return post_result;
+		}
 	}
 
 	// Assert
 	if (expected_pattern_number < 0) { /* expect failure */
-		ASSERT(result == 0);
+		ASSERT_EQUAL_D(result, 0);
 	}
 	else {
-		ASSERT(result == test_pattern_length[expected_pattern_number]);
-		ASSERT(pattern_number == expected_pattern_number);
-		ASSERT(row_number == expected_row_number);
-		ASSERT(pattern == csf->patterns[pattern_number]);
+		ASSERT_EQUAL_D(result, test_pattern_length[expected_pattern_number]);
+		ASSERT_EQUAL_D(pattern_number, expected_pattern_number);
+		ASSERT_EQUAL_D(row_number, expected_row_number);
+		ASSERT_EQUAL_P(pattern, csf->patterns[pattern_number]);
 	}
 
 	csf_free(csf);
+
+	if (exit_act != NULL) {
+		testresult_t exit_result = exit_act(csf);
+
+		if (exit_result != SCHISM_TESTRESULT_PASS) {
+			return exit_result;
+		}
+	}
 
 	RETURN_PASS;
 }
@@ -104,10 +117,33 @@ static testresult_t test_song_get_pattern(
 {
 	return test_song_get_pattern_hook(
 		start_pattern_number, start_row_number,
-		NULL, // pre-action hook
+		NULL,  // pre-action hook
 		test_offset,
-		NULL, // post-action hook
-		expected_pattern_number, expected_row_number);
+		NULL,  // post-action hook
+		expected_pattern_number, expected_row_number,
+		NULL); // exit hook
+}
+
+static testresult_t verify_end_of_song(song_t *csf)
+{
+	ASSERT(csf_get_num_patterns(csf) <= 5);
+	ASSERT_NULL(csf->patterns[5]);
+
+	RETURN_PASS;
+}
+
+static testresult_t latch_new_pattern_length(song_t *csf)
+{
+	test_pattern_length[5] = song_get_max_row_number_in_pattern(5) + 1;
+
+	RETURN_PASS;
+}
+
+static testresult_t restore_pattern_length_array(song_t *csf)
+{
+	test_pattern_length[5] = 0;
+
+	RETURN_PASS;
 }
 
 testresult_t test_song_get_pattern_offset_0(void)
@@ -145,8 +181,8 @@ testresult_t test_song_get_pattern_offset_same_pattern_LAST(void)
 testresult_t test_song_get_pattern_offset_next_pattern_FIRST(void)
 {
 	return test_song_get_pattern(
-		0, 15,  // starting from
-		17,     // advance by
+		0, 15, // starting from
+		17,    // advance by
 		1, 0); // expect to be at
 }
 
@@ -177,8 +213,8 @@ testresult_t test_song_get_pattern_offset_more_than_two_patterns(void)
 testresult_t test_song_get_pattern_offset_from_middle_same_pattern(void)
 {
 	return test_song_get_pattern(
-		2, 15, // starting from
-		2,    // advance by
+		2, 15,  // starting from
+		2,      // advance by
 		2, 17); // expect to be at
 }
 
@@ -206,32 +242,14 @@ testresult_t test_song_get_pattern_offset_song_LAST(void)
 		4, 63); // expect to be at
 }
 
-static testresult_t verify_end_of_song(song_t *csf)
-{
-	ASSERT(csf_get_num_patterns(csf) <= 5);
-	ASSERT(csf->patterns[5] == NULL);
-
-	RETURN_PASS;
-}
-
-static testresult_t latch_new_pattern_length(song_t *csf)
-{
-	test_pattern_length[5] = song_get_max_row_number_in_pattern(5) + 1;
-
-	RETURN_PASS;
-}
-
 testresult_t test_song_get_pattern_offset_past_end_of_song(void)
 {
-	testresult_t result = test_song_get_pattern_hook(
+	return test_song_get_pattern_hook(
 		2, 15, // starting from
 		verify_end_of_song, // pre hook
 		114,   // advance by
 		latch_new_pattern_length, // post hook
-		5, 0); // expect to be at
-
-	// restore pattern length array
-	test_pattern_length[5] = 0;
-
-	return result;
+		5, 0,  // expect to be at
+		restore_pattern_length_array);
 }
+

@@ -41,18 +41,19 @@ SCHISM_STATIC_ASSERT((ARRAY_SIZE(expected_result) - 1) % 2 == 0,
 
 static testresult_t test_slurp_common(slurp_t *fp)
 {
+	/* TODO: split me up, this is test multiple concerns */
 	char buf[ARRAY_SIZE(expected_result) - 1];
 	size_t i;
 	size_t j;
 
-	ASSERT(slurp_length(fp) == sizeof(buf));
+	ASSERT_EQUAL_LU(slurp_length(fp), sizeof(buf));
 
 	/* go over every possible (legal) combination of reads.
 	 * there's probably a simpler way to do this, but oh well. */
 	for (i = 0; i < sizeof(buf); i++) {
 		for (j = 0; j < (sizeof(buf) - i); j++) {
-			ASSERT(slurp_seek(fp, i, SEEK_SET) == 0);
-			ASSERT(slurp_read(fp, buf, sizeof(buf) - i - j) == (sizeof(buf) - i - j));
+			ASSERT_EQUAL_D(slurp_seek(fp, i, SEEK_SET), 0);
+			ASSERT_EQUAL_LU(slurp_read(fp, buf, sizeof(buf) - i - j), (sizeof(buf) - i - j));
 
 			/*printf("%" PRIuSZ ", %" PRIuSZ ": buf: %.*s", i, (int)(sizeof(buf) - i - j), buf);*/
 
@@ -60,7 +61,7 @@ static testresult_t test_slurp_common(slurp_t *fp)
 			ASSERT(!memcmp(buf, expected_result + i, sizeof(buf) - i - j));
 
 			/* we should never trigger EOF here */
-			ASSERT(!slurp_eof(fp));
+			ASSERT_FALSE(slurp_eof(fp));
 		}
 	}
 
@@ -69,8 +70,8 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	 * do it many times to make sure that extra reads have no effect on EOF. */
 
 	for (i = 0; i < 5; i++) {
-		ASSERT(slurp_read(fp, buf, sizeof(buf)) == 0);
-		ASSERT(slurp_eof(fp));
+		ASSERT_EQUAL_D(slurp_read(fp, buf, sizeof(buf)), 0);
+		ASSERT_TRUE(slurp_eof(fp));
 	}
 
 	/* TODO what should the behavior be for slurp_peek regarding EOF?
@@ -78,34 +79,34 @@ static testresult_t test_slurp_common(slurp_t *fp)
 
 	/* random operations should have no effect on EOF */
 	(void)slurp_tell(fp);
-	ASSERT(slurp_eof(fp));
+	ASSERT_TRUE(slurp_eof(fp));
 	(void)slurp_getc(fp);
-	ASSERT(slurp_eof(fp));
+	ASSERT_TRUE(slurp_eof(fp));
 
 	/* getting the length should not affect EOF
 	 * (i.e., it should not call seek()) */
 	(void)slurp_length(fp);
-	ASSERT(slurp_eof(fp));
+	ASSERT_TRUE(slurp_eof(fp));
 
 	/* seeking to the end should not cause EOF */
-	ASSERT(slurp_seek(fp, 0, SEEK_END) == 0);
-	ASSERT(!slurp_eof(fp));
+	ASSERT_EQUAL_D(slurp_seek(fp, 0, SEEK_END), 0);
+	ASSERT_FALSE(slurp_eof(fp));
 
 	/* random operations should have no effect on EOF */
 	(void)slurp_tell(fp);
-	ASSERT(!slurp_eof(fp));
+	ASSERT_FALSE(slurp_eof(fp));
 
 	/* getting the length should not affect EOF */
 	(void)slurp_length(fp);
-	ASSERT(!slurp_eof(fp));
+	ASSERT_FALSE(slurp_eof(fp));
 
 	/* any reads SHOULD affect EOF */
 	(void)slurp_getc(fp);
-	ASSERT(slurp_eof(fp));
+	ASSERT_TRUE(slurp_eof(fp));
 
 	/* seeking should clear any EOF flag */
-	ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
-	ASSERT(!slurp_eof(fp));
+	ASSERT_EQUAL_D(slurp_seek(fp, 0, SEEK_SET), 0);
+	ASSERT_FALSE(slurp_eof(fp));
 
 	/* TODO what should seeking past EOF do? */
 	/* TODO test slurp_limit here as well */
@@ -198,7 +199,7 @@ testresult_t test_slurp_stdio(void)
 	 * this is a source for race conditions ... */
 	stdfp = fopen(tmp, "rb");
 
-	ASSERT(slurp_stdio(&fp, stdfp) == SLURP_OPEN_SUCCESS);
+	ASSERT_EQUAL_D_NAMED(slurp_stdio(&fp, stdfp), SLURP_OPEN_SUCCESS);
 
 	r = test_slurp_common(&fp);
 

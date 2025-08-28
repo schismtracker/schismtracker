@@ -137,7 +137,9 @@ noinst_HEADERS = \
 	include/mt.h       \
 	include/timer.h         \
 	include/test-assertions.h  \
+	include/test-format.h      \
 	include/test-funcs.h       \
+	include/test-name.h        \
 	include/test-tempfile.h    \
 	include/tree.h			\
 	include/util.h			\
@@ -198,7 +200,7 @@ else
 endif
 
 if USE_THREADS
-files_mt = 
+files_mt =
 endif
 
 if USE_SDL3
@@ -704,8 +706,10 @@ schismtracker_LDFLAGS = $(ldflags_macosx)
 
 schismtrackertest_SOURCES = \
 	schism/main.c               \
-	test/assert.c				\
+	test/assert.c               \
 	test/harness.c              \
+	test/format.c               \
+	test/name.c                 \
 	test/testresult.c           \
 	test/log.c                  \
 	test/index.c                \
@@ -722,7 +726,7 @@ mains =									\
 	sys/macosx/schismtracker-macosx-sdlmain.$(OBJEXT)
 
 # Enable test paths -- overrides the entrypoint
-schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD
+schismtrackertest_CFLAGS = $(schismtracker_CFLAGS) -DSCHISM_TEST_BUILD -Werror=missing-declarations
 
 schismtrackertest_CPPFLAGS = $(schismtracker_CPPFLAGS)
 schismtrackertest_OBJCFLAGS = $(schimtracker_OBJCFLAGS)
