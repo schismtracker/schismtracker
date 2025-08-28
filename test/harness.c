@@ -175,8 +175,9 @@ int schism_test_main(int argc, char **argv)
 
 	free(filter_expression);
 
-	timer_quit();
-	mt_quit();
+	// weird, these cause a hang on macosx  --paper
+	//timer_quit();
+	//mt_quit();
 
 	return exit_code;
 }
