@@ -51,7 +51,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 		va_start(ap, name);
 
 		argv[0] = str_dup(name);
-		for (i = 1; i < 255; i++) {
+		for (i = 1; i < (ARRAY_SIZE(argv) - 1); i++) {
 			const char *arg = va_arg(ap, const char *);
 			if (!arg)
 				break;
@@ -101,12 +101,18 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 		while (waitid(P_PID, pid, &info, WEXITED) == -1);
 
 		/* if the child terminated abnormally, well, the exec call is still technically a success */
-		if ((info.si_code == CLD_EXITED) || (info.si_code == CLD_KILLED) || (info.si_code == CLD_DUMPED)) {
+		switch (info.si_code) {
+		case CLD_DUMPED:
+		case CLD_KILLED:
+			if (abnormal_exit)
+				*abnormal_exit = 1;
+			SCHISM_FALLTHROUGH;
+		case CLD_EXITED:
 			if (status)
 				*status = info.si_status;
-			if (abnormal_exit)
-				*abnormal_exit = (info.si_code != CLD_EXITED);
 			r = 1;
+
+			break;
 		}
 	}
 #elif defined(HAVE_WAITPID)
@@ -119,8 +125,19 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 		if (WIFEXITED(st)) {
 			if (status)
 				*status = WEXITSTATUS(st);
-			r = 1;
+		} else {
+			if (abnormal_exit)
+				*abnormal_exit = 1;
+
+			/* if we're here, we probably received a signal that wasn't caught.
+			 * this is MOST LIKELY going to be SIGBUS or SIGSEGV. However, we
+			 * have no way to say which signal it was, so I'm ignoring it for now.
+			 *
+			 * OR... the process is stopped (i.e. Ctrl-Z), which shouldn't ever
+			 * happen. */
 		}
+
+		r = 1;
 	}
 #endif
 
