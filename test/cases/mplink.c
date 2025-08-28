@@ -41,7 +41,7 @@ static song_t *create_subject(void)
 	return ret;
 }
 
-static testresult_t test_song_get_pattern_hook(
+static testresult_t test_song_get_pattern_hook_impl(
 	int start_pattern_number, int start_row_number, // for arrange
 	testresult_t (*pre_act)(song_t *csf),
 	int test_offset, // for act
@@ -57,7 +57,7 @@ static testresult_t test_song_get_pattern_hook(
 
 	int start_pattern_length = song_get_pattern(start_pattern_number, &pattern);
 
-	REQUIRE(start_pattern_length = test_pattern_length[start_pattern_number]);
+	REQUIRE(start_pattern_length == test_pattern_length[start_pattern_number]);
 
 	int pattern_number = start_pattern_number;
 	int row_number = start_row_number;
@@ -95,6 +95,24 @@ static testresult_t test_song_get_pattern_hook(
 	csf_free(csf);
 
 	RETURN_PASS;
+}
+
+static testresult_t test_song_get_pattern_hook(
+	int start_pattern_number, int start_row_number, // for arrange
+	testresult_t (*pre_act)(song_t *csf),
+	int test_offset, // for act
+	testresult_t (*post_act)(song_t *csf),
+	int expected_pattern_number, int expected_row_number) // for assert
+{
+	testresult_t r = test_song_get_pattern_hook_impl(start_pattern_number,
+		start_row_number,
+		pre_act,
+		test_offset,
+		post_act,
+		expected_pattern_number, expected_row_number);
+	/* im lazy */
+	current_song = NULL;
+	return r;
 }
 
 #define TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(name, start_pattern_number, \
@@ -189,7 +207,8 @@ static testresult_t verify_end_of_song(song_t *csf)
 
 static testresult_t latch_new_pattern_length(song_t *csf)
 {
-	test_pattern_length[5] = song_get_max_row_number_in_pattern(5) + 1;
+	/* what is going on here? I don't get this. */
+	test_pattern_length[5] = csf->pattern_size[5];
 
 	RETURN_PASS;
 }
