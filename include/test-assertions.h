@@ -30,6 +30,13 @@
 
 void test_assert(const char *file, long line, const char *cond, const char *msg, const char *fmt, ...);
 
+/* this doesn't belong here, but oh well */
+#define TEST_CASE_STUB(name, tocall, ...) \
+    testresult_t test_##name(void) \
+    { \
+        return tocall(__VA_ARGS__); \
+    }
+
 /* TODO prefix these with TEST_ */
 #define REQUIRE_PRINTF(cond, fmt, ...) \
 	do { \
