@@ -70,6 +70,7 @@ int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *templ
 
 		if (log) {
 			fputs(temp_file, log);
+			fputc('\n', log);
 			fclose(log);
 		}
 
