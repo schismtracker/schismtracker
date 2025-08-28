@@ -225,6 +225,42 @@ testresult_t test_slurp_win32(void)
 
 	return r;
 }
+
+testresult_t test_slurp_win32_mmap(void)
+{
+	slurp_t fp;
+	char tmp[TEST_TEMP_FILE_NAME_LENGTH];
+	testresult_t r;
+
+	REQUIRE(test_temp_file(tmp, expected_result, ARRAY_SIZE(expected_result) - 1));
+
+	REQUIRE(slurp_win32_mmap(&fp, tmp, ARRAY_SIZE(expected_result) - 1) == SLURP_OPEN_SUCCESS);
+
+	r = test_slurp_common(&fp);
+
+	unslurp(&fp);
+
+	return r;
+}
+#endif
+
+#ifdef HAVE_MMAP
+testresult_t test_slurp_mmap(void)
+{
+	slurp_t fp;
+	char tmp[TEST_TEMP_FILE_NAME_LENGTH];
+	testresult_t r;
+
+	REQUIRE(test_temp_file(tmp, expected_result, ARRAY_SIZE(expected_result) - 1));
+
+	REQUIRE(slurp_mmap(&fp, tmp, ARRAY_SIZE(expected_result) - 1) == SLURP_OPEN_SUCCESS);
+
+	r = test_slurp_common(&fp);
+
+	unslurp(&fp);
+
+	return r;
+}
 #endif
 
 /* TODO need to add slurp test functions for win32 */

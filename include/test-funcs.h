@@ -122,7 +122,13 @@ TEST_FUNC(test_slurp_memstream)
 TEST_FUNC(test_slurp_2memstream)
 TEST_FUNC(test_slurp_sf2)
 TEST_FUNC(test_slurp_stdio)
+#ifdef SCHISM_WIN32
 TEST_FUNC(test_slurp_win32)
+TEST_FUNC(test_slurp_win32_mmap)
+#endif
+#ifdef HAVE_MMAP
+TEST_FUNC(test_slurp_mmap)
+#endif
 
 TEST_FUNC(test_config_file_defined_values)
 TEST_FUNC(test_config_file_undefined_values_in_defined_section)
