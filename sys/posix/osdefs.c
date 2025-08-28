@@ -24,9 +24,18 @@
 #include "headers.h"
 #include "osdefs.h"
 #include "mem.h"
+#include "dmoz.h"
 
-#if defined(HAVE_EXECL) && defined(HAVE_FORK) && (defined(HAVE_WAITID) || defined(HAVE_WAITPID)) && !defined(SCHISM_WIN32)
+/* WOW NICE */
+#if ((defined(HAVE_EXECL) && defined(HAVE_FORK)) || defined(HAVE_POSIX_SPAWN)) && \
+	(defined(HAVE_WAITID) || defined(HAVE_WAITPID)) && !defined(SCHISM_WIN32)
 #include <sys/wait.h>
+#if defined(HAVE_POSIX_SPAWN)
+# include <spawn.h>
+#endif
+
+/* ugh */
+extern char **environ;
 
 int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *name, ...)
 {
@@ -54,10 +63,24 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 		va_end(ap);
 	}
 
+#if defined(HAVE_POSIX_SPAWN)
+	{
+		char *owd = dmoz_get_current_directory();
+
+		if (dir && (chdir(dir) == -1))
+			goto fail;
+
+		if (posix_spawn(&pid, name, NULL, NULL, argv, environ) != 0)
+			goto fail;
+
+		/* hm */
+		(void)chdir(owd);
+	}
+#elif defined(HAVE_FORK) && defined(HAVE_EXEC)
 	pid = fork();
 	switch (pid) {
 	case -1:
-		return 0;
+		goto fail;
 	case 0:
 		/* running in the child process */
 		if (dir && (chdir(dir) == -1))
@@ -67,6 +90,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 		 * couldn't exec the specified command name */
 		_exit(255);
 	};
+#endif
 
 	/* wait for the child process to finish */
 #if defined(HAVE_WAITID)
@@ -100,6 +124,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 	}
 #endif
 
+fail: /* do NOT jump here in the child process in case of fork() */
 	/* clean up the mess we've made */
 	for (i = 0; argv[i]; i++)
 		free(argv[i]);
