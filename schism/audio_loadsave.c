@@ -376,7 +376,7 @@ const struct save_format song_export_formats[] = {
 	{"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}, NULL},
 #ifdef USE_FLAC
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.export = {EXPORT_FUNCS(flac), 0}}, flac_enabled_cb},
-	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac)}}, flac_enabled_cb},
+	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac), 1}}, flac_enabled_cb},
 #endif
 	{.label = NULL}
 };
