@@ -42,7 +42,7 @@ static testresult_t test_str_from_num_thousands(int32_t n, const char *expect)
 }
 
 #define TEST_STR_FROM_NUM_THOUSANDS_TEMPLATE(name, num, expect) \
-    TEST_CASE_STUB(str_from_num_thousands_##name, test_str_from_num_thousands, num, expect)
+	TEST_CASE_STUB(str_from_num_thousands_##name, test_str_from_num_thousands, num, expect)
 
 /* wow, sublime text totally fails at syntax highlighting here */
 TEST_STR_FROM_NUM_THOUSANDS_TEMPLATE(0, INT32_C(0), "0")
