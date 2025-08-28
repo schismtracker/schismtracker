@@ -69,12 +69,12 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 	};
 
 	/* wait for the child process to finish */
-#if defined(HAVE_WAITID)
+#if 0 /* disabled ? */
 	{
 		siginfo_t info;
 
 		/* newer API; POSIX.1-2001 */
-		while (waitid(P_PID, pid, &info, WEXITED) == -1);
+		while (waitid(P_PID, pid, &info, WEXITED) == -1)
 
 		/* if the child terminated abnormally, well, the exec call is still technically a success */
 		if ((info.si_code == CLD_EXITED) || (info.si_code == CLD_KILLED) || (info.si_code == CLD_DUMPED)) {
@@ -98,7 +98,10 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 			r = 1;
 		}
 	}
+#else
+# error unsupported configuration
 #endif
+
 
 	/* clean up the mess we've made */
 	for (i = 0; argv[i]; i++)
