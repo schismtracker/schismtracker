@@ -36,7 +36,8 @@ static testresult_t test_str_from_num_thousands(int32_t n, const char *expect)
 
 	// Assert
 	ASSERT(result == &buf[0]);
-	ASSERT(strcmp(result, expect) == 0);
+	ASSERT_PRINTF(strcmp(result, expect) == 0,
+		"result %s was not %s as expected for %" PRId32, result, expect, n);
 	RETURN_PASS;
 }
 
@@ -203,7 +204,15 @@ testresult_t test_str_concat(void)
 		r = str_concat(c[i].args[0], c[i].args[1], c[i].args[2], c[i].args[3], c[i].args[4], (char *)NULL);
 		REQUIRE(r);
 
-		ASSERT(!strcmp(c[i].expected, r));
+		ASSERT_PRINTF(!strcmp(c[i].expected, r), "result \"%s\" with args "
+			"(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\") was not \"%s\" as expected",
+			r,
+			c[i].args[0] ? c[i].args[0] : "NULL",
+			c[i].args[1] ? c[i].args[1] : "NULL",
+			c[i].args[2] ? c[i].args[2] : "NULL",
+			c[i].args[3] ? c[i].args[3] : "NULL",
+			c[i].args[4] ? c[i].args[4] : "NULL",
+			c[i].expected);
 
 		free(r);
 	}
@@ -241,7 +250,8 @@ testresult_t test_str_from_num(void)
 
 		str_from_num(c[i].digits, c[i].num, buf);
 
-		ASSERT(!strcmp(c[i].result, buf));
+		ASSERT_PRINTF(!strcmp(c[i].result, buf), "result with integer %" PRIu32
+			" was \"%s\", not \"%s\" as expected", c[i].num, buf, c[i].result);
 	}
 
 	RETURN_PASS;
@@ -278,7 +288,8 @@ testresult_t test_str_from_num_signed(void)
 
 		str_from_num_signed(c[i].digits, c[i].num, buf);
 
-		ASSERT(!strcmp(c[i].result, buf));
+		ASSERT_PRINTF(!strcmp(c[i].result, buf), "result with integer %" PRId32
+			" was \"%s\", not \"%s\" as expected", c[i].num, buf, c[i].result);
 	}
 
 	RETURN_PASS;
@@ -303,8 +314,13 @@ testresult_t test_str_get_num_lines(void)
 
 	size_t i;
 
-	for (i = 0; i < ARRAY_SIZE(c); i++)
-		ASSERT(str_get_num_lines(c[i].text) == c[i].result);
+	for (i = 0; i < ARRAY_SIZE(c); i++) {
+		int x;
+
+		x = str_get_num_lines(c[i].text);
+
+		ASSERT_PRINTF(x == c[i].result, "result for string \"%s\" was %d, not %d as expected", c[i].text, x, c[i].result);
+	}
 
 	RETURN_PASS;
 }

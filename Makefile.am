@@ -704,6 +704,7 @@ schismtracker_LDFLAGS = $(ldflags_macosx)
 
 schismtrackertest_SOURCES = \
 	schism/main.c               \
+	test/assert.c				\
 	test/harness.c              \
 	test/testresult.c           \
 	test/log.c                  \

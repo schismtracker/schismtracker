@@ -24,11 +24,35 @@
 #ifndef SCHISM_TEST_ASSERTIONS_H_
 #define SCHISM_TEST_ASSERTIONS_H_
 
+#include "headers.h"
+
 #include "test.h"
 
+void test_assert(const char *file, long line, const char *cond, const char *msg, const char *fmt, ...);
+
 /* TODO prefix these with TEST_ */
-#define REQUIRE(init_cond) do { if (!(init_cond)) { test_log_printf("%s, line %d: test initialization failed: %s\n", __FILE__, __LINE__, #init_cond); return SCHISM_TESTRESULT_INCONCLUSIVE; } } while (0)
-#define ASSERT(cond) do { if (!(cond)) { test_log_printf("%s, line %d: assertion failed: %s\n", __FILE__, __LINE__, #cond); return SCHISM_TESTRESULT_FAIL; } } while (0)
+#define REQUIRE_PRINTF(cond, fmt, ...) \
+	do { \
+		if (!(cond)) { \
+			test_assert(__FILE__, __LINE__, #cond, "test initialization failed", fmt, __VA_ARGS__); \
+			return SCHISM_TESTRESULT_INCONCLUSIVE; \
+		} \
+	} while (0)
+
+#define ASSERT_PRINTF(cond, fmt, ...) \
+	do { \
+		if (!(cond)) { \
+			test_assert(__FILE__, __LINE__, #cond, "assertion failed", fmt, __VA_ARGS__); \
+			return SCHISM_TESTRESULT_FAIL; \
+		} \
+	} while (0)
+
+#define REQUIRE(init_cond) \
+	REQUIRE_PRINTF(init_cond, "", NULL)
+#define ASSERT(init_cond) \
+	ASSERT_PRINTF(init_cond, "", NULL)
+
+/* these are dumb */
 #define RETURN_PASS return SCHISM_TESTRESULT_PASS
 #define RETURN_FAIL return SCHISM_TESTRESULT_FAIL
 #define RETURN_INCONCLUSIVE return SCHISM_TESTRESULT_INCONCLUSIVE
