@@ -2144,6 +2144,12 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 	case FX_NOTESLIDEDOWN:
 		fx_note_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param, -1);
 		break;
+
+	case FX_MIDI:
+		/* This effect is the bane of my existence */
+		if (csf->flags & SONG_FIRSTTICK)
+			fx_midi_zxx(csf, chan);
+		break;
 	}
 }
 

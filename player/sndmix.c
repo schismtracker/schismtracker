@@ -1226,9 +1226,6 @@ int32_t csf_read_note(song_t *csf)
 				ninc = csf_smp_pos(0, 1);
 
 			chan->increment = ninc;
-		} else {
-			/* ... */
-			rn_process_midi_macro(csf, chan);
 		}
 
 		chan->final_panning = CLAMP(chan->final_panning, 0, 256);
