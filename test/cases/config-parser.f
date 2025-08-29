@@ -21,24 +21,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
+#include "test-case-index.h"
 
-#undef TEST_THUNK
+TEST(test_config_file_defined_values)
+TEST(test_config_file_undefined_values_in_defined_section)
+TEST(test_config_file_undefined_section)
+TEST(test_config_file_obviously_broken_values)
+TEST(test_config_file_null_default_with_value_set)
+TEST(test_config_file_null_default_with_value_set_defined_key)
+TEST(test_config_file_string_boundary_defined_key)
+TEST(test_config_file_string_boundary_default_value)
+TEST(test_config_file_string_boundary_zero)
 
-test_index_entry automated_tests[] =
-	{
-#define TEST_THUNK(x, ...) { #x, test_case_entrypoint_##x },
-#include "test-funcs.h"
-		{0}
-	};
-
-test_index_entry *test_get_case(const char *name)
-{
-	int i;
-
-	for (i = 0; automated_tests[i].name; i++)
-		if (!strcmp(automated_tests[i].name, name))
-			return &automated_tests[i];
-
-	return NULL;
-}
+TEST(test_config_file_set_string_in_new_section)
+TEST(test_config_file_set_new_string_in_existing_section)
+TEST(test_config_file_set_number_in_new_section)
+TEST(test_config_file_set_new_number_in_existing_section)
+TEST(test_config_file_set_string_in_null_section)
+TEST(test_config_file_set_number_in_null_section)
+TEST(test_config_file_set_string_with_null_key)
+TEST(test_config_file_set_number_with_null_key)
+TEST(test_config_file_set_string_with_null_value)
+TEST(test_config_file_get_string_with_null_value)

@@ -21,24 +21,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
+#include "test-case-index.h"
 
-#undef TEST_THUNK
-
-test_index_entry automated_tests[] =
-	{
-#define TEST_THUNK(x, ...) { #x, test_case_entrypoint_##x },
-#include "test-funcs.h"
-		{0}
-	};
-
-test_index_entry *test_get_case(const char *name)
-{
-	int i;
-
-	for (i = 0; automated_tests[i].name; i++)
-		if (!strcmp(automated_tests[i].name, name))
-			return &automated_tests[i];
-
-	return NULL;
-}
+TEST(test_bshift_arithmetic)
+TEST(test_bshift_right_shift_negative)
+TEST(test_bshift_left_shift_overflow)
+TEST(test_bswap_16)
+TEST(test_bswap_32)
+TEST(test_bswap_64)
+TEST(test_babs8)
+TEST(test_babs16)
+TEST(test_babs32)
+TEST(test_babs64)
+TEST(test_bavgu8)
+TEST(test_bavgu16)
+TEST(test_bavgu32)
+TEST(test_bavgu64)
+TEST(test_bavgs8)
+TEST(test_bavgs16)
+TEST(test_bavgs32)
+TEST(test_bavgs64)
+TEST(test_bitarray)

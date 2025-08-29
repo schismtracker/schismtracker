@@ -21,24 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
+#include "test-case-index.h"
 
-#undef TEST_THUNK
+TEST(test_slurp_memstream)
+TEST(test_slurp_2memstream)
+TEST(test_slurp_sf2)
+TEST(test_slurp_stdio)
 
-test_index_entry automated_tests[] =
-	{
-#define TEST_THUNK(x, ...) { #x, test_case_entrypoint_##x },
-#include "test-funcs.h"
-		{0}
-	};
-
-test_index_entry *test_get_case(const char *name)
-{
-	int i;
-
-	for (i = 0; automated_tests[i].name; i++)
-		if (!strcmp(automated_tests[i].name, name))
-			return &automated_tests[i];
-
-	return NULL;
-}
+/* TODO need to add slurp test functions for win32 */

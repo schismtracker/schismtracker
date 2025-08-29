@@ -43,11 +43,12 @@ typedef enum {
 // See testresult.c / testresult_str
 #define TESTRESULT_STR_MAX_LEN 12
 
-typedef testresult_t (*testfunctor_t)(void);
+typedef testresult_t (*test_functor_t)(void);
+typedef testresult_t (*testcase_functor_t)(int n);
 
 typedef struct {
 	const char *name;
-	testfunctor_t test;
+	test_functor_t test;
 } test_index_entry;
 
 /* not sure if I like this being a global; whatever, it's fine for now */
@@ -87,14 +88,25 @@ int schism_test_main(int argc, char *argv[]);
 # define ENTRYPOINT schism_main
 #endif
 
-/* declare functions */
+/* ------------------------------------------------------------------------ */
+/* test thunks */
+
+#define TEST(name) TEST_THUNK(name, name)
+
+// Declare all of the test thunks
+#define TEST_THUNK(name, implementation, ...) \
+	testresult_t test_case_entrypoint_##name(void);
+
 #include "test-funcs.h"
 
-/* make sure we don't overflow the terminal */
-#define TEST_FUNC(x) \
-	SCHISM_STATIC_ASSERT((6 + ARRAY_SIZE(#x)) < 78 - TESTRESULT_STR_MAX_LEN, \
-		"function name cannot overflow the terminal");
+// Prepare for definitions in test/cases/*
+#undef TEST_THUNK
+#define TEST_THUNK(name, implementation, ...) \
+	testresult_t test_case_entrypoint_##name(void) \
+	{ \
+		return implementation(__VA_ARGS__); \
+	}
 
-#include "test-funcs.h"
+
 
 #endif /* SCHISM_TEST_H_ */
