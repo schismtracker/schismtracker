@@ -116,6 +116,9 @@ struct save_format {
 		} export;
 	} f;
 
+	// TODO need a way to filter out sample formats that cannot
+	// be saved in a specific format (i.e. pcm in sbi or adlib in wav)
+
 	// for files that can only be loaded with an external library
 	// that is loaded at runtime (or linked to)
 	int (*enabled)(void);

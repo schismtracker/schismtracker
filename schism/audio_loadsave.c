@@ -386,6 +386,7 @@ const struct save_format song_export_formats[] = {
 const struct save_format sample_save_formats[] = {
 	{"ITS", "Impulse Tracker", ".its", {.save_sample = fmt_its_save_sample}, NULL},
 	{"S3I", "Scream Tracker", ".s3i", {.save_sample = fmt_s3i_save_sample}, NULL},
+	{"SBI", "Sound Blaster", ".sbi", {.save_sample = fmt_sbi_save_sample}, NULL},
 	{"AIFF", "Audio IFF", ".aiff", {.save_sample = fmt_aiff_save_sample}, NULL},
 	{"AU", "Sun/NeXT", ".au", {.save_sample = fmt_au_save_sample}, NULL},
 	{"WAV", "WAV", ".wav", {.save_sample = fmt_wav_save_sample}, NULL},
