@@ -20,8 +20,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#define NATIVE_SCREEN_WIDTH		640
-#define NATIVE_SCREEN_HEIGHT	400
 #define WINDOW_TITLE			"Schism Tracker"
 
 #include "headers.h"
@@ -264,7 +262,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 
 	// and to the right
 	temp = swidth - scenter + 1;
-	for (i = 1; (i <= temp) && (x + i < 80); i++) {
+	for (i = 1; (i <= temp) && (x + i < VGAMEM_COLUMNS); i++) {
 		mouseline[x+i]      = z  >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 		mouseline_mask[x+i] = zm >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 	}

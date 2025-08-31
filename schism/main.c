@@ -53,6 +53,7 @@
 #include "timer.h"
 #include "mt.h"
 #include "mem.h"
+#include "vgamem.h"
 
 #include "osdefs.h"
 
@@ -63,9 +64,6 @@
 #if !defined(__amigaos4__) && !defined(SCHISM_WII)
 # define ENABLE_HOOKS 1
 #endif
-
-#define NATIVE_SCREEN_WIDTH     640
-#define NATIVE_SCREEN_HEIGHT    400
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -367,8 +365,8 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 	kk->midi_volume = -1;
 	kk->midi_note = -1;
 	/* X/Y resolution */
-	kk->rx = NATIVE_SCREEN_WIDTH / 80;
-	kk->ry = NATIVE_SCREEN_HEIGHT / 50;
+	kk->rx = NATIVE_SCREEN_WIDTH / VGAMEM_COLUMNS;
+	kk->ry = NATIVE_SCREEN_HEIGHT / VGAMEM_ROWS;
 	/* preserve the start position */
 	kk->sx = start_x;
 	kk->sy = start_y;

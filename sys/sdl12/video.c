@@ -20,8 +20,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#define NATIVE_SCREEN_WIDTH             640
-#define NATIVE_SCREEN_HEIGHT            400
 
 /* should be the native res of the display (set once and never again)
  * assumes the user starts schism from the desktop and that the desktop
@@ -317,7 +315,7 @@ static int sdl12_video_startup(void)
 #endif
 	if (!video.surface) {
 		/* if we already got one... */
-		video.surface = sdl12_SetVideoMode(640, 400, 0, SDL_RESIZABLE);
+		video.surface = sdl12_SetVideoMode(NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT, 0, SDL_RESIZABLE);
 		if (!video.surface) {
 			// ok
 			perror("SDL_SetVideoMode");

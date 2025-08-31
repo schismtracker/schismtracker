@@ -29,8 +29,6 @@
 #include "widget.h"
 #include "vgamem.h"
 
-#define NATIVE_SCREEN_WIDTH     640
-#define NATIVE_SCREEN_HEIGHT    400
 #define SCOPE_ROWS      32
 
 /* This value is used internally to scale the power output of the FFT to decibels. */
