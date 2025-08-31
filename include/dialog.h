@@ -43,7 +43,8 @@ struct dialog {
 
 	/* maybe these should get the data pointer as well? */
 	void (*draw_const) (void);
-	int (*handle_key) (struct key_event * k);
+	int (*handle_key) (struct key_event * k, void *data);
+	void (*focus_changed) (int selected_widget, void *data);
 
 	/* there's no action_ok, as yes and ok are fundamentally the same */
 	void (*action_yes) (void *data);
@@ -70,6 +71,8 @@ void dialog_draw(void);
 
 struct dialog *dialog_create(int type, const char *text, void (*action_yes) (void *data),
 		   void (*action_no) (void *data), int default_widget, void *data);
+
+void dialog_notify_selected_widget_changed(void);
 
 void dialog_destroy(void);
 void dialog_destroy_all(void);

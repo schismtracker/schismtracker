@@ -536,9 +536,9 @@ enum mouse_state {
 };
 
 enum mouse_button {
-	MOUSE_BUTTON_LEFT = 0,
-	MOUSE_BUTTON_MIDDLE,
-	MOUSE_BUTTON_RIGHT,
+	MOUSE_BUTTON_LEFT = 1,
+	MOUSE_BUTTON_MIDDLE = 2,
+	MOUSE_BUTTON_RIGHT = 4,
 };
 
 struct key_event {

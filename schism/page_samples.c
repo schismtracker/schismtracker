@@ -955,7 +955,7 @@ static void sample_adlibconfig_draw_const(void)
 		draw_text(labels[a].label, labels[a].x, labels[a].y + 30, a ? 0 : 3, 2);
 }
 
-static int do_adlib_handlekey(struct key_event *kk)
+static int do_adlib_handlekey(struct key_event *kk, void *data)
 {
 	if (kk->sym == SCHISM_KEYSYM_F1) {
 		if (kk->state == KEY_PRESS)

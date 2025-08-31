@@ -26,6 +26,7 @@
 #include "backend/events.h"
 #include "util.h"
 #include "video.h"
+#include "keyboard.h"
 
 #include "init.h"
 
@@ -568,6 +569,20 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 	}
 }
 
+static enum mouse_button sdl12_mouse_buttons_trans(Uint32 sdl_mouse_button_state)
+{
+	enum mouse_button ret = 0;
+
+	if (sdl_mouse_button_state & SDL_BUTTON(SDL_BUTTON_LEFT))
+		ret |= MOUSE_BUTTON_LEFT;
+	if (sdl_mouse_button_state & SDL_BUTTON(SDL_BUTTON_MIDDLE))
+		ret |= MOUSE_BUTTON_MIDDLE;
+	if (sdl_mouse_button_state & SDL_BUTTON(SDL_BUTTON_RIGHT))
+		ret |= MOUSE_BUTTON_RIGHT;
+
+	return ret;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 static SDLMod (SDLCALL *sdl12_GetModState)(void);
@@ -723,6 +738,7 @@ static void sdl12_pump_events(void)
 			schism_event.type = SCHISM_MOUSEMOTION;
 			schism_event.motion.x = e.motion.x;
 			schism_event.motion.y = e.motion.y;
+			schism_event.motion.buttons = sdl12_mouse_buttons_trans(e.motion.state);
 			events_push_event(&schism_event);
 			break;
 		case SDL_MOUSEBUTTONDOWN:
