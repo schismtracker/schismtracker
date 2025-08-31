@@ -27,6 +27,7 @@
 #include "vgamem.h"
 #include "fonts.h"
 #include "song.h"
+#include "events.h"
 
 #define SAMPLE_DATA_COLOR 13 /* Sample data */
 #define SAMPLE_LOOP_COLOR 3 /* Sample loop marks */
@@ -39,6 +40,7 @@
 
 /* for halfwidth, we need all the bytes we can get, hence why it's first ;) */
 #define VGAMEM_FONT_HALFWIDTH (0x80000000)
+#define VGAMEM_FONT_PIANOKEY (0x50000000) /* synthesized drawing for representing a piano */
 #define VGAMEM_FONT_OVERLAY (0x40000000)
 #define VGAMEM_FONT_UNICODE (0x20000000) /* byte 29; leaves literally just enough space */
 #define VGAMEM_FONT_BIOS (0x10000000)
@@ -360,6 +362,45 @@ static const uint8_t uFFFD[] = {
 				bg = VGAMEM_HW_BG1(*bp); \
 				fg2 = VGAMEM_HW_FG2(*bp); \
 				bg2 = VGAMEM_HW_BG2(*bp); \
+			} else if ((*bp & VGAMEM_FONT_PIANOKEY) == VGAMEM_FONT_PIANOKEY) { \
+				char c = VGAMEM_CHAR(*bp); \
+				dg = 0; \
+				if ((c >= 64) && (c < 80)) { \
+					/* range: 64 to 79, outline border */ \
+					/* drawn by extending lines from the middle of the character */ \
+					/* low bits 0-3 indicate which directions to extend */ \
+					int _up = (c & 1) != 0; \
+					int _down = (c & 2) != 0; \
+					int _left = (c & 4) != 0; \
+					int _right = (c & 8) != 0; \
+					\
+					if (yl < 4) { \
+						if (_up) dg |= 0x18; \
+					} \
+					else if (yl > 4) { \
+						if (_down) dg |= 0x18; \
+					} \
+					else { /* yl == 4 */ \
+						dg |= 0x18; \
+						if (_left) dg |= 0xF8; \
+						if (_right) dg |= 0x1F; \
+					} \
+				} \
+				else if ((c >= 80) && (c <= 82)) { \
+					/* character 80: black key to the right */ \
+					/* character 81: black key to the left and to the right */ \
+					/* character 82: black key to the left */ \
+					if (c <= 81) dg |= 0x7; \
+					if (c >= 81) dg |= 0xE0; \
+				} \
+				else if (c == 83) { \
+					/* filled box */ \
+					dg = 0xFF; \
+				} \
+				fg = VGAMEM_FG(*bp); \
+				bg = VGAMEM_BG(*bp); \
+				fg2 = fg; \
+				bg2 = bg; \
 			} else if (*bp & VGAMEM_FONT_OVERLAY) { \
 				/* raw pixel data, needs special code ;) */ \
 				*out++ = tc[ (q[0]|((mouseline[x] & 0x80)?15:0)) & 0xFF]; \
@@ -471,6 +512,14 @@ void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 	vgamem[x + (y*80)] = ((fg << VGAMEM_FG_BIT) | (bg << VGAMEM_BG_BIT) | c);
 }
 
+// See the declaration of this function in vgamem.h for an explanatory comment.
+void draw_key_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
+{
+	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
+
+	vgamem[x + (y*80)] = (VGAMEM_FONT_PIANOKEY | (fg << VGAMEM_FG_BIT) | (bg << VGAMEM_BG_BIT) | c);
+}
+
 int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
@@ -553,6 +602,65 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 	}
 	draw_fill_chars(x + n, y, x + len - 1, y, fg, bg);
 	return n;
+}
+
+// See the declaration of this function in vgamem.h for an explanatory comment.
+int draw_text_len_with_character_translation(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+{
+	static char translation_buffer[100];
+
+	char *out = &translation_buffer[0];
+	int spaces_mismatch = 0;
+
+	const char *safe = text + len - 1;
+
+	while (len > 0) {
+		// If a translation became wider, then eat spaces when we can.
+		while ((*text == ' ') && (spaces_mismatch > 0)) {
+			text++;
+			len--;
+			spaces_mismatch--;
+		}
+
+		// If a translation became shorter, then inject spaces next to other spaces.
+		while ((*text == ' ') && (spaces_mismatch < 0)) {
+			*out++ = ' ';
+			spaces_mismatch++;
+		}
+
+		if (*text != '$') {
+			*out++ = *text++;
+			len--;
+		}
+		else
+		{
+			char key_to_translate = text[1];
+
+			if (key_to_translate == ' ')
+				spaces_mismatch = 0;
+			else {
+				const char *translation = events_describe_physical_key_for_qwerty_key(key_to_translate);
+
+				int length_before_translation = 2;
+				int length_after_translation = strlen(translation);
+
+				strcpy(out, translation);
+
+				out += length_after_translation;
+
+				spaces_mismatch += length_after_translation - length_before_translation;
+			}
+
+			text += 2;
+			len -= 2;
+		}
+	}
+
+	*out = '\0';
+
+	len = out - translation_buffer;
+
+	return draw_text_len(translation_buffer, len, x, y, fg, bg);
 }
 
 int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
@@ -768,7 +876,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 
 /* --------------------------------------------------------------------- */
 /* sample drawing
- * 
+ *
  * output channels = number of oscis
  * input channels = number of channels in data
 */
