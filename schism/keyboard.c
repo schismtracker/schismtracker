@@ -497,52 +497,68 @@ int kbd_get_note(struct key_event *k)
 {
 	int note;
 
-	if (!NO_CAM_MODS(k->mod)) return -1;
+	if (k->mod & (SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_CTRL))
+		return -1;
 
-	switch (k->scancode) {
-	case SCHISM_SCANCODE_GRAVE:
-		if (k->mod & SCHISM_KEYMOD_SHIFT) return NOTE_FADE;
-		SCHISM_FALLTHROUGH;
-	case SCHISM_SCANCODE_NONUSHASH: /* for delt */
-	case SCHISM_SCANCODE_KP_HASH:
-		return NOTE_OFF;
-	case SCHISM_SCANCODE_1:
-		return NOTE_CUT;
-	case SCHISM_SCANCODE_PERIOD:
-		return 0; /* clear */
-	case SCHISM_SCANCODE_Z: note = 1; break;
-	case SCHISM_SCANCODE_S: note = 2; break;
-	case SCHISM_SCANCODE_X: note = 3; break;
-	case SCHISM_SCANCODE_D: note = 4; break;
-	case SCHISM_SCANCODE_C: note = 5; break;
-	case SCHISM_SCANCODE_V: note = 6; break;
-	case SCHISM_SCANCODE_G: note = 7; break;
-	case SCHISM_SCANCODE_B: note = 8; break;
-	case SCHISM_SCANCODE_H: note = 9; break;
-	case SCHISM_SCANCODE_N: note = 10; break;
-	case SCHISM_SCANCODE_J: note = 11; break;
-	case SCHISM_SCANCODE_M: note = 12; break;
+	if (k->mod & SCHISM_KEYMOD_SHIFT) {
+		switch (k->scancode) {
+		case SCHISM_SCANCODE_GRAVE: return NOTE_FADE;
 
-	case SCHISM_SCANCODE_Q: note = 13; break;
-	case SCHISM_SCANCODE_2: note = 14; break;
-	case SCHISM_SCANCODE_W: note = 15; break;
-	case SCHISM_SCANCODE_3: note = 16; break;
-	case SCHISM_SCANCODE_E: note = 17; break;
-	case SCHISM_SCANCODE_R: note = 18; break;
-	case SCHISM_SCANCODE_5: note = 19; break;
-	case SCHISM_SCANCODE_T: note = 20; break;
-	case SCHISM_SCANCODE_6: note = 21; break;
-	case SCHISM_SCANCODE_Y: note = 22; break;
-	case SCHISM_SCANCODE_7: note = 23; break;
-	case SCHISM_SCANCODE_U: note = 24; break;
-	case SCHISM_SCANCODE_I: note = 25; break;
-	case SCHISM_SCANCODE_9: note = 26; break;
-	case SCHISM_SCANCODE_O: note = 27; break;
-	case SCHISM_SCANCODE_0: note = 28; break;
-	case SCHISM_SCANCODE_P: note = 29; break;
+		default: return -1;
+		}
+	} else {
+		/* hm, old behavior ignored whether shift was down,
+		 * but thats obviously broken and dumb.
+		 *
+		 * hopefully no one relies on that. */
+		switch (k->scancode) {
+		case SCHISM_SCANCODE_GRAVE:
+		case SCHISM_SCANCODE_NONUSHASH: /* for delt */
+		case SCHISM_SCANCODE_KP_HASH:
+			return NOTE_OFF;
+		case SCHISM_SCANCODE_1:
+			return NOTE_CUT;
+		case SCHISM_SCANCODE_PERIOD:
+			return 0; /* clear */
 
-	default: return -1;
-	};
+		/* low row */
+		case SCHISM_SCANCODE_Z: note = 1; break;
+		case SCHISM_SCANCODE_S: note = 2; break;
+		case SCHISM_SCANCODE_X: note = 3; break;
+		case SCHISM_SCANCODE_D: note = 4; break;
+		case SCHISM_SCANCODE_C: note = 5; break;
+		case SCHISM_SCANCODE_V: note = 6; break;
+		case SCHISM_SCANCODE_G: note = 7; break;
+		case SCHISM_SCANCODE_B: note = 8; break;
+		case SCHISM_SCANCODE_H: note = 9; break;
+		case SCHISM_SCANCODE_N: note = 10; break;
+		case SCHISM_SCANCODE_J: note = 11; break;
+		case SCHISM_SCANCODE_M: note = 12; break;
+
+		/* high row */
+		case SCHISM_SCANCODE_Q: note = 13; break;
+		case SCHISM_SCANCODE_2: note = 14; break;
+		case SCHISM_SCANCODE_W: note = 15; break;
+		case SCHISM_SCANCODE_3: note = 16; break;
+		case SCHISM_SCANCODE_E: note = 17; break;
+		case SCHISM_SCANCODE_R: note = 18; break;
+		case SCHISM_SCANCODE_5: note = 19; break;
+		case SCHISM_SCANCODE_T: note = 20; break;
+		case SCHISM_SCANCODE_6: note = 21; break;
+		case SCHISM_SCANCODE_Y: note = 22; break;
+		case SCHISM_SCANCODE_7: note = 23; break;
+		case SCHISM_SCANCODE_U: note = 24; break;
+		case SCHISM_SCANCODE_I: note = 25; break;
+		case SCHISM_SCANCODE_9: note = 26; break;
+		case SCHISM_SCANCODE_O: note = 27; break;
+		case SCHISM_SCANCODE_0: note = 28; break;
+		case SCHISM_SCANCODE_P: note = 29; break;
+
+		/* nada */
+		default: return -1;
+		};
+	}
+
 	note += (12 * current_octave);
 	return CLAMP(note, 1, 120);
 }

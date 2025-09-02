@@ -77,9 +77,9 @@ typedef struct dmoz_file dmoz_file_t;
 struct dmoz_file {
 	char *path; /* the full path to the file (needs free'd) */
 	char *base; /* the basename (needs free'd) */
-	int sort_order; /* where to sort it */
+	int32_t sort_order; /* where to sort it */
 
-	unsigned long type; /* combination of TYPE_* flags above */
+	uint32_t type; /* combination of TYPE_* flags above */
 
 	/*struct stat stat;*/
 	time_t timestamp; /* stat.st_mtime */
