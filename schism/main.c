@@ -460,8 +460,20 @@ SCHISM_NORETURN static void event_loop(void)
 
 				kk.mouse = MOUSE_NONE;
 
+				/* wow, I hate this */
+				if (kk.sym == SCHISM_KEYSYM_CAPSLOCK) {
+					if (se.type == SCHISM_KEYDOWN)
+						status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
+					else
+						status.keymod &= ~(SCHISM_KEYMOD_CAPS_PRESSED);
+				}
+
 				/* grab the keymod */
 				kk.mod = se.key.mod;
+				/* apply stupid hacky shit */
+				kk.mod &= ~(SCHISM_KEYMOD_CAPS_PRESSED);
+				kk.mod |= (status.keymod & SCHISM_KEYMOD_CAPS_PRESSED);
+
 				/* apply OS-specific fixups to account for bugs in SDL */
 				os_get_modkey(&kk.mod);
 				/* numlock hacks, mostly here because of macs */
