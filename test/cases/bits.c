@@ -32,7 +32,7 @@
 testresult_t test_bshift_arithmetic(void)
 {
 #ifdef HAVE_ARITHMETIC_RSHIFT
-	ASSERT(rshift_signed(-0xFFFF, 8) == (-0xFFFF >> 8));
+	ASSERT_EQUAL_D(rshift_signed(-0xFFFF, 8), (-0xFFFF >> 8));
 	RETURN_PASS;
 #else
 	RETURN_SKIP;
@@ -41,13 +41,13 @@ testresult_t test_bshift_arithmetic(void)
 
 testresult_t test_bshift_right_shift_negative(void)
 {
-	ASSERT(rshift_signed(INT32_C(-0xFFFF), 8) == INT32_C(-0x100));
+	ASSERT_EQUAL_D(rshift_signed(INT32_C(-0xFFFF), 8), INT32_C(-0x100));
 	RETURN_PASS;
 }
 
 testresult_t test_bshift_left_shift_overflow(void)
 {
-	ASSERT(lshift_signed((int32_t)0xFF000000, 4) == (int32_t)0xF0000000);
+	ASSERT_EQUAL_D(lshift_signed((int32_t)0xFF000000, 4), (int32_t)0xF0000000);
 	RETURN_PASS;
 }
 
@@ -56,19 +56,19 @@ testresult_t test_bshift_left_shift_overflow(void)
 
 testresult_t test_bswap_16(void)
 {
-	ASSERT(bswap_16(0xFEEE) == 0xEEFE);
+	ASSERT_EQUAL_SX(bswap_16(0xFEEE), 0xEEFE);
 	RETURN_PASS;
 }
 
 testresult_t test_bswap_32(void)
 {
-	ASSERT(bswap_32(0x12345678) == 0x78563412);
+	ASSERT_EQUAL_X(bswap_32(0x12345678), 0x78563412);
 	RETURN_PASS;
 }
 
 testresult_t test_bswap_64(void)
 {
-	ASSERT(bswap_64(0x0123456789ABCDEF) == 0xEFCDAB8967452301);
+	ASSERT_EQUAL_LX(bswap_64(0x0123456789ABCDEF), 0xEFCDAB8967452301);
 	RETURN_PASS;
 }
 
@@ -77,24 +77,24 @@ testresult_t test_bswap_64(void)
 
 testresult_t test_babs8(void)
 {
-	ASSERT(babs8(-1) == 1U);
-	ASSERT(babs8(INT8_MIN) == UINT8_C(0x80));
+	ASSERT_EQUAL_SD(babs8(-1), 1U);
+	ASSERT_EQUAL_SD(babs8(INT8_MIN), UINT8_C(0x80));
 
 	RETURN_PASS;
 }
 
 testresult_t test_babs16(void)
 {
-	ASSERT(babs16(-1) == 1U);
-	ASSERT(babs16(INT16_MIN) == UINT16_C(0x8000));
+	ASSERT_EQUAL_SD(babs16(-1), 1U);
+	ASSERT_EQUAL_SD(babs16(INT16_MIN), UINT16_C(0x8000));
 
 	RETURN_PASS;
 }
 
 testresult_t test_babs32(void)
 {
-	ASSERT(babs32(-1) == 1);
-	ASSERT(babs32(INT32_MIN) == UINT32_C(0x80000000));
+	ASSERT_EQUAL_D(babs32(-1), 1);
+	ASSERT_EQUAL_D(babs32(INT32_MIN), UINT32_C(0x80000000));
 
 	/* XXX whats the point of these "RETURN_*" macros? */
 	RETURN_PASS;
@@ -102,8 +102,8 @@ testresult_t test_babs32(void)
 
 testresult_t test_babs64(void)
 {
-	ASSERT(babs64(-1) == 1);
-	ASSERT(babs64(INT64_MIN) == UINT64_C(0x8000000000000000));
+	ASSERT_EQUAL_LD(babs64(-1), 1);
+	ASSERT_EQUAL_LD(babs64(INT64_MIN), UINT64_C(0x8000000000000000));
 
 	/* XXX whats the point of these "RETURN_*" macros? */
 	RETURN_PASS;
@@ -115,11 +115,11 @@ testresult_t test_babs64(void)
 testresult_t test_bavgu8(void)
 {
 	/* generic */
-	ASSERT(bavgu8(0, 2) == 1);
+	ASSERT_EQUAL_SU(bavgu8(0, 2), 1);
 	/* round up */
-	ASSERT(bavgu8(1, 2) == 2);
+	ASSERT_EQUAL_SU(bavgu8(1, 2), 2);
 	/* edge case */
-	ASSERT(bavgu8(UINT8_MAX, UINT8_MAX) == UINT8_MAX);
+	ASSERT_EQUAL_SU_NAMED(bavgu8(UINT8_MAX, UINT8_MAX), UINT8_MAX);
 
 	RETURN_PASS;
 }
@@ -127,11 +127,11 @@ testresult_t test_bavgu8(void)
 testresult_t test_bavgu16(void)
 {
 	/* generic */
-	ASSERT(bavgu16(0, 2) == 1);
+	ASSERT_EQUAL_SU(bavgu16(0, 2), 1);
 	/* round up */
-	ASSERT(bavgu16(1, 2) == 2);
+	ASSERT_EQUAL_SU(bavgu16(1, 2), 2);
 	/* edge case */
-	ASSERT(bavgu16(UINT16_MAX, UINT16_MAX) == UINT16_MAX);
+	ASSERT_EQUAL_SU_NAMED(bavgu16(UINT16_MAX, UINT16_MAX), UINT16_MAX);
 
 	RETURN_PASS;
 }
@@ -139,11 +139,11 @@ testresult_t test_bavgu16(void)
 testresult_t test_bavgu32(void)
 {
 	/* generic */
-	ASSERT(bavgu32(0, 2) == 1);
+	ASSERT_EQUAL_U(bavgu32(0, 2), 1);
 	/* round up */
-	ASSERT(bavgu32(1, 2) == 2);
+	ASSERT_EQUAL_U(bavgu32(1, 2), 2);
 	/* edge case */
-	ASSERT(bavgu32(UINT32_MAX, UINT32_MAX) == UINT32_MAX);
+	ASSERT_EQUAL_U_NAMED(bavgu32(UINT32_MAX, UINT32_MAX), UINT32_MAX);
 
 	RETURN_PASS;
 }
@@ -151,11 +151,11 @@ testresult_t test_bavgu32(void)
 testresult_t test_bavgu64(void)
 {
 	/* generic */
-	ASSERT(bavgu64(0, 2) == 1);
+	ASSERT_EQUAL_LU(bavgu64(0, 2), 1);
 	/* round up */
-	ASSERT(bavgu64(1, 2) == 2);
+	ASSERT_EQUAL_LU(bavgu64(1, 2), 2);
 	/* edge case */
-	ASSERT(bavgu64(UINT64_MAX, UINT64_MAX) == UINT64_MAX);
+	ASSERT_EQUAL_LU_NAMED(bavgu64(UINT64_MAX, UINT64_MAX), UINT64_MAX);
 
 	RETURN_PASS;
 }
@@ -166,13 +166,13 @@ testresult_t test_bavgu64(void)
 testresult_t test_bavgs8(void)
 {
 	/* generic */
-	ASSERT(bavgs8(0, 2) == 1);
+	ASSERT_EQUAL_SD(bavgs8(0, 2), 1);
 	/* round up */
-	ASSERT(bavgs8(1, 2) == 2);
+	ASSERT_EQUAL_SD(bavgs8(1, 2), 2);
 	/* edge cases */
-	ASSERT(bavgs8(INT8_MAX, INT8_MAX) == INT8_MAX);
-	ASSERT(bavgs8(INT8_MIN, INT8_MAX) == 0);
-	ASSERT(bavgs8(INT8_MIN, INT8_MIN) == INT8_MIN);
+	ASSERT_EQUAL_SD_NAMED(bavgs8(INT8_MAX, INT8_MAX), INT8_MAX);
+	ASSERT_EQUAL_SD(bavgs8(INT8_MIN, INT8_MAX), 0);
+	ASSERT_EQUAL_SD_NAMED(bavgs8(INT8_MIN, INT8_MIN), INT8_MIN);
 
 	RETURN_PASS;
 }
@@ -180,13 +180,13 @@ testresult_t test_bavgs8(void)
 testresult_t test_bavgs16(void)
 {
 	/* generic */
-	ASSERT(bavgs16(0, 2) == 1);
+	ASSERT_EQUAL_SD(bavgs16(0, 2), 1);
 	/* round up */
-	ASSERT(bavgs16(1, 2) == 2);
+	ASSERT_EQUAL_SD(bavgs16(1, 2), 2);
 	/* edge cases */
-	ASSERT(bavgs16(INT16_MAX, INT16_MAX) == INT16_MAX);
-	ASSERT(bavgs16(INT16_MIN, INT16_MAX) == 0);
-	ASSERT(bavgs16(INT16_MIN, INT16_MIN) == INT16_MIN);
+	ASSERT_EQUAL_SD_NAMED(bavgs16(INT16_MAX, INT16_MAX), INT16_MAX);
+	ASSERT_EQUAL_SD(bavgs16(INT16_MIN, INT16_MAX), 0);
+	ASSERT_EQUAL_SD_NAMED(bavgs16(INT16_MIN, INT16_MIN), INT16_MIN);
 
 	RETURN_PASS;
 }
@@ -194,13 +194,13 @@ testresult_t test_bavgs16(void)
 testresult_t test_bavgs32(void)
 {
 	/* generic */
-	ASSERT(bavgs32(0, 2) == 1);
+	ASSERT_EQUAL_D(bavgs32(0, 2), 1);
 	/* round up */
-	ASSERT(bavgs32(1, 2) == 2);
+	ASSERT_EQUAL_D(bavgs32(1, 2), 2);
 	/* edge cases */
-	ASSERT(bavgs32(INT32_MAX, INT32_MAX) == INT32_MAX);
-	ASSERT(bavgs32(INT32_MIN, INT32_MAX) == 0);
-	ASSERT(bavgs32(INT32_MIN, INT32_MIN) == INT32_MIN);
+	ASSERT_EQUAL_D_NAMED(bavgs32(INT32_MAX, INT32_MAX), INT32_MAX);
+	ASSERT_EQUAL_D(bavgs32(INT32_MIN, INT32_MAX), 0);
+	ASSERT_EQUAL_D_NAMED(bavgs32(INT32_MIN, INT32_MIN), INT32_MIN);
 
 	RETURN_PASS;
 }
@@ -208,13 +208,13 @@ testresult_t test_bavgs32(void)
 testresult_t test_bavgs64(void)
 {
 	/* generic */
-	ASSERT(bavgs64(0, 2) == 1);
+	ASSERT_EQUAL_LD(bavgs64(0, 2), 1);
 	/* round up */
-	ASSERT(bavgs64(1, 2) == 2);
+	ASSERT_EQUAL_LD(bavgs64(1, 2), 2);
 	/* edge cases */
-	ASSERT(bavgs64(INT64_MAX, INT64_MAX) == INT64_MAX);
-	ASSERT(bavgs64(INT64_MIN, INT64_MAX) == 0);
-	ASSERT(bavgs64(INT64_MIN, INT64_MIN) == INT64_MIN);
+	ASSERT_EQUAL_LD_NAMED(bavgs64(INT64_MAX, INT64_MAX), INT64_MAX);
+	ASSERT_EQUAL_LD(bavgs64(INT64_MIN, INT64_MAX), 0);
+	ASSERT_EQUAL_LD_NAMED(bavgs64(INT64_MIN, INT64_MIN), INT64_MIN);
 
 	RETURN_PASS;
 }

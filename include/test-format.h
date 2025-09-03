@@ -21,25 +21,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
+#ifndef SCHISM_TEST_FORMAT_H
+#define SCHISM_TEST_FORMAT_H
 
-#undef TEST_THUNK
+void test_format_string_reset(void);
+const char *test_format_string(const char *str);
 
-test_index_entry automated_tests[] =
-	{
-#define TEST(x) { #x, x },
-#include "test-funcs.h"
-#undef TEST
-		{0}
-	};
-
-test_index_entry *test_get_case(const char *name)
-{
-	int i;
-
-	for (i = 0; automated_tests[i].name; i++)
-		if (!strcmp(automated_tests[i].name, name))
-			return &automated_tests[i];
-
-	return NULL;
-}
+#endif /* SCHISM_TEST_FORMAT_H */

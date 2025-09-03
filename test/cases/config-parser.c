@@ -1,6 +1,29 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010-2012 Storlek
+ * URL: http://schismtracker.org/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "test.h"
-#include "test-tempfile.h"
 #include "test-assertions.h"
+#include "test-tempfile.h"
 
 #include "charset.h"
 
@@ -41,9 +64,9 @@ testresult_t test_config_file_defined_values(void)
 	int weight = cfg_get_number(&cfg, "ducks", "weight", 1234);
 
 	// Assert
-	ASSERT(strcmp(colour, "brown") == 0);
-	ASSERT(count == 7);
-	ASSERT(weight == 64);
+	ASSERT_EQUAL_S(colour, "brown");
+	ASSERT_EQUAL_D(count, 7);
+	ASSERT_EQUAL_D(weight, 64);
 
 	cfg_free(&cfg);
 
@@ -62,8 +85,8 @@ testresult_t test_config_file_undefined_values_in_defined_section(void)
 	int feathers = cfg_get_number(&cfg, "ducks", "feathers", 94995);
 
 	// Assert
-	ASSERT(strcmp(sauce, "soy") == 0);
-	ASSERT(feathers == 94995);
+	ASSERT_EQUAL_S(sauce, "soy");
+	ASSERT_EQUAL_D(feathers, 94995);
 
 	cfg_free(&cfg);
 
@@ -82,8 +105,8 @@ testresult_t test_config_file_undefined_section(void)
 	int dismal = cfg_get_number(&cfg, "barbecue", "dismal", 758);
 
 	// Assert
-	ASSERT(strcmp(weather, "elf") == 0);
-	ASSERT(dismal == 758);
+	ASSERT_EQUAL_S(weather, "elf");
+	ASSERT_EQUAL_D(dismal, 758);
 
 	cfg_free(&cfg);
 
@@ -106,11 +129,11 @@ testresult_t test_config_file_obviously_broken_values(void)
 	const char *str_null_default_value = cfg_get_string(&cfg, "doesn't", "exist", NULL, 0, NULL);
 
 	// Assert
-	ASSERT(strcmp(str_null_section, "ok") == 0);
-	ASSERT(strcmp(str_null_key, "ok") == 0);
-	ASSERT(num_null_section == 1);
-	ASSERT(num_null_key == 1);
-	ASSERT(str_null_default_value == NULL);
+	ASSERT_EQUAL_S(str_null_section, "ok");
+	ASSERT_EQUAL_S(str_null_key, "ok");
+	ASSERT_EQUAL_D(num_null_section, 1);
+	ASSERT_EQUAL_D(num_null_key, 1);
+	ASSERT_NULL(str_null_default_value);
 
 	cfg_free(&cfg);
 
@@ -134,7 +157,7 @@ testresult_t test_config_file_null_default_with_value_set(void)
 	cfg_get_string(&cfg, "still", "nonexistent", buf, 64, NULL);
 
 	// Assert
-	ASSERT(strcmp(buf, semaphore) == 0);
+	ASSERT_EQUAL_S(buf, semaphore);
 
 	cfg_free(&cfg);
 
@@ -158,7 +181,7 @@ testresult_t test_config_file_null_default_with_value_set_defined_key(void)
 	cfg_get_string(&cfg, "ducks", "weight", buf, 64, NULL);
 
 	// Assert
-	ASSERT(strcmp(buf, semaphore) != 0);
+	ASSERT_NOT_EQUAL_S(buf, semaphore);
 
 	cfg_free(&cfg);
 
@@ -184,7 +207,7 @@ testresult_t test_config_file_string_boundary_defined_key(void)
 	cfg_get_string(&cfg, "test", "test", buf, 26 + 1 /* '\0' */, NULL);
 
 	// Assert
-	ASSERT(strlen(buf) == 26);
+	ASSERT_STRLEN(buf, 26);
 
 	cfg_free(&cfg);
 
@@ -208,7 +231,7 @@ testresult_t test_config_file_string_boundary_default_value(void)
 	cfg_get_string(&cfg, "fake section", "fake key", buf, 10 + 1 /* '\0' */, "1234567890???broken");
 
 	// Assert
-	ASSERT(strlen(buf) == 10);
+	ASSERT_STRLEN(buf, 10);
 
 	cfg_free(&cfg);
 
@@ -234,8 +257,8 @@ testresult_t test_config_file_string_boundary_zero(void)
 	const char *result = cfg_get_string(&cfg, "shouldn't", "crash", buf, 0, "it doesn't");
 
 	// Assert
-	ASSERT(strcmp(result, "daikon") == 0);
-	ASSERT(strcmp(buf, semaphore) == 0);
+	ASSERT_EQUAL_S(result, "daikon");
+	ASSERT_EQUAL_S(buf, semaphore);
 
 	cfg_free(&cfg);
 
@@ -382,12 +405,12 @@ testresult_t test_config_file_set_string_in_new_section(void)
 	cfg_set_string(&cfg, "toast", "is", "tasty");
 
 	// Assert
-	ASSERT(grep_config(&cfg, "toast", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "toast", "is", NULL) == 2);
-	ASSERT(grep_config(&cfg, "toast", "is", "tasty") == 3);
-	ASSERT(grep_config(&cfg, NULL, "is", NULL) == 1);
-	ASSERT(grep_config(&cfg, NULL, "is", "tasty") == 2);
-	ASSERT(grep_config(&cfg, NULL, NULL, "tasty") == 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "toast", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "toast", "is", NULL), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "toast", "is", "tasty"), 3);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "is", NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "is", "tasty"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, NULL, "tasty"), 1);
 
 	cfg_free(&cfg);
 
@@ -405,13 +428,13 @@ testresult_t test_config_file_set_new_string_in_existing_section(void)
 	cfg_set_string(&cfg, "ducks", "are", "tasty");
 
 	// Assert
-	ASSERT(grep_config(&cfg, "toast", NULL, NULL) == 0);
-	ASSERT(grep_config(&cfg, "ducks", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "ducks", "are", NULL) == 2);
-	ASSERT(grep_config(&cfg, "ducks", "are", "tasty") == 3);
-	ASSERT(grep_config(&cfg, NULL, "are", NULL) == 1);
-	ASSERT(grep_config(&cfg, NULL, "are", "tasty") == 2);
-	ASSERT(grep_config(&cfg, NULL, NULL, "tasty") == 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "toast", NULL, NULL), 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "are", NULL), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "are", "tasty"), 3);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "are", NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "are", "tasty"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, NULL, "tasty"), 1);
 
 	cfg_free(&cfg);
 
@@ -429,12 +452,12 @@ testresult_t test_config_file_set_number_in_new_section(void)
 	cfg_set_number(&cfg, "cowboy", "hats", 3);
 
 	// Assert
-	ASSERT(grep_config(&cfg, "cowboy", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "cowboy", "hats", NULL) == 2);
-	ASSERT(grep_config(&cfg, "cowboy", "hats", "3") == 3);
-	ASSERT(grep_config(&cfg, NULL, "hats", NULL) == 1);
-	ASSERT(grep_config(&cfg, NULL, "hats", "3") == 2);
-	ASSERT(grep_config(&cfg, NULL, NULL, "3") == 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "cowboy", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "cowboy", "hats", NULL), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "cowboy", "hats", "3"), 3);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "hats", NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "hats", "3"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, NULL, "3"), 1);
 
 	cfg_free(&cfg);
 
@@ -452,13 +475,13 @@ testresult_t test_config_file_set_new_number_in_existing_section(void)
 	cfg_set_number(&cfg, "ducks", "boots", 4);
 
 	// Assert
-	ASSERT(grep_config(&cfg, "toast", NULL, NULL) == 0);
-	ASSERT(grep_config(&cfg, "ducks", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "ducks", "boots", NULL) == 2);
-	ASSERT(grep_config(&cfg, "ducks", "boots", "4") == 3);
-	ASSERT(grep_config(&cfg, NULL, "boots", NULL) == 1);
-	ASSERT(grep_config(&cfg, NULL, "boots", "4") == 2);
-	ASSERT(grep_config(&cfg, NULL, NULL, "4") == 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "toast", NULL, NULL), 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "boots", NULL), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "boots", "4"), 3);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "boots", NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "boots", "4"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, NULL, "4"), 1);
 
 	cfg_free(&cfg);
 
@@ -476,14 +499,14 @@ testresult_t test_config_file_set_string_in_null_section(void)
 	cfg_set_string(&cfg, NULL, "shouldn't", "crash");
 
 	// Assert
-	ASSERT(grep_config(&cfg, NULL, "shouldn't", NULL) == 0);
-	ASSERT(grep_config(&cfg, NULL, NULL, "crash") == 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "shouldn't", NULL), 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, NULL, "crash"), 0);
 
-	ASSERT(grep_config(&cfg, "ducks", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "ducks", "*", NULL) == 4);
-	ASSERT(grep_config(&cfg, NULL, "colour", "brown") == 2);
-	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
-	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "*", NULL), 4);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "colour", "brown"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "count", "7"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "weight", "64*"), 2);
 
 	cfg_free(&cfg);
 
@@ -501,14 +524,14 @@ testresult_t test_config_file_set_number_in_null_section(void)
 	cfg_set_number(&cfg, NULL, "don't segfault", 42);
 
 	// Assert
-	ASSERT(grep_config(&cfg, NULL, "don't segfault", NULL) == 0);
-	ASSERT(grep_config(&cfg, NULL, NULL, "42") == 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "don't segfault", NULL), 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, NULL, "42"), 0);
 
-	ASSERT(grep_config(&cfg, "ducks", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "ducks", "*", NULL) == 4);
-	ASSERT(grep_config(&cfg, NULL, "colour", "brown") == 2);
-	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
-	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "*", NULL), 4);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "colour", "brown"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "count", "7"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "weight", "64*"), 2);
 
 	cfg_free(&cfg);
 
@@ -526,14 +549,14 @@ testresult_t test_config_file_set_string_with_null_key(void)
 	cfg_set_string(&cfg, "shouldn't", NULL, "crash");
 
 	// Assert
-	ASSERT(grep_config(&cfg, "shouldn't", NULL, NULL) == 0);
-	ASSERT(grep_config(&cfg, NULL, NULL, "crash") == 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, "shouldn't", NULL, NULL), 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, NULL, "crash"), 0);
 
-	ASSERT(grep_config(&cfg, "ducks", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "ducks", "*", NULL) == 4);
-	ASSERT(grep_config(&cfg, NULL, "colour", "brown") == 2);
-	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
-	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "*", NULL), 4);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "colour", "brown"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "count", "7"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "weight", "64*"), 2);
 
 	cfg_free(&cfg);
 
@@ -551,14 +574,14 @@ testresult_t test_config_file_set_number_with_null_key(void)
 	cfg_set_number(&cfg, "don't segfault", NULL, 42);
 
 	// Assert
-	ASSERT(grep_config(&cfg, "*segfault", NULL, NULL) == 0);
-	ASSERT(grep_config(&cfg, NULL, NULL, "42") == 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, "*segfault", NULL, NULL), 0);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, NULL, "42"), 0);
 
-	ASSERT(grep_config(&cfg, "ducks", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "ducks", "*", NULL) == 4);
-	ASSERT(grep_config(&cfg, NULL, "colour", "brown") == 2);
-	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
-	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "*", NULL), 4);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "colour", "brown"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "count", "7"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "weight", "64*"), 2);
 
 	cfg_free(&cfg);
 
@@ -576,8 +599,8 @@ testresult_t test_config_file_set_string_with_null_value(void)
 	cfg_set_string(&cfg, "shouldn't", "crash", NULL);
 
 	// Assert
-	ASSERT(grep_config(&cfg, "shouldn't", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, NULL, "crash", NULL) == 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "shouldn't", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "crash", NULL), 1);
 
 	struct cfg_key *key;
 	struct cfg_section *q;
@@ -587,11 +610,11 @@ testresult_t test_config_file_set_string_with_null_value(void)
 	ASSERT(key != NULL);
 	ASSERT(key->value == NULL);
 
-	ASSERT(grep_config(&cfg, "ducks", NULL, NULL) == 1);
-	ASSERT(grep_config(&cfg, "ducks", "*", NULL) == 4);
-	ASSERT(grep_config(&cfg, NULL, "colour", "brown") == 2);
-	ASSERT(grep_config(&cfg, NULL, "count", "7") == 2);
-	ASSERT(grep_config(&cfg, NULL, "weight", "64*") == 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", NULL, NULL), 1);
+	ASSERT_EQUAL_D(grep_config(&cfg, "ducks", "*", NULL), 4);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "colour", "brown"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "count", "7"), 2);
+	ASSERT_EQUAL_D(grep_config(&cfg, NULL, "weight", "64*"), 2);
 
 	cfg_free(&cfg);
 
@@ -611,7 +634,7 @@ testresult_t test_config_file_get_string_with_null_value(void)
 	const char *result = cfg_get_string(&cfg, "shouldn't", "crash", NULL, 0, "it doesn't");
 
 	// Assert
-	ASSERT(strcmp(result, "it doesn't") == 0);
+	ASSERT_EQUAL_S(result, "it doesn't");
 
 	cfg_free(&cfg);
 

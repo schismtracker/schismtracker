@@ -21,25 +21,31 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/* executing test name */
+
 #include "test.h"
+#include "test-assertions.h"
+#include "test-name.h"
 
-#undef TEST_THUNK
+#include "mem.h"
 
-test_index_entry automated_tests[] =
-	{
-#define TEST(x) { #x, x },
-#include "test-funcs.h"
-#undef TEST
-		{0}
-	};
+static char *test_name = NULL;
 
-test_index_entry *test_get_case(const char *name)
+const char *test_get_name(void)
 {
-	int i;
+	return test_name;
+}
 
-	for (i = 0; automated_tests[i].name; i++)
-		if (!strcmp(automated_tests[i].name, name))
-			return &automated_tests[i];
+void test_set_name(const char *fmt, ...)
+{
+	va_list ap;
+	char *old_test_name = test_name;
 
-	return NULL;
+	va_start(ap, fmt);
+	if (vasprintf(&test_name, fmt, ap) < 0)
+		test_name = str_dup(fmt); // semi-graceful?
+	va_end(ap);
+
+	// free this last, because the caller might have passed in the old test name as one of the arguments
+	free(old_test_name);
 }

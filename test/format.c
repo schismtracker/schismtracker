@@ -21,25 +21,39 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
+#include "headers.h"
 
-#undef TEST_THUNK
+#include "test-format.h"
 
-test_index_entry automated_tests[] =
-	{
-#define TEST(x) { #x, x },
-#include "test-funcs.h"
-#undef TEST
-		{0}
-	};
+static char string_format_buffer[10000];
+static int string_format_buffer_next = 0;
 
-test_index_entry *test_get_case(const char *name)
+void test_format_string_reset(void)
 {
-	int i;
+	memset(string_format_buffer, 0, sizeof(string_format_buffer));
+	string_format_buffer_next = 0;
+}
 
-	for (i = 0; automated_tests[i].name; i++)
-		if (!strcmp(automated_tests[i].name, name))
-			return &automated_tests[i];
+const char *test_format_string(const char *str)
+{
+	int chars;
+	char *allocated_space;
 
-	return NULL;
+	if (str == NULL)
+		return "NULL";
+
+	chars = strlen(str) + 3;
+
+	if (string_format_buffer_next + chars >= ARRAY_SIZE(string_format_buffer)) {
+		// Fallback
+		return str;
+	}
+
+	allocated_space = string_format_buffer + string_format_buffer_next;
+
+	string_format_buffer_next += chars;
+
+	sprintf(allocated_space, "\"%s\"", str);
+
+	return allocated_space;
 }

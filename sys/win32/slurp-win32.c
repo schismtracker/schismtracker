@@ -222,8 +222,6 @@ static void slurp_win32_closure_(slurp_t *t)
 
 int slurp_win32(slurp_t *t, const char *filename, SCHISM_UNUSED size_t size)
 {
-	memset(t, 0, sizeof(*t));
-
 	t->internal.win32.handle = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (t->internal.win32.handle == INVALID_HANDLE_VALUE)
 		return SLURP_OPEN_FAIL;
