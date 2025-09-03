@@ -298,22 +298,19 @@ static void _jack_disconnect(struct jack_midi_provider *jmp)
 	if (!jmp) return;
 
 	if (jmp->client) {
-		if (jmp->midi_in_port)
+		if (jmp->midi_in_port) {
 			JACK_jack_port_unregister(jmp->client, jmp->midi_in_port);
+			jmp->midi_in_port = NULL;
+		}
 
-		if (jmp->midi_out_port)
+		if (jmp->midi_out_port) {
 			JACK_jack_port_unregister(jmp->client, jmp->midi_out_port);
+			jmp->midi_out_port = NULL;
+		}
 
 		JACK_jack_client_close(jmp->client);
+		jmp->client = NULL;
 	}
-
-	if (jmp->ringbuffer_in)
-		JACK_jack_ringbuffer_free(jmp->ringbuffer_in);
-
-	if (jmp->ringbuffer_out)
-		JACK_jack_ringbuffer_free(jmp->ringbuffer_out);
-
-	free(jmp);
 }
 
 static int _jack_work(struct midi_provider *p)
@@ -440,7 +437,17 @@ static void _jack_poll(struct midi_provider* jack_provider_)
 
 static void _jack_destroy_userdata(void *x)
 {
-	_jack_disconnect(x);
+	struct jack_midi_provider *jmp = x;
+
+	_jack_disconnect(jmp);
+
+	if (jmp->ringbuffer_in)
+		JACK_jack_ringbuffer_free(jmp->ringbuffer_in);
+
+	if (jmp->ringbuffer_out)
+		JACK_jack_ringbuffer_free(jmp->ringbuffer_out);
+
+	free(jmp);
 }
 
 int jack_midi_setup(void)
@@ -482,7 +489,7 @@ int jack_midi_setup(void)
 	return 1;
 
 fail:
-	_jack_disconnect(jmp);
+	_jack_destroy_userdata(jmp);
 
 	return 0;
 }
