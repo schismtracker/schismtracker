@@ -388,7 +388,7 @@ static int _jack_attempt_connect(struct midi_provider* jack_provider_)
 		return 1;
 
 	/* create our client */
-	jmp->client = JACK_jack_client_open(PORT_NAME, 0, NULL);
+	jmp->client = JACK_jack_client_open(PORT_NAME, JackNoStartServer, NULL);
 	if (!jmp->client)
 		goto fail;
 
