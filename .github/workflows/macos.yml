@@ -209,7 +209,7 @@ jobs:
           autoreconf -Iacinclude -i
           mkdir build_powerpc
           cd build_powerpc
-          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" UTF8PROC_CFLAGS="-I/Retro68-build/toolchain/powerpc-apple-macos/include" UTF8PROC_LIBS="-lutf8proc" FLAC_CFLAGS="-I$RUNNER_TEMP/ppcprefix/include" FLAC_LIBS="-L$RUNNER_TEMP/ppcprefix/lib -lFLAC -logg -lm" SDL12_CFLAGS="-I$RUNNER_TEMP/ppcprefix/include/SDL" SDL12_LIBS="-L$RUNNER_TEMP/ppcprefix/lib -lSDL" ../configure --with-sdl12 --enable-sdl12-linking --with-flac --enable-flac-linking --without-jack --without-sdl2 --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix"
+          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" UTF8PROC_CFLAGS="-I/Retro68-build/toolchain/powerpc-apple-macos/include" UTF8PROC_LIBS="-lutf8proc" FLAC_CFLAGS="-I$RUNNER_TEMP/ppcprefix/include" FLAC_LIBS="-L$RUNNER_TEMP/ppcprefix/lib -lFLAC -logg -lm" SDL12_CFLAGS="-I$RUNNER_TEMP/ppcprefix/include/SDL" SDL12_LIBS="-L$RUNNER_TEMP/ppcprefix/lib -lSDL" ../configure --with-sdl12 --enable-sdl12-linking --with-flac --enable-flac-linking --without-jack --without-sdl2 --disable-threads --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix"
           make schismtracker.bin RETRO68_ROOT="/Retro68-build/toolchain"
           cd .. # build_powerpc
           cd .. # schism
