@@ -1097,7 +1097,7 @@ int schism_main(int argc, char** argv)
 	}
 #endif
 
-	/* no longer required  --paper */
+	/* mt is no longer required  --paper */
 	mt_init();
 	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
 

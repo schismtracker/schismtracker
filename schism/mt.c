@@ -121,11 +121,17 @@ void mt_mutex_unlock(mt_mutex_t *mutex)
 }
 
 // ---------------------------------------------------------------------------
+/* condition variables are inherently incompatible with non-threaded
+ * environments (or disabled threading support), so we simply do a runtime
+ * assertion for this case */
 
 mt_cond_t *mt_cond_create(void)
 {
 #ifdef USE_THREADS
-	return mt_backend->cond_create();
+	if (mt_backend)
+		return mt_backend->cond_create();
+
+	return NULL;
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
 		"it works is incompatible with non-threaded models");
@@ -135,7 +141,8 @@ mt_cond_t *mt_cond_create(void)
 void mt_cond_delete(mt_cond_t *cond)
 {
 #ifdef USE_THREADS
-	mt_backend->cond_delete(cond);
+	if (mt_backend && cond)
+		mt_backend->cond_delete(cond);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
 		"it works is incompatible with non-threaded models");
@@ -174,6 +181,11 @@ void mt_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 
 // ---------------------------------------------------------------------------
 
+static int mt_test_thread_(void *xyzzy)
+{
+	return xyzzy != MT_DUMMY_ADDR;
+}
+
 int mt_init(void)
 {
 #ifdef USE_THREADS
@@ -197,10 +209,26 @@ int mt_init(void)
 	int i;
 
 	for (i = 0; backends[i]; i++) {
-		if (backends[i]->init()) {
-			mt_backend = backends[i];
-			break;
-		}
+		int st;
+		mt_thread_t *t;
+
+		if (!backends[i]->init())
+			continue;
+
+		/* make sure that threads actually work.
+		 * this cruft is here because SDL 1.2 thought it was a
+		 * EXTREMELY GOOD IDEA to keep compiling thread support,
+		 * and provide no way except starting a thread to detect
+		 * whether it was even compiled. NICE! */
+		t = backends[i]->thread_create(mt_test_thread_, "mt test thread", MT_DUMMY_ADDR);
+		if (!t)
+			continue;
+
+		backends[i]->thread_wait(t, &st);
+		SCHISM_RUNTIME_ASSERT(st == 0, "WHOOPS! threads are borked");
+
+		mt_backend = backends[i];
+		break;
 	}
 
 	if (!mt_backend)
