@@ -76,7 +76,7 @@ static void macos_copy_to_pascal_convert_newlines(const char *o,
 {
 	unsigned char i, n;
 
-	for (n = 0, i = 0; n < 255 && o[i]; i++, n++) {
+	for (n = 1, i = 0; n < 256 && o[i]; i++, n++) {
 		/* newline conversion */
 		if (o[i] == '\r' && o[i+1] == '\n') {
 			s[n] = '\r';
@@ -89,13 +89,14 @@ static void macos_copy_to_pascal_convert_newlines(const char *o,
 	}
 
 	/* copy the size */
-	s[0] = n;
+	s[0] = (n - 1);
 }
 
 static void macos_copy_utf8_to_pascal(const char *utf8, unsigned char s[256])
 {
 	if (utf8 && *utf8) {
 		char *n = charset_iconv_easy(utf8, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
+		//str_to_pascal(n, s);
 		macos_copy_to_pascal_convert_newlines(n, s);
 		free(n);
 	} else {
