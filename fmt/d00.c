@@ -65,17 +65,14 @@ static int d00_header_read_v1(struct d00_header *hdr, slurp_t *fp)
 		return 0;
 
 	READ_VALUE(version);
-	/* old headers should never be higher than version 1 */
-	if (hdr->version < 1)
-		return 0;
-
 	READ_VALUE(speed);
 	READ_VALUE(subsongs);
 	READ_VALUE(tpoin);
 	READ_VALUE(sequence_paraptr);
 	READ_VALUE(instrument_paraptr);
 	READ_VALUE(info_paraptr);
-	READ_VALUE(spfx_paraptr); /* actually levelpuls */
+	if (hdr->version > 0) /* v0: no levelpuls */
+		READ_VALUE(spfx_paraptr);
 	READ_VALUE(endmark);
 
 	return 1;
@@ -103,8 +100,6 @@ static int d00_header_read_new(struct d00_header *hdr, slurp_t *fp)
 		/* from adplug: "reheadered old-style song" */
 		slurp_seek(fp, 0x6B, SEEK_SET);
 
-		log_appendf(1, " D00: This is a reheadered old-style song!");
-
 		return d00_header_read_v1(hdr, fp);
 	}
 
@@ -128,8 +123,6 @@ static int d00_header_read_new(struct d00_header *hdr, slurp_t *fp)
 	return 1;
 }
 
-#undef READ_VALUE
-
 static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 {
 	/* this function is responsible for reading and verification
@@ -137,6 +130,7 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 	 * but v0-v1 d00 files have virtually no identifying information
 	 * if they haven't been reheadered. */
 	int64_t fppos;
+	uint64_t fplen;
 	static int (*const hdr_style[])(struct d00_header *hdr, slurp_t *fp) = {
 		/* in order of preference */
 		d00_header_read_new,
@@ -175,21 +169,43 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 	hdr->spfx_paraptr = bswapLE16(hdr->spfx_paraptr);
 	hdr->endmark = bswapLE16(hdr->endmark);
 
-	/* make sure that none of our pointers point inside
-	 * the file header (good for v0-v1, less-so for >v2) */
+	/* validate the parapointers */
 	fppos = slurp_tell(fp);
 	if (fppos < 0)
 		return 0; /* wut */
 
-	if (hdr->tpoin < fppos
-			|| hdr->sequence_paraptr < fppos
-			|| hdr->instrument_paraptr < fppos
-			|| hdr->info_paraptr < fppos
-			|| hdr->spfx_paraptr < fppos)
+	fplen = slurp_length(fp);
+
+	/* verify that parapointers are within range for the file */
+#define PARAPTR_VALID(ptr) \
+	(fppos <= ptr || fplen >= ptr)
+
+	/* these can never be invalid */
+	if (!PARAPTR_VALID(hdr->tpoin)
+		    || !PARAPTR_VALID(hdr->info_paraptr)
+		    || !PARAPTR_VALID(hdr->instrument_paraptr)
+		    || !PARAPTR_VALID(hdr->sequence_paraptr))
 		return 0;
 
+	/* this pointer is used differently depending on the version.
+	 * some versions have nothing! */
+	switch (hdr->version) {
+	case 1:
+	case 2:
+		/* Levelpuls */
+		SCHISM_FALLTHROUGH;
+	case 4:
+		/* SPFX */
+		if (!PARAPTR_VALID(hdr->spfx_paraptr))
+			return 0;
+		break;
+	}
+
+#undef PARAPTR_VALID
+
 	/* endmark should ALWAYS be 0xFFFF
-	 * this is actually a pretty good identifier of sorts... */
+	 * at this point, there's a fairly good chance we're working with
+	 * a v0 or v1 d00 file. */
 	if (hdr->endmark != 0xFFFF)
 		return 0;
 
@@ -197,8 +213,34 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 	if (!hdr->version)
 		hdr->speed = 70;
 
+	{
+		/* do some additional verification of the tpoin stuff.
+		 * this is likely a very weird edge case, but... */
+		int64_t start;
+		uint16_t ptrs[9];
+		size_t j;
+
+		start = slurp_tell(fp);
+		if (start < 0)
+			return 0; /* oops */
+
+		slurp_seek(fp, hdr->tpoin, SEEK_SET);
+		if (slurp_read(fp, ptrs, sizeof(ptrs)) != sizeof(ptrs))
+			return 0;
+
+		for (j = 0; j < 9; j++) {
+			ptrs[j] = bswapLE16(ptrs[j]);
+			if (ptrs[j] >= fplen)
+				return 0;
+		}
+
+		slurp_seek(fp, start, SEEK_SET);
+	}
+
 	return 1;
 }
+
+#undef READ_VALUE
 
 int fmt_d00_read_info(dmoz_file_t *file, slurp_t *fp)
 {
@@ -288,6 +330,7 @@ enum {
 	D00_WARN_LEVELPULS,
 #endif
 	D00_WARN_FINETUNE,
+	D00_WARN_ORDERSPEED,
 	/* ... */
 
 	D00_WARN_MAX_
@@ -300,6 +343,7 @@ const char *d00_warn_names[D00_WARN_MAX_] = {
 	[D00_WARN_LEVELPULS] = "Levelpuls not implemented",
 #endif
 	[D00_WARN_FINETUNE] = "Instrument finetune ignored",
+	[D00_WARN_ORDERSPEED] = "Order speed ignored",
 };
 
 #define EDLIBVOLTOITVOL(x) \
@@ -386,11 +430,13 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 	BITARRAY_ZERO(warn);
 	BITARRAY_SET(warn, D00_WARN_EXPERIMENTAL);
 
+	speeds[0] = hdr.speed;
+
 	memcpy(song->title, hdr.title, 31);
 	song->title[31] = '\0';
 
 	/* read in song info (message).
-	 * this is USUALLY simply 0xFFFF (end marking) but in some
+	 * this is USUALLY simply "\xFF\xFF" (end marking) but in some
 	 * old songs (e.g. "the alibi.d00") it contains real data */
 	slurp_seek(fp, hdr.info_paraptr, SEEK_SET);
 	for (msgp = 0; msgp < MAX_MESSAGE; ) {
@@ -398,16 +444,16 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 
 		ch = slurp_getc(fp);
 		if (ch == EOF)
-			/* end of file before end marker == error
-			 * OR we've misidentified a file :( */
-			return LOAD_FORMAT_ERROR;
+			/* some old files actually have this case.
+			 * (platest.d00) */
+			break;
 
 		if (ch == 0xFF) {
 			int ch2;
 
 			ch2 = slurp_getc(fp);
 			if (ch2 == EOF)
-				return LOAD_FORMAT_ERROR;
+				break;
 
 			if (ch2 == 0xFF) {
 				break; /* message end */
@@ -483,6 +529,7 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 					break;
 				} else if (ords[nords] >= 0x9000) {
 					/* set speed -- IGNORED for now */
+					BITARRAY_SET(warn, D00_WARN_ORDERSPEED);
 					continue;
 				} else if (ords[nords] >= 0x8000) {
 					ord_transpose[nords] = (ords[nords] & 0xff);
@@ -503,6 +550,10 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 				}
 			}
 
+			/* avoid possible divide-by-zero (phase.d00) */
+			if (!nords)
+				continue;
+
 			pattern = 0;
 			row = 0;
 
@@ -520,6 +571,7 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 				for (; pattern < MAX_PATTERNS; d00_fix_row(&pattern, &row)) {
 					uint16_t event;
 					song_note_t *sn;
+					uint16_t count = 0;
 
 D00_readnote: /* this goto is kind of ugly... */
 					if (slurp_read(fp, &event, 2) != 2)
@@ -537,8 +589,10 @@ D00_readnote: /* this goto is kind of ugly... */
 
 					if (event < 0x4000) {
 						int note = (event & 0xFF);
-						int count = (event >> 8);
 						int r;
+
+						if (hdr.version > 0)
+							count = (event >> 8);
 
 						/* note event; data is stored in the low byte */
 						switch (note & 0x7F) {
@@ -556,30 +610,37 @@ D00_readnote: /* this goto is kind of ugly... */
 							}
 							break;
 						default:
-							/* 0x80 flag == ignore channel transpose */
-							if (note & 0x80) {
-								note -= 0x80;
-							} else {
-								note += ord_transpose[n % nords];
-							}
-
-							/* reset fx */
+							/* reset fx (does v0 do this?)
+							 * ALSO: is this even right ?? lol */
 							mem_effect = FX_NONE;
 							mem_param = 0;
+
+							if (hdr.version > 0) {
+								/* 0x80 flag == ignore channel transpose */
+								if (note & 0x80) {
+									note -= 0x80;
+								} else {
+									note += ord_transpose[n % nords];
+								}
+
+								if (count >= 0x20) {
+									/* "tied note" */
+									if (sn->effect == FX_NONE) {
+										sn->effect = FX_TONEPORTAMENTO;
+										sn->param = 0xFF;
+									}
+									count -= 0x20;
+								}
+							} else {
+								/* note handling for v0 */
+								if (count < 2) /* unlocked note */
+									note += ord_transpose[n % nords];
+							}
 
 							sn->note = note + NOTE_FIRST + 12;
 							sn->instrument = mem_instr;
 							sn->voleffect = mem_volfx;
 							sn->volparam = mem_volparam;
-
-							if (count >= 0x20) {
-								/* "tied note" */
-								if (sn->effect == FX_NONE) {
-									sn->effect = FX_TONEPORTAMENTO;
-									sn->param = 0xFF;
-								}
-								count -= 0x20;
-							}
 
 							row += count + 1;
 
@@ -611,6 +672,10 @@ D00_readnote: /* this goto is kind of ugly... */
 
 								mem_param = (speed << 4) | depth;
 							}
+							break;
+						case 8: /* Duration (v0) */
+							if (hdr.version == 0)
+								count = fxop;
 							break;
 						case 9: /* New Level (in layman's terms, volume) */
 							mem_volfx = VOLFX_VOLUME;
@@ -667,6 +732,8 @@ D00_readnote: /* this goto is kind of ugly... */
 					}
 				}
 
+				/* FIXME: this isn't perfect; "like galway.d00" adds some
+				 * weird stuff on the end */
 				if (n == nords) {
 					if (max_pattern < pattern) {
 						max_pattern = pattern;
@@ -676,6 +743,16 @@ D00_readnote: /* this goto is kind of ugly... */
 					}
 				}
 			}
+		}
+
+		//log_appendf(1, "pat: %d, row: %d", max_pattern, max_row);
+
+		/* fixup max patterns / rows (off by one?) */
+		if (!max_row) {
+			max_pattern--;
+			max_row = D00_PATTERN_ROWS - 1;
+		} else {
+			max_row--;
 		}
 
 		/* now, clean up the giant mess we've made.
@@ -690,6 +767,7 @@ D00_readnote: /* this goto is kind of ugly... */
 			}
 		}
 
+#if 0
 		if (song->pattern_size[max_pattern] != max_row) {
 			/* insert an effect to jump back to the start
 			 * this effect may be on the 10th channel if we can't
@@ -702,8 +780,12 @@ D00_readnote: /* this goto is kind of ugly... */
 
 				row[c].effect = FX_POSITIONJUMP;
 				row[c].param = 0;
+				break;
 			}
 		}
+#else
+		song->pattern_size[max_pattern] = max_row + 1;
+#endif
 
 		for (c = 0; c <= (int)max_pattern; c++)
 			song->orderlist[c] = c;
@@ -738,9 +820,12 @@ D00_readnote: /* this goto is kind of ugly... */
 			}
 		}
 
-		//log_appendf(1, "mode: %u", mode);
-		//for (c = 0; c < 10; c++)
-		//	log_appendf(1, "speeds[%d] = %u", c, speeds[c]);
+
+#if 1
+		log_appendf(1, "mode: %u", mode);
+		for (c = 0; c < 10; c++)
+			log_appendf(1, "speeds[%d] = %u", c, speeds[c]);
+#endif
 
 		hz_to_speed_tempo(hdr.version, mode, &song->initial_speed, &song->initial_tempo);
 	}
@@ -846,6 +931,8 @@ D00_readnote: /* this goto is kind of ugly... */
 
 	if (hdr.version == 4)
 		strncpy(song->tracker_id, "EdLib Tracker", sizeof(song->tracker_id) - 1);
+	else
+		snprintf(song->tracker_id, sizeof(song->tracker_id), "Unknown AdLib Tracker, file version %d", (int)hdr.version);
 	/* otherwise... it's probably some random tracker */
 
 	for (c = 0; c < D00_WARN_MAX_; c++)
