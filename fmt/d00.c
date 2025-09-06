@@ -28,8 +28,15 @@
 #include "mem.h"
 #include "log.h"
 
+/*
+#define D00_ENABLE_BROKEN_LEVELPULS
+
+To enable broken levelpuls support.
+This is broken because somewhere in the replayer, effects are ignored
+after noteoff, and I don't care enough to fix it right now.
+*/
+
 struct d00_header {
-	unsigned char id[6];
 	unsigned char type;
 	unsigned char version;
 	unsigned char speed; // apparently this is in Hz? wtf
@@ -46,73 +53,149 @@ struct d00_header {
 	uint16_t endmark; // what?
 };
 
-// This function, like many of the other read functions, also
-// performs sanity checks on the data itself.
-static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
+#define READ_VALUE(name) \
+	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { unslurp(fp); return 0; } } while (0)
+
+static int d00_header_read_v1(struct d00_header *hdr, slurp_t *fp)
+{
+	/* reads old D00 header. this doesn't have a lot of identifying
+	 * info, besides some assumptions we make that I am going to abuse */
+	const uint64_t fplen = slurp_length(fp) - slurp_tell(fp);
+	if (fplen <= 15 || fplen > UINT16_MAX)
+		return 0;
+
+	READ_VALUE(version);
+	/* old headers should never be higher than version 1 */
+	if (hdr->version < 1)
+		return 0;
+
+	READ_VALUE(speed);
+	READ_VALUE(subsongs);
+	READ_VALUE(tpoin);
+	READ_VALUE(sequence_paraptr);
+	READ_VALUE(instrument_paraptr);
+	READ_VALUE(info_paraptr);
+	READ_VALUE(spfx_paraptr); /* actually levelpuls */
+	READ_VALUE(endmark);
+
+	return 1;
+}
+
+static int d00_header_read_new(struct d00_header *hdr, slurp_t *fp)
 {
 	// we check if the length is larger than UINT16_MAX because
 	// the parapointers wouldn't be able to fit all of the bits
 	// otherwise. 119 is just the size of the header.
-	const uint64_t fplen = slurp_length(fp);
+	const uint64_t fplen = slurp_length(fp) - slurp_tell(fp);
+	unsigned char magic[6];
+
 	if (fplen <= 119 || fplen > UINT16_MAX)
 		return 0;
 
-#define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { unslurp(fp); return 0; } } while (0)
-
-	READ_VALUE(id);
-	if (memcmp(hdr->id, "JCH\x26\x02\x66", sizeof(hdr->id)))
+	if ((slurp_read(fp, magic, 6) != 6)
+			|| memcmp(magic, "JCH\x26\x02\x66", 6))
 		return 0;
 
-	/* this should always be zero? */
 	READ_VALUE(type);
-	if (hdr->type)
-		return 0;
 
-	/* TODO: handle other versions */
 	READ_VALUE(version);
-	if (hdr->version != 4)
-		return 0;
+	if (hdr->version & 0x80) {
+		/* from adplug: "reheadered old-style song" */
+		slurp_seek(fp, 0x6B, SEEK_SET);
+
+		log_appendf(1, " D00: This is a reheadered old-style song!");
+
+		return d00_header_read_v1(hdr, fp);
+	}
 
 	READ_VALUE(speed);
 
 	/* > EdLib always sets offset 0009h to 01h. You cannot make more than
 	 * > one piece of music at a time in the editor. */
 	READ_VALUE(subsongs);
-	if (hdr->subsongs != 1)
-		return 0;
-
 	READ_VALUE(soundcard);
-	if (hdr->soundcard != 0)
-		return 0;
-
 	READ_VALUE(title);
 	READ_VALUE(author);
 	READ_VALUE(reserved);
 
 	READ_VALUE(tpoin);
-	hdr->tpoin = bswapLE16(hdr->tpoin);
 	READ_VALUE(sequence_paraptr);
-	hdr->sequence_paraptr = bswapLE16(hdr->sequence_paraptr);
 	READ_VALUE(instrument_paraptr);
-	hdr->instrument_paraptr = bswapLE16(hdr->instrument_paraptr);
 	READ_VALUE(info_paraptr);
-	hdr->info_paraptr = bswapLE16(hdr->info_paraptr);
 	READ_VALUE(spfx_paraptr);
-	hdr->spfx_paraptr = bswapLE16(hdr->spfx_paraptr);
 	READ_VALUE(endmark);
-	hdr->endmark = bswapLE16(hdr->endmark);
 
-	// verify the parapointers
-	if (hdr->tpoin < 119
-		|| hdr->sequence_paraptr < 119
-		|| hdr->instrument_paraptr < 119
-		|| hdr->info_paraptr < 119
-		|| hdr->spfx_paraptr < 119
-		|| hdr->endmark < 119)
-		return 0;
+	return 1;
+}
 
 #undef READ_VALUE
+
+static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
+{
+	/* this function is responsible for reading and verification
+	 * most of this verification isn't useful for v2-v4 d00 files,
+	 * but v0-v1 d00 files have virtually no identifying information
+	 * if they haven't been reheadered. */
+	int64_t fppos;
+	static int (*const hdr_style[])(struct d00_header *hdr, slurp_t *fp) = {
+		/* in order of preference */
+		d00_header_read_new,
+		d00_header_read_v1,
+		NULL
+	};
+	size_t i;
+
+	for (i = 0; /* nothing */; i++) {
+		/* end of list? */
+		if (!hdr_style[i])
+			return 0;
+
+		slurp_rewind(fp);
+		memset(hdr, 0, sizeof(*hdr));
+		if (hdr_style[i](hdr, fp))
+			break; /* SUCCESS! */
+	}
+
+	/* should always be zero */
+	if (hdr->type)
+		return 0;
+
+	if (hdr->version > 4)
+		return 0;
+
+	/* ignore files with more than one subsong.
+	 * we can't handle them anyway. */
+	if (hdr->subsongs != 1)
+		return 0;
+
+	hdr->tpoin = bswapLE16(hdr->tpoin);
+	hdr->sequence_paraptr = bswapLE16(hdr->sequence_paraptr);
+	hdr->instrument_paraptr = bswapLE16(hdr->instrument_paraptr);
+	hdr->info_paraptr = bswapLE16(hdr->info_paraptr);
+	hdr->spfx_paraptr = bswapLE16(hdr->spfx_paraptr);
+	hdr->endmark = bswapLE16(hdr->endmark);
+
+	/* make sure that none of our pointers point inside
+	 * the file header (good for v0-v1, less-so for >v2) */
+	fppos = slurp_tell(fp);
+	if (fppos < 0)
+		return 0; /* wut */
+
+	if (hdr->tpoin < fppos
+			|| hdr->sequence_paraptr < fppos
+			|| hdr->instrument_paraptr < fppos
+			|| hdr->info_paraptr < fppos
+			|| hdr->spfx_paraptr < fppos)
+		return 0;
+
+	/* endmark should ALWAYS be 0xFFFF
+	 * this is actually a pretty good identifier of sorts... */
+	if (hdr->endmark != 0xFFFF)
+		return 0;
+
+	/* AdPlug: overwrite speed with 70hz if version is 0 */
+	if (!hdr->version)
+		hdr->speed = 70;
 
 	return 1;
 }
@@ -136,19 +219,32 @@ int fmt_d00_read_info(dmoz_file_t *file, slurp_t *fp)
  * Loosely based off the AdPlug code, written by
  * Simon Peter <dn.tlp@gmx.net> */
 
-static void hz_to_speed_tempo(uint32_t hz, uint32_t *pspeed, uint32_t *ptempo)
+static void hz_to_speed_tempo(unsigned char ver, uint16_t hz, uint32_t *pspeed, uint32_t *ptempo)
 {
-	/* "close enough" calculation; based on known values ;)
-	 *
-	 * "AAAAARGGGHHH" BPM is 131-ish, and the Hz is 32.
-	 * 131/32 is a little over 4. */
-	*pspeed = 3;
-	*ptempo = (hz * 4);
+	if (ver >= 3) {
+		/* have to do a bit more work here...
+		 *
+		 * this is really just a guesstimate.
+		 * "AAAAARGGGHHH" BPM is 131-ish, and the hz value is 32.
+		 * hence we just multiple by 131/32. :) */
+		double tempo;
+		uint32_t speed;
 
-	while (*ptempo > 255) {
-		/* eh... */
-		*pspeed *= 2;
-		*ptempo /= 2;
+		speed = 3u;
+		tempo = (hz * (131.0 / 32.0));
+
+		while (tempo > 255.0) {
+			/* divide until we get a valid tempo */
+			speed *= 2;
+			tempo /= 2;
+		}
+
+		*pspeed = speed;
+		*ptempo = round(tempo);
+	} else {
+		/* hz is basically just speed. */
+		*pspeed = hz;
+		*ptempo = 131;
 	}
 }
 
@@ -188,6 +284,10 @@ static void d00_fix_row(uint32_t *pattern, uint32_t *row)
 enum {
 	D00_WARN_EXPERIMENTAL,
 	D00_WARN_SPFX,
+#ifndef D00_ENABLE_BROKEN_LEVELPULS
+	D00_WARN_LEVELPULS,
+#endif
+	D00_WARN_FINETUNE,
 	/* ... */
 
 	D00_WARN_MAX_
@@ -195,8 +295,80 @@ enum {
 
 const char *d00_warn_names[D00_WARN_MAX_] = {
 	[D00_WARN_EXPERIMENTAL] = "D00 loader is experimental at best",
-	[D00_WARN_SPFX] = "SPFX effects not implemented",
+	[D00_WARN_SPFX] = "SPFX not implemented",
+#ifndef D00_ENABLE_BROKEN_LEVELPULS
+	[D00_WARN_LEVELPULS] = "Levelpuls not implemented",
+#endif
+	[D00_WARN_FINETUNE] = "Instrument finetune ignored",
 };
+
+#define EDLIBVOLTOITVOL(x) \
+	((63 - ((x) & 63)) * 64 / 63)
+
+#ifdef D00_ENABLE_BROKEN_LEVELPULS
+/* return of 0 means catastrophic failure */
+static int d00_load_levelpuls(uint16_t paraptr, int tunelev,
+	song_instrument_t *ins, song_sample_t *smp, slurp_t *fp)
+{
+	/* FIXME: The first iteration of the tunelev takes in a "timer",
+	 * which is weird-speak for sustain for given amount of ticks. */
+	BITARRAY_DECLARE(loop, 255);
+	uint32_t i;
+	int32_t x = 0;
+	int64_t start = slurp_tell(fp);
+
+	BITARRAY_ZERO(loop);
+
+	for (i = 0; i < ARRAY_SIZE(ins->vol_env.ticks); i++) {
+		int level, duration;
+
+		if (tunelev == 0xFF)
+			break; /* end of levelpuls. FIXME i think we need to loop this point */
+
+		slurp_seek(fp, paraptr + tunelev * 4, SEEK_SET);
+
+		BITARRAY_SET(loop, tunelev);
+
+		level = slurp_getc(fp);
+		if (level == EOF)
+			return 0;
+
+		/* int8_t voladd; -- ignored */
+
+		duration = slurp_getc(fp);
+		if (duration == EOF)
+			return 0;
+
+		ins->vol_env.ticks[i] = x;
+
+		if (level != 0xFF) {
+			ins->vol_env.values[i] = EDLIBVOLTOITVOL(level);
+		} else if (i > 0) {
+			/* total guesstimate */
+			ins->vol_env.values[i] = ins->vol_env.values[i - 1];
+		} else {
+			ins->vol_env.values[i] = 64;
+		}
+
+		x += MAX(duration / 20, 1) + 1;
+
+		tunelev = slurp_getc(fp);
+		if (tunelev == EOF)
+			return 0;
+
+		if (BITARRAY_ISSET(loop, tunelev))
+			/* XXX set loop here */
+			break;
+	}
+
+	ins->vol_env.nodes = MAX(i, 2);
+
+	slurp_seek(fp, start, SEEK_SET);
+
+	/* I guess */
+	return 1;
+}
+#endif
 
 int fmt_d00_load_song(song_t *song, slurp_t *fp,
 	SCHISM_UNUSED unsigned int lflags)
@@ -204,14 +376,50 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 	int c;
 	int ninst = 0;
 	uint16_t speeds[10];
-	uint32_t warn = (1 << D00_WARN_EXPERIMENTAL);
+	BITARRAY_DECLARE(warn, D00_WARN_MAX_);
 	struct d00_header hdr;
+	int msgp;
 
 	if (!d00_header_read(&hdr, fp))
 		return LOAD_UNSUPPORTED;
 
+	BITARRAY_ZERO(warn);
+	BITARRAY_SET(warn, D00_WARN_EXPERIMENTAL);
+
 	memcpy(song->title, hdr.title, 31);
 	song->title[31] = '\0';
+
+	/* read in song info (message).
+	 * this is USUALLY simply 0xFFFF (end marking) but in some
+	 * old songs (e.g. "the alibi.d00") it contains real data */
+	slurp_seek(fp, hdr.info_paraptr, SEEK_SET);
+	for (msgp = 0; msgp < MAX_MESSAGE; ) {
+		int ch;
+
+		ch = slurp_getc(fp);
+		if (ch == EOF)
+			/* end of file before end marker == error
+			 * OR we've misidentified a file :( */
+			return LOAD_FORMAT_ERROR;
+
+		if (ch == 0xFF) {
+			int ch2;
+
+			ch2 = slurp_getc(fp);
+			if (ch2 == EOF)
+				return LOAD_FORMAT_ERROR;
+
+			if (ch2 == 0xFF) {
+				break; /* message end */
+			} else {
+				song->message[msgp++] = ch;
+				if (msgp >= MAX_MESSAGE) break;
+				song->message[msgp++] = ch2;
+			}
+		} else {
+			song->message[msgp++] = ch;
+		}
+	}
 
 	{
 		/* handle pattern/order stuff
@@ -252,9 +460,10 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 			if (ptrs[c] != 0) {
 				// I think this actually just adds onto the existing volume,
 				// instead of averaging them together ???????
-				//song->channels[c].volume = volume[c];
+				song->channels[c].volume = EDLIBVOLTOITVOL(volume[c]);
 			} else {
 				song->channels[c].flags |= CHN_MUTE;
+				continue; /* wut */
 			}
 
 			slurp_seek(fp, ptrs[c], SEEK_SET);
@@ -406,10 +615,10 @@ D00_readnote: /* this goto is kind of ugly... */
 						case 9: /* New Level (in layman's terms, volume) */
 							mem_volfx = VOLFX_VOLUME;
 							/* volume is backwards, WTF */
-							mem_volparam = (63 - (fxop & 63)) * 64 / 63;
+							mem_volparam = EDLIBVOLTOITVOL(fxop);
 							break;
 						case 0xB: /* Set spfx (need to handle this appropriately...) */
-							{
+							if (hdr.version == 4) {
 								/* SPFX is a linked list.
 								 *
 								 * Yep; there's a `ptr` value within the structure, which
@@ -435,7 +644,7 @@ D00_readnote: /* this goto is kind of ugly... */
 
 								slurp_seek(fp, oldpos, SEEK_SET);
 							}
-							warn |= (1 << D00_WARN_SPFX);
+							BITARRAY_SET(warn, D00_WARN_SPFX);
 							break;
 						case 0xC: /* Set instrument */
 							mem_instr = fxop + 1;
@@ -511,7 +720,8 @@ D00_readnote: /* this goto is kind of ugly... */
 		 * basically each channel ought to have an increment. if each speed
 		 * is the same this is okay, and we can probably just ignore the
 		 * "song speed" altogether. though i don't know how many songs
-		 * actually use different speeds for each channel. */
+		 * actually use different speeds for each channel, and such
+		 * songs are likely incredibly rare. */
 		int max_count = 1, count = 1;
 		uint16_t mode = speeds[0];
 
@@ -532,7 +742,7 @@ D00_readnote: /* this goto is kind of ugly... */
 		//for (c = 0; c < 10; c++)
 		//	log_appendf(1, "speeds[%d] = %u", c, speeds[c]);
 
-		hz_to_speed_tempo(mode, &song->initial_speed, &song->initial_tempo);
+		hz_to_speed_tempo(hdr.version, mode, &song->initial_speed, &song->initial_tempo);
 	}
 
 	/* start reading instrument data */
@@ -542,9 +752,19 @@ D00_readnote: /* this goto is kind of ugly... */
 
 	ninst = MIN(ninst, MAX_SAMPLES);
 
+	/* enable instrument mode so we can read in levelpuls info */
+#ifdef D00_ENABLE_BROKEN_LEVELPULS
+	if (hdr.version == 1 || hdr.version == 2)
+		song->flags |= SONG_INSTRUMENTMODE;
+#endif
+
 	for (c = 0; c < ninst; c++) {
 		unsigned char bytes[11];
 		song_sample_t *smp = song->samples + c + 1;
+#ifdef D00_ENABLE_BROKEN_LEVELPULS
+		song_instrument_t *inst;
+#endif
+		int tunelev;
 
 		if (slurp_read(fp, bytes, 11) != 11)
 			continue; /* wut? */
@@ -571,18 +791,42 @@ D00_readnote: /* this goto is kind of ugly... */
 		smp->data = csf_allocate_sample(1);
 		smp->length = 1;
 
-#if 0
-		/* I don't think this is right... */
-		smp->c5speed += slurp_getc(fp);
-#else
-		slurp_seek(fp, 1, SEEK_CUR);
+#ifdef D00_ENABLE_BROKEN_LEVELPULS
+		song->instruments[c + 1] = inst = csf_allocate_instrument();
+		csf_init_instrument(inst, c + 1);
+		inst->fadeout = 256ul << 5;
 #endif
+
+		tunelev = slurp_getc(fp);
+		if (tunelev == EOF)
+			break; /* truncated file?? */
+
+		switch (hdr.version) {
+		case 1:
+		case 2:
+			if (tunelev == 0xFF)
+				break;
+#ifdef D00_ENABLE_BROKEN_LEVELPULS
+			if (d00_load_levelpuls(hdr.spfx_paraptr, tunelev, inst, smp, fp) == 0)
+				return LOAD_FORMAT_ERROR; /* WUT */
+#else
+			BITARRAY_SET(warn, D00_WARN_LEVELPULS);
+#endif
+			break;
+		case 4:
+			BITARRAY_SET(warn, D00_WARN_FINETUNE);
+			break;
+		default:
+			/* just padding? */
+			break;
+		}
+
 
 		smp->volume = 64 * 4; //mphack
 
-		/* It's probably safe to ignore these */
+		/* It's probably safe to ignore these (?)
+		 * I think Adplug also ignores these values if SPFX isn't used ... */
 #if 0
-		log_appendf(1, "inst: %d", c);
 		log_appendf(1, "timer: %d", slurp_getc(fp));
 		log_appendf(1, "sr: %d", slurp_getc(fp));
 		log_appendf(1, "unknown bytes: %d, %d", slurp_getc(fp), slurp_getc(fp));
@@ -594,14 +838,18 @@ D00_readnote: /* this goto is kind of ugly... */
 #endif
 	}
 
+	/* TODO for older D00 files we can use the levelpuls structure
+	 * to create an instrument that plays stuff properly */
+
 	for (c = 9; c < MAX_CHANNELS; c++)
 		song->channels[c].flags |= CHN_MUTE;
 
-	snprintf(song->tracker_id, sizeof(song->tracker_id),
-		(hdr.version < 4) ? "Unknown AdLib tracker" : "EdLib Tracker");
+	if (hdr.version == 4)
+		strncpy(song->tracker_id, "EdLib Tracker", sizeof(song->tracker_id) - 1);
+	/* otherwise... it's probably some random tracker */
 
 	for (c = 0; c < D00_WARN_MAX_; c++)
-		if (warn & (1 << c))
+		if (BITARRAY_ISSET(warn, c))
 			log_appendf(4, " Warning: %s", d00_warn_names[c]);
 
 	return LOAD_SUCCESS;
