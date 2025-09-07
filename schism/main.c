@@ -77,11 +77,8 @@ enum {
 };
 static int shutdown_process = 0;
 
-static char *video_driver = NULL;
 static char *audio_driver = NULL;
 static char *audio_device = NULL;
-static int want_fullscreen = -1;
-static int did_classic = 0;
 
 /* --------------------------------------------------------------------- */
 
@@ -130,14 +127,20 @@ static char *diskwrite_to = NULL;
 
 /* startup flags */
 enum {
-	SF_PLAY = 1, /* -p: start playing after loading initial_song */
-	SF_HOOKS = 2, /* --no-hooks: don't run startup/exit scripts */
-	SF_FONTEDIT = 4,
-	SF_CLASSIC = 8,
-	SF_NETWORK = 16,
-	SF_HEADLESS = 32,
+	SF_PLAY, /* -p: start playing after loading initial_song */
+	SF_HOOKS, /* --no-hooks: don't run startup/exit scripts */
+	SF_FONTEDIT, /* we are being run as just the font editor */
+	SF_CLASSIC,
+	SF_DID_CLASSIC, /* whether to obey SF_CLASSIC */
+	SF_FULLSCREEN,
+	SF_DID_FULLSCREEN, /* whether to obey SF_FULLSCREEN */
+	SF_NETWORK, /* start up network stuff */
+	SF_HEADLESS, /* headless */
+
+	SF_MAX_,
 };
-static int startup_flags = SF_HOOKS | SF_NETWORK;
+/* not sure if i like this extra keyword here */
+static BITARRAY_DECLARE(startup_flags, SF_MAX_);
 
 /* getopt ids */
 #define SHORT_OPTIONS "a:v:fFpPh" // these should correspond to the characters below (trailing colon indicates argument)
@@ -209,56 +212,69 @@ static void parse_options(int argc, char **argv)
 			audio_parse_driver_spec(optarg, (char**)&audio_driver, (char**)&audio_device);
 			break;
 		case O_SDL_VIDEODRIVER:
-			// XXX this has been broken for ages
-			video_driver = str_dup(optarg);
+			/* this is largely only here for historical reasons, as
+			 * old Schism used to be able to utilize:
+			 *   1. SDL 1.2 surfaces
+			 *   2. YUV overlays
+			 *   3. OpenGL <3.0
+			 *   4. DirectDraw
+			 * However, all of this cruft has been ripped out over
+			 * time. Possibly we could re-add OpenGL (maybe YUV
+			 * overlays as well) but the way its implemented in
+			 * SDL 1.2 seems to be buggy, and that's really the
+			 * only place where it's actually useful. */
+			setenv("SDL_VIDEODRIVER", optarg, 1);
+			setenv("SDL_VIDEO_DRIVER", optarg, 1);
 			break;
 #if USE_NETWORK
 		case O_NETWORK:
-			startup_flags |= SF_NETWORK;
+			BITARRAY_SET(startup_flags, SF_NETWORK);
 			break;
 		case O_NO_NETWORK:
-			startup_flags &= ~SF_NETWORK;
+			BITARRAY_CLEAR(startup_flags, SF_NETWORK);
 			break;
 #endif
 		case O_CLASSIC_MODE:
-			startup_flags |= SF_CLASSIC;
-			did_classic = 1;
+			BITARRAY_SET(startup_flags, SF_CLASSIC);
+			BITARRAY_SET(startup_flags, SF_DID_CLASSIC);
 			break;
 		case O_NO_CLASSIC_MODE:
-			startup_flags &= ~SF_CLASSIC;
-			did_classic = 1;
+			BITARRAY_CLEAR(startup_flags, SF_CLASSIC);
+			BITARRAY_SET(startup_flags, SF_DID_CLASSIC);
 			break;
 		case O_FULLSCREEN:
-			want_fullscreen = 1;
+			BITARRAY_SET(startup_flags, SF_FULLSCREEN);
+			BITARRAY_SET(startup_flags, SF_DID_FULLSCREEN);
 			break;
 		case O_NO_FULLSCREEN:
-			want_fullscreen = 0;
+			BITARRAY_CLEAR(startup_flags, SF_FULLSCREEN);
+			BITARRAY_SET(startup_flags, SF_DID_FULLSCREEN);
 			break;
 		case O_PLAY:
-			startup_flags |= SF_PLAY;
+			BITARRAY_SET(startup_flags, SF_PLAY);
 			break;
 		case O_NO_PLAY:
-			startup_flags &= ~SF_PLAY;
+			BITARRAY_CLEAR(startup_flags, SF_PLAY);
 			break;
 		case O_FONTEDIT:
-			startup_flags |= SF_FONTEDIT;
+			BITARRAY_SET(startup_flags, SF_FONTEDIT);
 			break;
 		case O_NO_FONTEDIT:
-			startup_flags &= ~SF_FONTEDIT;
+			BITARRAY_CLEAR(startup_flags, SF_FONTEDIT);
 			break;
 		case O_DISKWRITE:
 			diskwrite_to = optarg;
 			break;
 #if ENABLE_HOOKS
 		case O_HOOKS:
-			startup_flags |= SF_HOOKS;
+			BITARRAY_SET(startup_flags, SF_HOOKS);
 			break;
 		case O_NO_HOOKS:
-			startup_flags &= ~SF_HOOKS;
+			BITARRAY_CLEAR(startup_flags, SF_HOOKS);
 			break;
 #endif
 		case O_HEADLESS:
-			startup_flags |= SF_HEADLESS;
+			BITARRAY_SET(startup_flags, SF_HEADLESS);
 			break;
 		case O_VERSION:
 			puts(schism_banner(0));
@@ -862,6 +878,28 @@ SCHISM_NORETURN static void event_loop(void)
 }
 
 #ifndef NDEBUG
+struct assert_log_cb_data_ {
+	const char *msg;
+	const char *exp;
+	const char *file;
+	int line;
+};
+
+static void schism_assert_fail_log_cb(FILE *f, void *userdata)
+{
+	struct assert_log_cb_data_ *x = userdata;
+
+	const char *format =
+		"Assertion failed: \"%s\".\n"
+		"\n"
+		"File: %s\n"
+		"Line: %d\n"
+		"\n"
+		"Expression: %s\n";
+	
+	fprintf(f, format, x->msg, x->file, x->line, x->exp);
+}
+
 /* schism equivalent to built-in C assert() macro.
  *
  * In general this mimics the Visual C++ assert() implementation, which
@@ -870,21 +908,14 @@ SCHISM_NORETURN static void event_loop(void)
  * expression that caused the assertion. */
 void schism_assert_fail(const char *msg, const char *exp, const char *file, int line)
 {
-	const char *format =
-		"Assertion failed: \"%s\".\n"
-		"\n"
-		"File: %s\n"
-		"Line: %d\n"
-		"\n"
-		"Expression: %s\n"
-		"\n"
-		"Schism Tracker will now terminate.";
+	struct assert_log_cb_data_ xx;
 
-	if (msgbox(OS_MESSAGE_BOX_ERROR, "Assertion triggered!", format, msg, file, line, exp) < 0) {
-		/* fall back to printing to stderr, I guess */
-		fprintf(stderr, format, msg, file, line, exp);
-		fputc('\n', stderr);
-	}
+	xx.msg = msg;
+	xx.exp = exp;
+	xx.file = file;
+	xx.line = line;
+
+	schism_crash(schism_assert_fail_log_cb, &xx);
 
 	/* XXX should this use schism_exit ?
 	 * I mean, it's not like it's totally necessary to exit everything.
@@ -1061,6 +1092,11 @@ extern void vis_init(void);
 /* the real main function is called per-platform */
 int schism_main(int argc, char** argv)
 {
+	/* defaults */
+	BITARRAY_ZERO(startup_flags);
+	BITARRAY_SET(startup_flags, SF_HOOKS);
+	BITARRAY_SET(startup_flags, SF_NETWORK);
+
 	os_sysinit(&argc, &argv);
 
 	vis_init();
@@ -1073,7 +1109,7 @@ int schism_main(int argc, char** argv)
 	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
-	if (startup_flags & SF_HEADLESS)
+	if (BITARRAY_ISSET(startup_flags, SF_HEADLESS))
 		status.flags |= STATUS_IS_HEADLESS; // for the log
 
 	/* Eh. */
@@ -1091,7 +1127,7 @@ int schism_main(int argc, char** argv)
 #endif
 
 #if ENABLE_HOOKS
-	if (startup_flags & SF_HOOKS) {
+	if (BITARRAY_ISSET(startup_flags, SF_HOOKS)) {
 		run_startup_hook();
 		shutdown_process |= EXIT_HOOK;
 	}
@@ -1114,18 +1150,20 @@ int schism_main(int argc, char** argv)
 		log_nl();
 	}
 
-	if (did_classic) {
+	if (BITARRAY_ISSET(startup_flags, SF_DID_CLASSIC)) {
+		/* this should be a bitarray too */
 		status.flags &= ~CLASSIC_MODE;
-		if (startup_flags & SF_CLASSIC) status.flags |= CLASSIC_MODE;
+		if (BITARRAY_ISSET(startup_flags, SF_CLASSIC))
+			status.flags |= CLASSIC_MODE;
 	}
 
-	if (!(startup_flags & SF_NETWORK))
+	if (!(BITARRAY_ISSET(startup_flags, SF_NETWORK)))
 		status.flags |= NO_NETWORK;
 
 	shutdown_process |= EXIT_SAVECFG;
 	shutdown_process |= EXIT_SDLQUIT;
 
-	if (startup_flags & SF_HEADLESS) {
+	if (BITARRAY_ISSET(startup_flags, SF_HEADLESS)) {
 		if (!diskwrite_to) {
 			fprintf(stderr, "Error: --headless requires --diskwrite\n");
 			return 1;
@@ -1166,8 +1204,8 @@ int schism_main(int argc, char** argv)
 	}
 
 	SCHISM_RUNTIME_ASSERT(!video_startup(), "Failed to initialize video!");
-	if (want_fullscreen >= 0)
-		video_fullscreen(want_fullscreen);
+	if (BITARRAY_ISSET(startup_flags, SF_DID_FULLSCREEN))
+		video_fullscreen(BITARRAY_ISSET(startup_flags, SF_FULLSCREEN));
 
 	palette_apply();
 	font_init();
@@ -1210,7 +1248,7 @@ int schism_main(int argc, char** argv)
 		free(initial_dir);
 	}
 
-	if (startup_flags & SF_FONTEDIT) {
+	if (BITARRAY_ISSET(startup_flags, SF_FONTEDIT)) {
 		status.flags |= STARTUP_FONTEDIT;
 		set_page(PAGE_FONT_EDIT);
 		free(initial_song);
@@ -1226,7 +1264,7 @@ int schism_main(int argc, char** argv)
 				if (song_export(diskwrite_to, driver) != SAVE_SUCCESS) {
 					schism_exit(1);
 				}
-			} else if (startup_flags & SF_PLAY) {
+			} else if (BITARRAY_ISSET(startup_flags, SF_PLAY)) {
 				song_start();
 				set_page(PAGE_INFO);
 			}
