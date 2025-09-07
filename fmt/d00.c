@@ -821,7 +821,7 @@ D00_readnote: /* this goto is kind of ugly... */
 		}
 
 
-#if 1
+#if 0
 		log_appendf(1, "mode: %u", mode);
 		for (c = 0; c < 10; c++)
 			log_appendf(1, "speeds[%d] = %u", c, speeds[c]);
