@@ -113,7 +113,7 @@ static const schism_audio_backend_t *backends[] = {
 #ifdef SCHISM_SDL2
 	&schism_audio_backend_sdl2,
 #endif
-#ifdef SCHISM_WIN32
+#if defined(SCHISM_WIN32) && defined(USE_THREADS)
 	&schism_audio_backend_dsound,
 	&schism_audio_backend_waveout,
 #endif

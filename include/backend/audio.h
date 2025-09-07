@@ -69,7 +69,7 @@ typedef struct {
 	void (*control_panel)(schism_audio_device_t *device);
 } schism_audio_backend_t;
 
-#ifdef SCHISM_WIN32
+#if defined(SCHISM_WIN32) && defined(USE_THREADS)
 extern const schism_audio_backend_t schism_audio_backend_dsound;
 extern const schism_audio_backend_t schism_audio_backend_waveout;
 #endif
