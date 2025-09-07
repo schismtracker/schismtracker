@@ -59,7 +59,7 @@ SCHISM_STATIC_ASSERT(NUM_BUFFERS >= 2, "NUM_BUFFERS must be at least 2");
 struct schism_audio_device {
 	/* The thread where we callback */
 	mt_thread_t *thread;
-	int cancelled;
+	volatile int cancelled;
 
 	/* The callback and the protecting mutex */
 	void (*callback)(uint8_t *stream, int len);
@@ -81,22 +81,17 @@ struct schism_audio_device {
 /* ---------------------------------------------------------- */
 /* drivers */
 
-/* lol */
-static const char *drivers[] = {
-	"waveout",
-};
-
 static int waveout_audio_driver_count(void)
 {
-	return ARRAY_SIZE(drivers);
+	return 1;
 }
 
 static const char *waveout_audio_driver_name(int i)
 {
-	if (i >= ARRAY_SIZE(drivers) || i < 0)
-		return NULL;
-
-	return drivers[i];
+	switch (i) {
+	case 0: return "waveout";
+	default: return NULL;
+	}
 }
 
 /* ------------------------------------------------------------------------ */
@@ -189,14 +184,7 @@ static const char *waveout_audio_device_name(uint32_t i)
 
 static int waveout_audio_init_driver(const char *driver)
 {
-	int fnd = 0;
-	for (int i = 0; i < ARRAY_SIZE(drivers); i++) {
-		if (!strcmp(drivers[i], driver)) {
-			fnd = 1;
-			break;
-		}
-	}
-	if (!fnd)
+	if (strcmp(driver, "waveout"))
 		return -1;
 
 	/* Get the devices */
