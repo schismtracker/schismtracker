@@ -240,22 +240,8 @@ static void audio_callback(uint8_t *stream, int len)
 	}
 
 	/* convert 8-bit unsigned to signed by XORing the high bit */
-	if (audio_output_bits == 8) {
-		uint32_t sz;
-
-		sz = n * audio_sample_size;
-
-		/* TODO make this work for buffer sizes that aren't multiples of 4 */
-		if (!(sz & 3)) {
-			/* 32-bit fast path */
-			for (i = 0; i < sz; i += 4)
-				*(uint32_t *)(((char *)audio_buffer) + i) ^= UINT32_C(0x80808080);
-		} else {
-			/* 8-bit slow path */
-			for (i = 0; i < sz; i++)
-				((char *)audio_buffer)[i] ^= 0x80;
-		}
-	}
+	if (audio_output_bits == 8)
+		mem_xor(audio_buffer, n * audio_sample_size, 0x80);
 
 	if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
 		// I don't really like this...

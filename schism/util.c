@@ -157,3 +157,50 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 
 	return r;
 }
+
+/* ------------------------------------------------------------------------ */
+
+/* XORs all of the bytes in vbuf. */
+void mem_xor(void *vbuf, size_t len, unsigned char c)
+{
+	unsigned char *buf = vbuf;
+
+	if (len >= 4) {
+		size_t len8;
+		uint32_t cccc;
+
+		/* expand to all bytes */
+		cccc = c;
+		cccc |= (cccc << 8);
+		cccc |= (cccc << 16);
+
+		/* align the pointer */
+		for (; (uintptr_t)buf % sizeof(uint32_t); len--)
+			*(buf++) ^= c;
+
+		/* process in chunks of 8 32-bit integers */
+		for (len8 = (len / (sizeof(uint32_t) * 8)); len8 > 0; len8--) {
+			((uint32_t *)buf)[0] ^= cccc;
+			((uint32_t *)buf)[1] ^= cccc;
+			((uint32_t *)buf)[2] ^= cccc;
+			((uint32_t *)buf)[3] ^= cccc;
+			((uint32_t *)buf)[4] ^= cccc;
+			((uint32_t *)buf)[5] ^= cccc;
+			((uint32_t *)buf)[6] ^= cccc;
+			((uint32_t *)buf)[7] ^= cccc;
+			buf += (8 * sizeof(uint32_t));
+		}
+		len %= (sizeof(uint32_t) * 8);
+
+		/* process in chunks of 32-bit integers */
+		for (len8 = len / sizeof(uint32_t); len8 > 0; len8--) {
+			((uint32_t *)buf)[0] ^= cccc;
+			buf += sizeof(uint32_t);
+		}
+		len %= sizeof(uint32_t);
+	}
+
+	/* process any that remain */
+	for (; len > 0; len--)
+		*(buf++) ^= c;
+}
