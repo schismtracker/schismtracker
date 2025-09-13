@@ -100,7 +100,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This
 struct slurp_async_op {
 	/* vtable */
 	CONST_VTBL IUnknownVtbl *lpvtbl;
-	ULONG ref_cnt;
+	volatile ULONG ref_cnt;
 
 	/* things we have to free, or whatever */
 	IMFAsyncCallback *cb;
