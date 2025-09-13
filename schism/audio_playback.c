@@ -198,7 +198,8 @@ static void audio_callback(uint8_t *stream, int len)
 
 	memset(stream, 0, len);
 
-	audio_reallocate_buffer(len / audio_sample_size);
+	/* len is output buffer size */
+	audio_reallocate_buffer(len / (audio_output_channels * (audio_output_bits_real / 8)));
 
 	if (!stream || !len || !current_song) {
 		if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT)
@@ -228,6 +229,7 @@ static void audio_callback(uint8_t *stream, int len)
 		samples_played += n;
 	}
 
+	/* hax: convert internal buffer output */
 	if (audio_output_bits_real == 24) {
 		s32_to_s24(stream, (int32_t *)audio_buffer, n * audio_output_channels);
 	} else if (audio_output_fp) {
@@ -237,7 +239,8 @@ static void audio_callback(uint8_t *stream, int len)
 		memcpy(stream, audio_buffer, n * audio_sample_size);
 	}
 
-	/* convert 8-bit unsigned to signed by XORing the high bit */
+	/* convert 8-bit unsigned to signed by XORing the high bit
+	 * XXX im pretty sure this is broken for mono 8-bit output */
 	if (audio_output_bits == 8)
 		for (i = 0; i < n * 2; i++)
 			((char *)audio_buffer)[i] ^= 0x80;
