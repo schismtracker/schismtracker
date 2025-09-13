@@ -729,6 +729,24 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	return len;
 }
 
+#define CSF_DECODE_DELTA(BITS, CHANNELS) \
+	static void csf_decode_delta_##BITS##bit_##CHANNELS##chn(uint##BITS##_t *buf, uint32_t samples) \
+	{ \
+		uint##BITS##_t iadd[CHANNELS] = {0}; \
+		uint32_t i, c; \
+	\
+		for (i = 0; i < samples; i++) { \
+			for (c = 0; c < (CHANNELS); c++) { \
+				buf[i * (CHANNELS) + c] += iadd[c]; \
+				iadd[c] = buf[i * (CHANNELS) + c]; \
+			} \
+		} \
+	}
+
+CSF_DECODE_DELTA(8, 1) /* csf_decode_delta_8bit_1chn */
+CSF_DECODE_DELTA(8, 2) /* csf_decode_delta_8bit_2chn */
+
+#undef CSF_DECODE_DELTA
 
 uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 {
@@ -819,21 +837,25 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,M,BE,PCMS):
 	case SF(8,M,BE,PCMU):
 	case SF(8,M,BE,PCMD): {
-		uint8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x80 : 0;
-
 		len = sample->length;
 		if (len > memsize)
 			len = sample->length = memsize;
 
-		// read
+		/* first, read it all in */
 		slurp_read(fp, sample->data, len);
 
-		// process
-		uint8_t *data = (uint8_t *)sample->data;
-		for (uint32_t j = 0; j < len; j++) {
-			data[j] += iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
+		/* then do extra processing to get it into our format */
+		switch (flags & SF_ENC_MASK) {
+		case SF_PCMD:
+			csf_decode_delta_8bit_1chn((uint8_t *)sample->data, len);
+			break;
+		case SF_PCMU:
+			/* use fast 8-bit XOR function */
+			mem_xor(sample->data, len, 0x80);
+			break;
+		default:
+			/* nottin */
+			break;
 		}
 
 		break;
@@ -846,18 +868,29 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,SS,BE,PCMS):
 	case SF(8,SS,BE,PCMU):
 	case SF(8,SS,BE,PCMD): {
+		int c;
+		uint32_t j;
+
 		len = sample->length * 2;
 		if (len > memsize) break;
 
-		for (int c = 0; c < 2; c++) {
-			uint8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x80 : 0;
+		/* Convert split to interleaved */
+		for (c = 0; c < 2; c++)
+			for (j = 0; j < len; j += 2)
+				slurp_read(fp, (char *)sample->data + j + c, 1);
 
-			uint8_t *data = (uint8_t *)sample->data + c;
-			for (uint32_t j = 0; j < len; j += 2) {
-				data[j] = slurp_getc(fp) + iadd;
-				if ((flags & SF_ENC_MASK) == SF_PCMD)
-					iadd = data[j];
-			}
+		/* then do extra processing to get it into our format */
+		switch (flags & SF_ENC_MASK) {
+		case SF_PCMD:
+			csf_decode_delta_8bit_2chn((uint8_t *)sample->data, sample->length);
+			break;
+		case SF_PCMU:
+			/* use fast 8-bit XOR function */
+			mem_xor(sample->data, len, 0x80);
+			break;
+		default:
+			/* nottin */
+			break;
 		}
 
 		break;
@@ -876,15 +909,18 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 		slurp_read(fp, sample->data, len);
 
-		for (int c = 0; c < 2; c++) {
-			uint8_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x80 : 0;
-
-			uint8_t *data = (uint8_t *)sample->data + c;
-			for (uint32_t j = 0; j < len; j += 2) {
-				data[j] += iadd;
-				if ((flags & SF_ENC_MASK) == SF_PCMD)
-					iadd = data[j];
-			}
+		/* then do extra processing to get it into our format */
+		switch (flags & SF_ENC_MASK) {
+		case SF_PCMD:
+			csf_decode_delta_8bit_2chn((uint8_t *)sample->data, sample->length);
+			break;
+		case SF_PCMU:
+			/* use fast 8-bit XOR function */
+			mem_xor(sample->data, len, 0x80);
+			break;
+		default:
+			/* nottin */
+			break;
 		}
 
 		break;
