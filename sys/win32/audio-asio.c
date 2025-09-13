@@ -478,8 +478,25 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 	if (current_device || !devices_size)
 		return NULL; /* ASIO only supports one device at a time */
 
-	if (id == AUDIO_BACKEND_DEFAULT)
-		id = 0;
+	/* Special handling for "default" ASIO device:
+	 *
+	 * Try to open each driver, and return the first one that works.
+	 * It may be better to initialize a dummy device that then allows
+	 * the user to select which ASIO driver they actually want to use. */
+	if (id == AUDIO_BACKEND_DEFAULT) {
+		for (i = 0; i < devices_size; i++) {
+			/* zero out the obtained structure, as the previous call
+			 * might have messed up the values */
+			memset(obtained, 0, sizeof(*obtained));
+
+			dev = asio_open_device(i, desired, obtained);
+			if (dev)
+				return dev;
+		}
+
+		/* no working device found */
+		return NULL;
+	}
 
 	dev = mem_calloc(1, sizeof(struct schism_audio_device));
 
