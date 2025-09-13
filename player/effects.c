@@ -765,13 +765,41 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 			chan->pan_swing = 0;
 		}
 		break;
-	// S9x: Set Surround
+	// S9x: Sound Control
 	case 0x90:
-		if (param == 1 && (csf->flags & SONG_FIRSTTICK)) {
+		if (!(csf->flags & SONG_FIRSTTICK))
+			break;
+
+		switch (param & 0x0F) {
+		/* S90: Surround Off (modplug hack I think) */
+
+		case 0x01: /* S91: Set Surround */
 			chan->flags |= CHN_SURROUND;
 			chan->panbrello_delta = 0;
 			chan->panning = 128;
 			chan->channel_panning = 0;
+			break;
+
+		/* ---- ModPlug extensions ----
+		 *
+		 * S98: Reverb Off
+		 * S99: Reverb On
+		 * S9A: 2-Channels Surround Mode (??)
+		 * S9B: 4-Channels Surround Mode (??)
+		 * S9C: IT filter mode
+		 * S9D: MPT filter mode (??) */
+
+		case 0x0E: /* S9E: Go forward */
+			chan->flags &= ~(CHN_PINGPONGFLAG);
+			break;
+		case 0x0F: /* S9F: Go backward */
+			/* Set playback position to the end if the sample has just started */
+			if (csf_smp_pos_equals_zero(chan->position)
+					&& chan->length
+					&& (NOTE_IS_NOTE(chan->row_note)) || !(chan->flags & CHN_LOOP))
+				chan->position = csf_smp_pos(chan->length - 1, 0xFFFFFFFF);
+			chan->flags |= CHN_PINGPONGFLAG;
+			break;
 		}
 		break;
 	// SAx: Set 64k Offset
