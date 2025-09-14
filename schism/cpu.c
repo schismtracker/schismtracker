@@ -26,7 +26,20 @@
 #include "bits.h"
 #include "cpu.h"
 
-#if SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_init, 4, 8, 0) \
+/* Prioritize OS-level crap before gcc CPU builtins */
+#ifdef SCHISM_WIN32
+# include <windows.h> /* IsProcessorFeaturePresent */
+
+/* just to be sure */
+# ifndef PF_AVX2_INSTRUCTIONS_AVAILABLE
+#  define PF_AVX2_INSTRUCTIONS_AVAILABLE (40)
+# endif
+# ifndef PF_XMMI64_INSTRUCTIONS_AVAILABLE
+#  define PF_XMMI64_INSTRUCTIONS_AVAILABLE (10)
+# endif
+#elif defined(SCHISM_MACOSX)
+# include <sys/sysctl.h>
+#elif SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_init, 4, 8, 0) \
 		&& SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_supports, 4, 8, 0)
 # define SCHISM_HAS_GNUC_CPU_BUILTINS
 #endif
@@ -39,7 +52,40 @@ int cpu_init(void)
 	/* zero it out if it was already initialized? */
 	BITARRAY_ZERO(features);
 
-#ifdef SCHISM_HAS_GNUC_CPU_BUILTINS
+#ifdef SCHISM_WIN32
+
+# define CPU_FEATURE(WINBIT, BIT) \
+do { \
+	if (IsProcessorFeaturePresent(WINBIT)) \
+		BITARRAY_SET(features, (BIT)); \
+} while (0)
+
+	CPU_FEATURE(PF_XMMI64_INSTRUCTIONS_AVAILABLE, CPU_FEATURE_SSE2);
+	CPU_FEATURE(PF_AVX2_INSTRUCTIONS_AVAILABLE, CPU_FEATURE_AVX2);
+
+# undef CPU_FEATURE
+
+	return 0;
+#elif defined(SCHISM_MACOSX)
+
+# define CPU_FEATURE(NAME, BIT) \
+do { \
+	int enabled; \
+	size_t enabled_len = sizeof(enabled); \
+	if (!sysctlbyname("hw.optional." NAME, &enabled, &enabled_len, NULL, 0) \
+			&& enabled_len == sizeof(enabled) \
+			&& enabled) \
+		BITARRAY_SET(features, (BIT)); \
+} while (0)
+
+	CPU_FEATURE("altivec", CPU_FEATURE_ALTIVEC);
+	CPU_FEATURE("sse2", CPU_FEATURE_SSE2);
+	CPU_FEATURE("avx2", CPU_FEATURE_AVX2);
+
+# undef CPU_FEATURE
+
+	return 0;
+#elif defined(SCHISM_HAS_GNUC_CPU_BUILTINS)
 	__builtin_cpu_init();
 
 # define CPU_FEATURE(NAME, BIT) \
@@ -57,15 +103,18 @@ do { \
 	/* arm? alpha? sparc? */
 # endif
 
+#undef CPU_FEATURE
+
 	return 0;
 #else
+	/* unimplemented */
 	return -1;
 #endif
 }
 
 int cpu_has_feature(int feature)
 {
-	if (feature >= CPU_FEATURE_MAX_)
+	if (feature < 0 || feature >= CPU_FEATURE_MAX_)
 		return 0;
 
 	return BITARRAY_ISSET(features, feature);
