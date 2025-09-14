@@ -1096,8 +1096,8 @@ dnl --------------------------------------------------------------------------
 dnl check for a target. TARGET is what to pass to the compiler, and NAME is
 dnl what to append to SCHISM_ to #define
 
-# SCHISM_CHECK_TARGET(TARGET, NAME)
-# ---------------------------------
+# SCHISM_CHECK_TARGET(TARGET, NAME, ADDCFLAGS)
+# --------------------------------------------
 AC_DEFUN([SCHISM_CHECK_TARGET], [
 	AC_MSG_CHECKING([for $1 support])
 	old_CFLAGS="$CFLAGS"
@@ -1107,15 +1107,16 @@ AC_DEFUN([SCHISM_CHECK_TARGET], [
 		[have_compile_flag=yes],
 		[have_compile_flag=no])
 	AC_MSG_RESULT([$have_compile_flag])
+	CFLAGS="$old_CFLAGS"
 	if test "x$have_compile_flag" = "xyes"; then
 		AC_DEFINE([$2], [1], [$1 support])
+		CFLAGS="$CFLAGS $3"
 	fi
-	CFLAGS="$old_CFLAGS"
 ])
 
-SCHISM_CHECK_TARGET([-msse2],    [SCHISM_SSE2])
-SCHISM_CHECK_TARGET([-mavx2],    [SCHISM_AVX2])
-SCHISM_CHECK_TARGET([-maltivec], [SCHISM_ALTIVEC])
+SCHISM_CHECK_TARGET([-msse2],    [SCHISM_SSE2],    [])
+SCHISM_CHECK_TARGET([-mavx2],    [SCHISM_AVX2],    [])
+SCHISM_CHECK_TARGET([-maltivec], [SCHISM_ALTIVEC], [-mabi=altivec])
 
 dnl --------------------------------------------------------------------------
 
