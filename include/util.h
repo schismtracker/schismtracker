@@ -136,4 +136,11 @@ int msgbox(int style, const char *title, const char *fmt, ...);
 /* fast XOR with a byte value */
 void mem_xor(void *vbuf, size_t len, unsigned char c);
 
+void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
+	size_t stride);
+void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
+	size_t stride);
+void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
+	size_t stride);
+
 #endif /* SCHISM_UTIL_H_ */

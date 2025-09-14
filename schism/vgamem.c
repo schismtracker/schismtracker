@@ -773,9 +773,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
  * input channels = number of channels in data
 */
 
-/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug
- *
- * TODO: vectorized sample drawing. */
+/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug */
 #define DRAW_SAMPLE_DATA_VARIANT(bits, doublebits) \
 	static void _draw_sample_data_##bits(struct vgamem_overlay *r, \
 		int##bits##_t *data, uint32_t length, unsigned int inputchans, unsigned int outputchans) \
@@ -793,7 +791,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 			uint64_t poshi = 0, poslo = 0; \
 	\
 			for (x = 0; x < r->width; x++) { \
-				uint32_t scanlength, i; \
+				uint32_t scanlength, i, co; \
 				int##bits##_t min = INT##bits##_MAX, max = INT##bits##_MIN; \
 	\
 				poslo += step; \
@@ -802,18 +800,10 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 				if (poshi + scanlength > length) scanlength = length - poshi; \
 				scanlength = MAX(scanlength, 1); \
 	\
-				for (i = 0; i < scanlength; i++) { \
-					uint32_t co = 0; \
+				/* FIXME: this is wrong for outputting mono from stereo (only accounts for left channel) */ \
+				minmax_##bits(data + (poshi * inputchans) + (cc % inputchans), scanlength * inputchans, &min, &max, inputchans); \
 	\
-					do { \
-						int##bits##_t s = data[((poshi + i) * inputchans) + cc + co]; \
-						if (s < min) min = s; \
-						if (s > max) max = s; \
-					} while (co++ < inputchans - outputchans); \
-				} \
-	\
-				/* XXX is doing this with integers faster than say, floating point?
-				 * I mean, it sure is a bit more ~accurate~ at least, and it'll work the same everywhere. */ \
+				/* BUT IT'S WEB SCALE! */ \
 				min = rshift_signed((int##doublebits##_t)min * nh, bits); \
 				max = rshift_signed((int##doublebits##_t)max * nh, bits); \
 	\

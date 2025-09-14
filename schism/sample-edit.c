@@ -38,17 +38,11 @@
 #define MINMAX(bits) \
 	static void _minmax_##bits(int##bits##_t *data, uint32_t length, int##bits##_t *min, int##bits##_t *max) \
 	{ \
-		uint32_t pos = length; \
-	\
 		*min = INT##bits##_MAX; \
 		*max = INT##bits##_MIN; \
-		while (pos) { \
-			pos--; \
-			if (data[pos] < *min) \
-				*min = data[pos]; \
-			else if (data[pos] > *max) \
-				*max = data[pos]; \
-		} \
+	\
+		/* forward to SIMD-ized function */ \
+		minmax_##bits(data, length, min, max, 1); \
 	}
 
 MINMAX(8)
