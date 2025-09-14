@@ -28,6 +28,7 @@ extraneous libraries (i.e. GLib). */
 #include "util.h"
 #include "osdefs.h"
 #include "mem.h"
+#include "cpu.h"
 
 /* This function is roughly equivalent to the mkstemp() function on POSIX
  * operating systems, but instead of returning a file descriptor it returns
@@ -159,48 +160,92 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 }
 
 /* ------------------------------------------------------------------------ */
+/* mem_xor: XORs all of the bytes in vbuf.
+ * uses SIMD-enhanced versions if possible. */
 
-/* XORs all of the bytes in vbuf. */
-void mem_xor(void *vbuf, size_t len, unsigned char c)
-{
-	unsigned char *buf = vbuf;
-
-	if (len >= 4) {
-		size_t len8;
-		uint32_t cccc;
-
-		/* expand to all bytes */
-		cccc = c;
-		cccc |= (cccc << 8);
-		cccc |= (cccc << 16);
-
-		/* align the pointer */
-		for (; (uintptr_t)buf % sizeof(uint32_t); len--)
-			*(buf++) ^= c;
-
-		/* process in chunks of 8 32-bit integers */
-		for (len8 = (len / (sizeof(uint32_t) * 8)); len8 > 0; len8--) {
-			((uint32_t *)buf)[0] ^= cccc;
-			((uint32_t *)buf)[1] ^= cccc;
-			((uint32_t *)buf)[2] ^= cccc;
-			((uint32_t *)buf)[3] ^= cccc;
-			((uint32_t *)buf)[4] ^= cccc;
-			((uint32_t *)buf)[5] ^= cccc;
-			((uint32_t *)buf)[6] ^= cccc;
-			((uint32_t *)buf)[7] ^= cccc;
-			buf += (8 * sizeof(uint32_t));
-		}
-		len %= (sizeof(uint32_t) * 8);
-
-		/* process in chunks of 32-bit integers */
-		for (len8 = len / sizeof(uint32_t); len8 > 0; len8--) {
-			((uint32_t *)buf)[0] ^= cccc;
-			buf += sizeof(uint32_t);
-		}
-		len %= sizeof(uint32_t);
+#define MEM_XOR(attributes, name) \
+	attributes static void mem_xor_##name(void *vbuf, size_t len, unsigned char c) \
+	{ \
+		unsigned char *buf = vbuf; \
+	\
+		if (len >= 4) { \
+			size_t len8; \
+			uint32_t cccc; \
+	\
+			/* expand to all bytes */ \
+			cccc = c; \
+			cccc |= (cccc << 8); \
+			cccc |= (cccc << 16); \
+	\
+			/* align the pointer */ \
+			for (; (uintptr_t)buf % sizeof(uint32_t); len--) \
+				*(buf++) ^= c; \
+	\
+			/* process in chunks of 8 32-bit integers */ \
+			for (len8 = (len / (sizeof(uint32_t) * 8)); len8 > 0; len8--) { \
+				((uint32_t *)buf)[0] ^= cccc; \
+				((uint32_t *)buf)[1] ^= cccc; \
+				((uint32_t *)buf)[2] ^= cccc; \
+				((uint32_t *)buf)[3] ^= cccc; \
+				((uint32_t *)buf)[4] ^= cccc; \
+				((uint32_t *)buf)[5] ^= cccc; \
+				((uint32_t *)buf)[6] ^= cccc; \
+				((uint32_t *)buf)[7] ^= cccc; \
+				buf += (8 * sizeof(uint32_t)); \
+			} \
+			len %= (sizeof(uint32_t) * 8); \
+	\
+			/* process in chunks of 32-bit integers */ \
+			for (len8 = len / sizeof(uint32_t); len8 > 0; len8--) { \
+				((uint32_t *)buf)[0] ^= cccc; \
+				buf += sizeof(uint32_t); \
+			} \
+			len %= sizeof(uint32_t); \
+		} \
+	\
+		/* process any that remain */ \
+		for (; len > 0; len--) \
+			*(buf++) ^= c; \
 	}
 
-	/* process any that remain */
-	for (; len > 0; len--)
-		*(buf++) ^= c;
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0)
+# ifdef SCHISM_SSE2
+MEM_XOR(__attribute__((__target__("sse2"))), sse2)
+#  define MEM_XOR_SSE2
+# endif
+# ifdef SCHISM_AVX2
+MEM_XOR(__attribute__((__target__("avx2"))), avx2)
+#  define MEM_XOR_AVX2
+# endif
+# ifdef SCHISM_ALTIVEC
+MEM_XOR(__attribute__((__target__("altivec"))), altivec)
+#  define MEM_XOR_ALTIVEC
+# endif
+#endif
+
+MEM_XOR(/* nothing */, c)
+
+void mem_xor(void *vbuf, size_t len, unsigned char c)
+{
+#ifdef MEM_XOR_AVX2
+	if (cpu_has_feature(CPU_FEATURE_AVX2)) {
+		mem_xor_avx2(vbuf, len, c);
+		return;
+	}
+#endif
+#ifdef MEM_XOR_SSE2
+	if (cpu_has_feature(CPU_FEATURE_SSE2)) {
+		mem_xor_sse2(vbuf, len, c);
+		return;
+	}
+#endif
+#ifdef MEM_XOR_ALTIVEC
+	if (cpu_has_feature(CPU_FEATURE_ALTIVEC)) {
+		mem_xor_altivec(vbuf, len, c);
+		return;
+	}
+#endif
+
+	/* fallback to plain C implementation */
+	mem_xor_c(vbuf, len, c);
 }
