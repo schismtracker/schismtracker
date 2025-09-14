@@ -1101,7 +1101,7 @@ dnl what to append to SCHISM_ to #define
 AC_DEFUN([SCHISM_CHECK_TARGET], [
 	AC_MSG_CHECKING([for $1 support])
 	old_CFLAGS="$CFLAGS"
-	CFLAGS="$CFLAGS $1"
+	CFLAGS="$CFLAGS $1 $3"
 	AC_COMPILE_IFELSE(
 		[AC_LANG_PROGRAM([[]], [[return 0;]])],
 		[have_compile_flag=yes],
