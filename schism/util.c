@@ -283,7 +283,10 @@ MINMAX_C(32)
 
 #undef MINMAX_C
 
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0)
+/* clang is stupid */
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0) \
+	&& !defined(SCHISM_XBOX) /* XBOX is hardcoded to i586 */ \
+	&& (defined(__x86_64__) || defined(__i386__)) /* so is mac os x */
 # ifdef SCHISM_SSE2
 #  include <immintrin.h>
 
