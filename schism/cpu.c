@@ -40,7 +40,8 @@
 #elif defined(SCHISM_MACOSX)
 # include <sys/sysctl.h>
 #elif SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_init, 4, 8, 0) \
-		&& SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_supports, 4, 8, 0)
+		&& SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_supports, 4, 8, 0) \
+		&& !defined(SCHISM_XBOX) /* broken toolchain */
 # define SCHISM_HAS_GNUC_CPU_BUILTINS
 #endif
 
