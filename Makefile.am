@@ -110,6 +110,7 @@ noinst_HEADERS = \
 	include/clippy.h		\
 	include/config-parser.h		\
 	include/config.h        \
+	include/cpu.h			\
 	include/disko.h			\
 	include/dialog.h        \
 	include/dmoz.h			\
@@ -597,6 +598,7 @@ schismtracker_SOURCES = \
 	schism/clippy.c			\
 	schism/config-parser.c		\
 	schism/config.c			\
+	schism/cpu.c			\
 	schism/dialog.c			\
 	schism/disko.c			\
 	schism/dmoz.c			\

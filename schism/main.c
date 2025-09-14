@@ -53,6 +53,7 @@
 #include "timer.h"
 #include "mt.h"
 #include "mem.h"
+#include "cpu.h"
 
 #include "osdefs.h"
 
@@ -1098,6 +1099,8 @@ int schism_main(int argc, char** argv)
 	BITARRAY_SET(startup_flags, SF_NETWORK);
 
 	os_sysinit(&argc, &argv);
+
+	cpu_init();
 
 	vis_init();
 
