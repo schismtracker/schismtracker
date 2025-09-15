@@ -1547,65 +1547,6 @@ struct tm *win32_localtime(const time_t *t)
 }
 
 /* ------------------------------------------------------------------------------- */
-
-DWORD win32_create_process_wait(const WCHAR *cmd, WCHAR *arg, WCHAR *cwd)
-{
-	int full_arg_len;
-	WCHAR *full_arg;
-
-	BOOL status;
-	STARTUPINFOW startup_info;
-	PROCESS_INFORMATION process_information;
-	DWORD ret;
-
-	full_arg_len = wcslen(cmd) + 1 + wcslen(arg) + 1;
-
-	full_arg = malloc(full_arg_len * sizeof(WCHAR));
-
-	if (!full_arg)
-		return (DWORD)-3;
-
-	wcscpy(full_arg, cmd);
-	wcscat(full_arg, L" ");
-	wcscat(full_arg, arg);
-
-	memset(&startup_info, 0, sizeof(startup_info));
-
-	startup_info.cb = sizeof(startup_info);
-	startup_info.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-	startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-	startup_info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-
-	status = CreateProcessW(
-		cmd,
-		full_arg,
-		NULL, /* process attributes */
-		NULL, /* thread attributes */
-		TRUE, /* inherit handles */
-		0, /* flags -- used only for fancy OS-specific stuff*/
-		NULL, /* environment */
-		cwd, /* current directory (or NULL) */
-		&startup_info,
-		&process_information);
-
-	if (!status) /* process creation failed */
-		ret = (DWORD)-1;
-	else {
-		CloseHandle(process_information.hThread);
-		WaitForSingleObject(process_information.hProcess, INFINITE);
-		status = GetExitCodeProcess(process_information.hProcess, &ret);
-		CloseHandle(process_information.hProcess);
-
-		if (!status)
-			ret = (DWORD)-2;
-	}
-
-	free(full_arg);
-
-	return ret;
-}
-
-/* ------------------------------------------------------------------------------- */
 /* exec */
 
 #define WIN32_EXEC_IMPL(SUFFIX, CHARSET, CHAR_TYPE, SPAWNVP, CHDIR, STRDUP, GETCWD) \
