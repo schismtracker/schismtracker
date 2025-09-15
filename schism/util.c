@@ -35,7 +35,7 @@ extraneous libraries (i.e. GLib). */
  * a C stdio file pointer. */
 FILE *mkfstemp(char *template)
 {
-#if defined(HAVE_MKSTEMP) && defined(HAVE_FDOPEN)
+#if defined(HAVE_MKSTEMP) && defined(HAVE_FDOPEN) && !defined(SCHISM_WIN32)
 	/* Just forward to mkstemp */
 	int fd;
 
