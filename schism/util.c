@@ -35,6 +35,16 @@ extraneous libraries (i.e. GLib). */
  * a C stdio file pointer. */
 FILE *mkfstemp(char *template)
 {
+#if defined(HAVE_MKSTEMP) && defined(HAVE_FDOPEN)
+	/* Just forward to mkstemp */
+	int fd;
+
+	fd = mkstemp(template);
+	if (fd < 0)
+		return NULL;
+
+	return fdopen(fd, "w+b");
+#else
 	static const char letters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	static size_t letters_len = ARRAY_SIZE(letters) - 1;
 	static uint64_t value;
@@ -91,6 +101,7 @@ FILE *mkfstemp(char *template)
 	/* We return the null string if we can't find a unique file name.  */
 	template[0] = '\0';
 	return NULL;
+#endif
 }
 
 static void util_envvar_helper(const char *name, const char *val)
