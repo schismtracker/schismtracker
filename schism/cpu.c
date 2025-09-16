@@ -63,6 +63,7 @@ do { \
 
 	CPU_FEATURE(PF_XMMI64_INSTRUCTIONS_AVAILABLE, CPU_FEATURE_SSE2);
 	CPU_FEATURE(PF_AVX2_INSTRUCTIONS_AVAILABLE, CPU_FEATURE_AVX2);
+	/* TODO avx512bw */
 
 # undef CPU_FEATURE
 
@@ -82,6 +83,7 @@ do { \
 	CPU_FEATURE("altivec", CPU_FEATURE_ALTIVEC);
 	CPU_FEATURE("sse2", CPU_FEATURE_SSE2);
 	CPU_FEATURE("avx2", CPU_FEATURE_AVX2);
+	CPU_FEATURE("avx512bw", CPU_FEATURE_AVX512BW); /* XXX is this correct? */
 
 # undef CPU_FEATURE
 
@@ -98,6 +100,7 @@ do { \
 # if defined(__x86_64__) || defined(__i386__)
 	CPU_FEATURE("sse2", CPU_FEATURE_SSE2);
 	CPU_FEATURE("avx2", CPU_FEATURE_AVX2);
+	CPU_FEATURE("avx512bw", CPU_FEATURE_AVX512BW);
 # elif defined(__powerpc__) || defined(__ppc__) || defined(__ppc64__)
 	CPU_FEATURE("altivec", CPU_FEATURE_ALTIVEC);
 # else

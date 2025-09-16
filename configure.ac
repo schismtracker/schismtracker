@@ -1114,9 +1114,10 @@ AC_DEFUN([SCHISM_CHECK_TARGET], [
 	fi
 ])
 
-SCHISM_CHECK_TARGET([-msse2],    [SCHISM_SSE2],    [])
-SCHISM_CHECK_TARGET([-mavx2],    [SCHISM_AVX2],    [])
-SCHISM_CHECK_TARGET([-maltivec], [SCHISM_ALTIVEC], [-mabi=altivec])
+SCHISM_CHECK_TARGET([-msse2],     [SCHISM_SSE2],     [])
+SCHISM_CHECK_TARGET([-mavx2],     [SCHISM_AVX2],     [])
+SCHISM_CHECK_TARGET([-mavx512bw], [SCHISM_AVX512BW], [])
+SCHISM_CHECK_TARGET([-maltivec],  [SCHISM_ALTIVEC],  [-mabi=altivec])
 
 dnl --------------------------------------------------------------------------
 
