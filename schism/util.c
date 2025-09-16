@@ -298,9 +298,9 @@ MINMAX_C(32)
 
 # include <immintrin.h>
 
-# define MINMAX_X86_INTRINSICS(TARGET, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
+# define MINMAX_X86_INTRINSICS(TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
 	__attribute__((__target__(#TARGET))) \
-	static void minmax_##BITS##_##TARGET(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
+	static void minmax_##BITS##_##NAME(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
 	{ \
 		size_t i; \
 	\
@@ -359,7 +359,7 @@ MINMAX_C(32)
 /* circa 2000 (pentium 4) */
 
 /* 8-bit SSE2 */
-MINMAX_X86_INTRINSICS(sse2, __m128i, 8, 16,
+MINMAX_X86_INTRINSICS(sse2, sse2, __m128i, 8, 16,
 	/* vars */
 	__m128i msb;,
 {
@@ -381,7 +381,7 @@ MINMAX_X86_INTRINSICS(sse2, __m128i, 8, 16,
 }, _mm_set1_epi8, _mm_loadu_si128, _mm_min_epu8, _mm_max_epu8, _mm_store_si128)
 
 /* 16-bit SSE2 */
-MINMAX_X86_INTRINSICS(sse2, __m128i, 16, 8,
+MINMAX_X86_INTRINSICS(sse2, sse2, __m128i, 16, 8,
 	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm_set1_epi16, _mm_loadu_si128, _mm_min_epi16, _mm_max_epi16, _mm_store_si128)
 
@@ -391,7 +391,7 @@ MINMAX_X86_INTRINSICS(sse2, __m128i, 16, 8,
 /* circa 2006, simply adds min/max for signed 8-bit so we don't have to XOR */
 
 /* 8-bit SSE 4.1 */
-MINMAX_X86_INTRINSICS(sse2, __m128i, 8, 16,
+MINMAX_X86_INTRINSICS(sse4.1, sse41, __m128i, 8, 16,
 	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm_set1_epi8, _mm_loadu_si128, _mm_min_epi8, _mm_max_epi8, _mm_store_si128)
 #  define MINMAX_SSE41
@@ -400,12 +400,12 @@ MINMAX_X86_INTRINSICS(sse2, __m128i, 8, 16,
 /* circa 2011 */
 
 /* 8-bit AVX2 */
-MINMAX_X86_INTRINSICS(avx2, __m256i, 8, 32,
+MINMAX_X86_INTRINSICS(avx2, avx2, __m256i, 8, 32,
 	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm256_set1_epi8, _mm256_loadu_si256, _mm256_min_epi8, _mm256_max_epi8, _mm256_store_si256)
 
 /* 16-bit AVX2 */
-MINMAX_X86_INTRINSICS(avx2, __m256i, 16, 16,
+MINMAX_X86_INTRINSICS(avx2, avx2, __m256i, 16, 16,
 	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm256_set1_epi16, _mm256_loadu_si256, _mm256_min_epi16, _mm256_max_epi16, _mm256_store_si256)
 
@@ -414,11 +414,11 @@ MINMAX_X86_INTRINSICS(avx2, __m256i, 16, 16,
 # ifdef SCHISM_AVX512BW
 /* circa 2016, super fast */
 
-MINMAX_X86_INTRINSICS(avx512bw, __m512i, 8, 64,
+MINMAX_X86_INTRINSICS(avx512bw, avx512bw, __m512i, 8, 64,
 	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm512_set1_epi8, _mm512_loadu_si512, _mm512_min_epi8, _mm512_max_epi8, _mm512_store_si512)
 
-MINMAX_X86_INTRINSICS(avx512bw, __m512i, 16, 32,
+MINMAX_X86_INTRINSICS(avx512bw, avx512bw, __m512i, 16, 32,
 	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm512_set1_epi16, _mm512_loadu_si512, _mm512_min_epi16, _mm512_max_epi16, _mm512_store_si512)
 
