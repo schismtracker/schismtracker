@@ -270,10 +270,8 @@ void mem_xor(void *vbuf, size_t len, unsigned char c)
 /* ------------------------------------------------------------------------ */
 /* min/max of a buffer.
  *
- * With a randomized mono 16-bit sample of size 16000000 at 1000 passes:
- *  - SSE2: 0.42 secs
- *  - Altivec: 1.48 secs
- *  - C: 6.29 secs */
+ * for a 16-bit sample, SSE2 is about four times as fast as plain C.
+ * AVX2 is about twice as fast as SSE2. */
 
 #define MINMAX_C(BITS) \
 	static inline SCHISM_ALWAYS_INLINE \
@@ -298,122 +296,114 @@ MINMAX_C(32)
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0) \
 	&& !defined(SCHISM_XBOX) /* XBOX is hardcoded to i586 */ \
 	&& (defined(__x86_64__) || defined(__i386__)) /* so is mac os x */
+
+# define MINMAX_X86_INTRINSICS(TARGET, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
+	__attribute__((__target__(#TARGET))) \
+	static void minmax_##BITS##_##TARGET(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
+	{ \
+		size_t i; \
+	\
+		if (!len) return; /* wat */ \
+	\
+		if (len >= SIZE \
+				&& stride < SIZE /* stride cannot be over SIZE */ \
+				&& !(stride & (stride - 1))) /* stride must be a power of 2 */ \
+		{ \
+			size_t xlen; \
+			TYPE vmin; \
+			TYPE vmax; \
+			__attribute__((__aligned__(SIZE))) int##BITS##_t amin[SIZE]; \
+			__attribute__((__aligned__(SIZE))) int##BITS##_t amax[SIZE]; \
+			VARS \
+\
+			PREFIX \
+\
+			/* load the min and unsign it */ \
+			vmin = SET1(*min); \
+			vmax = SET1(*max); \
+\
+			/* kludge it in */ \
+			for (xlen = len / SIZE; xlen > 0; xlen--) { \
+				TYPE x; \
+\
+				x = LOADU((const TYPE *)buf); \
+				PREPROCESS \
+\
+				vmin = MIN(vmin, x); \
+				vmax = MAX(vmax, x); \
+\
+				buf += SIZE; \
+			} \
+\
+			len %= SIZE; \
+\
+			SUFFIX \
+\
+			/* TODO: do this in the actual vector so that \
+			 * we can just extract the first value */ \
+			STORE((TYPE *)amin, vmin); \
+			STORE((TYPE *)amax, vmax); \
+\
+			for (i = 0; i < 16; i += stride) { \
+				if (amin[i] < *min) *min = amin[i]; \
+				if (amax[i] > *max) *max = amax[i]; \
+			} \
+		} \
+\
+		/* process the rest */ \
+		minmax_##BITS##_c(buf, len, min, max, stride); \
+	}
+
 # ifdef SCHISM_SSE2
 #  include <immintrin.h>
 
-__attribute__((__target__("sse2")))
-static void minmax_8_sse2(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
-	size_t stride)
-{
-	size_t i;
+/* 8-bit SSE2 */
+MINMAX_X86_INTRINSICS(sse2, __m128i, 8, 16, __m128i msb;, {
+	msb = _mm_set1_epi8(0x80);
 
-	if (!len) return; /* wat */
+	*min ^= 0x80;
+	*max ^= 0x80;
+}, {
+	/* convert back to signed */
+	vmin = _mm_xor_si128(vmin, msb);
+	vmax = _mm_xor_si128(vmax, msb);
 
-	if (len >= 16
-			&& stride < 16 /* stride cannot be over 16 */
-			&& !(stride & (stride - 1))) /* stride must be a power of 2 */
-	{
-		size_t xlen;
-		__m128i vmin;
-		__m128i vmax;
-		__m128i msb;
-		__attribute__((__aligned__(16))) int8_t amin[16];
-		__attribute__((__aligned__(16))) int8_t amax[16];
+	*min ^= 0x80;
+	*max ^= 0x80;
+}, {
+	x = _mm_xor_si128(x, msb);
+}, _mm_set1_epi8, _mm_loadu_si128, _mm_min_epu8, _mm_max_epu8, _mm_store_si128)
 
-		/* constant; used to convert signed -> unsigned and vice versa.
-		 * this is because SSE2 has no _mm_min_epi8, only _mm_min_epu8,
-		 * which only works on unsigned.
-		 *
-		 * TODO: SSE4.1 provides a signed version */
-		msb = _mm_set1_epi8(0x80);
+/* 16-bit SSE2 */
+MINMAX_X86_INTRINSICS(sse2, __m128i, 16, 8, /* nothing */, /* nothing */, /* nothing */, /* nothing */,
+	_mm_set1_epi16, _mm_loadu_si128, _mm_min_epi16, _mm_max_epi16, _mm_store_si128)
 
-		/* load the min and unsign it */
-		vmin = _mm_set1_epi8(*min ^ 0x80);
-		vmax = _mm_set1_epi8(*max ^ 0x80);
-
-		/* kludge it in */
-		for (xlen = len / 16; xlen > 0; xlen--) {
-			__m128i x;
-
-			x = _mm_loadu_si128((const __m128i *)buf);
-			x = _mm_xor_si128(x, msb);
-
-			vmin = _mm_min_epu8(vmin, x);
-			vmax = _mm_max_epu8(vmax, x);
-
-			buf += 16;
-		}
-
-		len %= 16;
-
-		/* convert back to signed */
-		vmin = _mm_xor_si128(vmin, msb);
-		vmax = _mm_xor_si128(vmax, msb);
-
-		/* TODO: do this in the actual vector so that
-		 * we can just extract the first value */
-		_mm_store_si128((__m128i *)amin, vmin);
-		_mm_store_si128((__m128i *)amax, vmax);
-
-		for (i = 0; i < 16; i += stride) {
-			if (amin[i] < *min) *min = amin[i];
-			if (amax[i] > *max) *max = amax[i];
-		}
-	}
-
-	/* process the rest */
-	minmax_8_c(buf, len, min, max, stride);
-}
-
-__attribute__((__target__("sse2")))
-static void minmax_16_sse2(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
-	size_t stride)
-{
-	if (!len) return; /* wat */
-
-	if (len >= 8 && stride < 8 && !(stride & (stride - 1))) {
-		size_t xlen, i;
-		__m128i vmin, vmax;
-		__attribute__((__aligned__(16))) int16_t amin[8], amax[8];
-
-		/* load the min and unsign it */
-		vmin = _mm_set1_epi16(*min);
-		vmax = _mm_set1_epi16(*max);
-
-		/* kludge it in */
-		for (xlen = len / 8; xlen > 0; xlen--) {
-			__m128i x;
-
-			x = _mm_loadu_si128((const __m128i *)buf);
-
-			vmin = _mm_min_epi16(vmin, x);
-			vmax = _mm_max_epi16(vmax, x);
-
-			buf += 8;
-		}
-
-		len %= 8;
-
-		/* TODO: do this in the actual vector so that
-		 * we can just extract the first value */
-		_mm_store_si128((__m128i *)amin, vmin);
-		_mm_store_si128((__m128i *)amax, vmax);
-
-		for (i = 0; i < 8; i += stride) {
-			if (amin[i] < *min) *min = amin[i];
-			if (amax[i] > *max) *max = amax[i];
-		}
-	}
-
-	minmax_16_c(buf, len, min, max, stride);
-}
 #  define MINMAX_SSE2
+# endif
+# ifdef SCHISM_AVX2
+
+/* 8-bit AVX2 */
+MINMAX_X86_INTRINSICS(avx2, __m256i, 8, 32, /* nothing */, /* nothing */, /* nothing */, /* nothing */,
+	_mm256_set1_epi8, _mm256_loadu_si256, _mm256_min_epi8, _mm256_max_epi8, _mm256_store_si256)
+
+/* 16-bit AVX2 */
+MINMAX_X86_INTRINSICS(avx2, __m256i, 16, 16, /* nothing */, /* nothing */, /* nothing */, /* nothing */,
+	_mm256_set1_epi16, _mm256_loadu_si256, _mm256_min_epi16, _mm256_max_epi16, _mm256_store_si256)
+
+#  define MINMAX_AVX2
 # endif
 #endif
 
 void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
 	size_t stride)
 {
+	/* NOTE: for stride > 2, plain C code is faster than avx2 or sse2. */
+#ifdef MINMAX_AVX2
+	if (cpu_has_feature(CPU_FEATURE_AVX2)) {
+		minmax_8_avx2(buf, len, min, max, stride);
+		return;
+	}
+#endif
 #ifdef MINMAX_SSE2
 	if (cpu_has_feature(CPU_FEATURE_SSE2)) {
 		minmax_8_sse2(buf, len, min, max, stride);
@@ -427,6 +417,13 @@ void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
 void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
 	size_t stride)
 {
+	/* NOTE: for stride > 2, plain C code is faster than avx2 or sse2. */
+#ifdef MINMAX_AVX2
+	if (cpu_has_feature(CPU_FEATURE_AVX2)) {
+		minmax_16_avx2(buf, len, min, max, stride);
+		return;
+	}
+#endif
 #ifdef MINMAX_SSE2
 	if (cpu_has_feature(CPU_FEATURE_SSE2)) {
 		minmax_16_sse2(buf, len, min, max, stride);
