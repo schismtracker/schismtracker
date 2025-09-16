@@ -292,10 +292,11 @@ MINMAX_C(32)
 
 #undef MINMAX_C
 
-/* clang is stupid */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0) \
 	&& !defined(SCHISM_XBOX) /* XBOX is hardcoded to i586 */ \
-	&& (defined(__x86_64__) || defined(__i386__)) /* so is mac os x */
+	&& (defined(__x86_64__) || defined(__i386__)) /* clang on macosx LIES */
+
+# include <immintrin.h>
 
 # define MINMAX_X86_INTRINSICS(TARGET, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
 	__attribute__((__target__(#TARGET))) \
@@ -312,8 +313,8 @@ MINMAX_C(32)
 			size_t xlen; \
 			TYPE vmin; \
 			TYPE vmax; \
-			__attribute__((__aligned__(SIZE))) int##BITS##_t amin[SIZE]; \
-			__attribute__((__aligned__(SIZE))) int##BITS##_t amax[SIZE]; \
+			__attribute__((__aligned__(SIZE * (BITS / 8)))) int##BITS##_t amin[SIZE]; \
+			__attribute__((__aligned__(SIZE * (BITS / 8)))) int##BITS##_t amax[SIZE]; \
 			VARS \
 \
 			PREFIX \
@@ -344,7 +345,7 @@ MINMAX_C(32)
 			STORE((TYPE *)amin, vmin); \
 			STORE((TYPE *)amax, vmax); \
 \
-			for (i = 0; i < 16; i += stride) { \
+			for (i = 0; i < SIZE; i += stride) { \
 				if (amin[i] < *min) *min = amin[i]; \
 				if (amax[i] > *max) *max = amax[i]; \
 			} \
@@ -355,42 +356,73 @@ MINMAX_C(32)
 	}
 
 # ifdef SCHISM_SSE2
-#  include <immintrin.h>
+/* circa 2000 (pentium 4) */
 
 /* 8-bit SSE2 */
-MINMAX_X86_INTRINSICS(sse2, __m128i, 8, 16, __m128i msb;, {
+MINMAX_X86_INTRINSICS(sse2, __m128i, 8, 16,
+	/* vars */
+	__m128i msb;,
+{
+	/* prefix */
 	msb = _mm_set1_epi8(0x80);
 
 	*min ^= 0x80;
 	*max ^= 0x80;
 }, {
-	/* convert back to signed */
+	/* suffix */
 	vmin = _mm_xor_si128(vmin, msb);
 	vmax = _mm_xor_si128(vmax, msb);
 
 	*min ^= 0x80;
 	*max ^= 0x80;
 }, {
+	/* process */
 	x = _mm_xor_si128(x, msb);
 }, _mm_set1_epi8, _mm_loadu_si128, _mm_min_epu8, _mm_max_epu8, _mm_store_si128)
 
 /* 16-bit SSE2 */
-MINMAX_X86_INTRINSICS(sse2, __m128i, 16, 8, /* nothing */, /* nothing */, /* nothing */, /* nothing */,
+MINMAX_X86_INTRINSICS(sse2, __m128i, 16, 8,
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm_set1_epi16, _mm_loadu_si128, _mm_min_epi16, _mm_max_epi16, _mm_store_si128)
 
 #  define MINMAX_SSE2
 # endif
+# ifdef SCHISM_SSE41
+/* circa 2006, simply adds min/max for signed 8-bit so we don't have to XOR */
+
+/* 8-bit SSE 4.1 */
+MINMAX_X86_INTRINSICS(sse2, __m128i, 8, 16,
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
+	_mm_set1_epi8, _mm_loadu_si128, _mm_min_epi8, _mm_max_epi8, _mm_store_si128)
+#  define MINMAX_SSE41
+# endif
 # ifdef SCHISM_AVX2
+/* circa 2011 */
 
 /* 8-bit AVX2 */
-MINMAX_X86_INTRINSICS(avx2, __m256i, 8, 32, /* nothing */, /* nothing */, /* nothing */, /* nothing */,
+MINMAX_X86_INTRINSICS(avx2, __m256i, 8, 32,
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm256_set1_epi8, _mm256_loadu_si256, _mm256_min_epi8, _mm256_max_epi8, _mm256_store_si256)
 
 /* 16-bit AVX2 */
-MINMAX_X86_INTRINSICS(avx2, __m256i, 16, 16, /* nothing */, /* nothing */, /* nothing */, /* nothing */,
+MINMAX_X86_INTRINSICS(avx2, __m256i, 16, 16,
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
 	_mm256_set1_epi16, _mm256_loadu_si256, _mm256_min_epi16, _mm256_max_epi16, _mm256_store_si256)
 
 #  define MINMAX_AVX2
+# endif
+# ifdef SCHISM_AVX512BW
+/* circa 2016, super fast */
+
+MINMAX_X86_INTRINSICS(avx512bw, __m512i, 8, 64,
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
+	_mm512_set1_epi8, _mm512_loadu_si512, _mm512_min_epi8, _mm512_max_epi8, _mm512_store_si512)
+
+MINMAX_X86_INTRINSICS(avx512bw, __m512i, 16, 32,
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
+	_mm512_set1_epi16, _mm512_loadu_si512, _mm512_min_epi16, _mm512_max_epi16, _mm512_store_si512)
+
+#  define MINMAX_AVX512BW
 # endif
 #endif
 
@@ -398,9 +430,21 @@ void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
 	size_t stride)
 {
 	/* NOTE: for stride > 2, plain C code is faster than avx2 or sse2. */
+#ifdef MINMAX_AVX512BW
+	if (cpu_has_feature(CPU_FEATURE_AVX512BW)) {
+		minmax_8_avx512bw(buf, len, min, max, stride);
+		return;
+	}
+#endif
 #ifdef MINMAX_AVX2
 	if (cpu_has_feature(CPU_FEATURE_AVX2)) {
 		minmax_8_avx2(buf, len, min, max, stride);
+		return;
+	}
+#endif
+#ifdef MINMAX_SSE41
+	if (cpu_has_feature(CPU_FEATURE_SSE41)) {
+		minmax_8_sse41(buf, len, min, max, stride);
 		return;
 	}
 #endif
@@ -418,6 +462,12 @@ void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
 	size_t stride)
 {
 	/* NOTE: for stride > 2, plain C code is faster than avx2 or sse2. */
+#ifdef MINMAX_AVX512BW
+	if (cpu_has_feature(CPU_FEATURE_AVX512BW)) {
+		minmax_16_avx512bw(buf, len, min, max, stride);
+		return;
+	}
+#endif
 #ifdef MINMAX_AVX2
 	if (cpu_has_feature(CPU_FEATURE_AVX2)) {
 		minmax_16_avx2(buf, len, min, max, stride);
