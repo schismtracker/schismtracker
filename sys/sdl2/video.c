@@ -430,9 +430,14 @@ static void sdl2_video_set_hardware(int hardware)
 	/* Check the actual SDL version. If it's lower than we want, just use
 	 * the render backend with the software renderer. It does exactly what
 	 * we do, just with one more layer of indirection. */
+#ifdef SCHISM_WIN32
+	/* hidpi on windows is borked with surfaces */
+	video.type = VIDEO_TYPE_RENDERER;
+#else
 	video.type = (!hardware && sdl2_ver_atleast(2, 30, 5))
 		? (VIDEO_TYPE_SURFACE)
 		: (VIDEO_TYPE_RENDERER);
+#endif
 
 	/* There is no way to clear an SDL hint in SDL < 2.24.0, UGH! */
 	if (ask_for_no_acceleration)
@@ -531,13 +536,6 @@ static int sdl2_video_startup(void)
 	vgamem_flip();
 
 	video_setup(cfg_video_interpolation);
-
-#ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
-/* older SDL2 versions don't define this, don't fail the build for it */
-#define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
-#endif
-	sdl2_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
-	sdl2_SetHint("SDL_WINDOWS_NO_CLOSE_ON_ALT_F4", "1"); /* dunno if the hint is defined for old SDL, optional anyway */
 
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
@@ -1024,6 +1022,16 @@ static int sdl2_video_init(void)
 
 	//  :)
 	sdl_video_load_optional_syms();
+
+	/* cruft: have to do this before initializing video */
+#ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
+/* older SDL2 versions don't define this, don't fail the build for it */
+#define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
+#endif
+	sdl2_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+	sdl2_SetHint("SDL_WINDOWS_NO_CLOSE_ON_ALT_F4", "1"); /* dunno if the hint is defined for old SDL, optional anyway */
+	sdl2_SetHint("SDL_WINDOWS_DPI_SCALING", "1");
+	sdl2_SetHint("SDL_WINDOWS_DPI_AWARENESS", "permonitorv2");
 
 	if (sdl2_InitSubSystem(SDL_INIT_VIDEO) < 0) {
 		sdl2_quit();
