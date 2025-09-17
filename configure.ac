@@ -1121,6 +1121,46 @@ SCHISM_CHECK_TARGET([-mavx512bw], [SCHISM_AVX512BW], [])
 SCHISM_CHECK_TARGET([-maltivec],  [SCHISM_ALTIVEC],  [-mabi=altivec])
 
 dnl --------------------------------------------------------------------------
+dnl check for #pragma pack(push, 1) support
+dnl XXX we can also check for __attribute__((__packed__)) as well
+dnl and the old #pragma pack(1) syntax
+
+AC_MSG_CHECKING([for packed structure support])
+AC_COMPILE_IFELSE(
+	[AC_LANG_SOURCE([[
+		#include <stdint.h>
+		#include <stddef.h>
+
+		#pragma pack(push, 1)
+
+		struct nice {
+			uint64_t a;
+			uint8_t b[2];
+			uint32_t c;
+			uint16_t d[2];
+		};
+
+		#pragma pack(pop)
+
+		#define STATICASSERTYES(cond) \
+			typedef int PRIV_STATIC_ASSERT_##__COUNTER__[(cond) ? 1 : -1]
+
+		/* first, verify size */
+		STATICASSERTYES(sizeof(struct nice) == 18);
+
+		/* then, verify the offsets. */
+		STATICASSERTYES(offsetof(struct nice, b) == 8);
+		STATICASSERTYES(offsetof(struct nice, c) == 10);
+		STATICASSERTYES(offsetof(struct nice, d) == 14);
+	]])],
+	[have_pragma_pack=yes],
+	[have_pragma_pack=no])
+AC_MSG_RESULT([$have_pragma_pack])
+if test "x$have_pragma_pack" = "xyes"; then
+	AC_DEFINE([SCHISM_PRAGMA_PACK], [1], [#pragma pack support])
+fi
+
+dnl --------------------------------------------------------------------------
 
 AM_CONDITIONAL([BUILD_TESTS], [test "x$BUILD_TESTS" = "xyes"])
 
