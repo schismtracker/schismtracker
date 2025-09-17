@@ -800,7 +800,7 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 			/* Set playback position to the end if the sample has just started */
 			if (csf_smp_pos_equals_zero(chan->position)
 					&& chan->length
-					&& (NOTE_IS_NOTE(chan->row_note)) || !(chan->flags & CHN_LOOP))
+					&& (NOTE_IS_NOTE(chan->row_note) || !(chan->flags & CHN_LOOP)))
 				chan->position = csf_smp_pos(chan->length - 1, 0xFFFFFFFF);
 			chan->flags |= CHN_PINGPONGFLAG;
 			break;
