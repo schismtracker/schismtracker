@@ -771,9 +771,13 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 			break;
 
 		switch (param & 0x0F) {
-		/* S90: Surround Off (modplug hack I think) */
 
-		case 0x01: /* S91: Set Surround */
+		case 0x00: /* S90: Surround Off (modplug extension) */
+			chan->flags &= ~CHN_SURROUND;
+			chan->channel_panning = 0; // cs: wtf does ts do???
+			break;
+
+		case 0x01: /* S91: Surround On */
 			chan->flags |= CHN_SURROUND;
 			chan->panbrello_delta = 0;
 			chan->panning = 128;
