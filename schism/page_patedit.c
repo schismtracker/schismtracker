@@ -4710,6 +4710,15 @@ static void pated_song_changed(void)
 
 /* --------------------------------------------------------------------- */
 
+static void pattern_editor_set_page(void)
+{
+	/* end any pre-existing shift-selection.
+	 * fixes some odd bugs... */
+	shift_selection_end();
+}
+
+/* --------------------------------------------------------------------- */
+
 static int _fix_f7(struct key_event *k)
 {
 	if (k->sym == SCHISM_KEYSYM_F7) {
@@ -4738,6 +4747,7 @@ void pattern_editor_load_page(struct page *page)
 	page->clipboard_paste = pattern_selection_system_paste;
 	page->widgets = widgets_pattern;
 	page->help_index = HELP_PATTERN_EDITOR;
+	page->set_page = pattern_editor_set_page;
 
 	widget_create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
 }
