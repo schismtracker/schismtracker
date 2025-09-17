@@ -31,6 +31,10 @@
 
 /* --------------------------------------------------------------------- */
 
+#ifdef SCHISM_PRAGMA_PACK
+# pragma pack(push, 1)
+#endif
+
 // IT Sample Format
 struct it_sample {
 	uint32_t id;            // 0x53504D49
@@ -55,6 +59,58 @@ struct it_sample {
 	uint8_t vit;
 };
 
+#ifdef SCHISM_PRAGMA_PACK
+SCHISM_STATIC_ASSERT(sizeof(struct it_sample) == 80, "packed structure's size is not as expected");
+
+# pragma pack(pop)
+#endif
+
+static int it_read_sample_hdr(slurp_t *fp, struct it_sample *its)
+{
+#ifdef SCHISM_PRAGMA_PACK
+	/* all at once */
+	if (slurp_read(fp, its, sizeof(*its)) != sizeof(*its))
+		return 0;
+#else
+	/* read it all in manually */
+# define READ_VALUE(name) do { if (slurp_read(fp, &its->name, sizeof(its->name)) != sizeof(its->name)) { return 0; } } while (0)
+	READ_VALUE(id);
+	READ_VALUE(filename);
+	READ_VALUE(zero);
+	READ_VALUE(gvl);
+	READ_VALUE(flags);
+	READ_VALUE(vol);
+	READ_VALUE(name);
+	READ_VALUE(cvt);
+	READ_VALUE(dfp);
+	READ_VALUE(length);
+	READ_VALUE(loopbegin);
+	READ_VALUE(loopend);
+	READ_VALUE(c5speed);
+	READ_VALUE(susloopbegin);
+	READ_VALUE(susloopend);
+	READ_VALUE(samplepointer);
+	READ_VALUE(vis);
+	READ_VALUE(vid);
+	READ_VALUE(vir);
+	READ_VALUE(vit);
+# undef READ_VALUE
+#endif
+
+	if (memcmp(&its->id, "IMPS", 4))
+		return 0;
+
+	its->length = bswapLE32(its->length);
+	its->loopbegin = bswapLE32(its->loopbegin);
+	its->loopend = bswapLE32(its->loopend);
+	its->c5speed = bswapLE32(its->c5speed);
+	its->susloopbegin = bswapLE32(its->susloopbegin);
+	its->susloopend = bswapLE32(its->susloopend);
+	its->samplepointer = bswapLE32(its->samplepointer);
+
+	return 1;
+}
+
 /* --------------------------------------------------------------------- */
 
 int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
@@ -62,11 +118,10 @@ int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 	struct it_sample its;
 	unsigned char title[25];
 
-	if (slurp_read(fp, &its, sizeof(its)) != sizeof(its)
-		|| memcmp(&its.id, "IMPS", 4))
+	if (!it_read_sample_hdr(fp, &its))
 		return 0;
 
-	file->smp_length = bswapLE32(its.length);
+	file->smp_length = its.length;
 	file->smp_flags = 0;
 
 	if (its.flags & 2)
@@ -93,11 +148,11 @@ int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->smp_vibrato_depth = its.vid & 0x7f;
 	file->smp_vibrato_rate = its.vir;
 
-	file->smp_loop_start = bswapLE32(its.loopbegin);
-	file->smp_loop_end = bswapLE32(its.loopend);
-	file->smp_speed = bswapLE32(its.c5speed);
-	file->smp_sustain_start = bswapLE32(its.susloopbegin);
-	file->smp_sustain_end = bswapLE32(its.susloopend);
+	file->smp_loop_start = its.loopbegin;
+	file->smp_loop_end = its.loopend;
+	file->smp_speed = its.c5speed;
+	file->smp_sustain_start = its.susloopbegin;
+	file->smp_sustain_end = its.susloopend;
 
 	file->smp_filename = strn_dup((const char *)its.filename, sizeof(its.filename));
 	file->description = "Impulse Tracker Sample";
@@ -113,32 +168,7 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 {
 	struct it_sample its;
 
-#define READ_VALUE(name) do { if (slurp_read(fp, &its.name, sizeof(its.name)) != sizeof(its.name)) { return 0; } } while (0)
-
-	READ_VALUE(id);
-	READ_VALUE(filename);
-	READ_VALUE(zero);
-	READ_VALUE(gvl);
-	READ_VALUE(flags);
-	READ_VALUE(vol);
-	READ_VALUE(name);
-	READ_VALUE(cvt);
-	READ_VALUE(dfp);
-	READ_VALUE(length);
-	READ_VALUE(loopbegin);
-	READ_VALUE(loopend);
-	READ_VALUE(c5speed);
-	READ_VALUE(susloopbegin);
-	READ_VALUE(susloopend);
-	READ_VALUE(samplepointer);
-	READ_VALUE(vis);
-	READ_VALUE(vid);
-	READ_VALUE(vir);
-	READ_VALUE(vit);
-
-#undef READ_VALUE
-
-	if (its.id != bswapLE32(0x53504D49))
+	if (!it_read_sample_hdr(fp, &its))
 		return 0;
 
 	/* alright, let's get started */
@@ -175,11 +205,11 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	smp->panning = (its.dfp & 127) * 4;
 	if (its.dfp & 128)
 		smp->flags |= CHN_PANNING;
-	smp->loop_start = bswapLE32(its.loopbegin);
-	smp->loop_end = bswapLE32(its.loopend);
-	smp->c5speed = bswapLE32(its.c5speed);
-	smp->sustain_start = bswapLE32(its.susloopbegin);
-	smp->sustain_end = bswapLE32(its.susloopend);
+	smp->loop_start = its.loopbegin;
+	smp->loop_end = its.loopend;
+	smp->c5speed = its.c5speed;
+	smp->sustain_start = its.susloopbegin;
+	smp->sustain_end = its.susloopend;
 
 	int vibs[] = {VIB_SINE, VIB_RAMP_DOWN, VIB_SQUARE, VIB_RANDOM};
 	smp->vib_type = vibs[its.vit & 3];
@@ -189,7 +219,7 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 
 	// sanity checks purged, csf_adjust_sample_loop already does them  -paper
 
-	its.samplepointer = bswapLE32(its.samplepointer);
+	its.samplepointer = its.samplepointer;
 
 	const int64_t pos = slurp_tell(fp);
 	if (pos < 0)
@@ -288,8 +318,10 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 		case VIB_SINE:      its.vit = 0; break;
 	}
 
-#define WRITE_VALUE(name) do { disko_write(fp, &its.name, sizeof(its.name)); } while (0)
-
+#ifdef SCHISM_PRAGMA_PACK
+	disko_write(fp, &its, sizeof(its));
+#else
+# define WRITE_VALUE(name) do { disko_write(fp, &its.name, sizeof(its.name)); } while (0)
 	WRITE_VALUE(id);
 	WRITE_VALUE(filename);
 	WRITE_VALUE(zero);
@@ -310,8 +342,8 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	WRITE_VALUE(vid);
 	WRITE_VALUE(vir);
 	WRITE_VALUE(vit);
-
-#undef WRITE_VALUE
+# undef WRITE_VALUE
+#endif
 }
 
 int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
