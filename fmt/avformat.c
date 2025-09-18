@@ -26,6 +26,7 @@
 #include "bits.h"
 #include "log.h"
 #include "str.h"
+#include "mem.h"
 
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -66,6 +67,8 @@ static int (*schism_avcodec_receive_frame)(AVCodecContext *avctx, AVFrame *frame
 static int (*schism_av_get_bytes_per_sample)(enum AVSampleFormat sample_fmt);
 static void (*schism_avcodec_free_context)(AVCodecContext **avctx);
 static void (*schism_avio_context_free)(AVIOContext **s);
+
+static AVDictionaryEntry *(*schism_av_dict_get)(const AVDictionary *, const char *, const AVDictionaryEntry *, int flags);
 
 static int avformat_wasinit = 0;
 
@@ -440,6 +443,26 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	if (astr < 0)
 		goto fail;
 
+	{
+		/* metadata */
+		const AVDictionary *meta = fmtctx->metadata;
+		AVDictionaryEntry *ent;
+
+		ent = schism_av_dict_get(meta, "title", NULL, 0/*AV_DICT_MATCH_CASE*/);
+		if (ent) {
+			if (file)
+				file->title = str_dup(ent->value);
+			else if (smp)
+				strncpy(smp->name, ent->value, sizeof(smp->name));
+		}
+
+		if (file) {
+			/* only useful for files */
+			ent = schism_av_dict_get(meta, "artist", NULL, 0/*AV_DICT_MATCH_CASE*/);
+			if (ent) file->artist = str_dup(ent->value);
+		}
+	}
+
 	if (file) {
 		/* this seems to be in static memory (not allocated);
 		 * so I think we're fine just pointing to it, as long as
@@ -592,6 +615,7 @@ static int load_avformat_syms(void)
 	SCHISM_AVFORMAT_SYM(DLIB_AVUTIL, av_get_bytes_per_sample);
 	SCHISM_AVFORMAT_SYM(DLIB_AVUTIL, av_frame_free);
 	SCHISM_AVFORMAT_SYM(DLIB_AVUTIL, av_frame_alloc);
+	SCHISM_AVFORMAT_SYM(DLIB_AVUTIL, av_dict_get);
 
 	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avformat_alloc_context);
 	SCHISM_AVFORMAT_SYM(DLIB_AVFORMAT, avformat_free_context);
