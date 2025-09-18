@@ -57,6 +57,7 @@ static SDL_WindowFlags (SDLCALL *sdl3_GetWindowFlags)(SDL_Window * window);
 static Uint32 (SDLCALL *sdl3_MapRGB)(const SDL_PixelFormatDetails *format, const SDL_Palette *palette, Uint8 r, Uint8 g, Uint8 b);
 static bool (SDLCALL *sdl3_SetWindowPosition)(SDL_Window * window, int x, int y);
 static bool (SDLCALL *sdl3_SetWindowSize)(SDL_Window * window, int w, int h);
+static float (SDLCALL *sdl3_GetWindowDisplayScale)(SDL_Window * window);
 static bool (SDLCALL *sdl3_SetWindowFullscreen)(SDL_Window * window, bool fullscreen);
 static bool (SDLCALL *sdl3_GetWindowPosition)(SDL_Window * window, int *x, int *y);
 static SDL_Window * (SDLCALL *sdl3_CreateWindow)(const char *title, int w, int h, SDL_WindowFlags flags);
@@ -151,6 +152,8 @@ static struct {
 	uint32_t bpp; // BYTES per pixel
 
 	int width, height;
+
+	float scale;
 
 	struct {
 		unsigned int x, y;
@@ -494,16 +497,21 @@ static int sdl3_video_startup(void)
 	vgamem_flip();
 
 	sdl3_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
-	sdl3_SetHint("SDL_WINDOWS_DPI_AWARENESS", "unaware");
 	sdl3_SetHint(SDL_HINT_WINDOWS_CLOSE_ON_ALT_F4, "0");
 
+	/* FIXME: This is wrong for hi-DPI on windows. */
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 
-	video.window = sdl3_CreateWindow(WINDOW_TITLE, video.width, video.height, SDL_WINDOW_RESIZABLE);
+	video.scale = 1.0;
+
+	video.window = sdl3_CreateWindow(WINDOW_TITLE, video.width, video.height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 	if (!video.window)
 		return 0;
+
+	/* on Windows, the display scale is immediately available. */
+	sdl3_display_scale_changed_cb();
 
 	video_fullscreen(cfg_video_fullscreen);
 	video_set_hardware(cfg_video_hardware);
@@ -519,6 +527,21 @@ static int sdl3_video_startup(void)
 	set_icon();
 
 	return 1;
+}
+
+// called from events.c
+// XXX might be windows specific...
+void sdl3_display_scale_changed_cb(void)
+{
+	// FIXME this is wrong if someone resizes and moves to a screen
+	// with a different DPI, because it'll reset the resolution.
+	const float scale = sdl3_GetWindowDisplayScale(video.window);
+
+	video.width = video.width * scale / video.scale;
+	video.height = video.height * scale / video.scale;
+	video.scale = scale;
+
+	sdl3_SetWindowSize(video.window, video.width, video.height);
 }
 
 static void sdl3_video_fullscreen(int new_fs_flag)
@@ -953,6 +976,8 @@ static int sdl3_video_load_syms(void)
 	SCHISM_SDL3_SYM(LockSurface);
 	SCHISM_SDL3_SYM(UnlockSurface);
 
+	SCHISM_SDL3_SYM(GetWindowDisplayScale);
+
 	return 0;
 }
 
@@ -971,6 +996,8 @@ static int sdl3_video_init(void)
 		sdl3_quit();
 		return 0;
 	}
+
+	events_pump_events();
 
 	return 1;
 }

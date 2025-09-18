@@ -235,6 +235,10 @@ static void sdl3_pump_events(void)
 			schism_event.window.data.resized.height = e.window.data2;
 			events_push_event(&schism_event);
 			break;
+		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+			// tell video.c about it
+			sdl3_display_scale_changed_cb();
+			break;
 		case SDL_EVENT_KEY_DOWN:
 			// pop any pending keydowns
 			pop_pending_keydown(NULL);

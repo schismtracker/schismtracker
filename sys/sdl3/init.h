@@ -54,4 +54,7 @@ int sdl3_load_sym(const char *fn, void *addr);
 #define SDL3_VERSION_ATLEAST(ver, mmajor, mminor, mpatch) \
 	SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, ver.major, ver.minor, ver.patch)
 
+// video.c
+void sdl3_display_scale_changed_cb(void);
+
 #endif /* SCHISM_SYS_SDL3_INIT_H_ */
