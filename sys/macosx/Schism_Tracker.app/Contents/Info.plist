@@ -111,6 +111,6 @@
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
 	<key>NSHighResolutionCapable</key>
-	<false/>
+	<true/>
 </dict>
 </plist>
