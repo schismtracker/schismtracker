@@ -530,11 +530,11 @@ static int sdl3_video_startup(void)
 }
 
 // called from events.c
-// XXX might be windows specific...
 void sdl3_display_scale_changed_cb(void)
 {
-	// FIXME this is wrong if someone resizes and moves to a screen
-	// with a different DPI, because it'll reset the resolution.
+	// NOTE: on Wayland, this causes an annoying flicker any time
+	// the window is moved across bounds. Possibly it would be
+	// better to target the "window moved" event?
 	const float scale = sdl3_GetWindowDisplayScale(video.window);
 
 	video.width = video.width * scale / video.scale;
