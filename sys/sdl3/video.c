@@ -328,19 +328,19 @@ static inline void video_recalculate_fixed_width(void)
 				SDL_LOGICAL_PRESENTATION_LETTERBOX);
 			break;
 		case VIDEO_TYPE_SURFACE: {
-			const double ratio_w = (double)video.width  / (double)cfg_video_want_fixed_width;
-			const double ratio_h = (double)video.height / (double)cfg_video_want_fixed_height;
+			const double ratio_w = (double)video.u.s.surface->w  / (double)cfg_video_want_fixed_width;
+			const double ratio_h = (double)video.u.s.surface->h / (double)cfg_video_want_fixed_height;
 
 			if (ratio_w < ratio_h) {
-				video.u.s.clip.w = video.width;
+				video.u.s.clip.w = video.u.s.surface->w;
 				video.u.s.clip.h = (double)cfg_video_want_fixed_height * ratio_w;
 			} else {
-				video.u.s.clip.h = video.height;
+				video.u.s.clip.h = video.u.s.surface->h;
 				video.u.s.clip.w = (double)cfg_video_want_fixed_width  * ratio_h;
 			}
 
-			video.u.s.clip.x = (video.width  - video.u.s.clip.w) / 2;
-			video.u.s.clip.y = (video.height - video.u.s.clip.h) / 2;
+			video.u.s.clip.x = (video.u.s.surface->w - video.u.s.clip.w) / 2;
+			video.u.s.clip.y = (video.u.s.surface->h - video.u.s.clip.h) / 2;
 			break;
 		}
 		case VIDEO_TYPE_UNINITIALIZED:
@@ -350,8 +350,8 @@ static inline void video_recalculate_fixed_width(void)
 		}
 	} else if (video.type == VIDEO_TYPE_SURFACE) {
 		video.u.s.clip.x = video.u.s.clip.y = 0;
-		video.u.s.clip.w = video.width;
-		video.u.s.clip.h = video.height;
+		video.u.s.clip.w = video.u.s.surface->w;
+		video.u.s.clip.h = video.u.s.surface->h;
 	}
 }
 
@@ -499,7 +499,6 @@ static int sdl3_video_startup(void)
 	sdl3_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 	sdl3_SetHint(SDL_HINT_WINDOWS_CLOSE_ON_ALT_F4, "0");
 
-	/* FIXME: This is wrong for hi-DPI on windows. */
 	video.width = cfg_video_width;
 	video.height = cfg_video_height;
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;

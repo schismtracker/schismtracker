@@ -324,19 +324,19 @@ static inline void video_recalculate_fixed_width(void)
 			sdl2_RenderSetLogicalSize(video.u.r.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 			break;
 		case VIDEO_TYPE_SURFACE: {
-			const double ratio_w = (double)video.width  / (double)cfg_video_want_fixed_width;
-			const double ratio_h = (double)video.height / (double)cfg_video_want_fixed_height;
+			const double ratio_w = (double)video.u.s.surface->w  / (double)cfg_video_want_fixed_width;
+			const double ratio_h = (double)video.u.s.surface->h / (double)cfg_video_want_fixed_height;
 
 			if (ratio_w < ratio_h) {
-				video.u.s.clip.w = video.width;
+				video.u.s.clip.w = video.u.s.surface->w;
 				video.u.s.clip.h = (double)cfg_video_want_fixed_height * ratio_w;
 			} else {
-				video.u.s.clip.h = video.height;
+				video.u.s.clip.h = video.u.s.surface->h;
 				video.u.s.clip.w = (double)cfg_video_want_fixed_width  * ratio_h;
 			}
 
-			video.u.s.clip.x = (video.width  - video.u.s.clip.w) / 2;
-			video.u.s.clip.y = (video.height - video.u.s.clip.h) / 2;
+			video.u.s.clip.x = (video.u.s.surface->w - video.u.s.clip.w) / 2;
+			video.u.s.clip.y = (video.u.s.surface->h - video.u.s.clip.h) / 2;
 			break;
 		}
 		case VIDEO_TYPE_UNINITIALIZED:
@@ -345,8 +345,8 @@ static inline void video_recalculate_fixed_width(void)
 		}
 	} else if (video.type == VIDEO_TYPE_SURFACE) {
 		video.u.s.clip.x = video.u.s.clip.y = 0;
-		video.u.s.clip.w = video.width;
-		video.u.s.clip.h = video.height;
+		video.u.s.clip.w = video.u.s.surface->w;
+		video.u.s.clip.h = video.u.s.surface->h;
 	}
 }
 
@@ -430,14 +430,9 @@ static void sdl2_video_set_hardware(int hardware)
 	/* Check the actual SDL version. If it's lower than we want, just use
 	 * the render backend with the software renderer. It does exactly what
 	 * we do, just with one more layer of indirection. */
-#ifdef SCHISM_WIN32
-	/* hidpi on windows is borked with surfaces */
-	video.type = VIDEO_TYPE_RENDERER;
-#else
 	video.type = (!hardware && sdl2_ver_atleast(2, 30, 5))
 		? (VIDEO_TYPE_SURFACE)
 		: (VIDEO_TYPE_RENDERER);
-#endif
 
 	/* There is no way to clear an SDL hint in SDL < 2.24.0, UGH! */
 	if (ask_for_no_acceleration)
