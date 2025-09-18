@@ -398,7 +398,6 @@ jobs:
             configuration.md
 
   test:
-    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
@@ -411,8 +410,10 @@ jobs:
           { sys: mingw64, env: x86_64 },
           { sys: ucrt64,  env: ucrt-x86_64 },
         ]
+        os: [ windows-2022, windows-2025 ]
+    runs-on: ${{matrix.os}}
     concurrency:
-      group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.sys}}-${{matrix.sys.env}}${{matrix.threads.name}}
+      group: ${{github.ref}}-${{github.workflow}}-${{matrix.os}}-${{matrix.sys.sys}}-${{matrix.sys.env}}${{matrix.threads.name}}
       cancel-in-progress: true
     #name: ${{matrix.sys.sys}}-${{matrix.sys.env}} # the default name will work just fine
     defaults:
