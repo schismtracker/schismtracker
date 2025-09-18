@@ -51,7 +51,8 @@ union win32mm_ocp {
 };
 
 struct win32mm_midi {
-	DWORD id;
+	DWORD inid;
+	DWORD outid;
 
 	HMIDIIN in;
 	HMIDIOUT out;
@@ -149,15 +150,13 @@ static CALLBACK void _win32mm_inputcb(HMIDIIN in, UINT wmsg, DWORD_PTR inst,
 static int _win32mm_start(struct midi_port *p)
 {
 	struct win32mm_midi *m;
-	UINT id;
 	MMRESULT r;
 
 	m = p->userdata;
-	id = m->id;
-	if (p->io == MIDI_INPUT) {
+	if (p->io & MIDI_INPUT) {
 		m->in = NULL;
 		r = midiInOpen(&m->in,
-				(UINT_PTR)id,
+				(UINT_PTR)m->inid,
 				(DWORD_PTR)_win32mm_inputcb,
 				(DWORD_PTR)p,
 				CALLBACK_FUNCTION);
@@ -172,23 +171,24 @@ static int _win32mm_start(struct midi_port *p)
 		if (r != MMSYSERR_NOERROR) return 0;
 		if (midiInStart(m->in) != MMSYSERR_NOERROR) return 0;
 	}
-	if (p->io == MIDI_OUTPUT) {
+	if (p->io & MIDI_OUTPUT) {
 		m->out = NULL;
 		if (midiOutOpen(&m->out,
-				(UINT_PTR)id,
+				(UINT_PTR)m->outid,
 				0, 0,
 				CALLBACK_NULL) != MMSYSERR_NOERROR) return 0;
 	}
 
 	return 1;
 }
+
 static int _win32mm_stop(struct midi_port *p)
 {
 	struct win32mm_midi *m;
 	LPMIDIHDR ptr;
 
 	m = p->userdata;
-	if (p->io == MIDI_INPUT) {
+	if (p->io & MIDI_INPUT) {
 		/* portmidi appears to (essentially) ignore the error codes
 		for these guys */
 		(void)midiInStop(m->in);
@@ -196,7 +196,7 @@ static int _win32mm_stop(struct midi_port *p)
 		(void)midiInUnprepareHeader(m->in,&m->hh,sizeof(m->hh));
 		(void)midiInClose(m->in);
 	}
-	if (p->io == MIDI_OUTPUT) {
+	if (p->io & MIDI_OUTPUT) {
 		(void)midiOutReset(m->out);
 		(void)midiOutClose(m->out);
 		/* free output chain */
@@ -224,7 +224,17 @@ static void _win32mm_poll(struct midi_provider *p)
 	mmin = midiInGetNumDevs();
 	mmout = midiOutGetNumDevs();
 
-#define SCANPORTS(COUNT, GETCAPS, IOCAP, CP) \
+#ifdef SCHISM_WIN32_COMPILE_ANSI
+# define CAPS_CMPNAME(x, y) \
+	(win32_ver_unicode() \
+		? !memcmp((x)->w.szPname, (y)->w.szPname, sizeof((x)->w.szPname)) \
+		: !memcmp((x)->a.szPname, (y)->a.szPname, sizeof((x)->a.szPname)))
+#else
+# define CAPS_CMPNAME(x, y) \
+	(!memcmp((x)->w.szPname, (y)->w.szPname, sizeof((x)->w.szPname)))
+#endif
+
+#define SCANPORTS(COUNT, GETCAPS, IOCAP, CP, OIOCAP, OCP, ID) \
 	do { \
 		for (i = 0; i < (COUNT); i++) { \
 			union win32mm_##CP cp; \
@@ -244,14 +254,32 @@ static void _win32mm_poll(struct midi_provider *p)
 			q = NULL; \
 			ok = 0; \
 			while (midi_port_foreach(p, &q)) { \
-				if (!q->mark || !(q->iocap == IOCAP)) \
+				if (!q->mark) \
 					continue; \
 		\
 				data = q->userdata; \
+				/* It is annoying to have two different MIDI ports with
+				 * the same name (i.e. the same device), especially when
+				 * they are virtually indistinguishable without prefixing
+				 * (in) or (out). Thus, if we have a device that has generally
+				 * the same MIDI caps info (including the same name), we
+				 * link them together as the same MIDI device. */ \
+				if ((q->iocap == OIOCAP) \
+						/* A and W variants are aligned up until the name */ \
+						&& !memcmp(&cp, &data->OCP, offsetof(MIDIINCAPSW, szPname)) \
+						&& CAPS_CMPNAME(&cp, &data->OCP)) { \
+					q->mark = 0; \
+					/* add on additional IOCAP */ \
+					q->iocap |= IOCAP; \
+					data->ID = i; \
+					ok = 1; \
+					break; \
+				} \
+		\
 				if (!memcmp(&data->CP, &cp, sizeof(cp))) { \
 					q->mark = 0; \
 					/* fixup the ID, if any */ \
-					data->id = i; \
+					data->ID = i; \
 					ok = 1; \
 					break; \
 				} \
@@ -261,7 +289,7 @@ static void _win32mm_poll(struct midi_provider *p)
 				continue; \
 		\
 			data = mem_calloc(1, sizeof(*data)); \
-			data->id = i; \
+			data->ID = i; \
 			memcpy(&data->CP, &cp, sizeof(cp)); \
 		\
 			SCHISM_ANSI_UNICODE({ \
@@ -279,8 +307,8 @@ static void _win32mm_poll(struct midi_provider *p)
 	} while (0)
 
 	/* ~everybody wants prosthetic foreheads on their real heads~ ! */
-	SCANPORTS(mmin,  midiInGetDevCaps,  MIDI_INPUT,  icp);
-	SCANPORTS(mmout, midiOutGetDevCaps, MIDI_OUTPUT, ocp);
+	SCANPORTS(mmin,  midiInGetDevCaps,  MIDI_INPUT,  icp, MIDI_OUTPUT, ocp, inid);
+	SCANPORTS(mmout, midiOutGetDevCaps, MIDI_OUTPUT, ocp, MIDI_INPUT,  icp, outid);
 
 #undef SCANPORTS
 
