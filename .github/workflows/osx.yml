@@ -386,6 +386,8 @@ jobs:
           { flag: '--enable-threads', name: '-threaded' },
         ]
         sys: [
+          { host: macos-26, compiler: '26.0' },
+          { host: macos-26, compiler: '16.4 '},
           { host: macos-15, compiler: '26.0' },
           { host: macos-15, compiler: '16.4' },
           { host: macos-15, compiler: '16.3' },
