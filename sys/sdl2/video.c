@@ -686,8 +686,6 @@ static void sdl2_video_get_logical_coordinates(int x, int y, int *trans_x, int *
 	if (!cfg_video_want_fixed || video.type == VIDEO_TYPE_SURFACE) {
 		*trans_x = x;
 		*trans_y = y;
-
-		printf("%d\n", x);
 	} else {
 		float xx, yy;
 #if SDL2_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
