@@ -205,4 +205,7 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 
 /* ------------------------------------------------------------------------ */
 
+void video_calculate_clip(uint32_t w, uint32_t h,
+	uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph);
+
 #endif /* SCHISM_VIDEO_H_ */

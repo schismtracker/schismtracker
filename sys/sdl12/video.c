@@ -101,21 +101,24 @@ static struct video_cf {
 
 	/* actual window/screen coordinates */
 	struct {
-		unsigned int width, height;
+		uint32_t width, height;
 	} draw;
 
 	/* desktop info */
 	struct {
-		unsigned int width, height, bpp;
+		uint32_t width, height, bpp;
 
-		int swsurface;
-		int fb_hacks;
-		int fullscreen;
-		int doublebuf;
+		/* a buncha booleans */
+		unsigned int swsurface : 1;
+		unsigned int fb_hacks : 1;
+		unsigned int fullscreen : 1;
+		unsigned int doublebuf : 1;
 	} desktop;
-	SDL_Rect clip;
 	struct {
-		unsigned int x, y;
+		uint32_t x, y, w, h;
+	} clip;
+	struct {
+		uint32_t x, y;
 	} mouse;
 
 	uint32_t pal[256];
@@ -393,28 +396,11 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 		sdlflags |= SDL_RESIZABLE;
 	}
 
-	// What?
+	/* XXX: what's this doing? isn't it just a no-op? */
 	if (want_fixed == -1 && best_resolution(w, h))
 		want_fixed = 0;
 
-	if (want_fixed) {
-		double ratio_w = (double)w / (double)cfg_video_want_fixed_width;
-		double ratio_h = (double)h / (double)cfg_video_want_fixed_height;
-		if (ratio_w < ratio_h) {
-			video.clip.w = w;
-			video.clip.h = (double)cfg_video_want_fixed_height * ratio_w;
-		} else {
-			video.clip.h = h;
-			video.clip.w = (double)cfg_video_want_fixed_width * ratio_h;
-		}
-		video.clip.x=(w-video.clip.w)/2;
-		video.clip.y=(h-video.clip.h)/2;
-	} else {
-		video.clip.x = 0;
-		video.clip.y = 0;
-		video.clip.w = w;
-		video.clip.h = h;
-	}
+	video_calculate_clip(w, h, &video.clip.x, &video.clip.y, &video.clip.w, &video.clip.h);
 
 	if (video.desktop.fb_hacks && video.surface) {
 		/* the original one will be _just fine_ */

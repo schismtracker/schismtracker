@@ -860,3 +860,32 @@ void video_show_cursor(int enabled)
 {
 	backend->show_cursor(enabled);
 }
+
+/* ------------------------------------------------------------ */
+
+/* takes in a width and height, and calculates clip from it.
+ * NOTE this uses global config variables (kind of evil, but most
+ * of the video stuff is already evil) */
+void video_calculate_clip(uint32_t w, uint32_t h,
+	uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph)
+{
+	if (cfg_video_want_fixed) {
+		const double ratio_w = (double)w / (double)cfg_video_want_fixed_width;
+		const double ratio_h = (double)h / (double)cfg_video_want_fixed_height;
+
+		if (ratio_w < ratio_h) {
+			*pw = w;
+			*ph = (double)cfg_video_want_fixed_height * ratio_w;
+		} else {
+			*ph = h;
+			*pw = (double)cfg_video_want_fixed_width * ratio_h;
+		}
+
+		*px = (w - *pw) / 2;
+		*py = (h - *ph) / 2;
+	} else {
+		*px = *py = 0;
+		*pw = w;
+		*ph = h;
+	}
+}

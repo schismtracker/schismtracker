@@ -145,7 +145,7 @@ static struct {
 		} r;
 		struct {
 			struct {
-				int x, y, w, h;
+				uint32_t x, y, w, h;
 			} clip;
 			SDL_Surface *surface;
 		} s;
@@ -318,35 +318,18 @@ static void set_icon(void)
 static inline void video_recalculate_fixed_width(void)
 {
 	/* Aspect ratio correction if it's wanted */
-	if (cfg_video_want_fixed) {
-		switch (video.type) {
-		case VIDEO_TYPE_RENDERER:
+	switch (video.type) {
+	case VIDEO_TYPE_RENDERER:
+		if (cfg_video_want_fixed)
 			sdl2_RenderSetLogicalSize(video.u.r.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
-			break;
-		case VIDEO_TYPE_SURFACE: {
-			const double ratio_w = (double)video.u.s.surface->w  / (double)cfg_video_want_fixed_width;
-			const double ratio_h = (double)video.u.s.surface->h / (double)cfg_video_want_fixed_height;
-
-			if (ratio_w < ratio_h) {
-				video.u.s.clip.w = video.u.s.surface->w;
-				video.u.s.clip.h = (double)cfg_video_want_fixed_height * ratio_w;
-			} else {
-				video.u.s.clip.h = video.u.s.surface->h;
-				video.u.s.clip.w = (double)cfg_video_want_fixed_width  * ratio_h;
-			}
-
-			video.u.s.clip.x = (video.u.s.surface->w - video.u.s.clip.w) / 2;
-			video.u.s.clip.y = (video.u.s.surface->h - video.u.s.clip.h) / 2;
-			break;
-		}
-		case VIDEO_TYPE_UNINITIALIZED:
-			/* WUT */
-			break;
-		}
-	} else if (video.type == VIDEO_TYPE_SURFACE) {
-		video.u.s.clip.x = video.u.s.clip.y = 0;
-		video.u.s.clip.w = video.u.s.surface->w;
-		video.u.s.clip.h = video.u.s.surface->h;
+		break;
+	case VIDEO_TYPE_SURFACE:
+		video_calculate_clip(video.u.s.surface->w, video.u.s.surface->h,
+			&video.u.s.clip.x, &video.u.s.clip.y, &video.u.s.clip.w, &video.u.s.clip.h);
+		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+		SCHISM_UNREACHABLE;
+		break;
 	}
 }
 
