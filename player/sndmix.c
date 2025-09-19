@@ -801,10 +801,12 @@ uint32_t csf_read(song_t *csf, void * v_buffer, uint32_t bufsize)
 		// Handle eq
 		if (csf->mix_channels >= 2) {
 			eq_stereo(csf, csf->mix_buffer, count);
-			if (!(csf->mix_flags & SNDMIX_DIRECTTODISK)) normalize_stereo(csf, csf->mix_buffer, count << 1);
+			if (!(csf->mix_flags & SNDMIX_DIRECTTODISK))
+				normalize_stereo(csf, csf->mix_buffer, count);
 		} else {
 			eq_mono(csf, csf->mix_buffer, count);
-			if (!(csf->mix_flags & SNDMIX_DIRECTTODISK)) normalize_mono(csf, csf->mix_buffer, count);
+			if (!(csf->mix_flags & SNDMIX_DIRECTTODISK))
+				normalize_mono(csf, csf->mix_buffer, count);
 		}
 
 		mix_stat++;

@@ -79,21 +79,40 @@ static void eq_filter(eq_band *pbs, int32_t *buffer, uint32_t count)
 	}
 }
 
-void normalize_mono(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t count)
+/* I hate that these are here. */
+void normalize_mono(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t samples)
 {
-	for (uint32_t b = 0; b < count; b++)
+	uint32_t b;
+
+	if (audio_settings.master.left + audio_settings.master.right == 62) {
+		/* If the audio is already the max volume, do nothing. */
+		return;
+	} else if (audio_settings.master.left + audio_settings.master.right == 0) {
+		/* If we're muted, memset the buffer to zero. */
+		memset(buffer, 0, samples * 4);
+	} /* else... */
+
+	/* average the left/right channel values together */
+	for (b = 0; b < samples; b++)
 		buffer[b] = _muldiv(buffer[b], audio_settings.master.left + audio_settings.master.right, 62);
 }
 
-void normalize_stereo(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t count)
+void normalize_stereo(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t samples)
 {
-	uint32_t b = 0;
+	uint32_t b;
+	uint32_t size = samples * 2;
 
-	while (b < count) {
-		buffer[b] = _muldiv(buffer[b], audio_settings.master.left, 31);
-		b++;
-		buffer[b] = _muldiv(buffer[b], audio_settings.master.right, 31);
-		b++;
+	if (audio_settings.master.left + audio_settings.master.right == 62) {
+		/* If the audio is already the max volume, do nothing. */
+		return;
+	} else if (audio_settings.master.left + audio_settings.master.right == 0) {
+		/* If we're muted, memset the buffer to zero. */
+		memset(buffer, 0, size * 4);
+	} /* else... */
+
+	for (b = 0; b < size; b += 2) {
+		buffer[b]   = _muldiv(buffer[b],   audio_settings.master.left,  31);
+		buffer[b+1] = _muldiv(buffer[b+1], audio_settings.master.right, 31);
 	}
 }
 
