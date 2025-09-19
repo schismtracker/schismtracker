@@ -235,6 +235,14 @@ static void sdl3_pump_events(void)
 			schism_event.window.data.resized.height = e.window.data2;
 			events_push_event(&schism_event);
 			break;
+		case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:
+		case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN:
+			// ok, weirdly SDL 3 does NOT send this event when
+			// a window goes into fullscreen (even though it should,
+			// because the window obviously DOES get resized).
+			// so, fake it.
+			sdl3_video_fullscreen_cb();
+			break;
 		case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
 			// tell video.c about it
 			sdl3_display_scale_changed_cb();

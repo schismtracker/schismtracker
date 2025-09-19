@@ -561,6 +561,16 @@ static void sdl3_video_resize(unsigned int width, unsigned int height)
 	status.flags |= (NEED_UPDATE);
 }
 
+void sdl3_video_fullscreen_cb(void)
+{
+	int w, h;
+
+	// fake it til u make it
+	sdl3_GetWindowSize(video.window, &w, &h);
+
+	sdl3_video_resize(w, h);
+}
+
 static void yuv_pal_(unsigned int i, unsigned char rgb[3])
 {
 	uint32_t y, u, v;
