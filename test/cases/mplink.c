@@ -32,8 +32,7 @@ static song_t *create_subject(void)
 {
 	song_t *ret = csf_allocate();
 
-	for (int i = 0; test_pattern_length[i]; i++)
-	{
+	for (int i = 0; test_pattern_length[i]; i++) {
 		ret->patterns[i] = csf_allocate_pattern(test_pattern_length[i]);
 		ret->pattern_size[i] = test_pattern_length[i];
 	}
@@ -84,8 +83,7 @@ static testresult_t test_song_get_pattern_hook_impl(
 	// Assert
 	if (expected_pattern_number < 0) { /* expect failure */
 		ASSERT(result == 0);
-	}
-	else {
+	} else {
 		ASSERT(result == test_pattern_length[expected_pattern_number]);
 		ASSERT(pattern_number == expected_pattern_number);
 		ASSERT(row_number == expected_row_number);

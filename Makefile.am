@@ -702,8 +702,12 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(libs_asio)
 schismtracker_LDFLAGS = $(ldflags_macosx)
 
-### Automated testing -- some additional files get compiled, but
-### these are only linked into schismtrackertest.
+# Automated testing -- some additional files get compiled, but
+# these are only linked into schismtrackertest.
+#
+# TODO: Build schism itself as a static library. We can then
+# build separate entrypoints for both the regular program
+# AND the test suite.
 
 schismtrackertest_SOURCES = \
 	schism/main.c               \

@@ -105,8 +105,7 @@ int schism_test_main(int argc, char **argv)
 
 		if (strpbrk(test_case_name, "*?") != NULL) {
 			filter_expression = str_dup(test_case_name);
-		}
-		else {
+		} else {
 			// run individual test case -- used internally as part of batch processing
 			run_batch = 0;
 

@@ -30,12 +30,12 @@
 #define unlink _unlink
 #endif
 
+#define TEST_LIST_FILENAME TEST_TEMP_FILE_NAME_PREFIX ".lst"
+
 /* if you need a template that can change length, just pass strlen(template), no need to add
  * extra complexity to this function... (if it does NOT change length, pass it as a constant.
- * don't call strlen if you don't have to, because it can be expensive)
- *
- * (also this really should just return the file pointer itself ... lol) */
-int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *template, size_t template_length)
+ * don't call strlen if you don't have to, because it can be expensive) */
+FILE *test_temp_file2(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *template, size_t template_length)
 {
 	FILE *f;
 	size_t remaining;
@@ -44,16 +44,16 @@ int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *templ
 	memcpy(temp_file, TEST_TEMP_FILE_NAME_TEMPLATE, TEST_TEMP_FILE_NAME_LENGTH);
 
 	f = mkfstemp(temp_file);
-	if (f == NULL)
-		return 0;
+	if (!f)
+		return NULL;
 
 	remaining = 0;
 
-	if (template != NULL) {
+	if (template) {
 		const char *buf = template;
 		remaining = template_length;
 
-		while (1) {
+		for (;;) {
 			int num_written = fwrite(buf, 1, remaining, f);
 
 			if (num_written <= 0)
@@ -63,10 +63,8 @@ int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *templ
 		}
 	}
 
-	fclose(f);
-
-	if (remaining == 0) {
-		FILE *log = fopen("test_tmp.lst", "ab");
+	if (!remaining) {
+		FILE *log = fopen(TEST_LIST_FILENAME, "ab");
 
 		if (log) {
 			fputs(temp_file, log);
@@ -74,32 +72,51 @@ int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *templ
 			fclose(log);
 		}
 
-		return 1;
+		return f;
 	} else {
+		fclose(f);
 		// TODO still need to make an os_remove, or a
 		// dmoz_path_remove, or whatever
 		remove(temp_file);
-		return 0;
+		return NULL;
 	}
+}
+
+/* this is simply a wrapper around test_temp_file2 now. */
+int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *template, size_t template_length)
+{
+	FILE *fp = test_temp_file2(temp_file, template, template_length);
+	if (!fp)
+		return 0;
+
+	fclose(fp);
+	return 1;
 }
 
 void test_temp_files_cleanup(void)
 {
-	FILE *log = fopen("test_tmp.lst", "rb");
+	FILE *log = fopen(TEST_LIST_FILENAME, "rb");
 
 	if (log) {
-		char temp_file[50];
+		char temp_file[TEST_TEMP_FILE_NAME_LENGTH];
 
-		while (1) {
-			if (fgets(temp_file, 50, log) == NULL)
+		for (;;) {
+			/* read in the filename */
+			if (fread(temp_file, 1, TEST_TEMP_FILE_NAME_LENGTH - 1, log) != (TEST_TEMP_FILE_NAME_LENGTH - 1))
+				break;
+			/* we should always have a newline next */
+			if (fgetc(log) != '\n')
 				break;
 
-			// Silly fgets, includes the line terminator
-			temp_file[strcspn(temp_file, "\r\n")] = '\0';
+			temp_file[TEST_TEMP_FILE_NAME_LENGTH - 1] = 0;
 
-			unlink(temp_file);
+			/* portability: `unlink` -> `remove` */
+			remove(temp_file);
 		}
 
-		unlink("test_tmp.lst");
+		/* close, then remove */
+		fclose(log);
+
+		remove(TEST_LIST_FILENAME);
 	}
 }

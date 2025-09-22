@@ -24,11 +24,19 @@
 #ifndef SCHISM_TEST_TEMPFILE_H_
 #define SCHISM_TEST_TEMPFILE_H_
 
+#include "headers.h"
+
 /* must end with the literal string "XXXXXX" (mkfstemp) */
-#define TEST_TEMP_FILE_NAME_TEMPLATE "test_tmp_XXXXXX"
+#define TEST_TEMP_FILE_NAME_PREFIX "test_tmp"
+#define TEST_TEMP_FILE_NAME_TEMPLATE TEST_TEMP_FILE_NAME_PREFIX "_XXXXXX"
 #define TEST_TEMP_FILE_NAME_LENGTH (sizeof(TEST_TEMP_FILE_NAME_TEMPLATE))
 
-int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *template, size_t template_length);
+/* creates a file, closes it, and fills 'temp_file' with the name. */
+int test_temp_file(char temp_file[TEST_TEMP_FILE_NAME_LENGTH],
+	const char *template, size_t template_length);
+/* like test_temp_file, but returns the file pointer. */
+FILE *test_temp_file2(char temp_file[TEST_TEMP_FILE_NAME_LENGTH],
+	const char *template, size_t template_length);
 void test_temp_files_cleanup(void);
 
 #endif /* SCHISM_TEST_TEMPFILE_H_ */

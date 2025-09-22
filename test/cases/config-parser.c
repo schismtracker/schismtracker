@@ -21,8 +21,7 @@ static const char test_config_file_content[] =
 \
 		int init_result = cfg_init(&cfg, test_config_file); \
 \
-		if (init_result < 0) \
-		{ \
+		if (init_result < 0) { \
 			test_log_printf("cfg_init(\"%s\") failed with result %d\n", test_config_file, init_result); \
 			RETURN_FAIL; \
 		} \

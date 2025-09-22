@@ -192,11 +192,8 @@ testresult_t test_slurp_stdio(void)
 	FILE *stdfp;
 	testresult_t r;
 
-	REQUIRE(test_temp_file(tmp, expected_result, ARRAY_SIZE(expected_result) - 1));
-
-	/* XXX we open the file, close the file, and then reopen it.
-	 * this is a source for race conditions ... */
-	stdfp = fopen(tmp, "rb");
+	stdfp = test_temp_file2(tmp, expected_result, ARRAY_SIZE(expected_result) - 1);
+	REQUIRE(stdfp);
 
 	REQUIRE(slurp_stdio(&fp, stdfp) == SLURP_OPEN_SUCCESS);
 
