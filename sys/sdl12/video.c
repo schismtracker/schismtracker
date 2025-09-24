@@ -23,12 +23,6 @@
 #define NATIVE_SCREEN_WIDTH             640
 #define NATIVE_SCREEN_HEIGHT            400
 
-/* should be the native res of the display (set once and never again)
- * assumes the user starts schism from the desktop and that the desktop
- * is the native res (or at least something with square pixels) */
-static int display_native_x = -1;
-static int display_native_y = -1;
-
 #include "headers.h"
 #include "it.h"
 #include "osdefs.h"
@@ -246,14 +240,6 @@ static int sdl12_video_startup(void)
 		center_enabled = 1;
 	}
 
-	/* get monitor native res (assumed to be user's desktop res)
-	 * first time we start video */
-	if (display_native_x < 0 || display_native_y < 0) {
-		const SDL_VideoInfo* info = sdl12_GetVideoInfo();
-		display_native_x = info->current_w;
-		display_native_y = info->current_h;
-	}
-
 	sdl12_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef SCHISM_MACOSX
 /* apple/macs use a bundle; this overrides their nice pretty icon */
@@ -385,8 +371,6 @@ static int sdl12_video_startup(void)
 
 static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int sdlflags)
 {
-	int want_fixed = cfg_video_want_fixed;
-
 	if (video.desktop.doublebuf)
 		sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
 	if (video.desktop.fullscreen) {
@@ -395,10 +379,6 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 	} else {
 		sdlflags |= SDL_RESIZABLE;
 	}
-
-	/* XXX: what's this doing? isn't it just a no-op? */
-	if (want_fixed == -1 && best_resolution(w, h))
-		want_fixed = 0;
 
 	video_calculate_clip(w, h, &video.clip.x, &video.clip.y, &video.clip.w, &video.clip.h);
 
@@ -419,36 +399,18 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 		
 		/* if using swsurface, get a surface the size of the whole native monitor res
 		 * to avoid issues with weirdo display modes
-		 * get proper aspect ratio and surface of correct size */
+		 *
+		 * FIXME this seems to have issues toggling random hardware/fullscreen values,
+		 * and it actually grabs the mouse cursor and doesn't ungrab when going out
+		 * of fullscreen. */
 		if (video.desktop.fullscreen && video.desktop.swsurface) {
-			
-			double ar = NATIVE_SCREEN_WIDTH / (double) NATIVE_SCREEN_HEIGHT;
-			// ar = 4.0 / 3.0; want_fixed = 1; // uncomment for 4:3 fullscreen
-			
-			// get maximum size that can be this AR
-			if ((display_native_y * ar) > display_native_x) {
-				video.clip.h = display_native_x / ar;
-				video.clip.w = display_native_x;
-			} else {
-				video.clip.h = display_native_y;
-				video.clip.w = display_native_y * ar;
-			}	
-						
-			// clip to size (i.e. letterbox if necessary)
-			video.clip.x = (display_native_x - video.clip.w) / 2;
-			video.clip.y = (display_native_y - video.clip.h) / 2;
-			
-			// get a surface the size of the whole screen @ native res
-			w = display_native_x;
-			h = display_native_y;
-			
-			/* if we don't care about getting the right aspect ratio,
-			 * sod letterboxing and just get a surface the size of the entire display */
-			if (!want_fixed) {
-				video.clip.w = display_native_x;
-				video.clip.h = display_native_y;
-				video.clip.x = 0;
-				video.clip.y = 0;
+			const SDL_VideoInfo* info = sdl12_GetVideoInfo();
+
+			if (info) {
+				w = info->current_w;
+				h = info->current_h;
+				video_calculate_clip(w, h,
+					&video.clip.x, &video.clip.y, &video.clip.w, &video.clip.h);
 			}
 		}
 
