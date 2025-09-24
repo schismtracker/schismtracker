@@ -230,7 +230,9 @@ static int sdl12_video_startup(void)
 	SDL_Rect **modes;
 	int i, x = -1, y = -1;
 
-	// center the window on startup by default; this is what the SDL 2 backend does...
+	/* center the window on startup by default.
+	 * this is what the SDL 2 backend does, and it's annoying to
+	 * have the window pop up in the top left every time. */
 	int center_enabled = 0;
 	if (!getenv("SDL_VIDEO_WINDOW_POS")) {
 		setenv("SDL_VIDEO_WINDOW_POS", "center", 1);
@@ -344,6 +346,9 @@ static int sdl12_video_startup(void)
 	/* This call actually creates the surface. */
 	video_fullscreen(video.desktop.fullscreen);
 
+	if (!video.surface)
+		return 0;
+
 	/* We have to unset this variable, because otherwise
 	 * SDL will re-center the window every time it's
 	 * resized. */
@@ -414,10 +419,7 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 		video.surface = sdl12_SetVideoMode(w, h,
 			video.desktop.bpp, sdlflags);
 	}
-	if (!video.surface) {
-		perror("SDL_SetVideoMode");
-		exit(EXIT_FAILURE);
-	}
+
 	return video.surface;
 }
 
