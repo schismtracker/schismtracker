@@ -42,13 +42,6 @@ static void (SDLCALL *sdl12_LockAudio)(void);
 static void (SDLCALL *sdl12_UnlockAudio)(void);
 static void (SDLCALL *sdl12_PauseAudio)(int);
 
-static void (SDLCALL *sdl12_SetError)(const char *fmt, ...);
-static char * (SDLCALL *sdl12_GetError)(void);
-static void (SDLCALL *sdl12_ClearError)(void);
-
-static int (SDLCALL *sdl12_AudioInit)(const char *driver);
-static void (SDLCALL *sdl12_AudioQuit)(void);
-
 static char *(SDLCALL *sdl12_AudioDriverName)(char *buf, int maxlen);
 
 /* ---------------------------------------------------------- */
@@ -141,9 +134,6 @@ static int sdl12_audio_driver_info_init(void)
 {
 	int atleast_one_loaded = 0;
 
-	/* save the last error before we screw with our crap */
-	const char *cached_err = sdl12_GetError();
-
 	for (size_t i = 0; i < ARRAY_SIZE(drivers); i++) {
 		/* don't check twice for a driver */
 		if (drivers[i].exists) {
@@ -156,9 +146,6 @@ static int sdl12_audio_driver_info_init(void)
 			sdl12_audio_quit_driver();
 		}
 	}
-
-	/* restore the last error */
-	sdl12_SetError("%s", cached_err);
 
 	return atleast_one_loaded;
 }
@@ -306,13 +293,6 @@ static int sdl12_audio_load_syms(void)
 	SCHISM_SDL12_SYM(LockAudio);
 	SCHISM_SDL12_SYM(UnlockAudio);
 	SCHISM_SDL12_SYM(PauseAudio);
-
-	SCHISM_SDL12_SYM(SetError);
-	SCHISM_SDL12_SYM(GetError);
-	SCHISM_SDL12_SYM(ClearError);
-
-	SCHISM_SDL12_SYM(AudioInit);
-	SCHISM_SDL12_SYM(AudioQuit);
 
 	SCHISM_SDL12_SYM(AudioDriverName);
 
