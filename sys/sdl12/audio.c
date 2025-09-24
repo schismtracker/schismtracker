@@ -49,6 +49,8 @@ static void (SDLCALL *sdl12_ClearError)(void);
 static int (SDLCALL *sdl12_AudioInit)(const char *driver);
 static void (SDLCALL *sdl12_AudioQuit)(void);
 
+static char *(SDLCALL *sdl12_AudioDriverName)(char *buf, int maxlen);
+
 /* ---------------------------------------------------------- */
 /* drivers */
 
@@ -59,8 +61,21 @@ static int sdl12_audio_init_driver_cb(SCHISM_UNUSED void *p)
 
 static int sdl12_audio_init_driver(const char *name)
 {
-	return util_call_func_with_envvar(sdl12_audio_init_driver_cb, NULL,
+	char buf[256];
+
+	int x = util_call_func_with_envvar(sdl12_audio_init_driver_cb, NULL,
 		"SDL_AUDIODRIVER", name);
+
+	/* verify that our driver is the one we want */
+	sdl12_AudioDriverName(buf, sizeof(buf));
+	if (x >= 0) {
+		if (!strcmp(buf, name))
+			return 0;
+
+		/* the driver we requested could not be init */
+		sdl12_QuitSubSystem(SDL_INIT_AUDIO);
+	}
+	return -1;
 }
 
 static void sdl12_audio_quit_driver(void)
@@ -82,8 +97,11 @@ static struct sdl12_audio_driver_info {
 	 * These in the same order as the bootstrap array in
 	 * src/audio/SDL_audio.c to hopefully mimic SDL's original
 	 * behavior. */
+	{"pipewire", 0},  // Pipewire (sdl2-compat)
+	{"pulseaudio", 0},// PulseAudio (sdl2-compat)
 	{"pulse", 0},     // PulseAudio
 	{"alsa", 0},      // ALSA
+	{"jack", 0},      // JACK (sdl2-compat)
 	{"sndio", 0},     // OpenBSD sndio
 	{"netbsd", 0},    // NetBSD audio
 	{"openbsd", 0},   // OpenBSD audio (outdated)
@@ -95,6 +113,7 @@ static struct sdl12_audio_driver_info {
 	{"arts", 0},      // artsc audio (?)
 	{"esd", 0},       // Enlightened Sound Daemon
 	{"nas", 0},       // Network Audio System
+	{"wasapi", 0},    // Win32 WASAPI (sdl2-compat)
 	{"dsound", 0},    // Win32 DirectSound
 #ifdef SCHISM_WIN32
 	{"waveout", 0},   // Win32 WaveOut
@@ -126,29 +145,20 @@ static int sdl12_audio_driver_info_init(void)
 	const char *cached_err = sdl12_GetError();
 
 	for (size_t i = 0; i < ARRAY_SIZE(drivers); i++) {
-		// Clear any error before starting so we
-		// can check for one later
-		sdl12_ClearError();
-
-		if (sdl12_AudioInit(drivers[i].driver))
+		/* don't check twice for a driver */
+		if (drivers[i].exists) {
+			atleast_one_loaded = 1;
 			continue;
+		}
 
-		// Make sure there was no error initializing the
-		// driver. (SDL sets the error here to "No available
-		// audio device", but we'll use a more broad test
-		// instead)
-		const char *audio_init_err = sdl12_GetError();
-		if (audio_init_err && *audio_init_err)
-			continue;
-
-		// Ok, the driver was bootstrapped successfully, now
-		// punt and save that info.
-		sdl12_AudioQuit();
-		atleast_one_loaded = drivers[i].exists = 1;
+		if (!sdl12_audio_init_driver(drivers[i].driver)) {
+			atleast_one_loaded = drivers[i].exists = 1;
+			sdl12_audio_quit_driver();
+		}
 	}
 
 	/* restore the last error */
-	sdl12_SetError(cached_err);
+	sdl12_SetError("%s", cached_err);
 
 	return atleast_one_loaded;
 }
@@ -303,6 +313,8 @@ static int sdl12_audio_load_syms(void)
 
 	SCHISM_SDL12_SYM(AudioInit);
 	SCHISM_SDL12_SYM(AudioQuit);
+
+	SCHISM_SDL12_SYM(AudioDriverName);
 
 	return 0;
 }
