@@ -668,6 +668,7 @@ static void sdl12_pump_events(void)
 	sdl12_PumpEvents();
 
 	while (sdl12_PeepEvents(&e, 1, SDL_GETEVENT, SDL_ALLEVENTS) == 1) {
+		static int32_t mx, my; /* mouse X and Y coordinates (sigh) */
 		schism_event_t schism_event;
 
 		memset(&schism_event, 0, sizeof(schism_event));
@@ -729,8 +730,8 @@ static void sdl12_pump_events(void)
 			break;
 		case SDL_MOUSEMOTION:
 			schism_event.type = SCHISM_MOUSEMOTION;
-			schism_event.motion.x = e.motion.x;
-			schism_event.motion.y = e.motion.y;
+			mx = schism_event.motion.x = e.motion.x;
+			my = schism_event.motion.y = e.motion.y;
 			events_push_event(&schism_event);
 			break;
 		case SDL_MOUSEBUTTONDOWN:
@@ -758,8 +759,8 @@ static void sdl12_pump_events(void)
 				schism_event.button.state = !!e.button.state;
 				//schism_event.button.clicks = e.button.clicks;
 
-				schism_event.button.x = e.button.x;
-				schism_event.button.y = e.button.y;
+				mx = schism_event.button.x = e.button.x;
+				my = schism_event.button.y = e.button.y;
 				events_push_event(&schism_event);
 				break;
 			case SDL_BUTTON_WHEELDOWN:
@@ -767,8 +768,6 @@ static void sdl12_pump_events(void)
 				schism_event.type = SCHISM_MOUSEWHEEL;
 				schism_event.wheel.x = 0;
 				schism_event.wheel.y = (e.button.button == SDL_BUTTON_WHEELDOWN) ? -1 : 1;
-				unsigned int mx, my;
-				video_get_mouse_coordinates(&mx, &my);
 				schism_event.wheel.mouse_x = mx;
 				schism_event.wheel.mouse_y = my;
 				events_push_event(&schism_event);
