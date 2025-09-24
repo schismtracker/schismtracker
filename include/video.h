@@ -138,6 +138,12 @@ void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned
 void video_refresh(void); /* flips vgamem (this is a horribly stupid name) */
 SCHISM_HOT void video_blit(void);
 
+void video_translate_calculate(uint32_t vx, uint32_t vy,
+	/* clip rect */
+	uint32_t cx, uint32_t cy, uint32_t cw, uint32_t ch,
+	/* return */
+	unsigned int *x, unsigned int *y);
+
 /* ------------------------------------------------------------------------ */
 /* screensaver */
 

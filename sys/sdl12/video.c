@@ -524,27 +524,13 @@ SCHISM_HOT static void sdl12_video_blit(void)
 
 static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
 {
-	vx = MAX(vx, video.clip.x);
-	vx -= video.clip.x;
+	/* callback~! */
 
-	vy = MAX(vy, video.clip.y);
-	vy -= video.clip.y;
-
-	vx = MIN(vx, video.clip.w);
-	vy = MIN(vy, video.clip.h);
-
-	vx *= NATIVE_SCREEN_WIDTH;
-	vy *= NATIVE_SCREEN_HEIGHT;
-	vx /= (video.draw.width - (video.draw.width - video.clip.w));
-	vy /= (video.draw.height - (video.draw.height - video.clip.h));
-
-	if (video_mousecursor_visible() && (video.mouse.x != vx || video.mouse.y != vy))
-		status.flags |= SOFTWARE_MOUSE_MOVED;
-
-	video.mouse.x = vx;
-	video.mouse.y = vy;
-	if (x) *x = vx;
-	if (y) *y = vy;
+	video_translate_calculate(vx, vy,
+		/* clip rect */
+		video.clip.x, video.clip.y, video.clip.w, video.clip.h,
+		/* return pointers */
+		x, y);
 }
 
 static void sdl12_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
@@ -604,12 +590,6 @@ static void sdl12_video_set_hardware(int hardware)
 	// recreate the surface with the same size...
 	video_resize(video.draw.width, video.draw.height);
 	video_report();
-}
-
-static void sdl12_video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
-{
-	*x = video.mouse.x;
-	*y = video.mouse.y;
 }
 
 static int sdl12_video_have_menu(void)
@@ -813,7 +793,6 @@ const schism_video_backend_t schism_video_backend_sdl12 = {
 	.is_input_grabbed = sdl12_video_is_input_grabbed,
 	.set_input_grabbed = sdl12_video_set_input_grabbed,
 	.warp_mouse = sdl12_video_warp_mouse,
-	.get_mouse_coordinates = sdl12_video_get_mouse_coordinates,
 	.have_menu = sdl12_video_have_menu,
 	.toggle_menu = sdl12_video_toggle_menu,
 	.blit = sdl12_video_blit,

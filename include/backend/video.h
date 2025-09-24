@@ -53,7 +53,6 @@ typedef struct {
 	int (*is_input_grabbed)(void);
 	void (*set_input_grabbed)(int enabled);
 	void (*warp_mouse)(unsigned int x, unsigned int y);
-	void (*get_mouse_coordinates)(unsigned int *x, unsigned int *y);
 	int (*have_menu)(void);
 	void (*toggle_menu)(int on);
 	void (*blit)(void);

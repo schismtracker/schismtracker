@@ -657,22 +657,28 @@ static void sdl3_video_toggle_screensaver(int enabled)
 static void sdl3_video_translate(unsigned int vx, unsigned int vy,
 	unsigned int *x, unsigned int *y)
 {
-	if (video_mousecursor_visible()
-		&& (video.mouse.x != vx || video.mouse.y != vy))
-		status.flags |= SOFTWARE_MOUSE_MOVED;
+	uint32_t cx, cy, cw, ch;
 
-	vx *= NATIVE_SCREEN_WIDTH;
-	vy *= NATIVE_SCREEN_HEIGHT;
-	vx /= (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
-	vy /= (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
+	switch (video.type) {
+	case VIDEO_TYPE_SURFACE:
+		cx = video.u.s.clip.x;
+		cy = video.u.s.clip.y;
+		cw = video.u.s.clip.w;
+		ch = video.u.s.clip.h;
+		break;
+	case VIDEO_TYPE_RENDERER:
+		cx = cy = 0;
+		cw = (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
+		ch = (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
+		break;
+	}
+	
 
-	vx = MIN(vx, NATIVE_SCREEN_WIDTH - 1);
-	vy = MIN(vy, NATIVE_SCREEN_HEIGHT - 1);
-
-	video.mouse.x = vx;
-	video.mouse.y = vy;
-	if (x) *x = vx;
-	if (y) *y = vy;
+	video_translate_calculate(vx, vy,
+		/* clip rect */
+		cx, cy, cw, ch,
+		/* return pointers */
+		x, y);
 }
 
 static void sdl3_video_get_logical_coordinates(int x, int y, int *trans_x,
@@ -712,12 +718,6 @@ static void sdl3_video_set_input_grabbed(int enabled)
 static void sdl3_video_warp_mouse(unsigned int x, unsigned int y)
 {
 	sdl3_WarpMouseInWindow(video.window, x, y);
-}
-
-static void sdl3_video_get_mouse_coordinates(unsigned int *x, unsigned int *y)
-{
-	*x = video.mouse.x;
-	*y = video.mouse.y;
 }
 
 /* -------------------------------------------------- */
@@ -1030,7 +1030,6 @@ const schism_video_backend_t schism_video_backend_sdl3 = {
 	.is_input_grabbed = sdl3_video_is_input_grabbed,
 	.set_input_grabbed = sdl3_video_set_input_grabbed,
 	.warp_mouse = sdl3_video_warp_mouse,
-	.get_mouse_coordinates = sdl3_video_get_mouse_coordinates,
 	.have_menu = sdl3_video_have_menu,
 	.toggle_menu = sdl3_video_toggle_menu,
 	.blit = sdl3_video_blit,
