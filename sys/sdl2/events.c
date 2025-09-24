@@ -404,12 +404,14 @@ static void sdl2_pump_events(void)
 	sdl2_PumpEvents();
 
 	while (sdl2_PeepEvents(&e, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) == 1) {
-		schism_event_t schism_event = {0};
+		schism_event_t schism_event;
 
 #ifdef SCHISM_CONTROLLER
 		if (!sdl2_controller_sdlevent(&e))
 			continue;
 #endif
+
+		memset(&schism_event, 0, sizeof(schism_event));
 
 		switch (e.type) {
 		case SDL_QUIT:

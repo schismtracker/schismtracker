@@ -189,12 +189,14 @@ static void sdl3_pump_events(void)
 	SDL_Event e;
 
 	while (sdl3_PollEvent(&e)) {
-		schism_event_t schism_event = {0};
+		schism_event_t schism_event;
 
 #ifdef SCHISM_CONTROLLER
 		if (!sdl3_controller_sdlevent(&e))
 			continue;
 #endif
+
+		memset(&schism_event, 0, sizeof(schism_event));
 
 		switch (e.type) {
 		case SDL_EVENT_QUIT:

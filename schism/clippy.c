@@ -113,9 +113,12 @@ static void _clippy_copy_to_sys(int cb)
 
 static void _string_paste(SCHISM_UNUSED int cb, const char *cbptr)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
+
 	event.type = SCHISM_EVENT_PASTE;
 	event.clipboard.clipboard = str_dup(cbptr);
+
 	events_push_event(&event);
 }
 

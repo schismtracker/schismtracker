@@ -1060,7 +1060,8 @@ void midi_received_cb(struct midi_port *src, const unsigned char *data, uint32_t
 
 void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocity)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
 
 	event.type = SCHISM_EVENT_MIDI_NOTE;
 	event.midi_note.mnstatus = mnstatus;
@@ -1073,7 +1074,8 @@ void midi_event_note(enum midi_note mnstatus, int channel, int note, int velocit
 
 void midi_event_controller(int channel, int param, int value)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
 
 	event.type = SCHISM_EVENT_MIDI_CONTROLLER,
 	event.midi_controller.value = value;
@@ -1085,7 +1087,8 @@ void midi_event_controller(int channel, int param, int value)
 
 void midi_event_program(int channel, int value)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
 
 	event.type = SCHISM_EVENT_MIDI_PROGRAM;
 	event.midi_program.value = value;
@@ -1096,7 +1099,8 @@ void midi_event_program(int channel, int value)
 
 void midi_event_aftertouch(int channel, int value)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
 
 	event.type = SCHISM_EVENT_MIDI_AFTERTOUCH;
 	event.midi_aftertouch.value = value;
@@ -1107,7 +1111,8 @@ void midi_event_aftertouch(int channel, int value)
 
 void midi_event_pitchbend(int channel, int value)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
 
 	event.type = SCHISM_EVENT_MIDI_PITCHBEND;
 	event.midi_pitchbend.value = value;
@@ -1118,7 +1123,8 @@ void midi_event_pitchbend(int channel, int value)
 
 void midi_event_system(int argv, int param)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
 
 	event.type = SCHISM_EVENT_MIDI_SYSTEM;
 	event.midi_system.argv = argv;
@@ -1129,7 +1135,8 @@ void midi_event_system(int argv, int param)
 
 void midi_event_tick(void)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
 
 	event.type = SCHISM_EVENT_MIDI_TICK;
 
@@ -1138,7 +1145,8 @@ void midi_event_tick(void)
 
 void midi_event_sysex(const unsigned char *data, uint32_t len)
 {
-	schism_event_t event = {0};
+	schism_event_t event;
+	memset(&event, 0, sizeof(event));
 
 	event.type = SCHISM_EVENT_MIDI_SYSEX;
 	event.midi_sysex.len = len;
