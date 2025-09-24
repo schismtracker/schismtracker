@@ -111,9 +111,6 @@ static struct video_cf {
 	struct {
 		uint32_t x, y, w, h;
 	} clip;
-	struct {
-		uint32_t x, y;
-	} mouse;
 
 	uint32_t pal[256];
 } video;

@@ -126,6 +126,10 @@ static SDL_PixelFormat (SDLCALL *sdl3_GetPixelFormatForMasks)(int bpp, Uint32 Rm
 
 static void sdl3_video_setup(int quality);
 
+struct rect {
+	uint32_t x, y, w, h;
+};
+
 static struct {
 	SDL_Window *window;
 
@@ -143,9 +147,7 @@ static struct {
 		} r;
 		struct {
 			SDL_Surface *surface;
-			struct {
-				uint32_t x, y, w, h;
-			} clip;
+			struct rect clip;
 		} s;
 	} u; /* "type data" */
 
@@ -157,17 +159,9 @@ static struct {
 
 	float scale;
 
-	struct {
-		unsigned int x, y;
-	} mouse;
-
-	struct {
-		/* TODO: need to save the state of the menu bar or else
-		 * these will be wrong if it's toggled while in fullscreen */
-		int width, height;
-
-		int x, y;
-	} saved;
+	/* TODO: need to save the state of the menu bar or else
+	 * these will be wrong if it's toggled while in fullscreen */
+	struct rect saved;
 
 	int fullscreen;
 
@@ -535,8 +529,13 @@ static void sdl3_video_fullscreen(int new_fs_flag)
 
 	if (video.fullscreen) {
 		if (have_menu) {
-			sdl3_GetWindowSize(video.window, &video.saved.width, &video.saved.height);
-			sdl3_GetWindowPosition(video.window, &video.saved.x, &video.saved.y);
+			int w, h, x, y;
+			sdl3_GetWindowSize(video.window, &w, &h);
+			sdl3_GetWindowPosition(video.window, &x, &y);
+			video.saved.w = w;
+			video.saved.h = h;
+			video.saved.x = x;
+			video.saved.y = y;
 		}
 		sdl3_SetWindowFullscreen(video.window, 1);
 		if (have_menu)
@@ -546,7 +545,7 @@ static void sdl3_video_fullscreen(int new_fs_flag)
 		if (have_menu) {
 			/* the menu must be toggled first here */
 			video_toggle_menu(1);
-			sdl3_SetWindowSize(video.window, video.saved.width, video.saved.height);
+			sdl3_SetWindowSize(video.window, video.saved.w, video.saved.h);
 			sdl3_SetWindowPosition(video.window, video.saved.x, video.saved.y);
 		}
 		set_icon(); /* XXX is this necessary */
@@ -575,7 +574,7 @@ void sdl3_video_fullscreen_cb(void)
 
 int sdl3_video_text_input_active(void)
 {
-	return sdl3_TextInputActive(video.window);
+	return !!sdl3_TextInputActive(video.window);
 }
 
 static void yuv_pal_(unsigned int i, unsigned char rgb[3])

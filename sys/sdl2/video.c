@@ -158,10 +158,6 @@ static struct {
 	int width, height;
 
 	struct {
-		unsigned int x, y;
-	} mouse;
-
-	struct {
 		/* TODO: need to save the state of the menu bar or else
 		 * these will be wrong if it's toggled while in fullscreen */
 		int width, height, x, y;
