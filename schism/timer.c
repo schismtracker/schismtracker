@@ -287,6 +287,8 @@ int timer_init(void)
 	if (!backend)
 		return 0;
 
+	oneshot_data_pending = NULL;
+
 #ifdef USE_THREADS
 	timer_oneshot_mutex = mt_mutex_create();
 	timer_oneshot_cond = mt_cond_create();
@@ -294,29 +296,13 @@ int timer_init(void)
 	timer_oneshot_thread_cancelled = 0;
 	timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func,
 		"Timer oneshot thread", NULL);
-
-	if (!timer_oneshot_thread)
 #endif
-	{
-		/* this block should be run if we EITHER
-		 *  1. have no threading support compiled
-		 *   OR
-		 *  2. starting up the thread failed */
-
-	}
-
-	oneshot_data_pending = NULL;
 
 	return 1;
 }
 
 void timer_quit(void)
 {
-	if (backend) {
-		backend->quit();
-		backend = NULL;
-	}
-
 #ifdef USE_THREADS
 	// Kill the oneshot stuff if needed.
 	if (timer_oneshot_thread) {
@@ -331,4 +317,9 @@ void timer_quit(void)
 		timer_oneshot_mutex = NULL;
 	}
 #endif
+
+	if (backend) {
+		backend->quit();
+		backend = NULL;
+	}
 }
