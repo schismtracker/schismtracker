@@ -568,10 +568,12 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////////
+/* ------------------------------------------------------------------------ */
 
 static SDLMod (SDLCALL *sdl12_GetModState)(void);
-static int (SDLCALL *sdl12_PollEvent)(SDL_Event *event);
+static void (SDLCALL *sdl12_PumpEvents)(void);
+static int (SDLCALL *sdl12_PeepEvents)(SDL_Event *events, int numevents,
+	SDL_eventaction action, Uint32 mask);
 static Uint8 (SDLCALL *sdl12_EventState)(Uint8 type, int state);
 static Uint8 (SDLCALL *sdl12_GetAppState)(void);
 
@@ -663,7 +665,9 @@ static void sdl12_pump_events(void)
 	}
 #endif
 
-	while (sdl12_PollEvent(&e)) {
+	sdl12_PumpEvents();
+
+	while (sdl12_PeepEvents(&e, 1, SDL_GETEVENT, SDL_ALLEVENTS) == 1) {
 		schism_event_t schism_event;
 
 		memset(&schism_event, 0, sizeof(schism_event));
@@ -813,7 +817,8 @@ static void sdl12_pump_events(void)
 static int sdl12_events_load_syms(void)
 {
 	SCHISM_SDL12_SYM(GetModState);
-	SCHISM_SDL12_SYM(PollEvent);
+	SCHISM_SDL12_SYM(PumpEvents);
+	SCHISM_SDL12_SYM(PeepEvents);
 	SCHISM_SDL12_SYM(EventState);
 	SCHISM_SDL12_SYM(GetAppState);
 

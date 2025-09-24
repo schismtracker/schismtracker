@@ -34,7 +34,9 @@ static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
 static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
 static SDL_Keymod (SDLCALL *sdl3_GetModState)(void) = NULL;
-static bool (SDLCALL *sdl3_PollEvent)(SDL_Event *event) = NULL;
+
+static int (SDLCALL *sdl3_PeepEvents)(SDL_Event *events, int numevents, SDL_EventAction action, Uint32 minType, Uint32 maxType);
+static void (SDLCALL *sdl3_PumpEvents)(void);
 
 static void (SDLCALL *sdl3_free)(void *) = NULL;
 
@@ -188,7 +190,9 @@ static void sdl3_pump_events(void)
 {
 	SDL_Event e;
 
-	while (sdl3_PollEvent(&e)) {
+	sdl3_PumpEvents();
+
+	while (sdl3_PeepEvents(&e, 1, SDL_GETEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST) == 1) {
 		schism_event_t schism_event;
 
 #ifdef SCHISM_CONTROLLER
@@ -375,7 +379,8 @@ static int sdl3_events_load_syms(void)
 	SCHISM_SDL3_SYM(QuitSubSystem);
 
 	SCHISM_SDL3_SYM(GetModState);
-	SCHISM_SDL3_SYM(PollEvent);
+	SCHISM_SDL3_SYM(PumpEvents);
+	SCHISM_SDL3_SYM(PeepEvents);
 #ifdef SCHISM_WIN32
 	SCHISM_SDL3_SYM(SetWindowsMessageHook);
 #endif
