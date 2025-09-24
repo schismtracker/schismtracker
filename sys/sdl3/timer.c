@@ -28,6 +28,9 @@
 
 #include "init.h"
 
+/* apparently this has a memleak, and it's taking over valgrind output. */
+#define SDL3_ENABLE_TIMER_WITH_MEMLEAK 1
+
 static void (SDLCALL *sdl3_Delay)(uint32_t ms) = NULL;
 static void (SDLCALL *sdl3_DelayNS)(uint64_t ns) = NULL;
 
@@ -59,6 +62,7 @@ static void sdl3_timer_msleep(uint32_t ms)
 //////////////////////////////////////////////////////////////////////////////
 // oneshot timer
 
+#ifdef SDL3_ENABLE_TIMER_WITH_MEMLEAK
 struct _sdl3_timer_oneshot_curry {
 	void (*callback)(void *param);
 	void *param;
@@ -88,6 +92,7 @@ static int sdl3_timer_oneshot(uint32_t interval, void (*callback)(void *param),
 
 	return !!id;
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -131,6 +136,7 @@ const schism_timer_backend_t schism_timer_backend_sdl3 = {
 	.usleep = sdl3_timer_usleep,
 	.msleep = sdl3_timer_msleep,
 
-	// this has a memleak?  --paper
-	//.oneshot = sdl3_timer_oneshot,
+#ifdef SDL3_ENABLE_TIMER_WITH_MEMLEAK
+	.oneshot = sdl3_timer_oneshot,
+#endif
 };

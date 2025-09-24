@@ -229,7 +229,7 @@ static void sdl12_video_fullscreen(int tri)
 	video_report();
 }
 
-static void sdl12_video_setup(int interpolation)
+static void sdl12_video_setup(SCHISM_UNUSED int interpolation)
 {
 	// nothing
 }
@@ -533,12 +533,6 @@ static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int
 		x, y);
 }
 
-static void sdl12_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
-{
-	if (trans_x) *trans_x = x;
-	if (trans_y) *trans_y = y;
-}
-
 static int sdl12_video_is_hardware(void) {
 	return !!(video.surface->flags & SDL_HWSURFACE);
 }
@@ -789,7 +783,6 @@ const schism_video_backend_t schism_video_backend_sdl12 = {
 	.is_screensaver_enabled = sdl12_video_is_screensaver_enabled,
 	.toggle_screensaver = sdl12_video_toggle_screensaver,
 	.translate = sdl12_video_translate,
-	.get_logical_coordinates = sdl12_video_get_logical_coordinates,
 	.is_input_grabbed = sdl12_video_is_input_grabbed,
 	.set_input_grabbed = sdl12_video_set_input_grabbed,
 	.warp_mouse = sdl12_video_warp_mouse,

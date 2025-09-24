@@ -153,11 +153,11 @@ static int sdl2_timer_init(void)
 	if (!sdl2_timer64_load_syms())
 		sdl2_have_timer64 = 1;
 
-	sdl2_performance_frequency = sdl2_GetPerformanceFrequency();
-	sdl2_performance_start = sdl2_GetPerformanceCounter();
-
 	if (sdl2_InitSubSystem(SDL_INIT_TIMER) < 0)
 		return 0;
+
+	sdl2_performance_frequency = sdl2_GetPerformanceFrequency();
+	sdl2_performance_start = sdl2_GetPerformanceCounter();
 
 	return 1;
 }

@@ -909,7 +909,7 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED unsigned int lflag
 	{
 		/* Okay, now we have non-standard, Modplug extensions.
 		 * These are in RIFF format, without any word-alignment. */
-		iff_chunk_t text, midi;
+		iff_chunk_t text = {0}, midi = {0};
 
 		{
 			int xtpm = 0;

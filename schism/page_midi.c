@@ -280,7 +280,7 @@ static void midi_page_draw_portlist(void)
 	ct = midi_engine_port_count();
 
 	/* make sure this stuff doesn't overflow! */
-	if (ct > 13 && top_midi_port + 13 >= ct)
+	if (ct > 13 && top_midi_port + 13 >= (int)ct)
 		top_midi_port = ct - 13;
 
 	current_port = MIN(current_port, ct - 1);

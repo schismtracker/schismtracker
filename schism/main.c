@@ -635,6 +635,10 @@ SCHISM_NORETURN static void event_loop(void)
 						break;
 					case KEY_DRAG:
 						kk.on_target = (widget_find_xy(kk.x, kk.y) == *selected_widget);
+						break;
+					/* silence warning */
+					case KEY_RELEASE:
+						break;
 					}
 					if (se.type == SCHISM_MOUSEBUTTONUP && downtrip) {
 						downtrip = 0;
@@ -986,8 +990,6 @@ void schism_crash(void (*log_cb)(FILE *f, void *userdata), void *userdata)
 
 			/* Instrument data is probably more important? */
 			if (!(current_song->flags & SONG_INSTRUMENTMODE)) {
-				int i;
-
 				/* look for any possible adlib samples; if we do have some,
 				 * we have to save as S3M .. */
 				for (i = 1; i <= MAX_SAMPLES; i++) {

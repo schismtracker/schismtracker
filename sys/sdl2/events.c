@@ -540,7 +540,8 @@ static void sdl2_pump_events(void)
 			schism_event.wheel.x = e.wheel.x;
 			schism_event.wheel.y = e.wheel.y;
 
-#if SDL_VERSION_ATLEAST(2, 26, 0) // TODO: this #if might not be necessary
+			/* XXX this smells fishy. */
+#if SDL_VERSION_ATLEAST(2, 26, 0)
 			if (wheel_have_mouse_coordinates) {
 				schism_event.wheel.mouse_x = e.wheel.mouseX;
 				schism_event.wheel.mouse_y = e.wheel.mouseY;

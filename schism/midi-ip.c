@@ -217,7 +217,6 @@ static int _ip_work(struct midi_provider *p)
 	struct timeval tv;
 	fd_set rfds;
 	int i, m;
-	int *tmp2, *tmp;
 	struct midi_port *q;
 	struct midi_ip *data;
 	ssize_t r;
@@ -252,12 +251,12 @@ static int _ip_work(struct midi_provider *p)
 	return 0;
 }
 
-static int _ip_start(struct midi_port *p)
+static int _ip_start(SCHISM_UNUSED struct midi_port *p)
 {
 	/* no-op */
 	return 1;
 }
-static int _ip_stop(struct midi_port *p)
+static int _ip_stop(SCHISM_UNUSED struct midi_port *p)
 {
 	/* no-op */
 	return 1;
@@ -419,6 +418,9 @@ void ip_midi_setports(int n)
 	if (status.flags & NO_NETWORK) return;
 
 	mip->num_ports = n;
+
+	/* is this still necessary? */
+	do_wake_main();
 }
 
 #else

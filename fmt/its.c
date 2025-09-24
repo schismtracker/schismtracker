@@ -116,7 +116,6 @@ static int it_read_sample_hdr(slurp_t *fp, struct it_sample *its)
 int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	struct it_sample its;
-	unsigned char title[25];
 
 	if (!it_read_sample_hdr(fp, &its))
 		return 0;

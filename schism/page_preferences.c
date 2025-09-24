@@ -266,7 +266,7 @@ static void save_config_now(void)
 	status_text_flash("Configuration saved");
 }
 
-void preferences_audio_driver_changed(const char *name)
+void preferences_audio_driver_changed(void)
 {
 	if (!page_total_widgets)
 		return;
@@ -289,7 +289,7 @@ void preferences_load_page(struct page *page)
 
 	/* initialize total num of widgets */
 	page_total_widgets = &page->total_widgets;
-	preferences_audio_driver_changed(song_audio_driver());
+	preferences_audio_driver_changed();
 
 	page->title = "Preferences (Shift-F5)";
 	page->draw_const = preferences_draw_const;

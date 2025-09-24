@@ -791,7 +791,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 			uint64_t poshi = 0, poslo = 0; \
 	\
 			for (x = 0; x < r->width; x++) { \
-				uint32_t scanlength, i, co; \
+				uint32_t scanlength; \
 				int##bits##_t min = INT##bits##_MAX, max = INT##bits##_MIN; \
 	\
 				poslo += step; \

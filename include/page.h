@@ -459,7 +459,7 @@ void pattern_editor_length_edit(void);
 void update_current_order(void);
 
 /* page_preferences.c */
-void preferences_audio_driver_changed(const char *name);
+void preferences_audio_driver_changed(void);
 
 /* menu.c */
 void menu_show(void);

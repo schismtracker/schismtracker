@@ -49,7 +49,7 @@ int fmt_sbi_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	file->description = "Sound Blaster Instrument";
-	file->title = strn_dup(data + 4, 32);
+	file->title = strn_dup((char *)data + 4, 32);
 	file->type = TYPE_SAMPLE_EXTD | TYPE_INST_OTHER; //huh?
 	return 1;
 }

@@ -69,9 +69,6 @@ int video_width(void);
 int video_height(void);
 void video_resize(unsigned int width, unsigned int height);
 
-/* what the hell? */
-void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y);
-
 /* ------------------------------------------------------------------------ */
 /* fullscreen */
 
@@ -108,7 +105,7 @@ int video_is_hardware(void);
 int video_startup(void);
 void video_shutdown(void);
 void video_report(void); /* logs some information about the output */
-const char *video_driver_name(void); /* */
+const char *video_driver_name(void); /* "windows" or something similar */
 
 /* ------------------------------------------------------------------------ */
 /* mousecursor configuration */
@@ -119,8 +116,7 @@ enum video_mousecursor_shape {
 };
 
 void video_mousecursor(int z); /* takes in the MOUSE_* enum from it.h (why is it there?) */
-int video_mousecursor_visible(void);
-void video_mousecursor_changed(void); // used for each backend to do optimizations
+SCHISM_PURE int video_mousecursor_visible(void);
 void video_set_mousecursor_shape(enum video_mousecursor_shape shape);
 
 void video_warp_mouse(unsigned int x, unsigned int y);
@@ -167,8 +163,8 @@ SCHISM_HOT void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t
  *
  * NOTE: `bpp` here is BYTES per pixel, not bits per pixel. */
 SCHISM_HOT void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256]);
-SCHISM_HOT void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height);
-SCHISM_HOT void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, int width, int height);
+SCHISM_HOT void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], uint32_t width, uint32_t height);
+SCHISM_HOT void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, uint32_t width, uint32_t height);
 
 /* scaled blit, according to user settings (lots of params here) */
 SCHISM_HOT void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h);

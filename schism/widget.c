@@ -395,15 +395,15 @@ void widget_numentry_change_value(struct widget *w, int32_t new_value)
 	status.flags |= NEED_UPDATE;
 }
 
-static inline SCHISM_ALWAYS_INLINE int32_t fast_pow10(int32_t n)
+static inline SCHISM_ALWAYS_INLINE uint32_t fast_pow10(uint32_t n)
 {
-	static const int32_t tens[] = {
+	static const uint32_t tens[] = {
 		1,     10,     100,     1000,
 		10000, 100000, 1000000, 10000000
 	};
 
 	/* use our cache if we can to avoid buffer overrun */
-	return (n < (int32_t)ARRAY_SIZE(tens)) ? tens[n] : i_pow(10, n);
+	return (n < ARRAY_SIZE(tens)) ? tens[n] : i_pow(10, n);
 }
 
 int widget_numentry_handle_text(struct widget *w, const char *text)
@@ -422,16 +422,17 @@ int widget_numentry_handle_text(struct widget *w, const char *text)
 	value = w->d.numentry.value;
 
 	if (w->d.numentry.reverse) {
-		int i;
+		size_t i;
 
 		for (i = 0; i < len; i++) {
 			value *= 10;
 			value += text[0] - '0';
 		}
 	} else {
-		int pos = *(w->d.numentry.cursor_pos), n = 0;
+		int pos = *(w->d.numentry.cursor_pos);
+		size_t n;
 
-		for (; n < len && pos < w->width; n++, pos++) {
+		for (n = 0; n < len && pos < w->width; n++, pos++) {
 			int32_t pow10_of_pos = fast_pow10(w->width - 1 - pos);
 
 			/* isolate our digit and subtract it */
@@ -619,7 +620,8 @@ void widget_draw_widget(struct widget *w, int selected)
 		}
 		break;
 	case WIDGET_LISTBOX: {
-		uint32_t i, o;
+		int32_t i;
+		uint32_t o;
 		uint32_t size = w->d.listbox.size();
 
 		draw_fill_chars(w->x, w->y, w->x + w->width - 1, w->y + w->height - 1, DEFAULT_FG, 0);
@@ -628,8 +630,6 @@ void widget_draw_widget(struct widget *w, int selected)
 			break; /* wat */
 
 		for (o = w->d.listbox.top, i = 0; o < size && i < w->height; i++, o++) {
-			int fg, bg;
-
 			if (o == w->d.listbox.focus) {
 				if (w == &ACTIVE_WIDGET) {
 					fg = 0;

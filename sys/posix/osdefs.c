@@ -42,7 +42,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 	pid_t pid;
 	char *argv[256]; /* more than enough */
 	int r = 0;
-	int i;
+	size_t i;
 
 	{
 		/* convert the variable args list */

@@ -230,14 +230,11 @@ void Fmdrv_Init(song_t *csf, int32_t mixfreq)
 // count, like csf_create_stereo_mix, is in samples
 void Fmdrv_Mix(song_t *csf, uint32_t count)
 {
-	uint32_t sz;
 	uint32_t vu_max[OPL_CHANNELS];
 	uint32_t i;
 
 	if (!csf->opl_fm_active)
 		return;
-
-	sz = count * 2;
 
 	/*
 	static int counter = 0;
@@ -258,7 +255,6 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
 	// and do the panning here.
 	if (csf->multi_write) {
-		uint32_t j;
 		int32_t *buffers[OPL_CHANNELS] = {0};
 
 		for (i = 0; i < OPL_CHANNELS; i++) {
@@ -273,7 +269,6 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	} else {
 		/* updated this to be able to work with the mixing buffer
 		 * directly  --paper */
-		uint32_t j;
 		int32_t *buffers[OPL_CHANNELS] = {0};
 
 		for (i = 0; i < OPL_CHANNELS; i++) {

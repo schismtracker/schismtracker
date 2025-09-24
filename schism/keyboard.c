@@ -42,17 +42,17 @@ static const char *note_names_up[12] = {
 	"F#", "G-", "G#", "A-", "A#", "B-"
 };
 
-static const char note_names_short_up[12] = "cCdDefFgGaAb";
+SCHISM_NONSTRING static const char note_names_short_up[12] = "cCdDefFgGaAb";
 
 static const char *note_names_down[12] = {
 	"C-", "Db", "D-", "Eb", "E-", "F-",
 	"Gb", "G-", "Ab", "A-", "Bb", "B-"
 };
 
-static const char note_names_short_down[12] = "CdDeEFgGaAbB";
+SCHISM_NONSTRING static const char note_names_short_down[12] = "CdDeEFgGaAbB";
 
 static const char **note_names = note_names_up;
-static const char *note_names_short = note_names_short_up;
+SCHISM_NONSTRING static const char *note_names_short = note_names_short_up;
 
 /* --------------------------------------------------------------------- */
 
@@ -62,7 +62,7 @@ static int current_octave = 4;
 
 /* this is used in a couple of other places... maybe it should be in some
  * general-stuff file? */
-const char hexdigits[16] = "0123456789ABCDEF";
+SCHISM_NONSTRING const char hexdigits[16] = "0123456789ABCDEF";
 
 /* extra non-IT effects:
  *         '!' = volume '$' = keyoff

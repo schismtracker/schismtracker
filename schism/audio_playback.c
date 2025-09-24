@@ -194,7 +194,7 @@ static void audio_callback(uint8_t *stream, int len)
 {
 	uint32_t wasrow = current_song->row;
 	uint32_t waspat = current_song->current_order;
-	int i, n;
+	int n;
 
 	memset(stream, (audio_output_bits == 8) ? 0x80 : 0, len);
 
@@ -1678,7 +1678,7 @@ agh:
 	if (success) {
 		_audio_init_tail();
 		refresh_audio_device_list();
-		preferences_audio_driver_changed(driver_name);
+		preferences_audio_driver_changed();
 		return success;
 	}
 

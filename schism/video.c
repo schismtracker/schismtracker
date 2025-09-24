@@ -211,10 +211,11 @@ void video_mousecursor(int vis)
 	backend->mousecursor_changed();
 }
 
-/* -------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 /* mouse drawing */
 
-static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y, uint32_t mouseline[80], uint32_t mouseline_mask[80], unsigned int mouse_y)
+static void make_mouseline(unsigned int x, unsigned int v, unsigned int y,
+	uint32_t mouseline[80], uint32_t mouseline_mask[80], unsigned int mouse_y)
 {
 	const struct mouse_cursor *cursor = &cursors[video.mouse.shape];
 	uint32_t i;
@@ -225,8 +226,6 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 
 	memset(mouseline,      0, 80 * sizeof(*mouseline));
 	memset(mouseline_mask, 0, 80 * sizeof(*mouseline));
-
-	video_mousecursor_visible();
 
 	if (video_mousecursor_visible() != MOUSE_EMULATED
 		|| !video_is_focused()
@@ -283,7 +282,7 @@ static inline void make_mouseline(unsigned int x, unsigned int v, unsigned int y
 #define FIXED2INT(x) ((x) >> FIXED_BITS)
 #define FRAC(x) ((x) & FIXED_MASK)
 
-void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, int width, int height)
+void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, uint32_t width, uint32_t height)
 {
 	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
 
@@ -308,7 +307,7 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, s
 	pad = pitch - (width * bpp);
 	scalex = INT2FIXED(NATIVE_SCREEN_WIDTH-1) / width;
 	scaley = INT2FIXED(NATIVE_SCREEN_HEIGHT-1) / height;
-	for (y = 0, fixedy = 0; (y < height); y++, fixedy += scaley) {
+	for (y = 0, fixedy = 0; y < height; y++, fixedy += scaley) {
 		iny = FIXED2INT(fixedy);
 		if (iny != lasty) {
 			make_mouseline(mouseline_x, mouseline_v, iny, mouseline, mouseline_mask, video.mouse.y);
@@ -400,7 +399,7 @@ void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, s
 }
 
 /* Fast nearest neighbor blitter */
-void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], int width, int height)
+void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, uint32_t tpal[256], uint32_t width, uint32_t height)
 {
 	// at most 32-bits...
 	union {
@@ -418,7 +417,7 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	const int pad = (pitch - (width * bpp));
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
-	uint32_t y, last_scaled_y;
+	uint32_t y, last_scaled_y = 0 /* shut up gcc */;
 	uint64_t fixedy;
 
 	for (y = 0, fixedy = 0; y < height; y++, fixedy += scaley) {
@@ -427,8 +426,8 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 
 		const uint32_t scaled_y = fixedy >> 32;
 
-		// only scan again if we have to or if this the first scan
-		if (scaled_y != last_scaled_y || y == 0) {
+		// only scan again if we have to, or if this the first scan
+		if (y == 0 || scaled_y != last_scaled_y) {
 			make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, video.mouse.y);
 			switch (bpp) {
 			case 1:
@@ -522,7 +521,7 @@ void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 	unsigned char cv8backing[NATIVE_SCREEN_WIDTH];
 	uint32_t mouseline[80];
 	uint32_t mouseline_mask[80];
-	int y, x;
+	uint32_t y, x;
 
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
 		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, video.mouse.y);
@@ -819,11 +818,6 @@ void video_translate_calculate(uint32_t vx, uint32_t vy,
 void video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
 {
 	backend->translate(vx, vy, x, y);
-}
-
-void video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
-{
-	backend->get_logical_coordinates(x, y, trans_x, trans_y);
 }
 
 /* -------------------------------------------------- */

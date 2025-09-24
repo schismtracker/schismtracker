@@ -581,7 +581,9 @@ static schism_keymod_t sdl12_event_mod_state(void)
 }
 
 static uint8_t app_state = 0;
+#ifdef SCHISM_MACOS
 static uint8_t mouse_in_window = 0;
+#endif
 
 static void sdl12_pump_events(void)
 {
@@ -608,9 +610,9 @@ static void sdl12_pump_events(void)
 			if ((app_state & conv[i].mask) == (app_state_new & conv[i].mask))
 				continue;
 
-			schism_event_t e;
-			e.type = (app_state_new & conv[i].mask) ? conv[i].gain : conv[i].lost;
-			events_push_event(&e);
+			schism_event_t se;
+			se.type = (app_state_new & conv[i].mask) ? conv[i].gain : conv[i].lost;
+			events_push_event(&se);
 		}
 
 		app_state = app_state_new;
@@ -648,12 +650,12 @@ static void sdl12_pump_events(void)
 			mouseinwin = PtInRect(pos, &bounds);
 			if (mouse_in_window != mouseinwin) {
 				/* push the event */
-				schism_event_t e;
+				schism_event_t se;
 
-				e.type = (mouseinwin)
+				se.type = (mouseinwin)
 					? SCHISM_WINDOWEVENT_ENTER
 					: SCHISM_WINDOWEVENT_LEAVE;
-				events_push_event(&e);
+				events_push_event(&se);
 
 				mouse_in_window = mouseinwin;
 			}

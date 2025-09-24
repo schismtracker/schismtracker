@@ -273,7 +273,7 @@ void log_append_timestamp(int color, const char *text)
 	 * text at the same time */
 	memset(&dec, 0, sizeof(dec));
 
-	dec.in = text;
+	dec.in = (const uint8_t *)text;
 	dec.offset = 0;
 	dec.size = SIZE_MAX;
 

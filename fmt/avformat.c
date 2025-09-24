@@ -254,16 +254,16 @@ static int sample_fmt_to_sfflags(enum AVSampleFormat fmt, int channels, uint32_t
 
 static int avfmt_find_audio_stream(AVFormatContext *fmtctx)
 {
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < fmtctx->nb_streams; i++)
 		if (fmtctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
-			return i;
+			return (int)i;
 
 	return -1;
 }
 
-static int avfmt_read_to_sample(slurp_t *s, AVFormatContext *fmtctx, int astr, song_sample_t *smp)
+static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t *smp)
 {
 	int success = 0;
 	uint32_t flags;
@@ -452,8 +452,11 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 		if (ent) {
 			if (file)
 				file->title = str_dup(ent->value);
-			else if (smp)
-				strncpy(smp->name, ent->value, sizeof(smp->name));
+			else if (smp) {
+				/* do sizeof - 1 to silence gcc warning.
+				 * this is later fully memset in audio_loadsave.c */
+				strncpy(smp->name, ent->value, sizeof(smp->name) - 1);
+			}
 		}
 
 		if (file) {
@@ -474,7 +477,7 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 		file->smp_length = schism_avfmt_get_length_estimate(fmtctx, astr);
 	}
 
-	if (smp && !avfmt_read_to_sample(s, fmtctx, astr, smp))
+	if (smp && !avfmt_read_to_sample(fmtctx, astr, smp))
 		goto fail;
 
 	success = 1;

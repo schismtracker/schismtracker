@@ -1105,6 +1105,7 @@ CHARSET_VARIATION(internal)
 
 /* ----------------------------------------------------------------------- */
 
+#ifdef SCHISM_MACOS
 static size_t charset_nulterm_string_size(const void *in, charset_t inset)
 {
 	/* ugly */
@@ -1130,6 +1131,7 @@ static size_t charset_nulterm_string_size(const void *in, charset_t inset)
 
 	return decoder.offset;
 }
+#endif
 
 /* ----------------------------------------------------------------------- */
 

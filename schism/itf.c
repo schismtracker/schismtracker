@@ -310,7 +310,7 @@ static inline void draw_itfmap(void)
 			itfmap_pos = ptr - itfmap_chars;
 	}
 
-	if ((itfmap_pos >= 0) && (itfmap_pos < sizeof(itfmap_chars)) && (selected_item != ITFMAP))
+	if ((itfmap_pos >= 0) && (itfmap_pos < (int)sizeof(itfmap_chars)) && (selected_item != ITFMAP))
 		highlight_char = current_char;
 
 	for (n = 0; n < 240; n++) {

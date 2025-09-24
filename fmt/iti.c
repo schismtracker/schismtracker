@@ -109,7 +109,7 @@ static int load_it_notetrans(struct instrumentloader *ii, song_instrument_t *ins
 {
 	/* sample bits; made an array simply because it means it's expandible */
 	BITARRAY_DECLARE(smpbits, 256);
-	int n, m;
+	int n;
 
 	BITARRAY_ZERO(smpbits);
 

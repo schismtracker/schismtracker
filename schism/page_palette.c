@@ -156,7 +156,7 @@ static const char *palette_list_name_(uint32_t i)
 
 static int palette_list_toggled_(uint32_t i)
 {
-	return (i == current_palette_index);
+	return ((int)i == current_palette_index);
 }
 
 static void palette_list_activate_(void)

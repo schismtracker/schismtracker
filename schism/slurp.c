@@ -30,7 +30,6 @@
 #include "mem.h"
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename, size_t size);
-static int slurp_stdio_open_file_(slurp_t *t, FILE *fp);
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_stdio_tell_(slurp_t *t);
 static uint64_t slurp_stdio_length_(slurp_t *t);
@@ -418,7 +417,7 @@ static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 		return -1;
 
 	for (i = 0; i < ARRAY_SIZE(s->internal.sf2.data); i++) {
-		if (off < s->internal.sf2.data[i].len) {
+		if (off < (int64_t)s->internal.sf2.data[i].len) {
 			s->internal.sf2.current = i;
 			return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[i].off + off, SEEK_SET);
 		}
@@ -438,7 +437,7 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 {
 	size_t read = 0;
 
-	while (s->internal.sf2.current < (ARRAY_SIZE(s->internal.sf2.data) - 1)) {
+	while (s->internal.sf2.current < (int)(ARRAY_SIZE(s->internal.sf2.data) - 1)) {
 		int64_t off_current = slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
 		int64_t left = s->internal.sf2.data[s->internal.sf2.current].len - off_current;
 
@@ -449,7 +448,7 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 			break;
 
 		size_t tread = slurp_read(s->internal.sf2.src, (char *)data + read, left);
-		if (tread != left)
+		if (tread != (size_t)left)
 			return tread;
 
 		read += tread;

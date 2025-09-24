@@ -568,9 +568,9 @@ static void sdl2_video_resize(unsigned int width, unsigned int height)
 {
 	video.width = width;
 	video.height = height;
-	video_recalculate_fixed_width();
 	if (video.type == VIDEO_TYPE_SURFACE)
 		video.u.s.surface = sdl2_GetWindowSurface(video.window);
+	video_recalculate_fixed_width();
 	status.flags |= (NEED_UPDATE);
 }
 
@@ -678,44 +678,17 @@ static void sdl2_video_translate(unsigned int vx, unsigned int vy, unsigned int 
 		cw = (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
 		ch = (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
 		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+	default:
+		SCHISM_UNREACHABLE;
+		return;
 	}
-	
 
 	video_translate_calculate(vx, vy,
 		/* clip rect */
 		cx, cy, cw, ch,
 		/* return pointers */
 		x, y);
-}
-
-static void sdl2_video_get_logical_coordinates(int x, int y, int *trans_x, int *trans_y)
-{
-	if (!cfg_video_want_fixed || video.type == VIDEO_TYPE_SURFACE) {
-		*trans_x = x;
-		*trans_y = y;
-	} else {
-		float xx, yy;
-#if SDL2_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
-		if (sdl2_RenderWindowToLogical) {
-			sdl2_RenderWindowToLogical(video.u.r.renderer, x, y, &xx, &yy);
-		} else
-#endif
-		{
-			/* Alternative for older SDL versions. MIGHT work with high DPI */
-			float scale_x = 1, scale_y = 1;
-
-			sdl2_RenderGetScale(video.u.r.renderer, &scale_x, &scale_y);
-
-			xx = x - (video.width / 2) - (((float)cfg_video_want_fixed_width * scale_x) / 2);
-			yy = y - (video.height / 2) - (((float)cfg_video_want_fixed_height * scale_y) / 2);
-
-			xx /= (float)video.width * cfg_video_want_fixed_width;
-			yy /= (float)video.height * cfg_video_want_fixed_height;
-		}
-
-		*trans_x = (int)xx;
-		*trans_y = (int)yy;
-	}
 }
 
 /* -------------------------------------------------- */
@@ -1060,7 +1033,6 @@ const schism_video_backend_t schism_video_backend_sdl2 = {
 	.is_screensaver_enabled = sdl2_video_is_screensaver_enabled,
 	.toggle_screensaver = sdl2_video_toggle_screensaver,
 	.translate = sdl2_video_translate,
-	.get_logical_coordinates = sdl2_video_get_logical_coordinates,
 	.is_input_grabbed = sdl2_video_is_input_grabbed,
 	.set_input_grabbed = sdl2_video_set_input_grabbed,
 	.warp_mouse = sdl2_video_warp_mouse,

@@ -708,7 +708,7 @@ void midi_port_unregister(uint32_t num)
 
 	mt_mutex_lock(midi_port_mutex);
 
-	if (num >= 0 && num < port_alloc) {
+	if (num < port_alloc) {
 		struct midi_port *q = port_top[num];
 
 		if (q->disable) q->disable(q);
@@ -738,9 +738,9 @@ int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor)
 			i = ((*cursor)->num) + 1;
 		}
 
-		while (i >= 0 && i < port_alloc && !port_top[i]) i++;
+		while (i < port_alloc && !port_top[i]) i++;
 
-		if (i < 0 || i >= port_alloc) {
+		if (i >= port_alloc) {
 			*cursor = NULL;
 			mt_mutex_unlock(midi_port_mutex);
 			return 0;

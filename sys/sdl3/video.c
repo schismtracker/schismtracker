@@ -555,9 +555,9 @@ static void sdl3_video_resize(unsigned int width, unsigned int height)
 {
 	video.width = width;
 	video.height = height;
-	video_recalculate_fixed_width();
 	if (video.type == VIDEO_TYPE_SURFACE)
 		video.u.s.surface = sdl3_GetWindowSurface(video.window);
+	video_recalculate_fixed_width();
 	status.flags |= (NEED_UPDATE);
 }
 
@@ -671,30 +671,17 @@ static void sdl3_video_translate(unsigned int vx, unsigned int vy,
 		cw = (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
 		ch = (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
 		break;
+	case VIDEO_TYPE_UNINITIALIZED:
+	default:
+		SCHISM_UNREACHABLE;
+		return;
 	}
-	
 
 	video_translate_calculate(vx, vy,
 		/* clip rect */
 		cx, cy, cw, ch,
 		/* return pointers */
 		x, y);
-}
-
-static void sdl3_video_get_logical_coordinates(int x, int y, int *trans_x,
-	int *trans_y)
-{
-	if (cfg_video_want_fixed && video.type == VIDEO_TYPE_RENDERER) {
-		float xf, yf;
-
-		sdl3_RenderCoordinatesFromWindow(video.u.r.renderer, x, y, &xf, &yf);
-
-		*trans_x = (int)xf;
-		*trans_y = (int)yf;
-	} else {
-		*trans_x = x;
-		*trans_y = y;
-	}
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1026,7 +1013,6 @@ const schism_video_backend_t schism_video_backend_sdl3 = {
 	.is_screensaver_enabled = sdl3_video_is_screensaver_enabled,
 	.toggle_screensaver = sdl3_video_toggle_screensaver,
 	.translate = sdl3_video_translate,
-	.get_logical_coordinates = sdl3_video_get_logical_coordinates,
 	.is_input_grabbed = sdl3_video_is_input_grabbed,
 	.set_input_grabbed = sdl3_video_set_input_grabbed,
 	.warp_mouse = sdl3_video_warp_mouse,

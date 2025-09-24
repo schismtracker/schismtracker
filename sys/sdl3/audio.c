@@ -203,7 +203,7 @@ static void SDLCALL sdl3_audio_output_callback(void *userdata,
 	if (additional_amount <= 0)
 		return;
 
-	if (additional_amount > dev->buflen) {
+	if ((size_t)additional_amount > dev->buflen) {
 		dev->buf = mem_realloc(dev->buf, additional_amount);
 		dev->buflen = additional_amount;
 	}
@@ -229,7 +229,7 @@ static void SDLCALL sdl3_audio_input_callback(void *userdata,
 		return;
 
 	/* reallocate internal buffer if necessary */
-	if (additional_amount > dev->buflen) {
+	if ((size_t)additional_amount > dev->buflen) {
 		dev->buf = mem_realloc(dev->buf, additional_amount);
 		dev->buflen = additional_amount;
 	}

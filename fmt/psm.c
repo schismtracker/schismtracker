@@ -410,22 +410,22 @@ static int psm_read_pattern(iff_chunk_t *c, slurp_t *fp, song_t *song, int *sina
 		start = slurp_tell(fp);
 
 		while (slurp_tell(fp) + 3 - 2 < start + row_size - 2) {
-			/* c[0] == flags
-			 * c[1] == channel */
-			uint8_t c[2];
+			/* xx[0] == flags
+			 * xx[1] == channel */
+			uint8_t xx[2];
 			song_note_t *note;
 
-			if (slurp_read(fp, &c, sizeof(c)) != sizeof(c))
+			if (slurp_read(fp, xx, sizeof(xx)) != sizeof(xx))
 				return 0;
 
-			if (c[1] >= MAX_CHANNELS)
+			if (xx[1] >= MAX_CHANNELS)
 				continue;
 
-			*nchns = MAX(*nchns, c[1]);
+			*nchns = MAX(*nchns, xx[1]);
 
-			note = row + c[1];
+			note = row + xx[1];
 
-			if (c[0] & 0x80) {
+			if (xx[0] & 0x80) {
 				/* note */
 				int n = slurp_getc(fp);
 				if (n == EOF)
@@ -444,7 +444,7 @@ static int psm_read_pattern(iff_chunk_t *c, slurp_t *fp, song_t *song, int *sina
 				}
 			}
 
-			if (c[0] & 0x40) {
+			if (xx[0] & 0x40) {
 				int s = slurp_getc(fp);
 				if (s == EOF)
 					return 0;
@@ -452,7 +452,7 @@ static int psm_read_pattern(iff_chunk_t *c, slurp_t *fp, song_t *song, int *sina
 				note->instrument = s + 1;
 			}
 
-			if (c[0] & 0x20) {
+			if (xx[0] & 0x20) {
 				int v = slurp_getc(fp);
 				if (v == EOF)
 					return 0;
@@ -461,7 +461,7 @@ static int psm_read_pattern(iff_chunk_t *c, slurp_t *fp, song_t *song, int *sina
 				note->volparam = (MIN(v, 127) + 1) / 2;
 			}
 
-			if ((c[0] & 0x10) && !psm_import_effect(note, fp, *sinaria))
+			if ((xx[0] & 0x10) && !psm_import_effect(note, fp, *sinaria))
 				return 0;
 		}
 	}
@@ -812,12 +812,13 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			uint8_t xx[MAX_CHANNELS * 2];
 			uint32_t j;
 
-			SCHISM_RUNTIME_ASSERT(ppan_chunk.size >= subsong_channels * 2,
+			/* FIXME don't crash here? lol */
+			SCHISM_RUNTIME_ASSERT(ppan_chunk.size >= (uint32_t)subsong_channels * 2,
 				"PSM: PPAN chunk is too small");
 
 			slurp_seek(fp, ppan_chunk.offset, SEEK_SET);
 
-			if (slurp_read(fp, xx, subsong_channels * 2) != (subsong_channels * 2))
+			if (slurp_read(fp, xx, subsong_channels * 2) != (size_t)(subsong_channels * 2))
 				break;
 
 			for (j = 0; j < nchns; j++) {
@@ -1199,7 +1200,7 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 			while (slurp_tell(fp) <= start + size && row < nrows) {
 				int command = slurp_getc(fp);
 				int chan;
-				song_note_t *n;
+				song_note_t *nn;
 
 				if (command == 0 || command == EOF) {
 					row++;
@@ -1208,7 +1209,7 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 
 				chan = MIN(command & 31, nchans);
 
-				n = song->patterns[i] + (row * MAX_CHANNELS) + chan;
+				nn = song->patterns[i] + (row * MAX_CHANNELS) + chan;
 
 				if (command & 0x80) {
 					int note, instr;
@@ -1219,8 +1220,8 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					instr = slurp_getc(fp);
 					if (instr == EOF) break;
 
-					n->note = note + (3 * 12); /* 3 octaves up to adjust for c2freq */
-					n->instrument = instr;
+					nn->note = note + (3 * 12); /* 3 octaves up to adjust for c2freq */
+					nn->instrument = instr;
 				}
 
 				if (command & 0x40) {
@@ -1229,8 +1230,8 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					volume = slurp_getc(fp);
 					if (volume == EOF) break;
 
-					n->voleffect = VOLFX_VOLUME;
-					n->volparam = MIN(volume, 64);
+					nn->voleffect = VOLFX_VOLUME;
+					nn->volparam = MIN(volume, 64);
 				}
 
 				if (command & 0x20) {
@@ -1245,151 +1246,151 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
 					switch (effect) {
 					/* Volume Commands */
 					case 0x01: /* Fine Volume Slide Up */
-						n->effect = FX_VOLUMESLIDE;
-						n->param = (param << 4) | 0x0F;
+						nn->effect = FX_VOLUMESLIDE;
+						nn->param = (param << 4) | 0x0F;
 						break;
 					case 0x02: /* Volume Slide Up */
-						n->effect = FX_VOLUMESLIDE;
-						n->param = (param << 4) & 0xF0;
+						nn->effect = FX_VOLUMESLIDE;
+						nn->param = (param << 4) & 0xF0;
 						break;
 					case 0x03: /* Fine Volume Slide Down */
-						n->effect = FX_VOLUMESLIDE;
-						n->param = param | 0xF0;
+						nn->effect = FX_VOLUMESLIDE;
+						nn->param = param | 0xF0;
 						break;
 					case 0x04: /* Volume Slide Down */
-						n->effect = FX_VOLUMESLIDE;
-						n->param = param & 0x0F;
+						nn->effect = FX_VOLUMESLIDE;
+						nn->param = param & 0x0F;
 						break;
 
 					/* Portamento Commands */
 					case 0x0A: /* Fine Portamento Up */
-						n->effect = FX_PORTAMENTOUP;
-						n->param = param | 0xF0;
+						nn->effect = FX_PORTAMENTOUP;
+						nn->param = param | 0xF0;
 						break;
 					case 0x0B: /* Portamento Down */
-						n->effect = FX_PORTAMENTOUP;
-						n->param = param;
+						nn->effect = FX_PORTAMENTOUP;
+						nn->param = param;
 						break;
 					case 0x0C: /* Fine Portamento Down */
-						n->effect = FX_PORTAMENTODOWN;
-						n->param = param | 0xF0;
+						nn->effect = FX_PORTAMENTODOWN;
+						nn->param = param | 0xF0;
 						break;
 					case 0x0D: /* Portamento Down */
-						n->effect = FX_PORTAMENTODOWN;
-						n->param = param;
+						nn->effect = FX_PORTAMENTODOWN;
+						nn->param = param;
 						break;
 					case 0x0E: /* Tone Portamento */
-						n->effect = FX_TONEPORTAMENTO;
-						n->param = param;
+						nn->effect = FX_TONEPORTAMENTO;
+						nn->param = param;
 						break;
 					case 0x0F: /* Set Glissando Control */
-						n->effect = FX_SPECIAL;
-						n->param = 0x10 | (param & 0x0F);
+						nn->effect = FX_SPECIAL;
+						nn->param = 0x10 | (param & 0x0F);
 						break;
 					case 0x10: /* Tone Port+Vol Slide Up */
-						n->effect = FX_TONEPORTAVOL;
-						n->param = (param << 4);
+						nn->effect = FX_TONEPORTAVOL;
+						nn->param = (param << 4);
 						break;
 					case 0x11: /* Tone Port+Vol Slide Down */
-						n->effect = FX_TONEPORTAVOL;
-						n->param = (param & 0x0F);
+						nn->effect = FX_TONEPORTAVOL;
+						nn->param = (param & 0x0F);
 						break;
 
 					/* Vibrato Commands */
 					case 0x14: /* Vibrato */
-						n->effect = FX_VIBRATO;
-						n->param = param;
+						nn->effect = FX_VIBRATO;
+						nn->param = param;
 						break;
 					case 0x15: /* Set Vibrato Waveform */
-						n->effect = FX_SPECIAL;
-						n->param = (0x30 | (param & 0x0F));
+						nn->effect = FX_SPECIAL;
+						nn->param = (0x30 | (param & 0x0F));
 						break;
 					case 0x16: /* Vibrato+Vol Slide Up */
-						n->effect = FX_VIBRATOVOL;
-						n->param = (param << 4);
+						nn->effect = FX_VIBRATOVOL;
+						nn->param = (param << 4);
 						break;
 					case 0x17: /* Vibrato+Vol Slide Down */
-						n->effect = FX_VIBRATOVOL;
-						n->param = (param & 0x0F);
+						nn->effect = FX_VIBRATOVOL;
+						nn->param = (param & 0x0F);
 						break;
 
 					/* Tremolo Commands */
 					case 0x1E: /* Tremolo */
-						n->effect = FX_TREMOLO;
-						n->param = param;
+						nn->effect = FX_TREMOLO;
+						nn->param = param;
 						break;
 					case 0x1F: /* Set Tremolo Control */
-						n->effect = FX_SPECIAL;
-						n->param = 0x40 | (param & 0x0F);
+						nn->effect = FX_SPECIAL;
+						nn->param = 0x40 | (param & 0x0F);
 						break;
 
 					/* Sample Commands */
 					case 0x28: /* Sample Offset */
 						/* 3-byte offset, but we can only import the middle one */
-						n->effect = FX_OFFSET;
-						n->param = slurp_getc(fp);
+						nn->effect = FX_OFFSET;
+						nn->param = slurp_getc(fp);
 						slurp_seek(fp, 1, SEEK_CUR);
 						break;
 					case 0x29: /* Retrig Note */
-						n->effect = FX_RETRIG;
-						n->param = (param & 0x0F);
+						nn->effect = FX_RETRIG;
+						nn->param = (param & 0x0F);
 						break;
 					case 0x2A: /* Note Cut */
-						n->effect = FX_SPECIAL;
-						n->param = 0xC0;
+						nn->effect = FX_SPECIAL;
+						nn->param = 0xC0;
 						break;
 					case 0x2B: /* Note Delay */
-						n->effect = FX_SPECIAL;
-						n->param = (0xD0 | (param & 0x0F));
+						nn->effect = FX_SPECIAL;
+						nn->param = (0xD0 | (param & 0x0F));
 						break;
 
 					/* Pos. Change Commands */
 					case 0x32: /* Position Jump */
-						n->effect = FX_POSITIONJUMP;
-						n->param = param;
+						nn->effect = FX_POSITIONJUMP;
+						nn->param = param;
 						break;
 					case 0x33: /* Pattern Break */
-						n->effect = FX_PATTERNBREAK;
-						n->param = param;
+						nn->effect = FX_PATTERNBREAK;
+						nn->param = param;
 						break;
 					case 0x34: /* Jump Loop */
-						n->effect = FX_SPECIAL;
-						n->param = (0xB0 | (param & 0x0F));
+						nn->effect = FX_SPECIAL;
+						nn->param = (0xB0 | (param & 0x0F));
 						break;
 					case 0x35: /* Pattern Delay */
-						n->effect = FX_SPECIAL;
-						n->param = (0xE0 | (param & 0x0F));
+						nn->effect = FX_SPECIAL;
+						nn->param = (0xE0 | (param & 0x0F));
 						break;
 
 					/* Speed Change Cmds */
 					case 0x3C: /* Set Regular Speed */
-						n->effect = FX_SPEED;
-						n->param = param;
+						nn->effect = FX_SPEED;
+						nn->param = param;
 						break;
 					case 0x3D: /* Set BPM (Tempo) */
-						n->effect = FX_TEMPO;
-						n->param = param;
+						nn->effect = FX_TEMPO;
+						nn->param = param;
 						break;
 
 					/* Misc. Commands */
 					case 0x46: /* Arpeggio */
-						n->effect = FX_ARPEGGIO;
-						n->param = param;
+						nn->effect = FX_ARPEGGIO;
+						nn->param = param;
 						break;
 					case 0x47: /* Set Finetune */
-						n->effect = FX_SPECIAL;
-						n->param = (0x20 | (param & 0x0F));
+						nn->effect = FX_SPECIAL;
+						nn->param = (0x20 | (param & 0x0F));
 						break;
 					case 0x48: /* Set Balance */
 						/* openmpt handles this as panning, so that's what
 						 * I'm doing here as well. */
-						n->effect = FX_SPECIAL;
-						n->param = (0x80 | (param & 0x0F));
+						nn->effect = FX_SPECIAL;
+						nn->param = (0x80 | (param & 0x0F));
 						break;
 
 					default:
-						n->effect = FX_NONE;
-						n->param = param;
+						nn->effect = FX_NONE;
+						nn->param = param;
 						break;
 					}
 				}

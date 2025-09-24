@@ -54,15 +54,20 @@ char song_basename[SCHISM_NAME_MAX + 1];
 // replace any '\0' chars with spaces, mostly to make the string handling
 // much easier.
 
-static inline SCHISM_ALWAYS_INLINE void _fix_name(char *buf, size_t n)
+static inline SCHISM_ALWAYS_INLINE void _fix_name(char *buf, size_t max,
+	size_t realsize)
 {
 	size_t c;
 
-	for (c = 0; c < n; c++)
+	for (c = 0; c < max; c++)
 		if (!buf[c])
 			buf[c] = 0x20;
 
-	buf[n - 1] = 0;
+	/* completely destroy anything after the max; this works around issues
+	 * where someone deletes characters, runs into the \0, deletes it, and
+	 * then the REST of the string appears :) */
+	if (realsize > max)
+		memset(buf + max, 0, realsize - max);
 
 	/* kill the whitespace */
 	str_rtrim(buf);
@@ -72,19 +77,19 @@ static void _fix_names(song_t *qq)
 {
 	int n;
 
-	_fix_name(qq->title, 26);
+	_fix_name(qq->title, 26, sizeof(qq->title));
 
 	for (n = 1; n < MAX_SAMPLES; n++) {
-		_fix_name(qq->samples[n].name, 26);
-		_fix_name(qq->samples[n].filename, 13);
+		_fix_name(qq->samples[n].name, 26, sizeof(qq->samples[n].name));
+		_fix_name(qq->samples[n].filename, 13, sizeof(qq->samples[n].filename));
 	}
 
 	for (n = 1; n < MAX_INSTRUMENTS; n++) {
 		if (!qq->instruments[n])
 			continue;
 
-		_fix_name(qq->instruments[n]->name, 26);
-		_fix_name(qq->instruments[n]->filename, 13);
+		_fix_name(qq->instruments[n]->name, 26, sizeof(qq->instruments[n]->name));
+		_fix_name(qq->instruments[n]->filename, 13, sizeof(qq->instruments[n]->filename));
 	}
 }
 

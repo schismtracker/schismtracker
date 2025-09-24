@@ -844,7 +844,7 @@ static int dir_list_handle_text_input(const char *text)
 	return file_list_handle_text_input(text);
 }
 
-static inline int dir_list_handle_key(struct key_event * k, unsigned int width)
+static int dir_list_handle_key(struct key_event * k, unsigned int width)
 {
 	int new_dir = current_dir;
 

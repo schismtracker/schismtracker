@@ -590,7 +590,7 @@ static int pattern_selection_system_paste_modplug(const char *str, struct patter
 {
 	/* magic bytes and their respective effect mapping functions */
 	static const struct {
-		char magic[3];
+		SCHISM_NONSTRING char magic[3];
 		int (*map)(char f);
 	} fx_maps[] = {
 		{" IT", get_effect_number},
