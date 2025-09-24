@@ -47,6 +47,8 @@
 static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
 static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
+static bool (SDLCALL *sdl3_TextInputActive)(SDL_Window *window) = NULL;
+
 static const char *(SDLCALL *sdl3_GetCurrentVideoDriver)(void);
 static SDL_DisplayID (SDLCALL *sdl3_GetDisplayForWindow)(SDL_Window *window);
 static const SDL_DisplayMode *(SDLCALL *sdl3_GetCurrentDisplayMode)(SDL_DisplayID id);
@@ -571,6 +573,11 @@ void sdl3_video_fullscreen_cb(void)
 	sdl3_video_resize(w, h);
 }
 
+int sdl3_video_text_input_active(void)
+{
+	return sdl3_TextInputActive(video.window);
+}
+
 static void yuv_pal_(unsigned int i, unsigned char rgb[3])
 {
 	uint32_t y, u, v;
@@ -955,6 +962,8 @@ static int sdl3_video_load_syms(void)
 	SCHISM_SDL3_SYM(UnlockSurface);
 
 	SCHISM_SDL3_SYM(GetWindowDisplayScale);
+
+	SCHISM_SDL3_SYM(TextInputActive);
 
 	return 0;
 }
