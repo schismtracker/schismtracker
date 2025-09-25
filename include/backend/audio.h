@@ -25,7 +25,7 @@
 #define SCHISM_BACKEND_AUDIO_H_
 
 #include "../song.h"
-#include "backend/mt.h"
+#include "../mt.h"
 
 /* constants */
 
