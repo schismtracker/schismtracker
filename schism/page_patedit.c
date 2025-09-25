@@ -2278,7 +2278,13 @@ static void clipboard_copy(int honor_mute)
 		? snap_honor_mute(&clipboard, selection.first_channel-1)
 		: 0;
 
-	/* transfer to system where appropriate */
+	/* make ABSOLUTELY SURE the current selection is copied.
+	 * this SHOULD never have to be called, but if we do have to,
+	 * it resolves system-clipboard and built-in-clipboard getting
+	 * out of sync. */
+	pattern_selection_system_copyout();
+
+	/* then, transfer the selection to the clipboard. */
 	clippy_yank();
 
 	if (flag) {
