@@ -98,4 +98,48 @@ extern const schism_audio_backend_t schism_audio_backend_sdl2;
 extern const schism_audio_backend_t schism_audio_backend_sdl3;
 #endif
 
+struct schism_audio_device_simple_vtable {
+	// filled by the caller
+
+	// grab the current buffer
+	void *(*get_buffer)(schism_audio_device_t *dev, size_t *buflen);
+	// play!
+	int (*play)(schism_audio_device_t *dev);
+	// wait
+	int (*wait)(schism_audio_device_t *dev);
+};
+
+struct schism_audio_device_simple {
+	const struct schism_audio_device_simple_vtable *vtbl;
+
+	// -------------------------------------------------
+	// protected members (dont touch these)
+
+	mt_thread_t *thread;
+	volatile int cancelled;
+
+	mt_mutex_t *mutex;
+
+	int paused;
+
+	void (*callback)(uint8_t *stream, int len);
+};
+
+int audio_simple_init(schism_audio_device_t *dev_,
+	const struct schism_audio_device_simple_vtable *vtbl,
+	void (*callback)(uint8_t *stream, int len));
+void audio_simple_close(struct schism_audio_device_simple *dev);
+
+/* --- default lock implementation. */
+void audio_simple_lock(struct schism_audio_device_simple *dev);
+void audio_simple_unlock(struct schism_audio_device_simple *dev);
+void audio_simple_pause(struct schism_audio_device_simple *dev, int paused);
+
+// ---------------------------------------------------------------------------
+// forwarders!
+
+void audio_simple_device_lock(schism_audio_device_t *dev);
+void audio_simple_device_unlock(schism_audio_device_t *dev);
+void audio_simple_device_pause(schism_audio_device_t *dev, int paused);
+
 #endif /* SCHISM_BACKEND_AUDIO_H_ */

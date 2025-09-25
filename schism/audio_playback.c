@@ -31,6 +31,7 @@
 #include "config-parser.h"
 #include "mem.h"
 #include "str.h"
+#include "mt.h"
 
 #include "disko.h"
 #include "backend/audio.h"
@@ -52,8 +53,6 @@
 # define DEF_BUFFER_SIZE 1024
 #endif
 #define DEF_CHANNEL_LIMIT 128
-
-// ------------------------------------------------------------------------
 
 #define SMP_INIT (UINT_MAX - 1) /* for a click noise on init */
 
@@ -101,6 +100,8 @@ size_t audio_device_list_size = 0;
 
 static schism_audio_device_t *current_audio_device = NULL;
 
+static schism_audio_backend_t schism_audio_backend_dummy;
+
 // compiled backends
 static const schism_audio_backend_t *backends[] = {
 	// ordered by preference
@@ -127,6 +128,7 @@ static const schism_audio_backend_t *backends[] = {
 	/* all the way at the bottom... */
 	&schism_audio_backend_asio,
 #endif
+	&schism_audio_backend_dummy,
 	NULL
 };
 
@@ -332,7 +334,7 @@ static void _audio_create_drivers_list(void)
 	};
 	uint32_t drivers = 0;
 
-	struct _audio_driver disk = {.name = "disk"}, dummy = {.name = "dummy"};
+	//struct _audio_driver disk = {.name = "disk"}, dummy = {.name = "dummy"};
 
 	// Reset the drivers list
 	full_drivers.list = NULL;
@@ -356,12 +358,12 @@ static void _audio_create_drivers_list(void)
 				drivers |= DRIVER_PULSE;
 			} else if (!strcmp(n, "dummy")) {
 				drivers |= DRIVER_DUMMY;
-				dummy.backend = inited_backends[i];
-				continue;
+				//dummy.backend = inited_backends[i];
+				//continue;
 			} else if (!strcmp(n, "disk")) {
 				drivers |= DRIVER_DISK;
-				disk.backend = inited_backends[i];
-				continue;
+				//disk.backend = inited_backends[i];
+				//continue;
 			} else if (!strcmp(n, "winmm") || !strcmp(n, "directsound")) {
 				// Skip SDL 2 waveout driver; we have our own implementation
 				// and the SDL 2's driver seems to randomly want to hang on
@@ -392,8 +394,8 @@ static void _audio_create_drivers_list(void)
 		}
 	}
 
-	if (drivers & DRIVER_DISK)  full_drivers.list[full_drivers.size++] = disk;
-	if (drivers & DRIVER_DUMMY) full_drivers.list[full_drivers.size++] = dummy;
+	//if (drivers & DRIVER_DISK)  full_drivers.list[full_drivers.size++] = disk;
+	//if (drivers & DRIVER_DUMMY) full_drivers.list[full_drivers.size++] = dummy;
 }
 
 int audio_driver_count(void)
@@ -1797,3 +1799,280 @@ void song_initialise(void)
 	current_song->mix_flags |= SNDMIX_MUTECHNMODE;
 }
 
+// ---------------------------------------------------------------------------
+// thing for simple threaded audio devices.
+//
+// TODO: allow the 'simple' struct to NOT be the first member of the
+// device structure :)
+
+static int simple_thread_func_(void *userdata)
+{
+	struct schism_audio_device_simple *dev = userdata;
+
+	while (!dev->cancelled) {
+		void *buf;
+		size_t buflen;
+
+		buf = dev->vtbl->get_buffer((schism_audio_device_t *)dev, &buflen);
+		if (!buf)
+			return 0; /* what? */
+
+		if (dev->paused) {
+			memset(buf, 0, buflen);
+		} else {
+			mt_mutex_lock(dev->mutex);
+			dev->callback(buf, buflen);
+			mt_mutex_unlock(dev->mutex);
+		}
+
+		dev->vtbl->play((schism_audio_device_t *)dev);
+		dev->vtbl->wait((schism_audio_device_t *)dev);
+	}
+
+	return 0;
+}
+
+int audio_simple_init(schism_audio_device_t *dev_,
+	const struct schism_audio_device_simple_vtable *vtbl,
+	void (*callback)(uint8_t *stream, int len))
+{
+	struct schism_audio_device_simple *dev = (void *)dev_;
+
+	memset(dev, 0, sizeof(*dev));
+
+	dev->vtbl = vtbl;
+
+	dev->callback = callback;
+
+	dev->mutex = mt_mutex_create();
+	if (!dev->mutex)
+		return -1;
+
+	/* START! */
+	dev->thread = mt_thread_create(simple_thread_func_,
+		/* XXX include the name of the driver */
+		"Audio thread",
+		dev);
+	if (!dev->thread) {
+		mt_mutex_delete(dev->mutex);
+		return -1;
+	}
+
+	return 0;
+}
+
+void audio_simple_close(struct schism_audio_device_simple *dev)
+{
+	if (dev->thread) {
+		dev->cancelled = 1;
+		mt_thread_wait(dev->thread, NULL);
+	}
+
+	if (dev->mutex)
+		mt_mutex_delete(dev->mutex);
+}
+
+/* --- default lock implementation. */
+void audio_simple_lock(struct schism_audio_device_simple *dev)
+{
+	mt_mutex_lock(dev->mutex);
+}
+
+void audio_simple_unlock(struct schism_audio_device_simple *dev)
+{
+	mt_mutex_unlock(dev->mutex);
+}
+
+void audio_simple_pause(struct schism_audio_device_simple *dev, int paused)
+{
+	mt_mutex_lock(dev->mutex);
+	dev->paused = !!paused;
+	mt_mutex_unlock(dev->mutex);
+}
+
+// ---------------------------------------------------------------------------
+// forwarders!
+
+void audio_simple_device_lock(schism_audio_device_t *dev)
+{
+	audio_simple_lock((struct schism_audio_device_simple *)dev);
+}
+
+void audio_simple_device_unlock(schism_audio_device_t *dev)
+{
+	audio_simple_unlock((struct schism_audio_device_simple *)dev);
+}
+
+void audio_simple_device_pause(schism_audio_device_t *dev, int paused)
+{
+	audio_simple_pause((struct schism_audio_device_simple *)dev, paused);
+}
+
+// ---------------------------------------------------------------------------
+// hand-rolled dummy audio driver (i.e. we no longer rely on SDL's)
+
+struct schism_audio_device {
+	struct schism_audio_device_simple simple;
+
+	/* slab memory buffer */
+	void *buf;
+	int buflen;
+
+	/* microseconds to sleep */
+	int64_t us;
+
+	/* ehhhhh */
+	int64_t start;
+};
+
+static int dummy_init(void)
+{
+	/* always available */
+	return 1;
+}
+
+static void dummy_quit(void)
+{
+}
+
+static int dummy_driver_count(void)
+{
+	return 1;
+}
+
+static const char *dummy_driver_name(int i)
+{
+	switch (i) {
+	case 0: return "dummy";
+	}
+
+	return NULL;
+}
+
+static uint32_t dummy_device_count(SCHISM_UNUSED uint32_t flags)
+{
+	/* none */
+	return 0;
+}
+
+static const char *dummy_device_name(SCHISM_UNUSED uint32_t id)
+{
+	return NULL;
+}
+
+static int dummy_driver_init(const char *driver)
+{
+	return (!strcmp(driver, "dummy")) ? 0 : -1;
+}
+
+static void dummy_driver_quit(void)
+{
+	/* nothing */
+}
+
+/* ------------------------------------------------------------------------ */
+
+static void *dummy_simple_get_buffer(schism_audio_device_t *dev, size_t *buflen)
+{
+	dev->start = timer_ticks_us();
+	*buflen = dev->buflen;
+	return dev->buf;
+}
+
+static int dummy_simple_play(schism_audio_device_t *dev)
+{
+	return 1; /* :) */
+}
+
+static int dummy_simple_wait(schism_audio_device_t *dev)
+{
+	int64_t stime = ((int64_t)timer_ticks_us() - dev->start);
+
+	if (stime >= dev->us)
+		return 0; /* don't have to sleep at all */
+
+	/* sleep for the time left */
+	timer_usleep(dev->us - stime);
+	return 1;
+}
+
+static const struct schism_audio_device_simple_vtable dummy_vtbl = {
+	dummy_simple_get_buffer,
+	dummy_simple_play,
+	dummy_simple_wait
+};
+
+/* ------------------------------------------------------------------------ */
+
+static schism_audio_device_t *dummy_open_device(uint32_t id,
+	const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+{
+	int64_t us;
+	size_t buflen;
+	schism_audio_device_t *dev;
+
+	if (id != AUDIO_BACKEND_DEFAULT)
+		return NULL;
+
+	/* time to sleep */
+	us = desired->samples;
+	us *= 1000000;
+	us /= desired->freq;
+
+	if (us < 0)
+		return NULL; /* nope */
+
+	buflen = desired->samples;
+	buflen *= desired->bits / 8;
+	buflen *= desired->channels;
+
+	if (buflen > INT_MAX)
+		return NULL; /* wgat */
+
+	dev = mem_calloc(1, sizeof(*dev));
+
+	dev->buflen = buflen;
+	dev->buf = mem_alloc(dev->buflen);
+
+	dev->us = us;
+
+	dev->simple.vtbl = &dummy_vtbl;
+
+	if (audio_simple_init(dev, &dummy_vtbl, desired->callback)) {
+		free(dev->buf);
+		free(dev);
+		return NULL;
+	}
+
+	/* copy it all verbatim */
+	memcpy(obtained, desired, sizeof(schism_audio_spec_t));
+
+	return dev;
+}
+
+static void dummy_close_device(schism_audio_device_t *dev)
+{
+	audio_simple_close(&dev->simple);
+	free(dev->buf);
+	free(dev);
+}
+
+static schism_audio_backend_t schism_audio_backend_dummy = {
+	.init = dummy_init,
+	.quit = dummy_quit,
+
+	.driver_count = dummy_driver_count,
+	.driver_name = dummy_driver_name,
+
+	.device_count = dummy_device_count,
+	.device_name = dummy_device_name,
+
+	.init_driver = dummy_driver_init,
+	.quit_driver = dummy_driver_quit,
+
+	.open_device = dummy_open_device,
+	.close_device = dummy_close_device,
+	.lock_device = audio_simple_device_lock,
+	.unlock_device = audio_simple_device_unlock,
+	.pause_device = audio_simple_device_pause,
+};
