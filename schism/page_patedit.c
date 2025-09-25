@@ -1296,6 +1296,9 @@ static void normalise_block_selection(void)
 		selection.first_row = selection.last_row;
 		selection.last_row = n;
 	}
+
+	/* :/ */
+	pattern_selection_system_copyout();
 }
 
 static void shift_selection_begin(void)
@@ -2271,10 +2274,9 @@ static void clipboard_copy(int honor_mute)
 		(selection.last_channel - selection.first_channel) + 1,
 		(selection.last_row - selection.first_row) + 1);
 
-	flag = 0;
-	if (honor_mute) {
-		flag = snap_honor_mute(&clipboard, selection.first_channel-1);
-	}
+	flag = (honor_mute)
+		? snap_honor_mute(&clipboard, selection.first_channel-1)
+		: 0;
 
 	/* transfer to system where appropriate */
 	clippy_yank();
@@ -3692,6 +3694,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 		}
 		n = block_double_size + current_row - 1;
 		selection.last_row = MIN(n, max_row_number);
+		/* copyout */
+		pattern_selection_system_copyout();
 		break;
 	case SCHISM_KEYSYM_l:
 		if (k->state == KEY_RELEASE)
