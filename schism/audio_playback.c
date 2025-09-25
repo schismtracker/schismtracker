@@ -334,7 +334,7 @@ static void _audio_create_drivers_list(void)
 	};
 	uint32_t drivers = 0;
 
-	//struct _audio_driver disk = {.name = "disk"}, dummy = {.name = "dummy"};
+	struct _audio_driver disk = {.name = "disk"}, dummy = {.name = "dummy"};
 
 	// Reset the drivers list
 	full_drivers.list = NULL;
@@ -358,12 +358,12 @@ static void _audio_create_drivers_list(void)
 				drivers |= DRIVER_PULSE;
 			} else if (!strcmp(n, "dummy")) {
 				drivers |= DRIVER_DUMMY;
-				//dummy.backend = inited_backends[i];
-				//continue;
+				dummy.backend = inited_backends[i];
+				continue;
 			} else if (!strcmp(n, "disk")) {
 				drivers |= DRIVER_DISK;
-				//disk.backend = inited_backends[i];
-				//continue;
+				disk.backend = inited_backends[i];
+				continue;
 			} else if (!strcmp(n, "winmm") || !strcmp(n, "directsound")) {
 				// Skip SDL 2 waveout driver; we have our own implementation
 				// and the SDL 2's driver seems to randomly want to hang on
@@ -394,8 +394,8 @@ static void _audio_create_drivers_list(void)
 		}
 	}
 
-	//if (drivers & DRIVER_DISK)  full_drivers.list[full_drivers.size++] = disk;
-	//if (drivers & DRIVER_DUMMY) full_drivers.list[full_drivers.size++] = dummy;
+	if (drivers & DRIVER_DISK)  full_drivers.list[full_drivers.size++] = disk;
+	if (drivers & DRIVER_DUMMY) full_drivers.list[full_drivers.size++] = dummy;
 }
 
 int audio_driver_count(void)
@@ -1863,8 +1863,13 @@ int audio_simple_init(schism_audio_device_t *dev_,
 
 void audio_simple_close(struct schism_audio_device_simple *dev)
 {
+	if (!dev)
+		return;
+
 	if (dev->thread) {
 		dev->cancelled = 1;
+		if (dev->vtbl && dev->vtbl->aftercancel)
+			dev->vtbl->aftercancel((schism_audio_device_t *)dev);
 		mt_thread_wait(dev->thread, NULL);
 	}
 
@@ -1999,7 +2004,8 @@ static int dummy_simple_wait(schism_audio_device_t *dev)
 static const struct schism_audio_device_simple_vtable dummy_vtbl = {
 	dummy_simple_get_buffer,
 	dummy_simple_play,
-	dummy_simple_wait
+	dummy_simple_wait,
+	NULL
 };
 
 /* ------------------------------------------------------------------------ */

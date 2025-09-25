@@ -51,7 +51,7 @@
  * This is turned off here because they cause weird dislocation in the
  * audio buffer when moving/resizing/changing the window at all. */
 
-/* #define COMPILE_POSITION_NOTIFY */
+#define COMPILE_POSITION_NOTIFY
 
 static HRESULT (WINAPI *DSOUND_DirectSoundCreate)(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN pUnkOuter) = NULL;
 
@@ -62,14 +62,7 @@ static HRESULT (WINAPI *DSOUND_DirectSoundEnumerateA)(LPDSENUMCALLBACKA lpDSEnum
 static HRESULT (WINAPI *DSOUND_DirectSoundEnumerateW)(LPDSENUMCALLBACKW lpDSEnumCallback, LPVOID lpContext) = NULL;
 
 struct schism_audio_device {
-	/* The thread where we callback */
-	mt_thread_t *thread;
-	int cancelled;
-
-	/* Kid named callback: */
-	void (*callback)(uint8_t *stream, int len);
-
-	mt_mutex_t *mutex;
+	struct schism_audio_device_simple simple;
 
 #ifdef COMPILE_POSITION_NOTIFY
 	/* An event where we get notifications under DX6 and higher
@@ -77,19 +70,12 @@ struct schism_audio_device {
 	HANDLE event;
 #endif
 
-	/* A pointer to the function we use to wait for audio to finish playing */
-	void (*audio_wait)(schism_audio_device_t *dev);
-
-	/* pass to memset() to make silence.
-	 * used when paused and when initializing the device buffer */
-	uint8_t silence;
-
 	LPDIRECTSOUND dsound;
 	LPDIRECTSOUNDBUFFER lpbuffer;
 
 	/* ... */
+	DWORD cursor;
 	DWORD last_chunk;
-	int paused;
 
 	/* audio buffer info */
 	uint32_t bps; /* bits per sample */
@@ -97,6 +83,10 @@ struct schism_audio_device {
 	uint32_t samples; /* samples per chunk */
 	uint32_t size; /* size in bytes of one chunk (bps * channels * samples) */
 	uint32_t rate; /* sample rate */
+
+	/* current locked buffer */
+	void *buf;
+	DWORD buflen;
 };
 
 /* ---------------------------------------------------------- */
@@ -258,25 +248,59 @@ static void dsound_audio_quit_driver(void)
 
 /* -------------------------------------------------------- */
 
-static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
+static void *_dsound_audio_get_buffer(schism_audio_device_t *dev,
+	size_t *buflen)
 {
+	HRESULT res;
+	DWORD dw, xyzzy;
+
+	dev->last_chunk = dev->cursor;
+	dev->cursor = (dev->cursor + 1) % NUM_CHUNKS;
+
+	res = IDirectSoundBuffer_Lock(dev->lpbuffer, dev->cursor * dev->size, dev->size, &dev->buf, &dw, NULL, &xyzzy, 0);
+	if (res == DSERR_BUFFERLOST) {
+		IDirectSoundBuffer_Restore(dev->lpbuffer);
+		res = IDirectSoundBuffer_Lock(dev->lpbuffer, dev->cursor * dev->size, dev->size, &dev->buf, &dw, NULL, &xyzzy, 0);
+	}
+	if (res != DS_OK)
+		return NULL;
+
+	dev->buflen = dw;
+	*buflen = dw;
+	return dev->buf;
+}
+
+static int _dsound_audio_play(schism_audio_device_t *dev)
+{
+	if (dev->buf) {
+		IDirectSoundBuffer_Unlock(dev->lpbuffer, dev->buf, dev->buflen, NULL, 0);
+		dev->buf = NULL;
+		dev->buflen = 0;
+		return 0;
+	}
+
+	return -1;
+}
+
+static int _dsound_audio_wait_dx5(schism_audio_device_t *dev)
+{
+	DWORD status;
 	DWORD cursor, xyzzy;
 	HRESULT res;
 
-	while (!dev->cancelled) {
-		DWORD status;
+	while (!dev->simple.cancelled) { /* :/ */
 		IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
 		if (status & DSBSTATUS_BUFFERLOST) {
 			IDirectSoundBuffer_Restore(dev->lpbuffer);
 			IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
 			if (status & DSBSTATUS_BUFFERLOST)
-				break;
+				return -1;
 		}
 
 		if (!(status & DSBSTATUS_PLAYING)) {
 			if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
 				/* This should never happen */
-				break;
+				return -1;
 		} else {
 			res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
 			if (res == DSERR_BUFFERLOST) {
@@ -287,20 +311,29 @@ static void _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 				continue; /* what? */
 
 			if ((cursor / dev->size) != dev->last_chunk)
-				break;
+				return -1;
 
 			cursor -= (dev->last_chunk * dev->size);
 
-			uint32_t ms = (cursor / dev->bps / dev->channels) * 1000UL / dev->rate;
-			ms = MAX(1, ms);
+			uint64_t us = (cursor / dev->bps / dev->channels) * 1000000ULL / dev->rate;
+			us = MAX(1000, us);
 
-			timer_msleep(ms);
+			timer_usleep(us);
 		}
 	}
+
+	return 0;
 }
 
+static const struct schism_audio_device_simple_vtable dsound_dx5_vtbl = {
+	_dsound_audio_get_buffer,
+	_dsound_audio_play,
+	_dsound_audio_wait_dx5,
+	NULL
+};
+
 #ifdef COMPILE_POSITION_NOTIFY
-static void _dsound_audio_wait_dx6(schism_audio_device_t *dev)
+static int _dsound_audio_wait_dx6(schism_audio_device_t *dev)
 {
 	DWORD status;
 	IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
@@ -308,60 +341,32 @@ static void _dsound_audio_wait_dx6(schism_audio_device_t *dev)
 		IDirectSoundBuffer_Restore(dev->lpbuffer);
 		IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
 		if (status & DSBSTATUS_BUFFERLOST)
-			return;
+			return -1;
 	}
 
 	if (!(status & DSBSTATUS_PLAYING)) {
 		if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
 			/* This should never happen */
-			return;
+			return -1;
 	}
 
-	while (!dev->cancelled && (WaitForSingleObject(dev->event, 10) == WAIT_TIMEOUT));
-}
-#endif
-
-static int _dsound_audio_thread(void *data)
-{
-	schism_audio_device_t *dev = data;
-
-	mt_thread_set_priority(MT_THREAD_PRIORITY_TIME_CRITICAL);
-
-	DWORD cursor = 0;
-	HRESULT res = DS_OK;
-
-	while (!dev->cancelled) {
-		void *buf;
-		DWORD buflen, xyzzy;
-
-		dev->last_chunk = cursor;
-		cursor = (cursor + 1) % NUM_CHUNKS;
-
-		res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, &xyzzy, 0);
-		if (res == DSERR_BUFFERLOST) {
-			IDirectSoundBuffer_Restore(dev->lpbuffer);
-			res = IDirectSoundBuffer_Lock(dev->lpbuffer, cursor * dev->size, dev->size, &buf, &buflen, NULL, &xyzzy, 0);
-		}
-		if (res != DS_OK) {
-			timer_msleep(5);
-			continue;
-		}
-
-		if (dev->paused) {
-			memset(buf, dev->silence, buflen);
-		} else {
-			mt_mutex_lock(dev->mutex);
-			dev->callback(buf, buflen);
-			mt_mutex_unlock(dev->mutex);
-		}
-
-		IDirectSoundBuffer_Unlock(dev->lpbuffer, buf, buflen, NULL, 0);
-
-		dev->audio_wait(dev);
-	}
+	WaitForSingleObject(dev->event, INFINITE);
 
 	return 0;
 }
+
+static void _dsound_audio_aftercancel_dx6(schism_audio_device_t *dev)
+{
+	SetEvent(dev->event);
+}
+
+static const struct schism_audio_device_simple_vtable dsound_dx6_vtbl = {
+	_dsound_audio_get_buffer,
+	_dsound_audio_play,
+	_dsound_audio_wait_dx6,
+	_dsound_audio_aftercancel_dx6
+};
+#endif
 
 static void dsound_audio_close_device(schism_audio_device_t *dev);
 
@@ -421,13 +426,6 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 
 	/* ok, now allocate */
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
-
-	dev->callback = desired->callback;
-	dev->paused = 1; /* always start paused */
-
-	dev->mutex = mt_mutex_create();
-	if (!dev->mutex)
-		goto fail;
 
 	if (DSOUND_DirectSoundCreate(guid, &dev->dsound, NULL) != DS_OK) {
 		goto fail;
@@ -517,8 +515,6 @@ DS_badformat:
 	obtained->bits = format.wBitsPerSample;
 	obtained->samples = desired->samples;
 
-	dev->silence = AUDIO_SPEC_SILENCE(*obtained);
-
 	{
 		/* Silence the initial buffer (ripped from SDL)
 		 * FIXME why are we retrieving ptr2 and bytes2? */
@@ -526,23 +522,17 @@ DS_badformat:
 		DWORD bytes1, bytes2;
 
 		if (IDirectSoundBuffer_Lock(dev->lpbuffer, 0, dsformat.dwBufferBytes, &ptr1, &bytes1, &ptr2, &bytes2, DSBLOCK_ENTIREBUFFER) == DS_OK) {
-			memset(ptr1, dev->silence, bytes1);
+			memset(ptr1, AUDIO_SPEC_SILENCE(*obtained), bytes1);
 			IDirectSoundBuffer_Unlock(dev->lpbuffer, ptr1, bytes1, ptr2, bytes2);
 		}
 	}
 
+	if (audio_simple_init(dev,
 #ifdef COMPILE_POSITION_NOTIFY
-	/* Use position notify events to wait for audio to finish under DX6 */
-	dev->audio_wait = ((dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) && !_dsound_dx6_init_notify_position(dev))
-		? _dsound_audio_wait_dx6
-		: _dsound_audio_wait_dx5;
-#else
-	dev->audio_wait = _dsound_audio_wait_dx5;
+			((dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) && !_dsound_dx6_init_notify_position(dev))
+				? &dsound_dx6_vtbl :
 #endif
-
-	/* ok, now start the full thread */
-	dev->thread = mt_thread_create(_dsound_audio_thread, "DirectSound audio thread", dev);
-	if (!dev->thread)
+				&dsound_dx5_vtbl, desired->callback))
 		goto fail;
 
 	return dev;
@@ -558,10 +548,8 @@ static void dsound_audio_close_device(schism_audio_device_t *dev)
 	if (!dev)
 		return;
 
-	if (dev->thread) {
-		dev->cancelled = 1;
-		mt_thread_wait(dev->thread, NULL);
-	}
+	audio_simple_close(&dev->simple);
+
 	if (dev->lpbuffer) {
 		IDirectSoundBuffer_Stop(dev->lpbuffer);
 		IDirectSoundBuffer_Release(dev->lpbuffer);
@@ -569,41 +557,11 @@ static void dsound_audio_close_device(schism_audio_device_t *dev)
 	if (dev->dsound) {
 		IDirectSound_Release(dev->dsound);
 	}
-	if (dev->mutex) {
-		mt_mutex_delete(dev->mutex);
-	}
 #ifdef COMPILE_POSITION_NOTIFY
-	if (dev->event) {
+	if (dev->event)
 		CloseHandle(dev->event);
-	}
 #endif
 	free(dev);
-}
-
-static void dsound_audio_lock_device(schism_audio_device_t *dev)
-{
-	if (!dev)
-		return;
-
-	mt_mutex_lock(dev->mutex);
-}
-
-static void dsound_audio_unlock_device(schism_audio_device_t *dev)
-{
-	if (!dev)
-		return;
-
-	mt_mutex_unlock(dev->mutex);
-}
-
-static void dsound_audio_pause_device(schism_audio_device_t *dev, int paused)
-{
-	if (!dev)
-		return;
-
-	mt_mutex_lock(dev->mutex);
-	dev->paused = !!paused;
-	mt_mutex_unlock(dev->mutex);
 }
 
 /* -------------------------------------------------------------------- */
@@ -720,9 +678,9 @@ const schism_audio_backend_t schism_audio_backend_dsound = {
 
 	.open_device = dsound_audio_open_device,
 	.close_device = dsound_audio_close_device,
-	.lock_device = dsound_audio_lock_device,
-	.unlock_device = dsound_audio_unlock_device,
-	.pause_device = dsound_audio_pause_device,
+	.lock_device = audio_simple_device_lock,
+	.unlock_device = audio_simple_device_unlock,
+	.pause_device = audio_simple_device_pause,
 };
 
 /* -------------------------------------------------------------------- */

@@ -57,13 +57,7 @@ struct waveoutcaps2w {
 SCHISM_STATIC_ASSERT(NUM_BUFFERS >= 2, "NUM_BUFFERS must be at least 2");
 
 struct schism_audio_device {
-	/* The thread where we callback */
-	mt_thread_t *thread;
-	volatile int cancelled;
-
-	/* The callback and the protecting mutex */
-	void (*callback)(uint8_t *stream, int len);
-	mt_mutex_t *mutex;
+	struct schism_audio_device_simple simple;
 
 	/* This is for synchronizing the audio thread with
 	 * the actual audio device */
@@ -109,7 +103,10 @@ static size_t devices_size = 0;
  * (annoying!!)
  * The only thing I can think of is opening literally every single
  * device and then calling waveOutGetID() to check if it changed,
- * which is obviously stupid and a waste of resources. */
+ * which is obviously stupid and a waste of resources.
+ *
+ * NOTE 2025-09-25: can't we just compare the device caps, like we
+ * already do for the MIDI stuff? */
 static uint32_t waveout_audio_device_count(uint32_t flags)
 {
 	UINT devs;
@@ -204,33 +201,47 @@ static void waveout_audio_quit_driver(void)
 	}
 }
 
-/* -------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 
-static int waveout_audio_thread(void *data)
+static void *waveout_get_buffer(schism_audio_device_t *dev, size_t *buflen)
 {
-	schism_audio_device_t *dev = data;
+	*buflen = dev->wavehdr[dev->next_buffer].dwBufferLength;
+	return dev->wavehdr[dev->next_buffer].lpData;
+}
 
-	mt_thread_set_priority(MT_THREAD_PRIORITY_TIME_CRITICAL);
-
-	while (!dev->cancelled) {
-		/* FIXME add a timeout here */
-		mt_mutex_lock(dev->mutex);
-
-		dev->callback((uint8_t *)dev->wavehdr[dev->next_buffer].lpData, dev->wavehdr[dev->next_buffer].dwBufferLength);
-
-		mt_mutex_unlock(dev->mutex);
-
-		waveOutWrite(dev->hwaveout, &dev->wavehdr[dev->next_buffer], sizeof(dev->wavehdr[dev->next_buffer]));
-		dev->next_buffer = (dev->next_buffer + 1) % NUM_BUFFERS;
-
-		/* Wait until either the semaphore is polled or we've been asked to exit.
-		 * This prevents a hang on device close, since after waveOutClose is called
-		 * the semaphore is never released, which will cause us to wait forever. */
-		while (!dev->cancelled && (WaitForSingleObject(dev->sem, 10) == WAIT_TIMEOUT));
-	}
+static int waveout_play(schism_audio_device_t *dev)
+{
+	waveOutWrite(dev->hwaveout, &dev->wavehdr[dev->next_buffer], sizeof(dev->wavehdr[dev->next_buffer]));
 
 	return 0;
 }
+
+static int waveout_wait(schism_audio_device_t *dev)
+{
+	dev->next_buffer = (dev->next_buffer + 1) % NUM_BUFFERS;
+
+	/* wait infinitely. when we're closed, it will send a signal here,
+	 * and the device will be cancelled. */
+	WaitForSingleObject(dev->sem, INFINITE);
+
+	return 0;
+}
+
+static void waveout_aftercancel(schism_audio_device_t *dev)
+{
+	/* Release the semaphore, to wake up the waiting thread.
+	 * Prevents deadlocks */
+	ReleaseSemaphore(dev->sem, 1, NULL);
+}
+
+static const struct schism_audio_device_simple_vtable waveout_vtbl = {
+	waveout_get_buffer,
+	waveout_play,
+	waveout_wait,
+	waveout_aftercancel,
+};
+
+/* ------------------------------------------------------------------------ */
 
 static void CALLBACK waveout_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD dwParam1, DWORD dwParam2)
 {
@@ -239,9 +250,9 @@ static void CALLBACK waveout_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR d
 	/* don't care about other messages */
 	switch (uMsg) {
 	case WOM_DONE:
-	case WOM_CLOSE:
 		ReleaseSemaphore(dev->sem, 1, NULL);
-	default: return;
+	default:
+		return;
 	}
 }
 
@@ -272,8 +283,6 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 	/* ok, now we can allocate the device */
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(*dev));
 
-	dev->callback = desired->callback;
-
 	for (;;) {
 		/* Recalculate format */
 		format.nBlockAlign = format.nChannels * (format.wBitsPerSample / 8);
@@ -296,10 +305,6 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 		goto fail;
 	}
 
-	dev->mutex = mt_mutex_create();
-	if (!dev->mutex)
-		goto fail;
-
 	dev->sem = CreateSemaphoreA(NULL, 1, NUM_BUFFERS, "WinMM audio sync semaphore");
 	if (!dev->sem)
 		goto fail;
@@ -320,9 +325,7 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 		dev->wavehdr[i].dwUser = WAVEHDR_DWUSER_PREPARED;
 	}
 
-	/* ok, now start the full thread */
-	dev->thread = mt_thread_create(waveout_audio_thread, "WinMM audio thread", dev);
-	if (!dev->thread)
+	if (audio_simple_init(dev, &waveout_vtbl, desired->callback))
 		goto fail;
 
 	obtained->freq = format.nSamplesPerSec;
@@ -340,20 +343,19 @@ fail:
 
 static void waveout_audio_close_device(schism_audio_device_t *dev)
 {
+	int i;
+
 	if (!dev)
 		return;
 
-	/* kill the thread before doing anything else */
-	if (dev->thread) {
-		dev->cancelled = 1;
-		mt_thread_wait(dev->thread, NULL);
-	}
+	audio_simple_close(&dev->simple);
 
-	/* close the device */
+	/* kill the output */
 	if (dev->hwaveout)
 		waveOutClose(dev->hwaveout);
 
-	for (int i = 0; i < NUM_BUFFERS; i++) {
+	/* "unprepare" all of our buffers */
+	for (i = 0; i < NUM_BUFFERS; i++) {
 		if (dev->wavehdr[i].dwUser != WAVEHDR_DWUSER_PREPARED)
 			continue;
 
@@ -370,40 +372,7 @@ static void waveout_audio_close_device(schism_audio_device_t *dev)
 	if (dev->sem)
 		CloseHandle(dev->sem);
 
-	if (dev->mutex)
-		mt_mutex_delete(dev->mutex);
-
 	free(dev);
-}
-
-static void waveout_audio_lock_device(schism_audio_device_t *dev)
-{
-	if (!dev)
-		return;
-
-	mt_mutex_lock(dev->mutex);
-}
-
-static void waveout_audio_unlock_device(schism_audio_device_t *dev)
-{
-	if (!dev)
-		return;
-
-	mt_mutex_unlock(dev->mutex);
-}
-
-static void waveout_audio_pause_device(schism_audio_device_t *dev, int paused)
-{
-	if (!dev)
-		return;
-
-	mt_mutex_lock(dev->mutex);
-	if (paused) {
-		waveOutPause(dev->hwaveout);
-	} else {
-		waveOutRestart(dev->hwaveout);
-	}
-	mt_mutex_unlock(dev->mutex);
 }
 
 /* -------------------------------------------------------------------- */
@@ -436,7 +405,7 @@ const schism_audio_backend_t schism_audio_backend_waveout = {
 
 	.open_device = waveout_audio_open_device,
 	.close_device = waveout_audio_close_device,
-	.lock_device = waveout_audio_lock_device,
-	.unlock_device = waveout_audio_unlock_device,
-	.pause_device = waveout_audio_pause_device,
+	.lock_device = audio_simple_device_lock,
+	.unlock_device = audio_simple_device_unlock,
+	.pause_device = audio_simple_device_pause,
 };

@@ -25,6 +25,7 @@
 #define SCHISM_BACKEND_AUDIO_H_
 
 #include "../song.h"
+#include "backend/mt.h"
 
 /* constants */
 
@@ -107,6 +108,8 @@ struct schism_audio_device_simple_vtable {
 	int (*play)(schism_audio_device_t *dev);
 	// wait
 	int (*wait)(schism_audio_device_t *dev);
+	// prevent deadlocks when cancelling the waiting thread
+	void (*aftercancel)(schism_audio_device_t *dev);
 };
 
 struct schism_audio_device_simple {
