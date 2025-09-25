@@ -105,6 +105,7 @@ noinst_HEADERS = \
 	include/auto/logoschism.h	\
 	include/auto/schismico_hires.h	\
 	include/test.h     \
+	include/atomic.h	\
 	include/bits.h     \
 	include/charset.h		\
 	include/clippy.h		\
@@ -590,6 +591,7 @@ schismtracker_SOURCES = \
 	player/snd_gm.c			\
 	player/sndmix.c			\
 	player/tables.c			\
+	schism/atomic.c			\
 	schism/audio_loadsave.c		\
 	schism/audio_playback.c		\
 	schism/charset.c		\

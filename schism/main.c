@@ -54,6 +54,7 @@
 #include "mt.h"
 #include "mem.h"
 #include "cpu.h"
+#include "atomic.h"
 
 #include "osdefs.h"
 
@@ -1083,6 +1084,7 @@ void schism_exit(int x)
 	localtime_r_quit();
 #endif
 	timer_quit();
+	atm_quit();
 	mt_quit();
 
 	os_sysexit();
@@ -1091,6 +1093,15 @@ void schism_exit(int x)
 }
 
 extern void vis_init(void);
+
+static void schism_sighandler(SCHISM_UNUSED int x)
+{
+	schism_event_t e = {0};
+
+	e.type = SCHISM_QUIT;
+
+	events_push_event(&e);
+}
 
 /* the real main function is called per-platform */
 int schism_main(int argc, char** argv)
@@ -1140,6 +1151,7 @@ int schism_main(int argc, char** argv)
 
 	/* mt is no longer required  --paper */
 	mt_init();
+	SCHISM_RUNTIME_ASSERT(!atm_init(), "Failed to initialize atomics!");
 	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
 
 #ifndef HAVE_LOCALTIME_R
@@ -1226,9 +1238,10 @@ int schism_main(int argc, char** argv)
 #endif
 
 #if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2) && !defined(SCHISM_XBOX)
-	signal(SIGINT, exit);
-	signal(SIGQUIT, exit);
-	signal(SIGTERM, exit);
+	/* XXX this is dumb, we should just send a SCHISM_QUIT event */
+	signal(SIGINT, schism_sighandler);
+	signal(SIGQUIT, schism_sighandler);
+	signal(SIGTERM, schism_sighandler);
 #endif
 
 	video_mousecursor(cfg_video_mousecursor);

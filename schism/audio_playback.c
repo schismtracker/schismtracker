@@ -32,6 +32,7 @@
 #include "mem.h"
 #include "str.h"
 #include "mt.h"
+#include "atomic.h"
 
 #include "disko.h"
 #include "backend/audio.h"
@@ -1809,7 +1810,7 @@ static int simple_thread_func_(void *userdata)
 {
 	struct schism_audio_device_simple *dev = userdata;
 
-	while (!dev->cancelled) {
+	while (!atm_load(&dev->cancelled)) {
 		void *buf;
 		size_t buflen;
 
@@ -1817,7 +1818,7 @@ static int simple_thread_func_(void *userdata)
 		if (!buf)
 			return 0; /* what? */
 
-		if (dev->paused) {
+		if (atm_load(&dev->paused)) {
 			memset(buf, 0, buflen);
 		} else {
 			mt_mutex_lock(dev->mutex);
@@ -1867,7 +1868,7 @@ void audio_simple_close(struct schism_audio_device_simple *dev)
 		return;
 
 	if (dev->thread) {
-		dev->cancelled = 1;
+		atm_store(&dev->cancelled, 1);
 		if (dev->vtbl && dev->vtbl->aftercancel)
 			dev->vtbl->aftercancel((schism_audio_device_t *)dev);
 		mt_thread_wait(dev->thread, NULL);
@@ -1891,7 +1892,7 @@ void audio_simple_unlock(struct schism_audio_device_simple *dev)
 void audio_simple_pause(struct schism_audio_device_simple *dev, int paused)
 {
 	mt_mutex_lock(dev->mutex);
-	dev->paused = !!paused;
+	atm_store(&dev->paused, !!paused);
 	mt_mutex_unlock(dev->mutex);
 }
 

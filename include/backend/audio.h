@@ -26,6 +26,7 @@
 
 #include "../song.h"
 #include "../mt.h"
+#include "../atomic.h"
 
 /* constants */
 
@@ -119,11 +120,11 @@ struct schism_audio_device_simple {
 	// protected members (dont touch these)
 
 	mt_thread_t *thread;
-	volatile int cancelled;
+	struct atm cancelled;
 
 	mt_mutex_t *mutex;
 
-	int paused;
+	struct atm paused;
 
 	void (*callback)(uint8_t *stream, int len);
 };

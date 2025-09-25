@@ -35,10 +35,11 @@
 #include "mt.h"
 #include "timer.h"
 #include "mem.h"
+#include "atomic.h"
 
 #include "dmoz.h"
 
-static int _connected = 0;
+static struct atm _connected = {0};
 /* midi_mutex is locked by the main thread,
 midi_port_mutex is for the port thread(s),
 and midi_record_mutex is by the event/sound thread
@@ -284,7 +285,7 @@ void midi_engine_poll_ports(void)
 
 int midi_engine_start(void)
 {
-	if (_connected)
+	if (atm_load(&_connected))
 		return 1;
 
 	midi_mutex        = mt_mutex_create();
@@ -300,13 +301,13 @@ int midi_engine_start(void)
 	}
 
 	_midi_engine_connect();
-	_connected = 1;
+	atm_store(&_connected, 1);
 	return 1;
 }
 
 void midi_engine_reset(void)
 {
-	if (!_connected) return;
+	if (!atm_load(&_connected)) return;
 	midi_engine_stop();
 	midi_engine_start();
 }
@@ -316,11 +317,11 @@ void midi_engine_stop(void)
 	struct midi_provider *n;
 	struct midi_port *q;
 
-	if (!_connected) return;
+	if (!atm_load(&_connected)) return;
 	if (!midi_mutex) return;
 
 	mt_mutex_lock(midi_mutex);
-	_connected = 0;
+	atm_store(&_connected, 0);
 
 	if (midi_worker_thread) {
 		midi_worker_thread_cancel = 1;
@@ -446,7 +447,7 @@ static void midi_engine_worker_impl(void)
 {
 	struct midi_provider *n;
 
-	if (!_connected)
+	if (!atm_load(&_connected))
 		return;
 
 	mt_mutex_lock(midi_mutex);
@@ -920,7 +921,7 @@ static void _midi_send_timer_callback(void *param)
 
 	// make sure the midi system is actually still running to prevent
 	// a crash on exit
-	if (midi_record_mutex && midi_port_mutex && _connected) {
+	if (midi_record_mutex && midi_port_mutex && atm_load(&_connected)) {
 		mt_mutex_lock(midi_record_mutex);
 		mt_mutex_lock(midi_port_mutex);
 		_midi_send_unlocked(curry->msg, curry->len, 0, MIDI_FROM_NOW);

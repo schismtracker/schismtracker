@@ -1,0 +1,142 @@
+/*
+ * Schism Tracker - a cross-platform Impulse Tracker clone
+ * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
+ * copyright (c) 2005-2008 Mrs. Brisby <mrs.brisby@nimh.org>
+ * copyright (c) 2009 Storlek & Mrs. Brisby
+ * copyright (c) 2010-2012 Storlek
+ * URL: http://schismtracker.org/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/* ... TODO: proper atomic implementation */
+
+#include "atomic.h"
+
+#if (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_ATOMICS__)
+
+#include <stdatomic.h>
+
+int atm_init(void) { return 0; }
+void atm_quit(void) { }
+
+int atm_load(struct atm *atm)
+{
+	return atomic_load(&atm->x);
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	atomic_store(&atm->x, x);
+}
+
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+	return atomic_load(&atm->x);
+}
+
+void atm_ptr_store(struct atm_ptr *atm, void *x)
+{
+	atomic_store(&atm->x, x);
+}
+
+#else
+
+#include "mt.h"
+
+#define MUTEXES_SIZE (16)
+
+static mt_mutex_t *mutexes[MUTEXES_SIZE] = {0};
+
+int atm_init(void)
+{
+	uint32_t i;
+
+	for (i = 0; i < MUTEXES_SIZE; i++) {
+		mutexes[i] = mt_mutex_create();
+		if (!mutexes[i])
+			return -1;
+	}
+
+	/* at this point, the mutexes array should NEVER be touched again
+	 * until we quit. */
+
+	return 0;
+}
+
+void atm_quit(void)
+{
+	uint32_t i;
+
+	for (i = 0; i < MUTEXES_SIZE; i++) {
+		if (mutexes[i]) {
+			mt_mutex_delete(mutexes[i]);
+			mutexes[i] = NULL;
+		}
+	}
+}
+
+/* ------------------------------------------------------------------------ */
+
+static inline SCHISM_ALWAYS_INLINE
+mt_mutex_t *atm_get_mutex(struct atm *atm)
+{
+	/* TODO use alignof() here ... */
+	return mutexes[((uintptr_t)atm / sizeof(*atm)) % MUTEXES_SIZE];
+}
+
+int atm_load(struct atm *atm)
+{
+	int r;
+	mt_mutex_t *m = atm_get_mutex(atm);
+
+	mt_mutex_lock(m);
+	r = atm->x;
+	mt_mutex_unlock(m);
+
+	return r;
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	mt_mutex_t *m = atm_get_mutex(atm);
+
+	mt_mutex_lock(m);
+	atm->x = x;
+	mt_mutex_unlock(m);
+}
+
+void *atm_load(struct atm_ptr *atm)
+{
+	int r;
+	mt_mutex_t *m = atm_get_mutex(atm);
+
+	mt_mutex_lock(m);
+	r = atm->x;
+	mt_mutex_unlock(m);
+
+	return r;
+}
+
+void atm_store(struct atm_ptr *atm, void *x)
+{
+	mt_mutex_t *m = atm_get_mutex(atm);
+
+	mt_mutex_lock(m);
+	atm->x = x;
+	mt_mutex_unlock(m);
+}
+
+#endif
