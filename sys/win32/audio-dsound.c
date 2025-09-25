@@ -288,7 +288,7 @@ static int _dsound_audio_wait_dx5(schism_audio_device_t *dev)
 	DWORD cursor, xyzzy;
 	HRESULT res;
 
-	while (!atm_load(dev->simple.cancelled)) { /* :/ */
+	while (!atm_load(&dev->simple.cancelled)) { /* :/ */
 		IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
 		if (status & DSBSTATUS_BUFFERLOST) {
 			IDirectSoundBuffer_Restore(dev->lpbuffer);
