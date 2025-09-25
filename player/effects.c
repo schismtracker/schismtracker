@@ -1417,6 +1417,7 @@ static void env_reset(song_voice_t *chan, int always)
 void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int porta, int inst_column)
 {
 	int inst_changed = 0;
+	int reset_env = 0;
 
 	if (instr >= MAX_INSTRUMENTS) return;
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
@@ -1504,19 +1505,12 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	// - instrument number given, no portamento, after keyoff, old effects enabled
 	// If someone can enlighten me to what the logic really is here, I'd appreciate it.
 	// Seems like it's just a total mess though, probably to get XMs to play right.
+	reset_env = (!chan->length)
+		|| (inst_column && porta && (csf->flags & SONG_COMPATGXX))
+		|| (inst_column && !porta && (chan->flags & (CHN_NOTEFADE|CHN_KEYOFF)) && (csf->flags & SONG_ITOLDEFFECTS));
+
 	if (penv) {
-		if ((
-			!chan->length
-		) || (
-			inst_column
-			&& porta
-			&& (csf->flags & SONG_COMPATGXX)
-		) || (
-			inst_column
-			&& !porta
-			&& (chan->flags & (CHN_NOTEFADE|CHN_KEYOFF))
-			&& (csf->flags & SONG_ITOLDEFFECTS)
-		)) {
+		if (reset_env) {
 			env_reset(chan, inst_changed
 				|| (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF)
 					? (!chan->fadeout_volume || !NOTE_IS_NOTE(chan->row_note))
@@ -1542,6 +1536,10 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 				chan->pan_swing = d * penv->pan_swing * 4;
 			}
 		}
+	} else if (reset_env) {
+		/* Don't use smooth volume ramping when an envelope reset would normally
+		 * happen in sample mode */
+		chan->flags |= CHN_FASTVOLRAMP;
 	}
 
 	// Invalid sample ?

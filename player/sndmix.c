@@ -585,7 +585,7 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 	    (chan->right_volume != chan->right_volume_new ||
 	     chan->left_volume  != chan->left_volume_new)) {
 		// Setting up volume ramp
-		int32_t ramp_length = (chan->right_volume_new > chan->right_volume || chan->left_volume_new > chan->right_volume)
+		int32_t ramp_length = ((chan->right_volume_new > chan->right_volume) || (chan->left_volume_new > chan->right_volume))
 			? csf->ramping_samples_up
 			: csf->ramping_samples_down;
 		int32_t right_delta = lshift_signed(chan->right_volume_new - chan->right_volume, VOLUMERAMPPRECISION);
@@ -596,9 +596,8 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 				&& (chan->right_volume_new | chan->left_volume_new)
 				&& !(chan->flags & CHN_FASTVOLRAMP)) {
 			int32_t l = lshift_signed(INT32_C(1), VOLUMERAMPPRECISION - 1);
-			int32_t r = (int32_t)ramp_length;
 
-			ramp_length = CLAMP(csf->buffer_count, r, l);
+			ramp_length = CLAMP(csf->buffer_count, ramp_length, l);
 		}
 
 		chan->right_ramp = right_delta / ramp_length;
