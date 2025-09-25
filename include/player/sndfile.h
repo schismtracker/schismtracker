@@ -800,7 +800,8 @@ typedef struct song {
 	uint32_t mix_flags; // SNDMIX_*
 	uint32_t mix_frequency, mix_bits_per_sample, mix_channels;
 	uint32_t mix_interpolation; /* SRCMODE_* */
-	uint32_t ramping_samples; // default: 64
+	uint32_t ramping_samples_up; // default: 16
+	uint32_t ramping_samples_down; // default: 42
 	uint32_t max_voices;
 	uint32_t vu_left;
 	uint32_t vu_right;

@@ -32,8 +32,10 @@
 
 #include "util.h" /* for clamp */
 
-// Volume ramp length, in 1/10 ms
-#define VOLUMERAMPLEN   146 // 1.46ms = 64 samples at 44.1kHz
+// Volume ramp length, in microseconds.
+// Stole these constants from OpenMPT defaults
+#define VOLUMERAMPUPLEN   363 // 16 samples at 44.1khz
+#define VOLUMERAMPDOWNLEN 952 // 42 samples at 44.1khz
 
 // VU meter
 #define VUMETER_DECAY 16
@@ -583,24 +585,20 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 	    (chan->right_volume != chan->right_volume_new ||
 	     chan->left_volume  != chan->left_volume_new)) {
 		// Setting up volume ramp
-		int32_t ramp_length = csf->ramping_samples;
+		int32_t ramp_length = (chan->right_volume_new > chan->right_volume || chan->left_volume_new > chan->right_volume)
+			? csf->ramping_samples_up
+			: csf->ramping_samples_down;
 		int32_t right_delta = lshift_signed(chan->right_volume_new - chan->right_volume, VOLUMERAMPPRECISION);
 		int32_t left_delta  = lshift_signed(chan->left_volume_new  - chan->left_volume,  VOLUMERAMPPRECISION);
 
-		switch (csf->mix_interpolation) {
-		case SRCMODE_SPLINE:
-		case SRCMODE_POLYPHASE:
-			/* XXX why only for spline/polyphase */
-			if (chan->right_volume | chan->left_volume
-				&& chan->right_volume_new | chan->left_volume_new
+		/* Extra-smooth ramping, unless we're forced to use the default values */
+		if ((chan->right_volume | chan->left_volume)
+				&& (chan->right_volume_new | chan->left_volume_new)
 				&& !(chan->flags & CHN_FASTVOLRAMP)) {
-				ramp_length = csf->buffer_count;
+			int32_t l = lshift_signed(INT32_C(1), VOLUMERAMPPRECISION - 1);
+			int32_t r = (int32_t)ramp_length;
 
-				int32_t l = lshift_signed(INT32_C(1), VOLUMERAMPPRECISION - 1);
-				int32_t r = (int32_t)csf->ramping_samples;
-
-				ramp_length = CLAMP(ramp_length, l, r);
-			}
+			ramp_length = CLAMP(csf->buffer_count, r, l);
 		}
 
 		chan->right_ramp = right_delta / ramp_length;
@@ -692,13 +690,17 @@ int32_t csf_init_player(song_t *csf, int reset)
 		csf->max_voices = MAX_VOICES;
 
 	csf->mix_frequency = CLAMP(csf->mix_frequency, 4000, MAX_SAMPLE_RATE);
-	csf->ramping_samples = (csf->mix_frequency * VOLUMERAMPLEN) / 100000;
 
-	if (csf->ramping_samples < 8)
-		csf->ramping_samples = 8;
+	csf->ramping_samples_up = _muldiv(csf->mix_frequency, VOLUMERAMPUPLEN, 1000000);
+	csf->ramping_samples_down = _muldiv(csf->mix_frequency, VOLUMERAMPDOWNLEN, 1000000);
 
-	if (csf->mix_flags & SNDMIX_NORAMPING)
-		csf->ramping_samples = 2;
+	csf->ramping_samples_up = MAX(csf->ramping_samples_up, 8);
+	csf->ramping_samples_down = MAX(csf->ramping_samples_down, 8);
+
+	if (csf->mix_flags & SNDMIX_NORAMPING) {
+		csf->ramping_samples_up = 2;
+		csf->ramping_samples_down = 2;
+	}
 
 	csf->dry_rofs_vol = csf->dry_lofs_vol = 0;
 

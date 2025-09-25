@@ -56,7 +56,8 @@ static void _csf_reset(song_t *csf)
 	memset(csf->message, 0, sizeof(csf->message));
 
 	// SNDMIX: These are flags for playback control
-	csf->ramping_samples = 64;
+	csf->ramping_samples_up = 16;
+	csf->ramping_samples_down = 42;
 	csf->vu_left = 0;
 	csf->vu_right = 0;
 	csf->dry_rofs_vol = 0;
