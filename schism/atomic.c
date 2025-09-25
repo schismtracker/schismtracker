@@ -34,22 +34,22 @@ void atm_quit(void) { }
 
 int atm_load(struct atm *atm)
 {
-	return atomic_load(&atm->x);
+	return atomic_load((const _Atomic volatile int32_t *)&atm->x);
 }
 
 void atm_store(struct atm *atm, int32_t x)
 {
-	atomic_store(&atm->x, x);
+	atomic_store((_Atomic volatile int32_t *)&atm->x, x);
 }
 
 void *atm_ptr_load(struct atm_ptr *atm)
 {
-	return atomic_load(&atm->x);
+	return atomic_load((const volatile void * _Atomic*)&atm->x);
 }
 
 void atm_ptr_store(struct atm_ptr *atm, void *x)
 {
-	atomic_store(&atm->x, x);
+	atomic_store((volatile void *_Atomic *)&atm->x, x);
 }
 
 #else
@@ -118,10 +118,17 @@ void atm_store(struct atm *atm, int32_t x)
 	mt_mutex_unlock(m);
 }
 
-void *atm_load(struct atm_ptr *atm)
+static inline SCHISM_ALWAYS_INLINE
+mt_mutex_t *atm_ptr_get_mutex(struct atm_ptr *atm)
 {
-	int r;
-	mt_mutex_t *m = atm_get_mutex(atm);
+	/* TODO use alignof() here ... */
+	return mutexes[((uintptr_t)atm / sizeof(*atm)) % MUTEXES_SIZE];
+}
+
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+	void *r;
+	mt_mutex_t *m = atm_ptr_get_mutex(atm);
 
 	mt_mutex_lock(m);
 	r = atm->x;
@@ -130,9 +137,9 @@ void *atm_load(struct atm_ptr *atm)
 	return r;
 }
 
-void atm_store(struct atm_ptr *atm, void *x)
+void atm_ptr_store(struct atm_ptr *atm, void *x)
 {
-	mt_mutex_t *m = atm_get_mutex(atm);
+	mt_mutex_t *m = atm_ptr_get_mutex(atm);
 
 	mt_mutex_lock(m);
 	atm->x = x;
