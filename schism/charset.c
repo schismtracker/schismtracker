@@ -1053,7 +1053,6 @@ static const size_t charset_size_estimate_divisor[] = {
 CHARSET_VARIATION(internal)
 {
 	charset_decode_t decoder = {0};
-	int xx = 0;
 
 	decoder.in = in;
 	decoder.offset = 0;
@@ -1085,8 +1084,6 @@ CHARSET_VARIATION(internal)
 			disko_memclose(&ds, 0);
 			return CHARSET_ERROR_DECODE;
 		}
-
-		xx |= (decoder.codepoint == 0x1F525);
 
 		int out_needed = conv_from_ucs4_func(decoder.codepoint, &ds);
 		if (out_needed < 0) {
