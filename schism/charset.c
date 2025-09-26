@@ -867,7 +867,7 @@ static int ucs4_to_itf(uint32_t ch, disko_t *out)
 			out_b[len++] = bswap##x##16(ch); \
 		} else if (ch < 0x110000) { \
 			uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
-			uint16_t w2 = 0xDC00 + ((ch - 0x10000) & (1ul << 10)); \
+			uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF); \
 	\
 			out_b[len++] = bswap##x##16(w1); \
 			out_b[len++] = bswap##x##16(w2); \
@@ -1053,6 +1053,7 @@ static const size_t charset_size_estimate_divisor[] = {
 CHARSET_VARIATION(internal)
 {
 	charset_decode_t decoder = {0};
+	int xx = 0;
 
 	decoder.in = in;
 	decoder.offset = 0;
@@ -1084,6 +1085,8 @@ CHARSET_VARIATION(internal)
 			disko_memclose(&ds, 0);
 			return CHARSET_ERROR_DECODE;
 		}
+
+		xx |= (decoder.codepoint == 0x1F525);
 
 		int out_needed = conv_from_ucs4_func(decoder.codepoint, &ds);
 		if (out_needed < 0) {
