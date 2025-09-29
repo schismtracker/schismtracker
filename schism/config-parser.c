@@ -92,44 +92,55 @@ static struct cfg_key *_get_key(struct cfg_section *section, const char *key_nam
 /* configuration file parser */
 
 /* skip past any comments and save them. return: length of comments */
-static size_t _parse_comments(const char *s, char **comments)
+static void _parse_comments(slurp_t *fp, disko_t *comments)
 {
-	const char *ptr = s, *prev;
 	char *new_comments, *tmp;
-	size_t len;
+	int64_t len;
+	int64_t prev, start;
+
+	start = slurp_tell(fp);
+	if (start < 0)
+		return; /* ok? */
 
 	do {
-		prev = ptr;
-		ptr += strspn(ptr, " \t\r\n");
-		if (*ptr == '#' || *ptr == ';')
-			ptr += strcspn(ptr, "\r\n");
-	} while (*ptr && ptr != prev);
-	len = ptr - s;
-	if (len) {
-		/* save the comments */
-		new_comments = strn_dup(s, len);
-		if (*comments) {
-			/* already have some comments -- add to them */
-			if (asprintf(&tmp, "%s%s", *comments, new_comments) == -1) {
-				perror("asprintf");
-				exit(255);
-			}
-			if (!tmp) {
-				perror("asprintf");
-				exit(255);
-			}
-			free(*comments);
-			free(new_comments);
-			*comments = tmp;
-		} else {
-			*comments = new_comments;
-		}
+		unsigned char c;
+
+		prev = slurp_tell(fp);
+
+		if (slurp_skip_until_chars(fp, " \t\r\n") == -1)
+			break;
+
+		if (slurp_peek(fp, &c, 1) != 1)
+			break;
+
+		/* Did you know that The Matrix is actually a trans allegory? */
+		if (!strchr("#;", c))
+			continue;
+
+		if (slurp_skip_chars(fp, "\r\n") == -1)
+			break;
+	} while (slurp_tell(fp) != prev);
+
+	len = slurp_tell(fp) - start;
+
+	slurp_seek(fp, start, SEEK_SET);
+
+	while (len > 0) {
+		char buf[4096];
+		size_t readin;
+
+		readin = MIN(len, sizeof(buf));
+
+		/* read it in, then dump it into the disko buffer */
+		slurp_read(fp, buf, readin);
+		disko_write(comments, buf, readin);
+
+		len -= readin;
 	}
-	return len;
 }
 
 /* parse a [section] line. return: 1 if all's well, 0 if it didn't work */
-static int _parse_section(cfg_file_t *cfg, char *line, struct cfg_section **cur_section, char *comments)
+static int _parse_section(cfg_file_t *cfg, char *line, struct cfg_section **cur_section, disko_t *comments)
 {
 	char *tmp;
 
@@ -140,30 +151,29 @@ static int _parse_section(cfg_file_t *cfg, char *line, struct cfg_section **cur_
 	line[strlen(line) - 1] = 0;
 	*cur_section = _get_section(cfg, line, 1);
 	(*cur_section)->omit = 0;
+
+	/* TODO this is repeated below, combine them into some sort of function */
 	if (comments) {
 		if ((*cur_section)->comments) {
 			/* glue them together */
-			if (asprintf(&tmp, "%s\n%s", comments, (*cur_section)->comments) == -1) {
-				perror("asprintf");
-				exit(255);
-			}
-			if (!tmp) {
-				perror("asprintf");
-				exit(255);
-			}
+			disko_write(comments, (*cur_section)->comments, strlen((*cur_section)->comments));
 			free((*cur_section)->comments);
-			free(comments);
-			(*cur_section)->comments = tmp;
-		} else {
-			(*cur_section)->comments = comments;
 		}
+
+		disko_write(comments, "\0", 1);
+
+		/* re-open it */
+		disko_memclose(comments, 1);
+		(*cur_section)->comments = comments->data;
+
+		disko_memopen(comments);
 	}
 
 	return 1;
 }
 
 /* parse a line as a key=value pair, and add it to the configuration. */
-static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_section, char *comments)
+static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_section, disko_t *comments)
 {
 	struct cfg_key *key;
 	char *k, *v, *tmp;
@@ -195,20 +205,17 @@ static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_se
 	if (comments) {
 		if (key->comments) {
 			/* glue them together */
-			if (asprintf(&tmp, "%s\n%s", comments, key->comments) == -1) {
-				perror("asprintf");
-				exit(255);
-			}
-			if (!tmp) {
-				perror("asprintf");
-				exit(255);
-			}
+			disko_write(comments, key->comments, strlen(key->comments));
 			free(key->comments);
-			free(comments);
-			key->comments = tmp;
-		} else {
-			key->comments = comments;
 		}
+
+		disko_write(comments, "\0", 1);
+
+		/* re-open it */
+		disko_memclose(comments, 1);
+		key->comments = comments->data;
+
+		disko_memopen(comments);
 	}
 
 	return 1;
@@ -246,63 +253,70 @@ static struct cfg_section *_free_section(struct cfg_section *section)
 /* --------------------------------------------------------------------------------------------------------- */
 /* public functions */
 
-static int cfg_read_receive_impl(const void *data, SCHISM_UNUSED size_t size, void *userdata)
+static int cfg_read_slurp(cfg_file_t *cfg, slurp_t *fp)
 {
 	size_t len; /* how far away the end of the token is from the start */
 	struct cfg_section *cur_section = NULL;
-	char *comments = NULL, *tmp;
-	cfg_file_t *cfg = (cfg_file_t *)userdata;
+	disko_t comments;
+	char *tmp;
 
-	const char *pos = (const char *)data;
-	do {
-		pos += _parse_comments(pos, &comments);
+	if (disko_memopen(&comments) < 0)
+		return 0;
+
+	for (;;) {
+		int end;
+		int64_t len, start;
+
+		_parse_comments(fp, &comments);
 
 		/* look for the end of the line or the next comment, whichever comes first. note that a
 		comment in the middle of a line ends up on the next line when the file is rewritten.
 		semicolon-comments are only handled at the start of lines. */
-		len = strcspn(pos, "#\r\n");
-		if (len) {
-			char *line = strn_dup(pos, len);
+		start = slurp_tell(fp);
+
+		end = (slurp_skip_chars(fp, "#\r\n") == -1);
+
+		len = slurp_tell(fp) - start;
+
+		if (len > 0) {
+			char *line;
+
+			slurp_seek(fp, start, SEEK_SET);
+			line = mem_alloc(len + 1);
+			slurp_read(fp, line, len);
+			line[len] = 0;
+
 			str_trim(line);
-			if (_parse_section(cfg, line, &cur_section, comments)
-			    || _parse_keyval(cfg, line, cur_section, comments)) {
-				comments = NULL;
+
+			if (_parse_section(cfg, line, &cur_section, &comments)
+					|| _parse_keyval(cfg, line, cur_section, &comments)) {
+				/* nothing */
 			} else {
 				/* broken line: add it as a comment. */
-				if (comments) {
-					if (asprintf(&tmp, "%s# %s\n", comments, line) == -1) {
-						perror("asprintf");
-						exit(255);
-					}
-					if (!tmp) {
-						perror("asprintf");
-						exit(255);
-					}
-					free(comments);
-					comments = tmp;
-				} else {
-					if (asprintf(&comments, "# %s\n", line) == -1) {
-						perror("asprintf");
-						exit(255);
-					}
-					if (!comments) {
-						perror("asprintf");
-						exit(255);
-					}
-				}
+				disko_write(&comments, "# ", 2);
+				disko_write(&comments, line, len);
+				disko_write(&comments, "\n", 1);
 			}
 			free(line);
-		}
-		pos += len;
+		} /* else if (len < 0) -- this is a bug */
 
-		/* skip the newline */
-		if (*pos == '\r')
-			pos++;
-		if (*pos == '\n')
-			pos++;
-	} while (*pos);
+		if (end)
+			break;
 
-	cfg->eof_comments = comments;
+		if (slurp_skip_chars(fp, "\r\n") == -1)
+			break;
+
+		/* skip the damn newline */
+		slurp_seek(fp, 1, SEEK_CUR);
+	}
+
+	/* write NUL byte */
+	disko_write(&comments, "\0", 1);
+
+	disko_memclose(&comments, 1);
+
+	cfg->eof_comments = comments.data;
+	cfg->dirty = 0;
 
 	return 1;
 }
@@ -313,9 +327,7 @@ int cfg_read(cfg_file_t *cfg)
 	if (slurp(&fp, cfg->filename, NULL, 0) < 0)
 		return -1;
 
-	slurp_receive(&fp, cfg_read_receive_impl, slurp_length(&fp) + 1, cfg);
-
-	cfg->dirty = 0;
+	cfg_read_slurp(cfg, &fp);
 
 	unslurp(&fp);
 

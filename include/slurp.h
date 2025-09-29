@@ -175,4 +175,9 @@ void slurp_unlimit(slurp_t *t);
 /* does the same as slurp_unlimit, but seeks to the wall itself */
 void slurp_unlimit_seek(slurp_t *t);
 
+/* strcspn equivalent */
+int slurp_skip_chars(slurp_t *fp, const char *str);
+/* strspn equivalent */
+int slurp_skip_until_chars(slurp_t *fp, const char *str);
+
 #endif /* SCHISM_SLURP_H */

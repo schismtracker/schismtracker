@@ -653,3 +653,44 @@ void slurp_unlimit_seek(slurp_t *t)
 		t->limit = 0;
 	}
 }
+
+/* ------------------------------------------------------------------------ */
+
+/* strcspn equivalent.
+ * if this function returns -1, then it's hit EOF. */
+int slurp_skip_chars(slurp_t *fp, const char *str)
+{
+	for (;;) {
+		unsigned char c;
+
+		if (slurp_peek(fp, &c, 1) != 1)
+			return -1;
+
+		if (strchr(str, c))
+			break;
+
+		/* keep going */
+		slurp_seek(fp, 1, SEEK_CUR);
+	}
+
+	return 0;
+}
+
+/* strspn equivalent */
+int slurp_skip_until_chars(slurp_t *fp, const char *str)
+{
+	for (;;) {
+		unsigned char c;
+
+		if (slurp_peek(fp, &c, 1) != 1)
+			return -1;
+
+		if (!strchr(str, c))
+			break;
+
+		/* keep going */
+		slurp_seek(fp, 1, SEEK_CUR);
+	}
+
+	return 0;
+}
