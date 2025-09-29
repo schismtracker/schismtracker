@@ -85,7 +85,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 		disko_memclose(&ds, 1);
 
 		/* :) */
-		slurp_memstream(t, ds.data, ds.length);
+		slurp_memstream_free(t, ds.data, ds.length);
 	} else {
 		if (buf) {
 			st = *buf;
