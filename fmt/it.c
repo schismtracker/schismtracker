@@ -360,7 +360,7 @@ int it_read_midi_config(midi_config_t *midi, slurp_t *fp)
 	return 1;
 }
 
-int fmt_it_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	struct it_file hdr;
 	uint32_t para_smp[MAX_SAMPLES], para_ins[MAX_INSTRUMENTS], para_pat[MAX_PATTERNS], para_min;

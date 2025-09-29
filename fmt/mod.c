@@ -221,7 +221,7 @@ int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* force determines whether the loader will force-read untagged files as
    15-sample mods */
-static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int force)
+static int fmt_mod_load_song(song_t *song, slurp_t *fp, uint32_t lflags, int force)
 {
 	uint8_t tag[4];
 	int n, npat, pat, chan, nchan, nord;
@@ -547,14 +547,14 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, unsigned int lflags, int
 
 /* loads everything but old 15-instrument mods... yes, even FLT8 and WOW files
    (and the definition of "everything" is always changing) */
-int fmt_mod31_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_mod31_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	return fmt_mod_load_song(song, fp, lflags, 0);
 }
 
 /* loads everything including old 15-instrument mods. this is a separate
    function so that it can be called later in the format-checking sequence. */
-int fmt_mod15_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_mod15_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	return fmt_mod_load_song(song, fp, lflags, 1);
 }

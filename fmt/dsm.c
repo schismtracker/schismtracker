@@ -295,7 +295,7 @@ static int dsm_process_pattern(slurp_t *fp, iff_chunk_t *chunk, const struct dsm
 	return 1;
 }
 
-int fmt_dsm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_dsm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	unsigned char riff[4], dsmf[4], chnpan[16];
 	size_t s = 0, p = 0, n = 0;

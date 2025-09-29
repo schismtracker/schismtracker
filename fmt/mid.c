@@ -179,7 +179,7 @@ int fmt_mid_read_info(dmoz_file_t *file, slurp_t *fp)
 /* --------------------------------------------------------------------------------------------------------- */
 // load
 
-int fmt_mid_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_mid_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	struct mthd mthd;
 	struct mtrk mtrk;

@@ -83,7 +83,7 @@ static int s3m_import_edittime(song_t *song, uint16_t trkvers, uint32_t reserved
 	return 1;
 }
 
-int fmt_s3m_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_s3m_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	uint16_t nsmp, nord, npat;
 	int misc = S3M_UNSIGNED | S3M_CHANPAN; // temporary flags, these are both generally true

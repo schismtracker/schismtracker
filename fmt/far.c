@@ -175,7 +175,7 @@ static void far_import_note(song_note_t *note, const uint8_t data[4])
 }
 
 
-int fmt_far_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_far_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	struct far_header fhdr;
 	struct far_sample fsmp;

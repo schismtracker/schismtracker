@@ -415,7 +415,7 @@ static int d00_load_levelpuls(uint16_t paraptr, int tunelev,
 #endif
 
 int fmt_d00_load_song(song_t *song, slurp_t *fp,
-	SCHISM_UNUSED unsigned int lflags)
+	SCHISM_UNUSED uint32_t lflags)
 {
 	int c;
 	int ninst = 0;

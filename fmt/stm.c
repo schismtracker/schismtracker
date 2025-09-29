@@ -144,7 +144,7 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 	}
 }
 
-int fmt_stm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_stm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	char id[8];
 	uint8_t tmp[4];

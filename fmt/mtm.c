@@ -93,7 +93,7 @@ static void mtm_unpack_track(const uint8_t *b, song_note_t *note, int rows)
 	}
 }
 
-int fmt_mtm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_mtm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	uint8_t b[192];
 	uint8_t nchan, nord, npat, nsmp;

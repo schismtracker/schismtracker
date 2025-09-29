@@ -71,7 +71,7 @@ enum {
 	S3I_TYPE_PCM = 1,
 };
 
-int fmt_stx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_stx_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	uint16_t nsmp, nord, npat;
 	int n;

@@ -286,7 +286,7 @@ static int read_ult_event(slurp_t *fp, song_note_t *note, int *lostfx)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-int fmt_ult_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_ult_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	char buf[34];
 	uint8_t ver;

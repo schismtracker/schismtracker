@@ -75,7 +75,7 @@ int fmt_sfx_read_info(dmoz_file_t *file, slurp_t *fp)
 Why did I write a loader for such an obscure format? That is, besides the fact that neither Modplug nor
 Mikmod support SFX (and for good reason; it's a particularly dumb format) */
 
-int fmt_sfx_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_sfx_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	uint8_t tag[4];
 	int nord, npat, pat, chan, restart, nsmp = 0, n;

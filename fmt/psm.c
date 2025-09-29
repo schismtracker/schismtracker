@@ -469,7 +469,7 @@ static int psm_read_pattern(iff_chunk_t *c, slurp_t *fp, song_t *song, int *sina
 	return 1;
 }
 
-int fmt_psm_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	/* the (way too much) stack data */
 	iff_chunk_t song_chunks[MAX_ORDERS] = {0},
@@ -992,7 +992,7 @@ enum {
 	PSM16_SAMPLE_FLAG_SAMPLE = (0xFF & ~PSM16_SAMPLE_FLAG_LOOP),
 };
 
-int fmt_psm16_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_psm16_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	int speed, tempo, master_volume;
 	uint16_t norders, npatterns, nsamples, nchnplay, nchnprocess, nchns;

@@ -60,7 +60,7 @@ enum {
 /* --------------------------------------------------------------------------------------------------------- */
 
 #define PROTO_READ_INFO         (dmoz_file_t *file, slurp_t *fp)
-#define PROTO_LOAD_SONG         (song_t *song, slurp_t *fp, unsigned int lflags)
+#define PROTO_LOAD_SONG         (song_t *song, slurp_t *fp, uint32_t lflags)
 #define PROTO_SAVE_SONG         (disko_t *fp, song_t *song)
 #define PROTO_LOAD_SAMPLE       (slurp_t *fp, song_sample_t *smp)
 #define PROTO_SAVE_SAMPLE       (disko_t *fp, song_sample_t *smp)

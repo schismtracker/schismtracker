@@ -342,7 +342,7 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-int fmt_okt_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_okt_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	uint8_t tag[8];
 	unsigned int readflags = 0;

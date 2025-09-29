@@ -100,7 +100,7 @@ int fmt_669_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* <opinion humble="false">This is better than IT's and MPT's 669 loaders</opinion> */
 
-int fmt_669_load_song(song_t *song, slurp_t *fp, unsigned int lflags)
+int fmt_669_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	uint8_t b[16];
 	uint16_t npat, nsmp;
