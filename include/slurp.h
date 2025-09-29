@@ -123,7 +123,7 @@ errno on error. 'buf' is only meaningful if you've already stat()'d the file; in
 can simply be NULL. If size is nonzero, it overrides the file's size as returned by stat -- this
 can be used to read only part of a file, or if the file size is known but a stat structure is not
 available. */
-int slurp(slurp_t *t, const char *filename, struct stat *buf, size_t size);
+int slurp(slurp_t *t, const char *filename, struct stat *buf, uint64_t size);
 
 /* initializes a slurp_t over an existing file */
 int slurp_stdio(slurp_t *t, FILE *fp);
@@ -144,12 +144,12 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 void unslurp(slurp_t *t);
 
 #ifdef SCHISM_WIN32
-int slurp_win32_mmap(slurp_t *useme, const char *filename, size_t st);
-int slurp_win32(slurp_t *s, const char *filename, size_t st);
+int slurp_win32_mmap(slurp_t *useme, const char *filename, uint64_t st);
+int slurp_win32(slurp_t *s, const char *filename, uint64_t st);
 #endif
 
 #if HAVE_MMAP
-int slurp_mmap(slurp_t *useme, const char *filename, size_t st);
+int slurp_mmap(slurp_t *useme, const char *filename, uint64_t st);
 #endif
 
 /* stdio-style file processing */

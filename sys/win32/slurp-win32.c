@@ -117,7 +117,7 @@ static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *
 	return val;
 }
 
-int slurp_win32_mmap(slurp_t *slurp, const char *filename, size_t st)
+int slurp_win32_mmap(slurp_t *slurp, const char *filename, uint64_t st)
 {
 	/* updated this to hopefully have no possible race conditions regarding the
 	 * actual size of the memory mapping. if older versions of windows don't support
@@ -126,6 +126,10 @@ int slurp_win32_mmap(slurp_t *slurp, const char *filename, size_t st)
 	DWORD hi, lo;
 	HANDLE file;
 	HANDLE mapping;
+
+	/* don't overflow if sizeof(uint64_t) > sizeof(SIZE_T) */
+	if (st > (uint64_t)SIZE_MAX)
+		return SLURP_OPEN_IGNORE;
 
 	file = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE)
@@ -220,7 +224,7 @@ static void slurp_win32_closure_(slurp_t *t)
 	CloseHandle(t->internal.win32.handle);
 }
 
-int slurp_win32(slurp_t *t, const char *filename, SCHISM_UNUSED size_t size)
+int slurp_win32(slurp_t *t, const char *filename, SCHISM_UNUSED uint64_t size)
 {
 	memset(t, 0, sizeof(*t));
 

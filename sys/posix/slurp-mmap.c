@@ -34,8 +34,12 @@ static void munmap_slurp_(slurp_t *fp)
 	(void)close(fp->internal.memory.interfaces.mmap.fd);
 }
 
-int slurp_mmap(slurp_t *fp, const char *filename, size_t st)
+int slurp_mmap(slurp_t *fp, const char *filename, uint64_t st)
 {
+	/* don't overflow if sizeof(uint64_t) > sizeof(size_t) */
+	if (st > (uint64_t)SIZE_MAX)
+		return SLURP_OPEN_IGNORE;
+
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1) return SLURP_OPEN_FAIL;
 

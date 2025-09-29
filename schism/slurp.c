@@ -29,7 +29,7 @@
 #include "osdefs.h"
 #include "mem.h"
 
-static int slurp_stdio_open_(slurp_t *t, const char *filename, size_t size);
+static int slurp_stdio_open_(slurp_t *t, const char *filename, uint64_t size);
 static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);
 static int64_t slurp_stdio_tell_(slurp_t *t);
 static uint64_t slurp_stdio_length_(slurp_t *t);
@@ -48,9 +48,9 @@ static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count);
 
 /* --------------------------------------------------------------------- */
 
-int slurp(slurp_t *t, const char *filename, struct stat * buf, size_t size)
+int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 {
-	static int (*const init_funcs[])(slurp_t *t, const char *filename, size_t size) = {
+	static int (*const init_funcs[])(slurp_t *t, const char *filename, uint64_t size) = {
 #ifdef SCHISM_WIN32
 		slurp_win32_mmap,
 #endif
@@ -204,7 +204,7 @@ int slurp_stdio(slurp_t *t, FILE *fp)
 	return SLURP_OPEN_SUCCESS;
 }
 
-static int slurp_stdio_open_(slurp_t *t, const char *filename, SCHISM_UNUSED size_t size)
+static int slurp_stdio_open_(slurp_t *t, const char *filename, SCHISM_UNUSED uint64_t size)
 {
 	FILE *fp;
 	void (*closure)(slurp_t *);
