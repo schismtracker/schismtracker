@@ -167,13 +167,10 @@ int slurp_win32_mmap(slurp_t *slurp, const char *filename, uint64_t st)
 
 static int slurp_win32_seek_(slurp_t *t, int64_t offset, int whence)
 {
-	union {
-		LONG l[2];
-		int64_t x;
-	} x;
+	LARGE_INTEGER r;
 	DWORD move;
 
-	x.x = offset;
+	r.QuadPart = offset;
 
 	switch (whence) {
 	case SEEK_SET: move = FILE_BEGIN; break;
@@ -182,19 +179,22 @@ static int slurp_win32_seek_(slurp_t *t, int64_t offset, int whence)
 	default: return -1;
 	}
 
-	return (SetFilePointer(t->internal.win32.handle, x.l[0], &x.l[1], move) == INVALID_SET_FILE_POINTER) ? -1 : 0;
+	r.u.LowPart = SetFilePointer(t->internal.win32.handle, r.u.LowPart, &r.u.HighPart, move);
+	if (r.u.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
+		return -1;
+
+	return 0;
 }
 
 static int64_t slurp_win32_tell_(slurp_t *t)
 {
-	LONG x = 0;
-	DWORD r;
+	LARGE_INTEGER r;
 
-	r = SetFilePointer(t->internal.win32.handle, 0, &x, FILE_CURRENT);
-	if (r == INVALID_SET_FILE_POINTER)
+	r.u.LowPart = SetFilePointer(t->internal.win32.handle, 0, &r.u.HighPart, FILE_CURRENT);
+	if (r.u.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
 		return -1;
 
-	return (int64_t)x << 32 | r;
+	return r.QuadPart;
 }
 
 static uint64_t slurp_win32_length_(slurp_t *t)
