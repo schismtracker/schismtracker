@@ -70,30 +70,48 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 
 	memset(t, 0, sizeof(*t));
 
-	if (buf) {
-		st = *buf;
+	if (!strcmp(filename, "-")) {
+		/* We can't seek on standard input! */
+		disko_t ds;
+		char buf[4096];
+		size_t r;
+
+		if (disko_memopen(&ds) < 0)
+			return -1;
+
+		while ((r = fread(buf, 1, 4096, stdin)) > 0)
+			disko_write(&ds, buf, r);
+
+		disko_memclose(&ds, 1);
+
+		/* :) */
+		slurp_memstream(t, ds.data, ds.length);
 	} else {
-		if (os_stat(filename, &st) < 0)
-			return -1;
-	}
-
-	if (!size)
-		size = st.st_size;
-
-	for (i = 0; i < ARRAY_SIZE(init_funcs); i++) {
-		switch (init_funcs[i](t, filename, size)) {
-		case SLURP_OPEN_FAIL:
-			return -1;
-		case SLURP_OPEN_SUCCESS:
-			goto finished;
-		default:
-		case SLURP_OPEN_IGNORE:
-			break;
+		if (buf) {
+			st = *buf;
+		} else {
+			if (os_stat(filename, &st) < 0)
+				return -1;
 		}
-	}
 
-	/* fail */
-	return -1;
+		if (!size)
+			size = st.st_size;
+
+		for (i = 0; i < ARRAY_SIZE(init_funcs); i++) {
+			switch (init_funcs[i](t, filename, size)) {
+			case SLURP_OPEN_FAIL:
+				return -1;
+			case SLURP_OPEN_SUCCESS:
+				goto finished;
+			default:
+			case SLURP_OPEN_IGNORE:
+				break;
+			}
+		}
+
+		/* fail */
+		return -1;
+	}
 
 finished: ; /* this semicolon is important because C */
 	uint8_t *mmdata;
@@ -210,14 +228,7 @@ static int slurp_stdio_open_(slurp_t *t, const char *filename, SCHISM_UNUSED uin
 	void (*closure)(slurp_t *);
 	int r;
 
-	if (!strcmp(filename, "-")) {
-		fp = stdin;
-		closure = NULL;
-	} else {
-		fp = os_fopen(filename, "rb");
-		closure = slurp_stdio_closure_;
-	}
-
+	fp = os_fopen(filename, "rb");
 	if (!fp)
 		return SLURP_OPEN_FAIL;
 
@@ -225,7 +236,7 @@ static int slurp_stdio_open_(slurp_t *t, const char *filename, SCHISM_UNUSED uin
 	if (r != SLURP_OPEN_SUCCESS)
 		return r;
 
-	t->closure = closure;
+	t->closure = slurp_stdio_closure_;
 	return SLURP_OPEN_SUCCESS;
 }
 

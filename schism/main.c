@@ -314,19 +314,23 @@ static void parse_options(int argc, char **argv)
 	char *cwd = dmoz_get_current_directory();
 	for (; optind < argc; optind++) {
 		char *arg = argv[optind];
-		char *tmp = dmoz_path_concat(cwd, arg);
-		if (!tmp) {
-			perror(arg);
-			continue;
-		}
-		char *norm = dmoz_path_normal(tmp);
-		free(tmp);
-		if (dmoz_path_is_directory(arg)) {
-			free(initial_dir);
-			initial_dir = norm;
+		if (!strcmp(arg, "-")) {
+			initial_song = str_dup("-");
 		} else {
-			free(initial_song);
-			initial_song = norm;
+			char *tmp = dmoz_path_concat(cwd, arg);
+			if (!tmp) {
+				perror(arg);
+				continue;
+			}
+			char *norm = dmoz_path_normal(tmp);
+			free(tmp);
+			if (dmoz_path_is_directory(arg)) {
+				free(initial_dir);
+				initial_dir = norm;
+			} else {
+				free(initial_song);
+				initial_song = norm;
+			}
 		}
 	}
 	free(cwd);
