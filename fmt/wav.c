@@ -259,7 +259,7 @@ struct wav_writedata {
 };
 
 /* returns bytes per frame */
-static int wav_header(disko_t *fp, int bits, int channels, int rate, size_t length,
+static int wav_header(disko_t *fp, int bits, int channels, uint32_t rate, size_t length,
 	struct wav_writedata *wwd /* out */)
 {
 	int16_t s;
@@ -399,7 +399,7 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 }
 
 
-int fmt_wav_export_head(disko_t *fp, int bits, int channels, int rate)
+int fmt_wav_export_head(disko_t *fp, int bits, int channels, uint32_t rate)
 {
 	struct wav_writedata *wwd = malloc(sizeof(struct wav_writedata));
 	if (!wwd)

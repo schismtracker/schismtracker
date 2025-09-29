@@ -475,7 +475,7 @@ static FLAC__StreamEncoderTellStatus write_on_tell(SCHISM_UNUSED const FLAC__Str
 	return FLAC__STREAM_ENCODER_TELL_STATUS_OK;
 }
 
-static int flac_save_init_head(disko_t *fp, int bits, int channels, int rate, uint32_t estimate_num_samples)
+static int flac_save_init_head(disko_t *fp, int bits, int channels, uint32_t rate, uint32_t estimate_num_samples)
 {
 	if (!flac_wasinit)
 		return -9;
@@ -543,7 +543,7 @@ static inline int flac_save_init_tail(disko_t *fp)
 	return 0;
 }
 
-static int flac_save_init(disko_t *fp, int bits, int channels, int rate, uint32_t estimate_num_samples)
+static int flac_save_init(disko_t *fp, int bits, int channels, uint32_t rate, uint32_t estimate_num_samples)
 {
 	if (flac_save_init_head(fp, bits, channels, rate, estimate_num_samples) || flac_save_init_tail(fp))
 		return -1;
@@ -551,7 +551,7 @@ static int flac_save_init(disko_t *fp, int bits, int channels, int rate, uint32_
 	return 0;
 }
 
-int fmt_flac_export_head(disko_t *fp, int bits, int channels, int rate)
+int fmt_flac_export_head(disko_t *fp, int bits, int channels, uint32_t rate)
 {
 	if (flac_save_init(fp, bits, channels, rate, 0))
 		return DW_ERROR;

@@ -346,7 +346,7 @@ struct aiff_writedata {
 	int bpf; // bytes per frame
 };
 
-static int aiff_header(disko_t *fp, int bits, int channels, int rate,
+static int aiff_header(disko_t *fp, int bits, int channels, uint32_t rate,
 	const char *name, size_t length, struct aiff_writedata *awd /* out */)
 {
 	int16_t s;
@@ -456,7 +456,7 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 }
 
 
-int fmt_aiff_export_head(disko_t *fp, int bits, int channels, int rate)
+int fmt_aiff_export_head(disko_t *fp, int bits, int channels, uint32_t rate)
 {
 	struct aiff_writedata *awd = malloc(sizeof(struct aiff_writedata));
 	if (!awd)
