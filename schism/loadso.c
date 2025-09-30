@@ -165,6 +165,7 @@ static const char *loadso_libtool_fmts[] = {
 #ifdef SCHISM_WIN32
 	"lib%s-%d.dll",
 	"%s-%d.dll", /* avformat-61.dll */
+	"%slib%d.dll", /* zlib1.dll */
 #elif defined(SCHISM_MACOSX)
 	/* ripped from sdl2-compat with minor changes; most notably,
 	 * we put the raw dylib within the Resources directory, while
