@@ -84,17 +84,17 @@ AC_ARG_ENABLE(fortify-source,
 	ADD_FORTIFY=check)
 
 AC_ARG_ENABLE(flac-linking,
-	AS_HELP_STRING([--enable-flac-linking], [Link to FLAC rather than loading at runtime]),
+	AS_HELP_STRING([--enable-flac-linking], [Link to FLAC rather than loading at runtime @<:default=check@:>@]),
 	FLAC_LINKING=$enableval,
 	FLAC_LINKING=check)
 
 AC_ARG_ENABLE(jack-linking,
-	AS_HELP_STRING([--enable-jack-linking], [Link to JACK rather than loading at runtime]),
+	AS_HELP_STRING([--enable-jack-linking], [Link to JACK rather than loading at runtime @<:default=check@:>@]),
 	JACK_LINKING=$enableval,
 	JACK_LINKING=check)
 
 AC_ARG_ENABLE(alsa-linking,
-	AS_HELP_STRING([--enable-alsa-linking], [Link to ALSA rather than loading at runtime]),
+	AS_HELP_STRING([--enable-alsa-linking], [Link to ALSA rather than loading at runtime @<:default=check@:>@]),
 	ALSA_LINKING=$enableval,
 	ALSA_LINKING=check)
 
@@ -159,29 +159,34 @@ AC_ARG_WITH([avformat],
 	[with_avformat=check])
 
 AC_ARG_ENABLE(sdl12-linking,
-	AS_HELP_STRING([--enable-sdl12-linking], [Link to SDL 1.2 rather than loading at runtime]),
+	AS_HELP_STRING([--enable-sdl12-linking], [Link to SDL 1.2 rather than loading at runtime @<:default=check@:>@]),
 	SDL12_LINKING=$enableval,
 	SDL12_LINKING=check)
 
 AC_ARG_ENABLE(sdl2-linking,
-	AS_HELP_STRING([--enable-sdl2-linking], [Link to SDL 2 rather than loading at runtime]),
+	AS_HELP_STRING([--enable-sdl2-linking], [Link to SDL 2 rather than loading at runtime @<:default=check@:>@]),
 	SDL2_LINKING=$enableval,
 	SDL2_LINKING=check)
 
 AC_ARG_ENABLE(sdl3-linking,
-	AS_HELP_STRING([--enable-sdl3-linking], [Link to SDL 3 rather than loading at runtime]),
+	AS_HELP_STRING([--enable-sdl3-linking], [Link to SDL 3 rather than loading at runtime @<:default=check@:>@]),
 	SDL3_LINKING=$enableval,
 	SDL3_LINKING=check)
 
 AC_ARG_ENABLE(x11-linking,
-	AS_HELP_STRING([--enable-x11-linking], [Link to X11 rather than loading at runtime]),
+	AS_HELP_STRING([--enable-x11-linking], [Link to X11 rather than loading at runtime @<:default=check@:>@]),
 	X11_LINKING=$enableval,
 	X11_LINKING=check)
 
 AC_ARG_ENABLE(avformat-linking,
-	AS_HELP_STRING([--enable-avformat-linking], [Link to libavformat rather than loading at runtime]),
+	AS_HELP_STRING([--enable-avformat-linking], [Link to libavformat rather than loading at runtime @<:default=check@:>@]),
 	AVFORMAT_LINKING=$enableval,
 	AVFORMAT_LINKING=check)
+
+AC_ARG_ENABLE(zlib-linking,
+	AS_HELP_STRING([--enable-zlib-linking], [Link to zlib rather than loading at runtime @<:default=check@:>@]),
+	ZLIB_LINKING=$enableval,
+	ZLIB_LINKING=check)
 
 dnl We disable the tests by default. This is primarily to aid package maintainers,
 dnl who would be surprised to find a whole new binary :)
