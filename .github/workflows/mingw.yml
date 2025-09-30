@@ -171,7 +171,7 @@ jobs:
           cd build
           # We link to SDL 1.2 here since it's universally supported by everything and is
           # useful as a fallback of sorts.
-          MEDIAFOUNDATION_CFLAGS="-I/c/msys2/msys64/mingw32/include" DSOUND_CFLAGS="-I/c/msys2/msys64/mingw32/include" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -L/c/MinGW/lib" CC="mingw32-gcc.exe" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" UTF8PROC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lutf8proc-3" SDL12_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL" SDL12_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL" FLAC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" FLAC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lFLAC -logg -lm" SDL2_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 --with-sdl12 --enable-sdl12-linking
+          MEDIAFOUNDATION_CFLAGS="-I/c/msys2/msys64/mingw32/include" DSOUND_CFLAGS="-I/c/msys2/msys64/mingw32/include" CPPFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" LDFLAGS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -L/c/MinGW/lib" CC="mingw32-gcc.exe" UTF8PROC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" UTF8PROC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lutf8proc-3" SDL12_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL" SDL12_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL" FLAC_CFLAGS="-I$RUNNER_TEMP_CYGPATH/i386prefix/include" FLAC_LIBS="-L$RUNNER_TEMP_CYGPATH/i386prefix/lib -lFLAC -logg -lm" SDL2_CFLAGS="-I/c/msys2/msys64/mingw32/include/SDL2" SDL2_LIBS="-L/c/msys2/msys64/mingw32/lib -lSDL2" ../configure --with-flac --with-sdl2 --with-sdl12 --enable-sdl12-linking --without-zlib
           make
           strip schismtracker.exe
           cp schismtracker.exe ../..
@@ -184,6 +184,8 @@ jobs:
           # our build might have failed! if so, fail this part of the
           # script so that we don't silently ship packages without
           # binaries in them
+          #
+          # TODO can we ship zlib as well?
           test -f "schismtracker.exe"
           # FIXME these DLLs may not be needed anymore
           cp "/c/MinGW/bin/libgcc_s_dw2-1.dll" .
@@ -348,7 +350,9 @@ jobs:
           make
           make install
           cd ../..
-        
+
+        # TODO build zlib here too
+
       - name: 'Get date of latest commit'
         id: date
         run: |
@@ -365,7 +369,7 @@ jobs:
           mkdir build
           cd build
           # Link to SDL2, since it's the only backend we support here
-          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-flac --with-sdl2 --enable-sdl2-linking
+          ../configure --host="$TARGET-w64-$SYS" --prefix="$HOME/prefix" --with-flac --with-sdl2 --without-zlib --enable-sdl2-linking
           make
           "$TARGET-w64-$SYS-strip" -g schismtracker.exe
           cp schismtracker.exe ../..
@@ -428,7 +432,7 @@ jobs:
         with:
           msystem: ${{ matrix.sys.sys }}
           update: true
-          install: mingw-w64-${{ matrix.sys.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.sys.env }}-SDL2 mingw-w64-${{ matrix.sys.env }}-libutf8proc zip dos2unix
+          install: mingw-w64-${{ matrix.sys.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.sys.env }}-SDL2 mingw-w64-${{ matrix.sys.env }}-libutf8proc mingw-w64-${{ matrix.sys.env }}-zlib zip dos2unix
 
       - name: 'Build package'
         env:
