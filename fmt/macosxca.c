@@ -142,6 +142,8 @@ static SInt64 macosxca_size_cb(void *userdata)
 {
 	slurp_t *fp = userdata;
 
+	/* I don't really know what we could do in the case of a nonseekable stream
+	 * here  --paper */
 	return slurp_length(fp);
 }
 

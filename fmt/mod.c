@@ -147,7 +147,7 @@ int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 	char tag[4], title[20];
 	int i = 0;
 
-	if (slurp_length(fp) < 1085)
+	if (!slurp_available(fp, 1085, SEEK_CUR))
 		return 0;
 
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
@@ -418,6 +418,11 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, uint32_t lflags, int for
 
 	/* hey, is this a wow file? */
 	if (test_wow) {
+		/* FIXME: this doesn't work for nonseekable streams.
+		 * we need to add a slurp_length_equals function,
+		 * which will read UNTIL the specified offset and make
+		 * sure it doesn't actually exceed. BUT MAYBE IT DOESN'T
+		 * MATTER AT ALL. */
 		if (slurp_length(fp) == 2048 * npat + samplesize + 3132) {
 			nchan = 8;
 			tid = "Mod's Grave WOW";

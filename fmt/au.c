@@ -44,8 +44,6 @@ struct au_header {
 
 static int read_header_au(struct au_header *hdr, slurp_t *fp)
 {
-	uint64_t memsize = slurp_length(fp);
-
 #define READ_VALUE(name) \
 	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
 
@@ -69,8 +67,8 @@ static int read_header_au(struct au_header *hdr, slurp_t *fp)
 	hdr->channels = bswapBE32(hdr->channels);
 
 	if (hdr->data_offset < 24
-		|| hdr->data_offset > memsize
-		|| hdr->data_size > memsize - hdr->data_offset)
+		|| slurp_available(fp, hdr->data_offset, SEEK_SET)
+		|| slurp_available(fp, hdr->data_size + hdr->data_offset, SEEK_SET))
 		return 0;
 
 	switch (hdr->channels) {

@@ -175,7 +175,9 @@ int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 	slurp_seek(fp, sizeof(uint32_t) * hdr.insnum, SEEK_CUR);
 	slurp_read(fp, para_smp, sizeof(uint32_t) * hdr.smpnum);
 
-	uint32_t para_min = ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : slurp_length(fp);
+	uint32_t para_min = ((hdr.special & 1) && hdr.msglength)
+		? hdr.msgoffset
+		: UINT32_C(0xFFFFFFFF); /* ?????????? */
 	for (n = 0; n < hdr.smpnum; n++) {
 		para_smp[n] = bswapLE32(para_smp[n]);
 		if (para_smp[n] < para_min)
@@ -332,7 +334,7 @@ SCHISM_STATIC_ASSERT(MAX_MIDI_MACRO == 32, "MIDI config reading code assumes mac
 int it_read_midi_config(midi_config_t *midi, slurp_t *fp)
 {
 	/* preserving this just for compat with old behavior  --paper */
-	if ((slurp_tell(fp) + 4896) > (int64_t)slurp_length(fp))
+	if (!slurp_available(fp, 4896, SEEK_CUR))
 		return 0;
 
 #define READ_VALUE(x) \
@@ -466,7 +468,9 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	slurp_read(fp, para_smp, 4 * hdr.smpnum);
 	slurp_read(fp, para_pat, 4 * hdr.patnum);
 
-	para_min = ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : slurp_length(fp);
+	para_min = ((hdr.special & 1) && hdr.msglength)
+		? hdr.msgoffset
+		: UINT32_C(0xFFFFFFFF);
 	for (n = 0; n < hdr.insnum; n++) {
 		para_ins[n] = bswapLE32(para_ins[n]);
 		if (para_ins[n] < para_min)
@@ -541,7 +545,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			tid = "BeRoTracker";
 	}
 
-	if ((hdr.special & 1) && hdr.msglength && hdr.msgoffset + hdr.msglength < slurp_length(fp)) {
+	if ((hdr.special & 1) && hdr.msglength && slurp_available(fp, hdr.msgoffset + hdr.msglength, SEEK_SET)) {
 		int msg_len = MIN(MAX_MESSAGE, hdr.msglength);
 		slurp_seek(fp, hdr.msgoffset, SEEK_SET);
 		slurp_read(fp, song->message, msg_len);

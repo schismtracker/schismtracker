@@ -751,7 +751,6 @@ CSF_DECODE_DELTA(8, 2) /* csf_decode_delta_8bit_2chn */
 
 uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 {
-	const uint64_t memsize = slurp_length(fp) - slurp_tell(fp);
 	uint32_t len = 0, mem;
 
 	if (sample->flags & CHN_ADLIB) return 0; // no sample data
@@ -819,7 +818,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(7,M,LE,PCMS):
 		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
 
-		len = sample->length = MIN(sample->length, memsize);
+		if (!slurp_available(fp, len, SEEK_CUR))
+			break;
 
 		slurp_read(fp, sample->data, len);
 		for (uint32_t j = 0; j < len; j++)
@@ -839,10 +839,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,M,BE,PCMU):
 	case SF(8,M,BE,PCMD): {
 		len = sample->length;
-		if (len > memsize)
-			len = sample->length = memsize;
 
-		/* first, read it all in */
+		if (!slurp_available(fp, len, SEEK_CUR))
+			break;
+
 		slurp_read(fp, sample->data, len);
 
 		/* then do extra processing to get it into our format */
@@ -873,7 +873,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		uint32_t j;
 
 		len = sample->length * 2;
-		if (len > memsize) break;
+
+		if (!slurp_available(fp, len, SEEK_CUR))
+			break;
 
 		/* Convert split to interleaved */
 		for (c = 0; c < 2; c++)
@@ -905,8 +907,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,SI,BE,PCMU):
 	case SF(8,SI,BE,PCMD): {
 		len = sample->length * 2;
-		if (len > memsize)
-			len = memsize >> 1;
+
+		if (!slurp_available(fp, len, SEEK_CUR))
+			break;
 
 		slurp_read(fp, sample->data, len);
 
@@ -937,7 +940,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x8000 : 0;
 
 		len = sample->length;
-		if (len * 2 > memsize)
+
+		if (!slurp_available(fp, len * 2, SEEK_CUR))
 			break;
 
 		// read
@@ -965,7 +969,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,SS,BE,PCMU): {
 		len = sample->length * 2;
 
-		if (len*2 > memsize)
+		if (!slurp_available(fp, len, SEEK_CUR))
 			break;
 
 		for (int c = 0; c < 2; c++) {
@@ -993,8 +997,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,SI,BE,PCMU):
 	case SF(16,SI,BE,PCMD): {
 		len = sample->length * 2;
-		if (len * 2 > memsize)
-			len = memsize >> 1;
+
+		if (!slurp_available(fp, len, SEEK_CUR))
+			break;
 
 		slurp_read(fp, sample->data, len * 2);
 
@@ -1027,7 +1032,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
 
-		if (len > memsize) break;
+		if (!slurp_available(fp, len, SEEK_CUR))
+			break;
+
 		if (len > 3*8*(((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
 			int32_t max = 0xFF;
 			int32_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT32_MIN : 0;
@@ -1080,7 +1087,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
 
-		if (len > memsize) break;
+		if (!slurp_available(fp, len, SEEK_CUR))
+			break;
+
 		if (len > 4*8*(((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
 			int32_t max = 0xFFFF;
 			int32_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT32_MIN : 0;
@@ -1127,6 +1136,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
 
+		if (!slurp_available(fp, len * 4, SEEK_CUR))
+			break;
+
 		for (uint32_t k = 0; k < len; k++) {
 			uint32_t bytes;
 			slurp_read(fp, &bytes, sizeof(bytes));
@@ -1146,9 +1158,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(32,SS,LE,IEEE): {
 		int i;
 
-		len = sample->length;
+		len = sample->length * 2;
 
-		len *= 2;
+		if (!slurp_available(fp, len * 4, SEEK_CUR))
+			break;
 
 		for (i = 0; i < 2; i++) {
 			int16_t *data = (int16_t *)sample->data + i;
@@ -1181,6 +1194,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
 
+		if (!slurp_available(fp, len * 8, SEEK_CUR))
+			break;
+
 		for (uint32_t k = 0; k < len; k++) {
 			uint64_t bytes;
 			slurp_read(fp, &bytes, sizeof(bytes));
@@ -1200,9 +1216,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(64,SS,LE,IEEE): {
 		int i;
 
-		len = sample->length;
+		len = sample->length * 2;
 
-		len *= 2;
+		if (!slurp_available(fp, len * 8, SEEK_CUR))
+			break;
 
 		for (i = 0; i < 2; i++) {
 			int16_t *data = (int16_t *)sample->data + i;
@@ -1218,7 +1235,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			}
 		}
 
-		len *= 4;
+		len *= 8;
 
 		break;
 	}
@@ -1227,9 +1244,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,M,LE,IT214):
 	case SF(16,M,LE,IT214):
 	case SF(8,M,LE,IT215):
-	case SF(16,M,LE,IT215):
-		len = memsize;
-		if (len < 2) break;
+	case SF(16,M,LE,IT215): {
+		int64_t start = slurp_tell(fp);
 		if ((flags & SF_BIT_MASK) == SF_8) {
 			it_decompress8(sample->data, sample->length,
 					fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
@@ -1237,13 +1253,14 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			it_decompress16(sample->data, sample->length,
 					fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
 		}
+		len = slurp_tell(fp) - start;
 		break;
+	}
 	case SF(8,SS,LE,IT214):
 	case SF(16,SS,LE,IT214):
 	case SF(8,SS,LE,IT215):
-	case SF(16,SS,LE,IT215):
-		len = memsize;
-		if (len < 4) break;
+	case SF(16,SS,LE,IT215): {
+		int64_t start = slurp_tell(fp);
 		if ((flags & SF_BIT_MASK) == SF_8) {
 			it_decompress8(sample->data, sample->length,
 					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
@@ -1255,12 +1272,13 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			it_decompress16(sample->data + 2, sample->length,
 					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
 		}
+		len = slurp_tell(fp) - start;
 		break;
+	}
 
 	// PTM 8bit delta to 16-bit sample
 	case SF(16,M,LE,PTM): {
 		len = sample->length * 2;
-		if (len > memsize) break;
 		signed char *data = (signed char *)sample->data;
 		signed char delta8 = 0;
 		for (uint32_t j=0; j<len; j++) {
@@ -1278,7 +1296,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	// Huffman MDL compressed samples
 	case SF(8,M,LE,MDL):
 	case SF(16,M,LE,MDL):
-		if (memsize < 8) break;
 		if ((flags & SF_BIT_MASK) == SF_8) {
 			len = mdl_decompress8(sample->data, sample->length, fp);
 		} else {
@@ -1289,7 +1306,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	// 8-bit ADPCM data w/ 16-byte table (MOD ADPCM)
 	case SF(PCMD16,8,M,LE): {
 		len = (sample->length + 1) / 2 + 16;
-		if (len > memsize) break;
+
+		if (!slurp_available(fp, len, SEEK_CUR))
+			break;
 
 		int8_t table[16];
 		slurp_read(fp, table, sizeof(table));
@@ -1306,14 +1325,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		}
 		break;
 	}
-	}
-	if (len > memsize) {
-		if (sample->data) {
-			sample->length = 0;
-			csf_free_sample(sample->data);
-			sample->data = NULL;
-		}
-		return 0;
 	}
 	csf_adjust_sample_loop(sample);
 	return len;

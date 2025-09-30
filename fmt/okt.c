@@ -36,7 +36,7 @@ int fmt_okt_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char magic[8];
 
-	if (slurp_length(fp) < 16)
+	if (!slurp_available(fp, 16, SEEK_CUR))
 		return 0;
 
 	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)

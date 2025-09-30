@@ -102,7 +102,9 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 			return 0;
 		smp->length = bswapLE32(dw);
 
-		if (slurp_length(fp) < 0x50 + smp->length * bytes_per_sample)
+		slurp_seek(fp, 80, SEEK_SET);
+
+		if (!slurp_available(fp, smp->length * bytes_per_sample, SEEK_CUR))
 			return 0;
 
 		/* convert flags */
@@ -119,7 +121,6 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 			int format = SF_M | SF_LE; // endianness; channels
 			format |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU); // bits; encoding
 
-			slurp_seek(fp, 80, SEEK_SET);
 			csf_read_sample(smp, format, fp);
 		}
 	} else if (type == S3I_TYPE_ADLIB) {

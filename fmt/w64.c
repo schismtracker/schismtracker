@@ -68,7 +68,7 @@ static int w64_chunk_peek(struct w64_chunk *chunk, slurp_t *fp)
 	if (pos < 0)
 		return 0;
 
-	return ((uint64_t)pos <= slurp_length(fp));
+	return slurp_available(fp, 1, SEEK_CUR);
 }
 
 static int w64_chunk_empty(struct w64_chunk *chunk)

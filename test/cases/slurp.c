@@ -45,8 +45,12 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	char buf[ARRAY_SIZE(expected_result) - 1];
 	size_t i;
 	size_t j;
+	int64_t len;
 
-	ASSERT(slurp_length(fp) == sizeof(buf));
+	len = slurp_length(fp);
+
+	/* don't error if the length is unknown */
+	ASSERT(len == -1 || len == sizeof(buf));
 
 	/* go over every possible (legal) combination of reads.
 	 * there's probably a simpler way to do this, but oh well. */

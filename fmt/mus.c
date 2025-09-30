@@ -61,7 +61,7 @@ static int read_mus_header(struct mus_header *hdr, slurp_t *fp)
 	hdr->scorelen   = bswapLE16(hdr->scorelen);
 	hdr->scorestart = bswapLE16(hdr->scorestart);
 
-	if (((uint64_t)hdr->scorestart + hdr->scorelen) > slurp_length(fp))
+	if (!slurp_available(fp, hdr->scorestart + hdr->scorelen, SEEK_SET))
 		return 0;
 
 	slurp_seek(fp, 8, SEEK_CUR); // skip
@@ -137,8 +137,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 	slurp_seek(fp, hdr.scorestart, SEEK_SET);
 
 	// Narrow the data buffer to simplify reading
-	len = slurp_length(fp);
-	len = MIN(len, hdr.scorestart + hdr.scorelen);
+	slurp_limit(fp, hdr.scorestart + hdr.scorelen);
 
 	/* start the first pattern */
 	pat = 0;
@@ -148,7 +147,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 	note = song->patterns[pat];
 	song->orderlist[pat] = pat;
 
-	while (!finished && slurp_tell(fp) < (int64_t)len) {
+	while (!finished && !slurp_eof(fp)) {
 		uint8_t event, b1, b2, type, ch;
 
 		event = slurp_getc(fp);
@@ -377,6 +376,8 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 			note += 64 * row;
 		}
 	}
+
+	slurp_unlimit(fp);
 
 	song->flags |= SONG_NOSTEREO;
 	song->initial_speed = 1;

@@ -88,7 +88,7 @@ int fmt_dsm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char riff[4], dsmf[4];
 
-	if (!(slurp_length(fp) > 40))
+	if (!slurp_available(fp, 40, SEEK_CUR))
 		return 0;
 
 	if (slurp_read(fp, riff, sizeof(riff)) != sizeof(dsmf)

@@ -256,7 +256,11 @@ static FLAC__StreamDecoderTellStatus read_on_tell(SCHISM_UNUSED const FLAC__Stre
 
 static FLAC__StreamDecoderLengthStatus read_on_length(SCHISM_UNUSED const FLAC__StreamDecoder *decoder, FLAC__uint64 *stream_length, void *client_data)
 {
-	*stream_length = (FLAC__uint64)slurp_length(((struct flac_readdata*)client_data)->fp);
+	int64_t len = slurp_length(((struct flac_readdata*)client_data)->fp);
+	if (len < 0)
+		return FLAC__STREAM_DECODER_LENGTH_STATUS_UNSUPPORTED;
+
+	*stream_length = (FLAC__uint64)len;
 	return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
 }
 

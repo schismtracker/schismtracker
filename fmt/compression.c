@@ -65,8 +65,6 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 	if (startpos < 0)
 		return 0; // wat
 
-	const uint64_t filelen = slurp_length(fp);
-
 	destpos = (int8_t *) dest;
 
 	// now unpack data till the dest buffer is full
@@ -82,7 +80,7 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 				return 0;
 
 			if (c1 == EOF || c2 == EOF
-				|| pos + (c1 | (c2 << 8)) > (int64_t)filelen)
+				|| !slurp_available(fp, c1 | (c2 << 8), SEEK_CUR))
 				return pos - startpos;
 		}
 		bitbuf = bitnum = 0;
@@ -169,8 +167,6 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 	if (startpos < 0)
 		return 0; // wat
 
-	const uint64_t filelen = slurp_length(fp);
-
 	destpos = (int16_t *) dest;
 
 	// now unpack data till the dest buffer is full
@@ -186,7 +182,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 				return 0;
 
 			if (c1 == EOF || c2 == EOF
-				|| pos + (c1 | (c2 << 8)) > (int64_t)filelen)
+				|| !slurp_available(fp, c1 | (c2 << 8), SEEK_CUR))
 				return pos - startpos;
 		}
 
@@ -279,8 +275,6 @@ uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
 	if (startpos < 0)
 		return 0; // wat
 
-	const uint64_t filelen = slurp_length(fp);
-
 	uint32_t bitnum = 32;
 	uint8_t dlt = 0;
 
@@ -289,7 +283,6 @@ uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
 	if (slurp_read(fp, &v, sizeof(v)) != sizeof(v))
 		return 0;
 	v = bswapLE32(v);
-	v = MIN(v, filelen - startpos) + 4;
 
 	uint32_t bitbuf;
 	if (slurp_read(fp, &bitbuf, sizeof(bitbuf)) != sizeof(bitbuf))
@@ -329,8 +322,6 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
 	if (startpos < 0)
 		return 0; // wat
 
-	const uint64_t filelen = slurp_length(fp);
-
 	// first 4 bytes indicate packed length
 	uint32_t bitnum = 32;
 	uint8_t dlt = 0, lowbyte = 0;
@@ -338,7 +329,6 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
 	uint32_t v;
 	slurp_read(fp, &v, sizeof(v));
 	v = bswapLE32(v);
-	v = MIN(v, filelen - startpos) + 4;
 
 	uint32_t bitbuf;
 	slurp_read(fp, &bitbuf, sizeof(bitbuf));

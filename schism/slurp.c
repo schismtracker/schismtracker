@@ -128,9 +128,10 @@ finished: ; /* this semicolon is important because C */
 
 	slurp_rewind(t);
 
+#ifdef USE_ZLIB
 	slurp_gzip(t);
-
 	slurp_rewind(t);
+#endif
 
 	// TODO re-add PP20 unpacker, possibly also handle other formats?
 
@@ -525,30 +526,36 @@ struct slurp_nonseek {
 
 	/* disko memory buffer (note that pos should always equal length) */
 	disko_t ds;
-
-	/* terrible estimate of current length that only barely works */
-	uint64_t length;
 };
 
-static size_t slurp_nonseek_peek(slurp_t *fp, void *buf, size_t size)
+static int slurp_nonseek_available(slurp_t *fp, size_t x, int whence)
 {
-	/* preprocess for nonseek crap */
 	struct slurp_nonseek *ns = fp->nonseek;
+	int64_t pos = x;
 
-	while (fp->internal.memory.pos + size > ns->ds.length) {
-		size_t r;
+	switch (whence) {
+	case SEEK_SET: break;
+	case SEEK_CUR: pos += fp->internal.memory.pos; break;
+	case SEEK_END: return 0;
+	}
 
-		r = ns->read(ns->opaque, &ns->ds, size);
-		if (!r) {
-			/* nice, we actually have the proper length now */
-			ns->length = ns->ds.length;
-			break;
-		}
+	while (pos > ns->ds.length) {
+		size_t r = ns->read(ns->opaque, &ns->ds, pos - ns->ds.length);
+		if (!r)
+			return 0;
 	}
 
 	/* buffer may have changed */
 	fp->internal.memory.data = ns->ds.data;
 	fp->internal.memory.length = ns->ds.length;
+
+	return 1;
+}
+
+static size_t slurp_nonseek_peek(slurp_t *fp, void *buf, size_t size)
+{
+	/* available() will load up any data we're missing and update the buffer */
+	slurp_nonseek_available(fp, size, SEEK_CUR);
 
 	return slurp_memory_peek_(fp, buf, size);
 }
@@ -562,14 +569,6 @@ static void slurp_nonseek_closure(slurp_t *fp)
 	free(ns);
 }
 
-static uint64_t slurp_nonseek_length(slurp_t *fp)
-{
-	/* preprocess for nonseek crap */
-	struct slurp_nonseek *ns = fp->nonseek;
-
-	return ns->length;
-}
-
 int slurp_init_nonseek(slurp_t *fp,
 	size_t (*read_func)(void *opaque, disko_t *ds, size_t count),
 	void (*closure)(void *opaque),
@@ -580,17 +579,18 @@ int slurp_init_nonseek(slurp_t *fp,
 	ns->opaque = opaque;
 	ns->read = read_func;
 	ns->closure = closure;
-	ns->length = 0xFFFFFFFF; /* NICE */
 
 	if (disko_memopen(&ns->ds) < 0)
 		return -1;
 
+	/* initialize with bogus values */
 	slurp_memstream(fp, NULL, 0);
 
 	fp->peek = slurp_nonseek_peek;
-	fp->length = slurp_nonseek_length;
 	fp->closure = slurp_nonseek_closure;
 	fp->nonseek = ns;
+	fp->length = NULL;
+	fp->available = slurp_nonseek_available;
 
 	return 0;
 }
@@ -682,9 +682,9 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 	return read_bytes;
 }
 
-uint64_t slurp_length(slurp_t *t)
+int64_t slurp_length(slurp_t *t)
 {
-	return t->length(t);
+	return t->length ? t->length(t) : -1;
 }
 
 /* actual implementations */
@@ -726,6 +726,45 @@ int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), siz
 		free(buf);
 
 		return r;
+	}
+}
+
+/* TODO actually test this function within slurp crap */
+int slurp_available(slurp_t *fp, size_t x, int whence)
+{
+	if (fp->available) {
+		return fp->available(fp, x, whence);
+	} else if (fp->length) {
+		int64_t pos = 0;
+
+		switch (whence) {
+		case SEEK_SET: break;
+		case SEEK_CUR: pos += slurp_tell(fp); break;
+		case SEEK_END: return 0; /* ??? */
+		}
+
+		if (pos < 0)
+			return 0;
+
+		return ((fp->length(fp) - pos) >= x);
+	} else {
+		/* this is horribly inefficient but I can't come up with
+		 * anything better right now :)) */
+		unsigned char *buf = mem_alloc(x);
+		size_t r;
+		int64_t pos;
+
+		pos = slurp_tell(fp);
+
+		slurp_seek(fp, 0, whence);
+
+		r = slurp_peek(fp, buf, x);
+
+		free(buf);
+
+		slurp_seek(fp, pos, SEEK_SET);
+
+		return (r == x);
 	}
 }
 

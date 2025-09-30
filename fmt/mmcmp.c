@@ -43,8 +43,6 @@ typedef struct mm_subblock {
 
 static int read_mmcmp_header(mm_header_t *hdr, slurp_t *fp)
 {
-	const uint64_t memsize = slurp_length(fp);
-
 #define READ_VALUE(name) \
 	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
 
@@ -71,8 +69,8 @@ static int read_mmcmp_header(mm_header_t *hdr, slurp_t *fp)
 	    || hdr->blocks == 0
 	    || hdr->filesize < 16
 	    || hdr->filesize > 0x8000000
-	    || hdr->blktable >= memsize
-	    || hdr->blktable + 4 * hdr->blocks > memsize)
+	    || !slurp_available(fp, hdr->blktable, SEEK_SET)
+	    || !slurp_available(fp, hdr->blktable + 4 * hdr->blocks, SEEK_SET))
 		return 0;
 
 	return 1;
@@ -167,7 +165,7 @@ static uint32_t get_bits(mm_bit_buffer_t *bb, uint32_t bits)
 
 int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 {
-	if (slurp_length(fp) < 256)
+	if (!slurp_available(fp, 256, SEEK_CUR))
 		return 0;
 
 	mm_header_t hdr;

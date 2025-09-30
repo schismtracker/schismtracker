@@ -34,12 +34,6 @@ enum {
 	SLURP_OPEN_SUCCESS =  1,
 };
 
-/* TODO: get rid of slurp_length, and replace it with a slurp_available,
- * that takes in an offset from the current pointer.
- *
- * the main advantage is that with something like slurp_available we
- * will be able to read in the amount available for non-seekable streams. */
-
 struct slurp_nonseek;
 
 typedef struct slurp_struct_ slurp_t;
@@ -59,8 +53,8 @@ struct slurp_struct_ {
 	int64_t (*tell)(slurp_t *t);
 	size_t (*peek)(slurp_t *t, void *ptr, size_t count);
 	size_t (*read)(slurp_t *t, void *ptr, size_t count);
-	/* TODO get rid of this; it's totally incompatible with e.g. streams */
 	uint64_t (*length)(slurp_t *t);
+	int (*available)(slurp_t *t, size_t x, int whence);
 
 	/* this one is optional, and slurp will emulate stdio behavior if it's NULL */
 	int (*eof)(slurp_t *);
@@ -108,7 +102,7 @@ struct slurp_struct_ {
 			 * length of a stream (have to do gymnastics),
 			 * cache this on open. if it gets changed, we'll
 			 * probably fail anyway. */
-			uint64_t length; /* 64-bit for large file support */
+			int64_t length; /* 64-bit for large file support */
 		} stdio;
 
 		struct {
@@ -183,7 +177,8 @@ int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
 int slurp_eof(slurp_t *t);  /* 1 = end of file */
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 
-uint64_t slurp_length(slurp_t *t);
+/* length, or -1 if the operation isn't supported */
+int64_t slurp_length(slurp_t *t);
 
 /* creates a wall, relative to the current position
  * any reads that try to go after that point will be filled with zeroes */
@@ -209,5 +204,7 @@ int slurp_init_nonseek(slurp_t *fp,
 /* in fmt/gzip.c  .... */
 int slurp_gzip(slurp_t *src);
 #endif
+
+int slurp_available(slurp_t *fp, size_t x, int whence);
 
 #endif /* SCHISM_SLURP_H */

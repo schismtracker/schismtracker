@@ -179,22 +179,23 @@ static int64_t avfmt_seek(void *opaque, int64_t offset, int whence)
 	slurp_t *s = opaque;
 	int r;
 
-	if (whence == AVSEEK_SIZE)
-		return slurp_length(s);
+	if (whence == AVSEEK_SIZE) {
+		r = slurp_length(s);
+	} else {
+		/* ignore this stupid flag */
+		whence &= ~(AVSEEK_FORCE);
 
-	/* ignore this stupid flag */
-	whence &= ~(AVSEEK_FORCE);
+		switch (whence) {
+		case SEEK_SET:
+		case SEEK_CUR:
+		case SEEK_END:
+			break;
+		default:
+			return -1; /* nope */
+		}
 
-	switch (whence) {
-	case SEEK_SET:
-	case SEEK_CUR:
-	case SEEK_END:
-		break;
-	default:
-		return -1; /* nope */
+		r = slurp_seek(s, offset, whence);
 	}
-
-	r = slurp_seek(s, offset, whence);
 
 	return (r < 0) ? AVERROR_EXTERNAL : slurp_tell(s);
 }

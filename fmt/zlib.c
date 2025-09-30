@@ -73,7 +73,7 @@ static size_t slurp_zlib_read(void *opaque, disko_t *ds, size_t size)
 		return 0; /* FUN! */
 
 	zl->zs.next_out = zl->outbuf;
-	zl->zs.avail_out = MIN(size, sizeof(zl->outbuf));
+	zl->zs.avail_out = sizeof(zl->outbuf);
 
 	while (zl->zs.avail_out > 0) {
 		int res;
@@ -103,9 +103,9 @@ static size_t slurp_zlib_read(void *opaque, disko_t *ds, size_t size)
 		return 0;
 	}
 
-	disko_write(ds, zl->outbuf, size - zl->zs.avail_out);
+	disko_write(ds, zl->outbuf, sizeof(zl->outbuf) - zl->zs.avail_out);
 
-	return size - zl->zs.avail_out;
+	return sizeof(zl->outbuf) - zl->zs.avail_out;
 }
 
 static void slurp_zlib_closure(void *opaque)

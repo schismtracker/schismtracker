@@ -32,6 +32,7 @@
 
 int fmt_raw_load_sample(slurp_t *fp, song_sample_t *smp)
 {
+	/* FIXME doesn't work on seekable streams */
 	uint64_t len = slurp_length(fp);
 
 	smp->c5speed = 8363;

@@ -170,11 +170,10 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 			continue;
 
 		// hack to avoid having to count bytes when reading
-		end = slurp_tell(fp) + bytes;
-		end = MIN(end, slurp_length(fp));
+		slurp_limit(fp, bytes);
 
 		for (row = 0; row < rows; row++, note += MAX_CHANNELS - hdr->channels) {
-			for (chan = 0; slurp_tell(fp) < (int64_t)end && chan < hdr->channels; chan++, note++) {
+			for (chan = 0; !slurp_eof(fp) && chan < hdr->channels; chan++, note++) {
 				b = slurp_getc(fp);
 				if (b & 128) {
 					if (b & 1) note->note = slurp_getc(fp);
@@ -395,6 +394,8 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				    (this is documented) */
 			}
 		}
+
+		slurp_unlimit(fp);
 	}
 
 	if (lostfx)

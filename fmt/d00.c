@@ -60,8 +60,7 @@ static int d00_header_read_v1(struct d00_header *hdr, slurp_t *fp)
 {
 	/* reads old D00 header. this doesn't have a lot of identifying
 	 * info, besides some assumptions we make that I am going to abuse */
-	const uint64_t fplen = slurp_length(fp) - slurp_tell(fp);
-	if (fplen <= 15 || fplen > UINT16_MAX)
+	if (!slurp_available(fp, 15, SEEK_CUR) || slurp_available(fp, UINT16_MAX, SEEK_SET))
 		return 0;
 
 	READ_VALUE(version);
@@ -83,10 +82,9 @@ static int d00_header_read_new(struct d00_header *hdr, slurp_t *fp)
 	// we check if the length is larger than UINT16_MAX because
 	// the parapointers wouldn't be able to fit all of the bits
 	// otherwise. 119 is just the size of the header.
-	const uint64_t fplen = slurp_length(fp) - slurp_tell(fp);
 	unsigned char magic[6];
 
-	if (fplen <= 119 || fplen > UINT16_MAX)
+	if (!slurp_available(fp, 119, SEEK_CUR) || slurp_available(fp, UINT16_MAX, SEEK_SET))
 		return 0;
 
 	if ((slurp_read(fp, magic, 6) != 6)
@@ -174,11 +172,9 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 	if (fppos < 0)
 		return 0; /* wut */
 
-	fplen = slurp_length(fp);
-
 	/* verify that parapointers are within range for the file */
 #define PARAPTR_VALID(ptr) \
-	(fppos <= ptr || fplen >= ptr)
+	(fppos <= ptr || slurp_available(fp, ptr, SEEK_CUR))
 
 	/* these can never be invalid */
 	if (!PARAPTR_VALID(hdr->tpoin)
