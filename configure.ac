@@ -81,22 +81,22 @@ AC_ARG_ENABLE(ludicrous-mode,
 AC_ARG_ENABLE(fortify-source,
 	AS_HELP_STRING([--enable-fortify-source], [Build with FORTIFY_SOURCE]),
 	ADD_FORTIFY=$enableval,
-	ADD_FORTIFY=no)
+	ADD_FORTIFY=check)
 
 AC_ARG_ENABLE(flac-linking,
 	AS_HELP_STRING([--enable-flac-linking], [Link to FLAC rather than loading at runtime]),
 	FLAC_LINKING=$enableval,
-	FLAC_LINKING=no)
+	FLAC_LINKING=check)
 
 AC_ARG_ENABLE(jack-linking,
 	AS_HELP_STRING([--enable-jack-linking], [Link to JACK rather than loading at runtime]),
 	JACK_LINKING=$enableval,
-	JACK_LINKING=no)
+	JACK_LINKING=check)
 
 AC_ARG_ENABLE(alsa-linking,
 	AS_HELP_STRING([--enable-alsa-linking], [Link to ALSA rather than loading at runtime]),
 	ALSA_LINKING=$enableval,
-	ALSA_LINKING=no)
+	ALSA_LINKING=check)
 
 AC_ARG_ENABLE(force-wii,
 	AS_HELP_STRING([--enable-force-wii], [Force target the Wii]),
@@ -161,27 +161,27 @@ AC_ARG_WITH([avformat],
 AC_ARG_ENABLE(sdl12-linking,
 	AS_HELP_STRING([--enable-sdl12-linking], [Link to SDL 1.2 rather than loading at runtime]),
 	SDL12_LINKING=$enableval,
-	SDL12_LINKING=no)
+	SDL12_LINKING=check)
 
 AC_ARG_ENABLE(sdl2-linking,
 	AS_HELP_STRING([--enable-sdl2-linking], [Link to SDL 2 rather than loading at runtime]),
 	SDL2_LINKING=$enableval,
-	SDL2_LINKING=no)
+	SDL2_LINKING=check)
 
 AC_ARG_ENABLE(sdl3-linking,
 	AS_HELP_STRING([--enable-sdl3-linking], [Link to SDL 3 rather than loading at runtime]),
 	SDL3_LINKING=$enableval,
-	SDL3_LINKING=no)
+	SDL3_LINKING=check)
 
 AC_ARG_ENABLE(x11-linking,
 	AS_HELP_STRING([--enable-x11-linking], [Link to X11 rather than loading at runtime]),
 	X11_LINKING=$enableval,
-	X11_LINKING=no)
+	X11_LINKING=check)
 
 AC_ARG_ENABLE(avformat-linking,
 	AS_HELP_STRING([--enable-avformat-linking], [Link to libavformat rather than loading at runtime]),
 	AVFORMAT_LINKING=$enableval,
-	AVFORMAT_LINKING=no)
+	AVFORMAT_LINKING=check)
 
 dnl We disable the tests by default. This is primarily to aid package maintainers,
 dnl who would be surprised to find a whole new binary :)
@@ -781,7 +781,7 @@ AC_DEFUN([SCHISM_PKGCONFIG_CHECK], [
 			AC_SUBST([$6_CFLAGS])
 			AC_DEFINE([$7], [1], [$9 support])
 			AM_CONDITIONAL([$1], true)
-			if test "x$4" = "xyes"; then
+			if test "x$4" = "xyes" || (test "x$4" = "xcheck" && test "x$have_loadso" = "xno"); then
 				AC_SUBST([$6_LIBS])
 				AM_CONDITIONAL([$2], true)
 			else
