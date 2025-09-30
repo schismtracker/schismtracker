@@ -34,10 +34,23 @@ enum {
 	SLURP_OPEN_SUCCESS =  1,
 };
 
+/* TODO: get rid of slurp_length, and replace it with a slurp_available,
+ * that takes in an offset from the current pointer.
+ *
+ * the main advantage is that with something like slurp_available we
+ * will be able to read in the amount available for non-seekable streams. */
+
+struct slurp_nonseek;
+
 typedef struct slurp_struct_ slurp_t;
 struct slurp_struct_ {
 	/* stdio-style interfaces:
-	 * - seek, tell, and length are all required to be implemented.
+	 * - seek and tell are not required to be implemented, but DO
+	 *   implement them if you can. many functions in schism require it,
+	 *   and if you don't, slurp will emulate it, causing a massive
+	 *   slowdown.
+	 * - if seek is implemented, tell MUST ALSO be implemented, and
+	 *   vice versa. otherwise the behavior is totally undefined.
 	 * - peek can be NULL if read is implemented, and vice versa.
 	 *   (however, if you can implement both, that is preferred)
 	 * - peek is a custom schism construct that is like fread, but the
@@ -46,6 +59,7 @@ struct slurp_struct_ {
 	int64_t (*tell)(slurp_t *t);
 	size_t (*peek)(slurp_t *t, void *ptr, size_t count);
 	size_t (*read)(slurp_t *t, void *ptr, size_t count);
+	/* TODO get rid of this; it's totally incompatible with e.g. streams */
 	uint64_t (*length)(slurp_t *t);
 
 	/* this one is optional, and slurp will emulate stdio behavior if it's NULL */
@@ -62,6 +76,9 @@ struct slurp_struct_ {
 	int64_t limit;
 
 	unsigned int eof_ : 1; /* need THIS to emulate the EOF flag, for impls without it */
+
+	/* only allocated if we're a non-seekable structure. */
+	struct slurp_nonseek *nonseek;
 
 	union {
 		struct {
@@ -179,5 +196,18 @@ void slurp_unlimit_seek(slurp_t *t);
 int slurp_skip_chars(slurp_t *fp, const char *str);
 /* strspn equivalent */
 int slurp_skip_until_chars(slurp_t *fp, const char *str);
+
+struct disko;
+
+/* stupid nonseek hack */
+int slurp_init_nonseek(slurp_t *fp,
+	size_t (*read_func)(void *opaque, struct disko *ds, size_t count),
+	void (*closure)(void *opaque),
+	void *opaque);
+
+#ifdef USE_ZLIB
+/* in fmt/gzip.c  .... */
+int slurp_gzip(slurp_t *src);
+#endif
 
 #endif /* SCHISM_SLURP_H */

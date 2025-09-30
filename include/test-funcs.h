@@ -129,6 +129,9 @@ TEST_FUNC(test_slurp_win32_mmap)
 #ifdef HAVE_MMAP
 TEST_FUNC(test_slurp_mmap)
 #endif
+#ifdef USE_ZLIB
+TEST_FUNC(test_slurp_gzip)
+#endif
 
 TEST_FUNC(test_config_file_defined_values)
 TEST_FUNC(test_config_file_undefined_values_in_defined_section)

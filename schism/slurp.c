@@ -128,6 +128,10 @@ finished: ; /* this semicolon is important because C */
 
 	slurp_rewind(t);
 
+	slurp_gzip(t);
+
+	slurp_rewind(t);
+
 	// TODO re-add PP20 unpacker, possibly also handle other formats?
 
 	return 0;
@@ -287,7 +291,7 @@ static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence)
 		break;
 	}
 
-	if (offset < 0 || (size_t)offset > t->internal.memory.length)
+	if (offset < 0 || (!t->nonseek && (size_t)offset > t->internal.memory.length))
 		return -1;
 
 	t->internal.memory.pos = offset;
@@ -503,6 +507,92 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 	s->closure = sf2_slurp_closure;
 
 	slurp_rewind(s);
+}
+
+/* --------------------------------------------------------------------- */
+/* Replacement for seek() behavior for things that don't support
+ * seeking, such as stdin or whatever
+ *
+ * FIXME: need to override slurp_seek, because if someone calls it with
+ * SEEK_END we will totally fail. */
+
+struct slurp_nonseek {
+	void *opaque;
+
+	/* read function: may add more than `size`. */
+	size_t (*read)(void *opaque, disko_t *ds, size_t size);
+	void (*closure)(void *opaque);
+
+	/* disko memory buffer (note that pos should always equal length) */
+	disko_t ds;
+
+	/* terrible estimate of current length that only barely works */
+	uint64_t length;
+};
+
+static size_t slurp_nonseek_peek(slurp_t *fp, void *buf, size_t size)
+{
+	/* preprocess for nonseek crap */
+	struct slurp_nonseek *ns = fp->nonseek;
+
+	while (fp->internal.memory.pos + size > ns->ds.length) {
+		size_t r;
+
+		r = ns->read(ns->opaque, &ns->ds, size);
+		if (!r) {
+			/* nice, we actually have the proper length now */
+			ns->length = ns->ds.length;
+			break;
+		}
+	}
+
+	/* buffer may have changed */
+	fp->internal.memory.data = ns->ds.data;
+	fp->internal.memory.length = ns->ds.length;
+
+	return slurp_memory_peek_(fp, buf, size);
+}
+
+static void slurp_nonseek_closure(slurp_t *fp)
+{
+	struct slurp_nonseek *ns = fp->nonseek;
+
+	ns->closure(ns->opaque);
+	disko_memclose(&ns->ds, 0);
+	free(ns);
+}
+
+static uint64_t slurp_nonseek_length(slurp_t *fp)
+{
+	/* preprocess for nonseek crap */
+	struct slurp_nonseek *ns = fp->nonseek;
+
+	return ns->length;
+}
+
+int slurp_init_nonseek(slurp_t *fp,
+	size_t (*read_func)(void *opaque, disko_t *ds, size_t count),
+	void (*closure)(void *opaque),
+	void *opaque)
+{
+	struct slurp_nonseek *ns = mem_calloc(1, sizeof(*ns));
+
+	ns->opaque = opaque;
+	ns->read = read_func;
+	ns->closure = closure;
+	ns->length = 0xFFFFFFFF; /* NICE */
+
+	if (disko_memopen(&ns->ds) < 0)
+		return -1;
+
+	slurp_memstream(fp, NULL, 0);
+
+	fp->peek = slurp_nonseek_peek;
+	fp->length = slurp_nonseek_length;
+	fp->closure = slurp_nonseek_closure;
+	fp->nonseek = ns;
+
+	return 0;
 }
 
 /* --------------------------------------------------------------------- */

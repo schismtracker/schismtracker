@@ -148,6 +148,11 @@ AC_ARG_WITH([sdl3],
 	[],
 	[with_sdl3=check])
 
+AC_ARG_WITH([zlib],
+	[AS_HELP_STRING([--with-zlib],[Build with zlib support @<:@default=check@:>@])],
+	[],
+	[with_zlib=check])
+
 AC_ARG_WITH([avformat],
 	[AS_HELP_STRING([--with-avformat],[Build with libavformat support @<:default=check@:>@])],
 	[],
@@ -853,6 +858,28 @@ if test "x$with_avformat" = "xcheck" || test "x$with_avformat" = "xyes"; then
 			AC_DEFINE([AVFORMAT_DYNAMIC_LOAD], [1], [Dynamically load libavformat symbols])
 		fi
 	elif test "x$with_avformat" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find libavformat])
+	fi
+fi
+
+AM_CONDITIONAL([USE_ZLIB], false)
+AM_CONDITIONAL([LINK_TO_ZLIB], false)
+if test "x$with_zlib" = "xcheck" || test "x$with_zlib" = "xyes"; then
+	PKG_CHECK_MODULES([ZLIB], [zlib], [zlib_found=yes], [zlib_found=no])
+	if test "x$zlib_found" = "xyes"; then
+		AC_SUBST([ZLIB_CFLAGS])
+		AM_CONDITIONAL([USE_ZLIB], true)
+		AC_DEFINE([USE_ZLIB], [1], [zlib support])
+		if test "x$ZLIB_LINKING" = "xyes"; then
+			AC_SUBST([ZLIB_LIBS])
+			AM_CONDITIONAL([LINK_TO_ZLIB], true)
+		else
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
+			AC_DEFINE([ZLIB_DYNAMIC_LOAD], [1], [Dynamically load zlib symbols])
+		fi
+	elif test "x$with_zlib" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find libavformat])
 	fi
 fi

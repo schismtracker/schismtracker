@@ -26,6 +26,7 @@
 #include "test-tempfile.h"
 
 #include "slurp.h"
+#include "fmt.h"
 
 static const char expected_result[] =
 	"abc def ghi 123 456 789\n"
@@ -255,6 +256,35 @@ testresult_t test_slurp_mmap(void)
 	r = test_slurp_common(&fp);
 
 	unslurp(&fp);
+
+	return r;
+}
+#endif
+
+#ifdef USE_ZLIB
+testresult_t test_slurp_gzip(void)
+{
+	testresult_t r;
+	slurp_t fp;
+	static const unsigned char expected_result_gz[] = {
+		'\037', '\213', '\010', '\010', '\234', '\107', '\333', '\150', '\002', '\003', '\145', '\170', '\160', '\145', '\143', '\164',
+		'\145', '\144', '\137', '\162', '\145', '\163', '\165', '\154', '\164', '\000', '\113', '\114', '\112', '\126', '\110', '\111',
+		'\115', '\123', '\110', '\317', '\310', '\124', '\060', '\064', '\062', '\126', '\060', '\061', '\065', '\123', '\060', '\267',
+		'\260', '\344', '\362', '\124', '\310', '\311', '\054', '\113', '\125', '\310', '\314', '\123', '\110', '\124', '\110', '\317',
+		'\114', '\314', '\053', '\121', '\110', '\052', '\115', '\316', '\116', '\055', '\321', '\343', '\112', '\312', '\111', '\055',
+		'\115', '\317', '\320', '\343', '\002', '\000', '\240', '\062', '\045', '\375', '\072', '\000', '\000', '\000'
+	};
+
+	/* should never happen */
+	ASSERT(slurp_memstream(&fp, (uint8_t *)expected_result_gz, sizeof(expected_result_gz)) >= 0);
+
+	gzip_init();
+	REQUIRE(slurp_gzip(&fp) >= 0);
+
+	r = test_slurp_common(&fp);
+
+	unslurp(&fp);
+	gzip_quit();
 
 	return r;
 }

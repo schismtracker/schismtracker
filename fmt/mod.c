@@ -418,8 +418,7 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, uint32_t lflags, int for
 
 	/* hey, is this a wow file? */
 	if (test_wow) {
-		slurp_seek(fp, 0, SEEK_END);
-		if (slurp_tell(fp) == 2048 * npat + samplesize + 3132) {
+		if (slurp_length(fp) == 2048 * npat + samplesize + 3132) {
 			nchan = 8;
 			tid = "Mod's Grave WOW";
 		}
