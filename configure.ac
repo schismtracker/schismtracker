@@ -803,7 +803,6 @@ AC_DEFUN([SCHISM_PKGCONFIG_CHECK], [
 
 SCHISM_PKGCONFIG_CHECK([USE_FLAC], [LINK_TO_FLAC], [$with_flac], [$FLAC_LINKING], [flac], [FLAC], [USE_FLAC], [FLAC_DYNAMIC_LOAD], [FLAC])
 SCHISM_PKGCONFIG_CHECK([USE_JACK], [LINK_TO_JACK], [$with_jack], [$JACK_LINKING], [jack], [JACK], [USE_JACK], [JACK_DYNAMIC_LOAD], [JACK MIDI])
-SCHISM_PKGCONFIG_CHECK([USE_ALSA], [LINK_TO_ALSA], [$with_alsa], [$ALSA_LINKING], [alsa], [ALSA], [USE_ALSA], [ALSA_DYNAMIC_LOAD], [ALSA MIDI])
 SCHISM_PKGCONFIG_CHECK([USE_AVFORMAT], [LINK_TO_AVFORMAT], [$with_avformat], [$AVFORMAT_LINKING], [libavformat libavcodec libavutil], [AVFORMAT], [USE_AVFORMAT], [AVFORMAT_DYNAMIC_LOAD], [FFmpeg sample loading])
 SCHISM_PKGCONFIG_CHECK([USE_ZLIB], [LINK_TO_ZLIB], [$with_zlib], [$ZLIB_LINKING], [zlib], [ZLIB], [USE_ZLIB], [ZLIB_DYNAMIC_LOAD], [zlib])
 SCHISM_PKGCONFIG_CHECK([USE_SDL3], [LINK_TO_SDL3], [$with_sdl3], [$SDL3_LINKING], [sdl3], [SDL3], [SCHISM_SDL3], [SDL3_DYNAMIC_LOAD], [SDL 3])
@@ -811,6 +810,29 @@ SCHISM_PKGCONFIG_CHECK([USE_SDL2], [LINK_TO_SDL2], [$with_sdl2], [$SDL2_LINKING]
 SCHISM_PKGCONFIG_CHECK([USE_SDL12], [LINK_TO_SDL12], [$with_sdl12], [$SDL12_LINKING], [sdl], [SDL12], [SCHISM_SDL12], [SDL12_DYNAMIC_LOAD], [SDL 1.2])
 
 dnl -- this one is special
+AM_CONDITIONAL([USE_ALSA], false)
+AM_CONDITIONAL([LINK_TO_ALSA], false)
+if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
+	saved_LIBS="$LIBS"
+	AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
+	if test "x$alsa_found" = "xyes"; then
+		AM_CONDITIONAL([USE_ALSA], true)
+		AC_DEFINE([USE_ALSA], [1], [ALSA MIDI support])
+		if test "x$ALSA_LINKING" = "xyes"; then
+			AM_CONDITIONAL([LINK_TO_ALSA], true)
+		else
+			LIBS="$saved_LIBS"
+			if test "x$have_loadso" != "xyes"; then
+				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+			fi
+			AC_DEFINE([ALSA_DYNAMIC_LOAD], [1], [Dynamically load ALSA symbols])
+		fi
+	elif test "x$with_alsa" = "xyes"; then
+		AC_MSG_ERROR([*** Failed to find ALSA])
+	fi
+fi
+
+dnl -- this one too
 AM_CONDITIONAL([USE_MEDIAFOUNDATION], false)
 if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "xyes"; then
 	dnl requires Windows 7 or newer, but doesn't link to the libraries to keep
