@@ -33,6 +33,10 @@
 #include "mem.h"
 #include "loadso.h"
 
+#ifdef SCHISM_WIN32
+typedef long off_t;
+#endif
+
 #include <zlib.h>
 
 static int zlib_isinit = 0;
