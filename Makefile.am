@@ -478,15 +478,11 @@ if USE_AVFORMAT
 files_avformat = \
 	fmt/avformat.c
 cflags_avformat= \
-	$(AVFORMAT_CFLAGS) \
-	$(AVCODEC_CFLAGS) \
-	$(AVUTIL_CFLAGS)
+	$(AVFORMAT_CFLAGS)
 
 if LINK_TO_AVFORMAT
 libs_avformat= \
-	$(AVFORMAT_LIBS) \
-	$(AVCODEC_LIBS) \
-	$(AVUTIL_LIBS)
+	$(AVFORMAT_LIBS)
 endif
 
 endif

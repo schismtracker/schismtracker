@@ -767,123 +767,45 @@ dnl --------------------------------------------------------------------------
 
 dnl configure flags, optional dependencies
 
-AM_CONDITIONAL([USE_FLAC], false)
-AM_CONDITIONAL([LINK_TO_FLAC], false)
-if test "x$with_flac" = "xcheck" || test "x$with_flac" = "xyes"; then
-	dnl use pkg-config, it'll deal with everything for us
-	PKG_CHECK_MODULES([FLAC], [flac], [libflac_found=yes], [libflac_found=no])
-	if test "x$libflac_found" = "xyes"; then
-		AC_SUBST([FLAC_CFLAGS])
-		AC_DEFINE([USE_FLAC], [1], [FLAC support])
-		AM_CONDITIONAL([USE_FLAC], true)
-		if test "x$FLAC_LINKING" = "xyes"; then
-			AC_SUBST([FLAC_LIBS])
-			AM_CONDITIONAL([LINK_TO_FLAC], true)
-		else
-			if test "x$have_loadso" != "xyes"; then
-				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
-			fi
-			AC_DEFINE([FLAC_DYNAMIC_LOAD], [1], [Dynamically load FLAC symbols])
-		fi
-	elif test "x$with_flac" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find libFLAC])
-	fi
-fi
+# SCHISM_PKGCONFIG_CHECK(USEVARAM, LINKVARAM, CHECKYESNO, LINKING, MODULE-NAMES,
+#     PREFIX, USEDEFINE, DYNLOADDEFINE, USERFRIENDLYNAME)
+# ------------------------------------------------------------------------------
+AC_DEFUN([SCHISM_PKGCONFIG_CHECK], [
+	AM_CONDITIONAL([$1], false)
+	AM_CONDITIONAL([$2], false)
 
-AM_CONDITIONAL([USE_JACK], false)
-AM_CONDITIONAL([LINK_TO_JACK], false)
-if test "x$with_jack" = "xcheck" || test "x$with_jack" = "xyes"; then
-	PKG_CHECK_MODULES([JACK], [jack], [jack_found=yes], [jack_found=no])
-	if test "x$jack_found" = "xyes"; then
-		AC_SUBST([JACK_CFLAGS])
-		AM_CONDITIONAL([USE_JACK], true)
-		AC_DEFINE([USE_JACK], [1], [JACK MIDI support])
-		if test "x$JACK_LINKING" = "xyes"; then
-			AC_SUBST([JACK_LIBS])
-			AM_CONDITIONAL([LINK_TO_JACK], true)
-		else
-			if test "x$have_loadso" != "xyes"; then
-				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+	if test "x$3" = "xcheck" || test "x$3" = "xyes"; then
+		dnl use pkg-config, it'll deal with everything for us
+		PKG_CHECK_MODULES([$6], [$5], [libfound=yes], [libfound=no])
+		if test "x$libfound" = "xyes"; then
+			AC_SUBST([$6_CFLAGS])
+			AC_DEFINE([$7], [1], [$9 support])
+			AM_CONDITIONAL([$1], true)
+			if test "x$4" = "xyes"; then
+				AC_SUBST([$6_LIBS])
+				AM_CONDITIONAL([$2], true)
+			else
+				if test "x$have_loadso" != "xyes"; then
+					AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+				fi
+				AC_DEFINE([$8], [1], [Dynamically load $9 symbols])
 			fi
-			AC_DEFINE([JACK_DYNAMIC_LOAD], [1], [Dynamically load JACK symbols])
+		elif test "x$3" = "xyes"; then
+			AC_MSG_ERROR([*** Failed to find $9])
 		fi
-	elif test "x$with_jack" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find JACK])
 	fi
-fi
+])
 
-AM_CONDITIONAL([USE_ALSA], false)
-AM_CONDITIONAL([LINK_TO_ALSA], false)
-if test "x$with_alsa" = "xcheck" || test "x$with_alsa" = "xyes"; then
-	saved_LIBS="$LIBS"
-	AC_CHECK_LIB([asound], [snd_seq_open], [alsa_found=yes], [alsa_found=no])
-	if test "x$alsa_found" = "xyes"; then
-		AM_CONDITIONAL([USE_ALSA], true)
-		AC_DEFINE([USE_ALSA], [1], [ALSA MIDI support])
-		if test "x$ALSA_LINKING" = "xyes"; then
-			AM_CONDITIONAL([LINK_TO_ALSA], true)
-		else
-			LIBS="$saved_LIBS"
-			if test "x$have_loadso" != "xyes"; then
-				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
-			fi
-			AC_DEFINE([ALSA_DYNAMIC_LOAD], [1], [Dynamically load ALSA symbols])
-		fi
-	elif test "x$with_alsa" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find ALSA])
-	fi
-fi
+SCHISM_PKGCONFIG_CHECK([USE_FLAC], [LINK_TO_FLAC], [$with_flac], [$FLAC_LINKING], [flac], [FLAC], [USE_FLAC], [FLAC_DYNAMIC_LOAD], [FLAC])
+SCHISM_PKGCONFIG_CHECK([USE_JACK], [LINK_TO_JACK], [$with_jack], [$JACK_LINKING], [jack], [JACK], [USE_JACK], [JACK_DYNAMIC_LOAD], [JACK MIDI])
+SCHISM_PKGCONFIG_CHECK([USE_ALSA], [LINK_TO_ALSA], [$with_alsa], [$ALSA_LINKING], [alsa], [ALSA], [USE_ALSA], [ALSA_DYNAMIC_LOAD], [ALSA MIDI])
+SCHISM_PKGCONFIG_CHECK([USE_AVFORMAT], [LINK_TO_AVFORMAT], [$with_avformat], [$AVFORMAT_LINKING], [libavformat libavcodec libavutil], [AVFORMAT], [USE_AVFORMAT], [AVFORMAT_DYNAMIC_LOAD], [FFmpeg sample loading])
+SCHISM_PKGCONFIG_CHECK([USE_ZLIB], [LINK_TO_ZLIB], [$with_zlib], [$ZLIB_LINKING], [zlib], [ZLIB], [USE_ZLIB], [ZLIB_DYNAMIC_LOAD], [zlib])
+SCHISM_PKGCONFIG_CHECK([USE_SDL3], [LINK_TO_SDL3], [$with_sdl3], [$SDL3_LINKING], [sdl3], [SDL3], [SCHISM_SDL3], [SDL3_DYNAMIC_LOAD], [SDL 3])
+SCHISM_PKGCONFIG_CHECK([USE_SDL2], [LINK_TO_SDL2], [$with_sdl2], [$SDL2_LINKING], [sdl2], [SDL2], [SCHISM_SDL2], [SDL2_DYNAMIC_LOAD], [SDL 2])
+SCHISM_PKGCONFIG_CHECK([USE_SDL12], [LINK_TO_SDL12], [$with_sdl12], [$SDL12_LINKING], [sdl], [SDL12], [SCHISM_SDL12], [SDL12_DYNAMIC_LOAD], [SDL 1.2])
 
-AM_CONDITIONAL([USE_AVFORMAT], false)
-AM_CONDITIONAL([LINK_TO_AVFORMAT], false)
-if test "x$with_avformat" = "xcheck" || test "x$with_avformat" = "xyes"; then
-	PKG_CHECK_MODULES([AVFORMAT], [libavformat], [avformat_found=yes], [avformat_found=no])
-	PKG_CHECK_MODULES([AVUTIL], [libavutil], [avutil_found=yes], [avutil_found=no])
-	PKG_CHECK_MODULES([AVCODEC], [libavcodec], [avcodec_found=yes], [avcodec_found=no])
-	if test "x$avformat_found" = "xyes" && test "x$avcodec_found" = "xyes" && test "x$avutil_found" = "xyes"; then
-		AC_SUBST([AVFORMAT_CFLAGS])
-		AC_SUBST([AVCODEC_CFLAGS])
-		AC_SUBST([AVUTIL_CFLAGS])
-		AM_CONDITIONAL([USE_AVFORMAT], true)
-		AC_DEFINE([USE_AVFORMAT], [1], [libavformat support])
-		if test "x$AVFORMAT_LINKING" = "xyes"; then
-			AC_SUBST([AVFORMAT_LIBS])
-			AC_SUBST([AVUTIL_LIBS])
-			AC_SUBST([AVCODEC_LIBS])
-			AM_CONDITIONAL([LINK_TO_AVFORMAT], true)
-		else
-			if test "x$have_loadso" != "xyes"; then
-				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
-			fi
-			AC_DEFINE([AVFORMAT_DYNAMIC_LOAD], [1], [Dynamically load libavformat symbols])
-		fi
-	elif test "x$with_avformat" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find libavformat])
-	fi
-fi
-
-AM_CONDITIONAL([USE_ZLIB], false)
-AM_CONDITIONAL([LINK_TO_ZLIB], false)
-if test "x$with_zlib" = "xcheck" || test "x$with_zlib" = "xyes"; then
-	PKG_CHECK_MODULES([ZLIB], [zlib], [zlib_found=yes], [zlib_found=no])
-	if test "x$zlib_found" = "xyes"; then
-		AC_SUBST([ZLIB_CFLAGS])
-		AM_CONDITIONAL([USE_ZLIB], true)
-		AC_DEFINE([USE_ZLIB], [1], [zlib support])
-		if test "x$ZLIB_LINKING" = "xyes"; then
-			AC_SUBST([ZLIB_LIBS])
-			AM_CONDITIONAL([LINK_TO_ZLIB], true)
-		else
-			if test "x$have_loadso" != "xyes"; then
-				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
-			fi
-			AC_DEFINE([ZLIB_DYNAMIC_LOAD], [1], [Dynamically load zlib symbols])
-		fi
-	elif test "x$with_zlib" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find libavformat])
-	fi
-fi
-
+dnl -- this one is special
 AM_CONDITIONAL([USE_MEDIAFOUNDATION], false)
 if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "xyes"; then
 	dnl requires Windows 7 or newer, but doesn't link to the libraries to keep
@@ -894,72 +816,6 @@ if test "x$with_mediafoundation" = "xcheck" || test "x$with_mediafoundation" = "
 		AC_DEFINE([USE_MEDIAFOUNDATION], [1], [Use Media Foundation sample loading])
 	elif test "x$with_mediafoundation" = "xyes"; then
 		AC_MSG_ERROR([*** Failed to find Media Foundation])
-	fi
-fi
-
-AM_CONDITIONAL([USE_SDL3], false)
-AM_CONDITIONAL([LINK_TO_SDL3], false)
-if test "x$with_sdl3" = "xcheck" || test "x$with_sdl3" = "xyes"; then
-	PKG_CHECK_MODULES([SDL3], [sdl3], [sdl3_found=yes], [sdl3_found=no])
-	if test "x$sdl3_found" = "xyes"; then
-		AC_SUBST([SDL3_CFLAGS])
-		AM_CONDITIONAL([USE_SDL3], true)
-		AC_DEFINE([SCHISM_SDL3], [1], [SDL 3 backend])
-		if test "x$SDL3_LINKING" = "xyes"; then
-			AC_SUBST([SDL3_LIBS])
-			AM_CONDITIONAL([LINK_TO_SDL3], true)
-		else
-			if test "x$have_loadso" != "xyes"; then
-				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
-			fi
-			AC_DEFINE([SDL3_DYNAMIC_LOAD], [1], [Dynamically load SDL3 symbols])
-		fi
-	elif test "x$with_sdl3" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find SDL 3])
-	fi
-fi
-
-AM_CONDITIONAL([USE_SDL2], false)
-AM_CONDITIONAL([LINK_TO_SDL2], false)
-if test "x$with_sdl2" = "xcheck" || test "x$with_sdl2" = "xyes"; then
-	PKG_CHECK_MODULES([SDL2], [sdl2], [sdl2_found=yes], [sdl2_found=no])
-	if test "x$sdl2_found" = "xyes"; then
-		AC_SUBST([SDL2_CFLAGS])
-		AM_CONDITIONAL([USE_SDL2], true)
-		AC_DEFINE([SCHISM_SDL2], [1], [SDL 2 backend])
-		if test "x$SDL2_LINKING" = "xyes"; then
-			AC_SUBST([SDL2_LIBS])
-			AM_CONDITIONAL([LINK_TO_SDL2], true)
-		else
-			if test "x$have_loadso" != "xyes"; then
-				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
-			fi
-			AC_DEFINE([SDL2_DYNAMIC_LOAD], [1], [Dynamically load SDL2 symbols])
-		fi
-	elif test "x$with_sdl2" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find SDL 2])
-	fi
-fi
-
-AM_CONDITIONAL([USE_SDL12], false)
-AM_CONDITIONAL([LINK_TO_SDL12], false)
-if test "x$with_sdl12" = "xcheck" || test "x$with_sdl12" = "xyes"; then
-	PKG_CHECK_MODULES([SDL12], [sdl >= 1.2.10], [sdl12_found=yes], [sdl12_found=no])
-	if test "x$sdl12_found" = "xyes"; then
-		AC_SUBST([SDL12_CFLAGS])
-		AM_CONDITIONAL([USE_SDL12], true)
-		AC_DEFINE([SCHISM_SDL12], [1], [SDL 1.2 backend])
-		if test "x$SDL12_LINKING" = "xyes"; then
-			AC_SUBST([SDL12_LIBS])
-			AM_CONDITIONAL([LINK_TO_SDL12], true)
-		else
-			if test "x$have_loadso" != "xyes"; then
-				AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
-			fi
-			AC_DEFINE([SDL12_DYNAMIC_LOAD], [1], [Dynamically load SDL 1.2 symbols])
-		fi
-	elif test "x$with_sdl12" = "xyes"; then
-		AC_MSG_ERROR([*** Failed to find SDL 1.2])
 	fi
 fi
 
