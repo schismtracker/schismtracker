@@ -112,7 +112,14 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
 	ASSERT(!slurp_eof(fp));
 
-	/* TODO what should seeking past EOF do? */
+	/* TODO what should seeking past EOF do?
+	 *
+	 * hmm, I think if we seek past EOF on a read-only
+	 * stream (i.e. what slurp is) then it should always
+	 * be an error. In fact this is how the memory
+	 * implementation handles it, though I don't know
+	 * about stdio. */
+
 	/* TODO test slurp_limit here as well */
 
 	RETURN_PASS;
@@ -282,7 +289,9 @@ testresult_t test_slurp_gzip(void)
 	/* should never happen */
 	ASSERT(slurp_memstream(&fp, (uint8_t *)expected_result_gz, sizeof(expected_result_gz)) >= 0);
 
-	gzip_init();
+	/* -1 is an error (e.g. zlib failed to load) */
+	REQUIRE(gzip_init() >= 0);
+	/* -1 is an error (e.g. zlib failed to decompress) */
 	REQUIRE(slurp_gzip(&fp) >= 0);
 
 	r = test_slurp_common(&fp);
