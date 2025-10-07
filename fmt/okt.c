@@ -62,6 +62,9 @@ int fmt_okt_read_info(dmoz_file_t *file, slurp_t *fp)
 #define OKT_BLK_PBOD    OKT_BLOCK('P','B','O','D')
 #define OKT_BLK_SBOD    OKT_BLOCK('S','B','O','D')
 
+#ifdef HAVE_PRAGMA_PACK
+# pragma pack(push, 1)
+#endif
 struct okt_sample {
 	char name[20];
 	uint32_t length;
@@ -70,6 +73,10 @@ struct okt_sample {
 	uint16_t volume;
 	uint16_t mode;
 };
+#ifdef HAVE_PRAGMA_PACK
+# pragma pack(pop)
+SCHISM_STATIC_ASSERT(sizeof(struct okt_sample) == 32, "Binary structure has the wrong size!!!");
+#endif
 
 enum {
 	OKT_HAS_CMOD = 1 << 0,
@@ -112,12 +119,16 @@ static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpf
 	}
 
 	for (n = 1; n <= len; n++, ssmp++) {
+#ifdef HAVE_PRAGMA_PACK
+		slurp_read(fp, &osmp, sizeof(osmp));
+#else
 		slurp_read(fp, &osmp.name, sizeof(osmp.name));
 		slurp_read(fp, &osmp.length, sizeof(osmp.length));
 		slurp_read(fp, &osmp.loop_start, sizeof(osmp.loop_start));
 		slurp_read(fp, &osmp.loop_len, sizeof(osmp.loop_len));
 		slurp_read(fp, &osmp.volume, sizeof(osmp.volume));
 		slurp_read(fp, &osmp.mode, sizeof(osmp.mode));
+#endif
 
 		osmp.length = bswapBE32(osmp.length);
 		osmp.loop_start = bswapBE16(osmp.loop_start);
@@ -362,12 +373,17 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	if (memcmp(tag, "OKTASONG", 8) != 0)
 		return LOAD_UNSUPPORTED;
 
-	while (!slurp_eof(fp)) {
+	for (;;) {
 		uint32_t blklen; // length of this block
 		size_t nextpos; // ... and start of next one
 
+		/* weird, a read seems to reset EOF (should never ever happen) */
 		slurp_read(fp, tag, 4);
 		slurp_read(fp, &blklen, 4);
+
+		if (slurp_eof(fp))
+			break;
+
 		blklen = bswapBE32(blklen);
 		nextpos = slurp_tell(fp) + blklen;
 
