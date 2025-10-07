@@ -190,6 +190,9 @@ static int64_t slurp_win32_tell_(slurp_t *t)
 {
 	LARGE_INTEGER r;
 
+	/* Make sure this is zero so no random junk gets passed to SetFilePointer */
+	r.u.HighPart = 0;
+
 	r.u.LowPart = SetFilePointer(t->internal.win32.handle, 0, &r.u.HighPart, FILE_CURRENT);
 	if (r.u.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
 		return -1;
