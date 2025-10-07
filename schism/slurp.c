@@ -114,6 +114,18 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 	}
 
 finished: ; /* this semicolon is important because C */
+#ifdef USE_ZLIB
+	/* do this before mmcmp handling, so gzip'd mmcmp'd modules
+	 * will load correctly
+	 *
+	 * TODO is it possible to also have the reverse?
+	 * maybe we should be able to handle gzip-in-gzip, but
+	 * we'd have to effectively handle the case of infinite
+	 * loops (such as zip bombs) */
+	slurp_gzip(t);
+	slurp_rewind(t);
+#endif
+
 	uint8_t *mmdata;
 	size_t mmlen;
 
@@ -127,11 +139,6 @@ finished: ; /* this semicolon is important because C */
 	}
 
 	slurp_rewind(t);
-
-#ifdef USE_ZLIB
-	slurp_gzip(t);
-	slurp_rewind(t);
-#endif
 
 	// TODO re-add PP20 unpacker, possibly also handle other formats?
 
@@ -520,7 +527,12 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 struct slurp_nonseek {
 	void *opaque;
 
-	/* read function: may add more than `size`. */
+	/* read function. NOTE that size is merely a suggestion.
+	 * the user (i.e. slurp_nonseek_available) should call it
+	 * however many times required to fill the size it needs.
+	 * this function could also add More than requested.
+	 * it's designed this way to simplify buffering, hence why
+	 * this function does not instead take a void pointer. */
 	size_t (*read)(void *opaque, disko_t *ds, size_t size);
 	void (*closure)(void *opaque);
 
@@ -638,7 +650,7 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 {
 	size_t read_bytes;
 
-	if (!count)
+	if (!count || slurp_eof(t))
 		return 0;
 
 	read_bytes = slurp_limit_count(t, count);
@@ -665,7 +677,7 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 {
 	size_t read_bytes;
 
-	if (!count)
+	if (!count || slurp_eof(t))
 		return 0;
 
 	count = slurp_limit_count(t, count);
