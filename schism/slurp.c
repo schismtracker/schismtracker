@@ -608,13 +608,41 @@ int slurp_init_nonseek(slurp_t *fp,
 }
 
 /* --------------------------------------------------------------------- */
-/* these just forward directly to the function pointers */
 
 int slurp_seek(slurp_t *t, int64_t offset, int whence)
 {
-	int r = t->seek(t, offset, whence);
+	int r;
+	int64_t offcheck = offset;
+
+	switch (whence) {
+	case SEEK_SET: break;
+	case SEEK_CUR: {
+		int64_t pos = slurp_tell(t);
+
+		if (pos < 0)
+			return -1;
+
+		offcheck += pos;
+		break;
+	}
+	case SEEK_END: {
+		int64_t len = slurp_length(t);
+
+		/* just totally error out for now */
+		if (len < 0)
+			return -1;
+		offcheck += len;
+		break;
+	}
+	}
+
+	if (offcheck < 0 || !slurp_available(t, offcheck, SEEK_SET))
+		return -1;
+
+	r = t->seek(t, offset, whence);
 	if (r == 0)
 		t->eof_ = 0;
+
 	return r;
 }
 

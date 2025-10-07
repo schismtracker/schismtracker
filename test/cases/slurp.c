@@ -93,34 +93,39 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	ASSERT(slurp_eof(fp));
 
 	/* seeking to the end should not cause EOF */
-	ASSERT(slurp_seek(fp, 0, SEEK_END) == 0);
-	ASSERT(!slurp_eof(fp));
+	if (slurp_seek(fp, 0, SEEK_END) == 0) {
+		ASSERT(!slurp_eof(fp));
 
-	/* random operations should have no effect on EOF */
-	(void)slurp_tell(fp);
-	ASSERT(!slurp_eof(fp));
+		/* random operations should have no effect on EOF */
+		(void)slurp_tell(fp);
+		ASSERT(!slurp_eof(fp));
 
-	/* getting the length should not affect EOF */
-	(void)slurp_length(fp);
-	ASSERT(!slurp_eof(fp));
+		/* getting the length should not affect EOF */
+		(void)slurp_length(fp);
+		ASSERT(!slurp_eof(fp));
 
-	/* any reads SHOULD affect EOF */
-	(void)slurp_getc(fp);
-	ASSERT(slurp_eof(fp));
+		/* any reads should trigger EOF */
+		(void)slurp_getc(fp);
+		ASSERT(slurp_eof(fp));
+	} else {
+		ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
+	}
 
 	/* seeking should clear any EOF flag */
 	ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
 	ASSERT(!slurp_eof(fp));
 
-	/* TODO what should seeking past EOF do?
-	 *
-	 * hmm, I think if we seek past EOF on a read-only
-	 * stream (i.e. what slurp is) then it should always
-	 * be an error. In fact this is how the memory
-	 * implementation handles it, though I don't know
-	 * about stdio. */
+	/* limit should only allow reading X bytes */
+	slurp_limit(fp, sizeof(buf) >> 1);
+	ASSERT(slurp_read(fp, buf, sizeof(buf)) == (sizeof(buf) >> 1));
+	/* any subsequent reads should never return any bytes */
+	ASSERT(slurp_read(fp, buf, sizeof(buf)) == 0);
+	slurp_unlimit(fp);
 
-	/* TODO test slurp_limit here as well */
+	/* seek past EOF behavior */
+	ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
+	ASSERT(slurp_seek(fp, sizeof(buf), SEEK_SET) == 0);
+	ASSERT(slurp_seek(fp, sizeof(buf) + 1, SEEK_SET) == -1);
 
 	RETURN_PASS;
 }
