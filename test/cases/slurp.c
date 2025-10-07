@@ -60,6 +60,8 @@ static testresult_t test_slurp_common(slurp_t *fp)
 			ASSERT(slurp_seek(fp, i, SEEK_SET) == 0);
 			ASSERT(slurp_read(fp, buf, sizeof(buf) - i - j) == (sizeof(buf) - i - j));
 
+			ASSERT(slurp_tell(fp) == (sizeof(buf) - j));
+
 			/*printf("%" PRIuSZ ", %" PRIuSZ ": buf: %.*s", i, (int)(sizeof(buf) - i - j), buf);*/
 
 			/* data should not change */
@@ -76,6 +78,7 @@ static testresult_t test_slurp_common(slurp_t *fp)
 
 	for (i = 0; i < 5; i++) {
 		ASSERT(slurp_read(fp, buf, sizeof(buf)) == 0);
+		ASSERT(slurp_tell(fp) == sizeof(buf));
 		ASSERT(slurp_eof(fp));
 	}
 
@@ -112,20 +115,25 @@ static testresult_t test_slurp_common(slurp_t *fp)
 		ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
 	}
 
-	/* read and peek should zero out remaining bytes */
+	/* read should zero out remaining bytes */
 	memset(buf, 0xFF, sizeof(buf));
 	ASSERT(slurp_seek(fp, sizeof(buf) >> 1, SEEK_SET) == 0);
 	ASSERT(slurp_read(fp, buf, sizeof(buf)) == (sizeof(buf) >> 1));
 	ASSERT(memcmp(buf + sizeof(zero), zero, sizeof(zero)) == 0);
 
+	/* verify state */
+	ASSERT(slurp_tell(fp) == sizeof(buf));
 	ASSERT(slurp_getc(fp) == EOF);
 	ASSERT(slurp_eof(fp));
 
+	/* peek should zero out remaining bytes */
 	memset(buf, 0xFF, sizeof(buf));
 	ASSERT(slurp_seek(fp, sizeof(buf) >> 1, SEEK_SET) == 0);
 	ASSERT(slurp_peek(fp, buf, sizeof(buf)) == (sizeof(buf) >> 1));
 	ASSERT(memcmp(buf + sizeof(zero), zero, sizeof(zero)) == 0);
 
+	/* verify state */
+	ASSERT(slurp_tell(fp) == (sizeof(buf) >> 1));
 	ASSERT(slurp_getc(fp) == 101);
 	ASSERT(!slurp_eof(fp));
 
@@ -139,15 +147,19 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	memset(buf, 0xFF, sizeof(buf));
 	ASSERT(slurp_read(fp, buf, sizeof(buf)) == (sizeof(buf) >> 1));
 	ASSERT(memcmp(buf + sizeof(zero), zero, sizeof(zero)) == 0);
+	ASSERT(slurp_tell(fp) == (sizeof(buf) >> 1));
 	/* any subsequent reads should never return any bytes */
 	ASSERT(slurp_read(fp, buf, sizeof(buf)) == 0);
+	ASSERT(slurp_tell(fp) == (sizeof(buf) >> 1));
 	/* XXX slurp_eof should probably return 1 here */
 	slurp_unlimit(fp);
 
 	/* seek past EOF behavior */
 	ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
 	ASSERT(slurp_seek(fp, sizeof(buf), SEEK_SET) == 0);
+	ASSERT(slurp_tell(fp) == sizeof(buf));
 	ASSERT(slurp_seek(fp, sizeof(buf) + 1, SEEK_SET) == -1);
+	ASSERT(slurp_tell(fp) == sizeof(buf));
 
 	RETURN_PASS;
 }
