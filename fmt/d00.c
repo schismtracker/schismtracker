@@ -96,7 +96,8 @@ static int d00_header_read_new(struct d00_header *hdr, slurp_t *fp)
 	READ_VALUE(version);
 	if (hdr->version & 0x80) {
 		/* from adplug: "reheadered old-style song" */
-		slurp_seek(fp, 0x6B, SEEK_SET);
+		if (slurp_seek(fp, 0x6B, SEEK_SET) == -1)
+			return 0;
 
 		return d00_header_read_v1(hdr, fp);
 	}

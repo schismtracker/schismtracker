@@ -682,6 +682,8 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 		return 0;
 
 	read_bytes = slurp_limit_count(t, count);
+	if (!read_bytes)
+		return 0; /* ehhh */
 
 	if (t->peek) {
 		read_bytes = t->peek(t, ptr, read_bytes);
@@ -697,6 +699,7 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 	}
 
 	slurp_fill_remaining(t, ptr, read_bytes, count);
+	t->eof_ = 0; /* dont clobber */
 
 	return read_bytes;
 }
@@ -708,13 +711,15 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 	if (!count || slurp_eof(t))
 		return 0;
 
-	count = slurp_limit_count(t, count);
+	read_bytes = slurp_limit_count(t, count);
+	if (!read_bytes)
+		return 0; /* ehhh */
 
 	if (t->read) {
-		read_bytes = t->read(t, ptr, count);
+		read_bytes = t->read(t, ptr, read_bytes);
 	} else {
-		read_bytes = t->peek(t, ptr, count);
-		slurp_seek(t, count, SEEK_CUR);
+		read_bytes = t->peek(t, ptr, read_bytes);
+		slurp_seek(t, read_bytes, SEEK_CUR);
 	}
 
 	slurp_fill_remaining(t, ptr, read_bytes, count);

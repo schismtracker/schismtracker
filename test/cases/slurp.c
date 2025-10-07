@@ -43,6 +43,7 @@ SCHISM_STATIC_ASSERT((ARRAY_SIZE(expected_result) - 1) % 2 == 0,
 static testresult_t test_slurp_common(slurp_t *fp)
 {
 	char buf[ARRAY_SIZE(expected_result) - 1];
+	static const char zero[ARRAY_SIZE(buf) >> 1] = {0};
 	size_t i;
 	size_t j;
 	int64_t len;
@@ -111,15 +112,36 @@ static testresult_t test_slurp_common(slurp_t *fp)
 		ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
 	}
 
+	/* read and peek should zero out remaining bytes */
+	memset(buf, 0xFF, sizeof(buf));
+	ASSERT(slurp_seek(fp, sizeof(buf) >> 1, SEEK_SET) == 0);
+	ASSERT(slurp_read(fp, buf, sizeof(buf)) == (sizeof(buf) >> 1));
+	ASSERT(memcmp(buf + sizeof(zero), zero, sizeof(zero)) == 0);
+
+	ASSERT(slurp_getc(fp) == EOF);
+	ASSERT(slurp_eof(fp));
+
+	memset(buf, 0xFF, sizeof(buf));
+	ASSERT(slurp_seek(fp, sizeof(buf) >> 1, SEEK_SET) == 0);
+	ASSERT(slurp_peek(fp, buf, sizeof(buf)) == (sizeof(buf) >> 1));
+	ASSERT(memcmp(buf + sizeof(zero), zero, sizeof(zero)) == 0);
+
+	ASSERT(slurp_getc(fp) == 101);
+	ASSERT(!slurp_eof(fp));
+
 	/* seeking should clear any EOF flag */
 	ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
 	ASSERT(!slurp_eof(fp));
 
-	/* limit should only allow reading X bytes */
+	/* limit should only allow reading X bytes
+	 * also test read zero behavior here :) */
 	slurp_limit(fp, sizeof(buf) >> 1);
+	memset(buf, 0xFF, sizeof(buf));
 	ASSERT(slurp_read(fp, buf, sizeof(buf)) == (sizeof(buf) >> 1));
+	ASSERT(memcmp(buf + sizeof(zero), zero, sizeof(zero)) == 0);
 	/* any subsequent reads should never return any bytes */
 	ASSERT(slurp_read(fp, buf, sizeof(buf)) == 0);
+	/* XXX slurp_eof should probably return 1 here */
 	slurp_unlimit(fp);
 
 	/* seek past EOF behavior */
