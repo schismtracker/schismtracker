@@ -816,6 +816,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	// 7-bit (data shifted one bit left)
 	case SF(7,M,BE,PCMS):
 	case SF(7,M,LE,PCMS):
+		len = sample->length;
+
 		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
 
 		if (!slurp_available(fp, len, SEEK_CUR))
