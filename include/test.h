@@ -40,8 +40,11 @@ typedef enum {
 	SCHISM_TESTRESULT_NOT_RUN,
 } testresult_t;
 
-// See testresult.c / testresult_str
+/* See testresult.c / testresult_str */
 #define TESTRESULT_STR_MAX_LEN 12
+
+/* fit within 80 columns */
+#define TESTRESULT_MAX_LINE_LEN (79)
 
 typedef testresult_t (*testfunctor_t)(void);
 
@@ -92,7 +95,7 @@ int schism_test_main(int argc, char *argv[]);
 
 /* make sure we don't overflow the terminal */
 #define TEST_FUNC(x) \
-	SCHISM_STATIC_ASSERT((6 + ARRAY_SIZE(#x)) < 78 - TESTRESULT_STR_MAX_LEN, \
+	SCHISM_STATIC_ASSERT((6 + ARRAY_SIZE(#x) + TESTRESULT_STR_MAX_LEN) < TESTRESULT_MAX_LINE_LEN, \
 		"function name cannot overflow the terminal");
 
 #include "test-funcs.h"
