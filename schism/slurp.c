@@ -131,6 +131,11 @@ finished: ; /* this semicolon is important because C */
 	slurp_rewind(t);
 #endif
 
+#ifdef USE_LZMA
+	slurp_xz(t);
+	slurp_rewind(t);
+#endif
+
 	uint8_t *mmdata;
 	size_t mmlen;
 
