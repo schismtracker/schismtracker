@@ -44,6 +44,10 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 	int r = 0;
 	size_t i;
 
+	/* Initialize this BEFORE anything else */
+	if (abnormal_exit)
+		*abnormal_exit = 0;
+
 	{
 		/* convert the variable args list */
 		va_list ap;
@@ -99,10 +103,6 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 
 		/* newer API; POSIX.1-2001 */
 		while (waitid(P_PID, pid, &info, WEXITED) == -1);
-
-		/* hax */
-		if (abnormal_exit)
-			*abnormal_exit = 0;
 
 		/* if the child terminated abnormally, well, the exec call is still technically a success */
 		switch (info.si_code) {
