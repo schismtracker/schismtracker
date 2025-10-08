@@ -287,6 +287,8 @@ static void slurp_stdio_closure_(slurp_t *t)
 
 static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence)
 {
+	uint64_t len = slurp_length(t);
+
 	switch (whence) {
 	default:
 	case SEEK_SET:
@@ -295,11 +297,11 @@ static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence)
 		offset += t->internal.memory.pos;
 		break;
 	case SEEK_END:
-		offset += t->internal.memory.length;
+		offset += len;
 		break;
 	}
 
-	if (offset < 0 || (!t->nonseek && (size_t)offset > t->internal.memory.length))
+	if (offset < 0 || (size_t)offset > len)
 		return -1;
 
 	t->internal.memory.pos = offset;
@@ -551,7 +553,7 @@ static int slurp_nonseek_available(slurp_t *fp, size_t x, int whence)
 	case SEEK_END: return 0;
 	}
 
-	while (pos > ns->ds.length) {
+	while (pos > (int64_t)ns->ds.length) {
 		size_t r = ns->read(ns->opaque, &ns->ds, pos - ns->ds.length);
 		if (!r)
 			return 0;
@@ -581,6 +583,15 @@ static void slurp_nonseek_closure(slurp_t *fp)
 	free(ns);
 }
 
+static uint64_t slurp_nonseek_length(slurp_t *fp)
+{
+	/* Call available with maximum size to load the entire buffer;
+	 * allows us to read in the whole thing :) */
+	slurp_nonseek_available(fp, SIZE_MAX, SEEK_SET);
+
+	return fp->internal.memory.length;
+}
+
 int slurp_init_nonseek(slurp_t *fp,
 	size_t (*read_func)(void *opaque, disko_t *ds, size_t count),
 	void (*closure)(void *opaque),
@@ -601,7 +612,7 @@ int slurp_init_nonseek(slurp_t *fp,
 	fp->peek = slurp_nonseek_peek;
 	fp->closure = slurp_nonseek_closure;
 	fp->nonseek = ns;
-	fp->length = NULL;
+	fp->length = slurp_nonseek_length;
 	fp->available = slurp_nonseek_available;
 
 	return 0;
@@ -625,15 +636,9 @@ int slurp_seek(slurp_t *t, int64_t offset, int whence)
 		offcheck += pos;
 		break;
 	}
-	case SEEK_END: {
-		int64_t len = slurp_length(t);
-
-		/* just totally error out for now */
-		if (len < 0)
-			return -1;
-		offcheck += len;
+	case SEEK_END:
+		offcheck += slurp_length(t);
 		break;
-	}
 	}
 
 	if (offcheck < 0 || !slurp_available(t, offcheck, SEEK_SET))
@@ -727,12 +732,10 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 	return read_bytes;
 }
 
-int64_t slurp_length(slurp_t *t)
+uint64_t slurp_length(slurp_t *t)
 {
-	return t->length ? t->length(t) : -1;
+	return t->length(t);
 }
-
-/* actual implementations */
 
 int slurp_getc(slurp_t *t)
 {
@@ -781,6 +784,7 @@ int slurp_available(slurp_t *fp, size_t x, int whence)
 		return 1; /* ... */
 
 	if (fp->available) {
+		/* prefer this one */
 		return fp->available(fp, x, whence);
 	} else if (fp->length) {
 		int64_t pos = 0;
@@ -816,7 +820,6 @@ void slurp_unlimit(slurp_t *t)
 	t->limit = 0;
 }
 
-/* */
 void slurp_unlimit_seek(slurp_t *t)
 {
 	if (t->limit) {

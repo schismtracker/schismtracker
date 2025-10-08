@@ -55,6 +55,7 @@ struct slurp_struct_ {
 	size_t (*read)(slurp_t *t, void *ptr, size_t count);
 	uint64_t (*length)(slurp_t *t);
 	int (*available)(slurp_t *t, size_t x, int whence);
+	/* TODO: absolute seek for e.g. memory streams. */
 
 	/* this one is optional, and slurp will emulate stdio behavior if it's NULL */
 	int (*eof)(slurp_t *);
@@ -177,8 +178,8 @@ int slurp_getc(slurp_t *t); /* returns unsigned char cast to int, or EOF */
 int slurp_eof(slurp_t *t);  /* 1 = end of file */
 int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
 
-/* length, or -1 if the operation isn't supported */
-int64_t slurp_length(slurp_t *t);
+/* can never fail (hopefully...) */
+uint64_t slurp_length(slurp_t *t);
 
 /* creates a wall, relative to the current position
  * any reads that try to go after that point will be filled with zeroes */

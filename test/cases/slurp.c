@@ -46,12 +46,8 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	static const char zero[ARRAY_SIZE(buf) >> 1] = {0};
 	size_t i;
 	size_t j;
-	int64_t len;
 
-	len = slurp_length(fp);
-
-	/* don't error if the length is unknown */
-	ASSERT(len == -1 || len == sizeof(buf));
+	ASSERT(slurp_length(fp) == sizeof(buf));
 
 	/* go over every possible (legal) combination of reads.
 	 * there's probably a simpler way to do this, but oh well. */
@@ -97,23 +93,20 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	ASSERT(slurp_eof(fp));
 
 	/* seeking to the end should not cause EOF */
-	if (slurp_seek(fp, 0, SEEK_END) == 0) {
-		ASSERT(!slurp_eof(fp));
+	ASSERT(slurp_seek(fp, 0, SEEK_END) == 0);
+	ASSERT(!slurp_eof(fp));
 
-		/* random operations should have no effect on EOF */
-		(void)slurp_tell(fp);
-		ASSERT(!slurp_eof(fp));
+	/* random operations should have no effect on EOF */
+	(void)slurp_tell(fp);
+	ASSERT(!slurp_eof(fp));
 
-		/* getting the length should not affect EOF */
-		(void)slurp_length(fp);
-		ASSERT(!slurp_eof(fp));
+	/* getting the length should not affect EOF */
+	(void)slurp_length(fp);
+	ASSERT(!slurp_eof(fp));
 
-		/* any reads should trigger EOF */
-		(void)slurp_getc(fp);
-		ASSERT(slurp_eof(fp));
-	} else {
-		ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
-	}
+	/* any reads should trigger EOF */
+	(void)slurp_getc(fp);
+	ASSERT(slurp_eof(fp));
 
 	/* read should zero out remaining bytes */
 	memset(buf, 0xFF, sizeof(buf));
