@@ -153,14 +153,7 @@ int slurp_gzip(slurp_t *src)
 	/* read a bit to ensure we've actually got the right thing.
 	 * zlib won't complain if our file Isn't Correct, so we have
 	 * to do it ourselves. */
-	{
-		unsigned char buf[1024];
-
-		slurp_read(src, buf, 1024);
-		slurp_read(src, buf, 1024);
-		slurp_read(src, buf, 1024);
-		slurp_read(src, buf, 1024);
-	}
+	slurp_available(src, 8096, SEEK_SET);
 
 	/* check the error flag. if it's set, we're toast.
 	 * if it was set twice, our whole lives are different than
