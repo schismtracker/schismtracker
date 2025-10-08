@@ -153,16 +153,20 @@ A return value of 0 indicates that the event should NOT be processed by the main
 static inline void msgbox_printf_impl(const char *title, const char *text, int style)
 {
 	const char *styles[] = {
-		[OS_MESSAGE_BOX_INFO] = "INFO",
-		[OS_MESSAGE_BOX_ERROR] = "ERROR",
+		[OS_MESSAGE_BOX_INFO]    = "INFO",
+		[OS_MESSAGE_BOX_ERROR]   = "ERROR",
+		[OS_MESSAGE_BOX_WARNING] = "WARNING",
 	};
 
 #ifdef SCHISM_XBOX
-	debugPrint
+	debugPrint("[%s] %s: %s", styles[style], title, text);
 #else
-	printf
+	{
+		FILE *out = (style == OS_MESSAGE_BOX_INFO) ? stdout : stderr;
+
+		fprintf(out, "[%s] %s: %s\n", styles[style], title, text);
+	}
 #endif
-		("[%s] %s: %s", styles[style], title, text);
 }
 # define os_show_message_box(title, text, style) (msgbox_printf_impl(title, text, style))
 #endif
