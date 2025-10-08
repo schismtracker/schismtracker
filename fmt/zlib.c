@@ -54,8 +54,8 @@ struct slurp_zlib {
 	/* stupid gzip doesn't discard the header? */
 	gz_header gz;
 
-	unsigned char buf[4096];
-	unsigned char outbuf[4096];
+	unsigned char buf[CHUNK_SIZE];
+	unsigned char outbuf[CHUNK_SIZE];
 
 	/* error flag */
 	unsigned int err : 1;

@@ -344,4 +344,33 @@ testresult_t test_slurp_gzip(void)
 }
 #endif
 
-/* TODO need to add slurp test functions for win32 */
+#ifdef USE_BZIP2
+testresult_t test_slurp_bzip2(void)
+{
+	testresult_t r;
+	slurp_t fp;
+	static const unsigned char expected_result_bz2[] = {
+		'\102', '\132', '\150', '\071', '\061', '\101', '\131', '\046', '\123', '\131', '\203', '\024', '\220', '\211', '\000', '\000',
+		'\015', '\135', '\200', '\000', '\020', '\100', '\001', '\077', '\340', '\000', '\040', '\077', '\355', '\007', '\000', '\040',
+		'\000', '\110', '\212', '\157', '\112', '\075', '\103', '\106', '\203', '\311', '\250', '\323', '\152', '\024', '\000', '\015',
+		'\000', '\001', '\266', '\062', '\174', '\347', '\157', '\225', '\325', '\333', '\324', '\343', '\236', '\207', '\152', '\032',
+		'\265', '\071', '\055', '\001', '\275', '\304', '\132', '\360', '\310', '\205', '\004', '\322', '\031', '\171', '\064', '\000',
+		'\155', '\352', '\062', '\104', '\135', '\311', '\024', '\341', '\102', '\102', '\014', '\122', '\102', '\044',
+	};
+
+	/* should never happen */
+	ASSERT(slurp_memstream(&fp, (uint8_t *)expected_result_bz2, sizeof(expected_result_bz2)) >= 0);
+
+	/* -1 is an error (e.g. zlib failed to load) */
+	REQUIRE(bzip2_init() >= 0);
+	/* -1 is an error (e.g. zlib failed to decompress) */
+	REQUIRE(slurp_bzip2(&fp) >= 0);
+
+	r = test_slurp_common(&fp);
+
+	unslurp(&fp);
+	bzip2_quit();
+
+	return r;
+}
+#endif

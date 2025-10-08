@@ -300,5 +300,8 @@ void avformat_quit(void);
 int gzip_init(void);
 void gzip_quit(void);
 
+int bzip2_init(void);
+void bzip2_quit(void);
+
 #endif /* SCHISM_FMT_H_ */
 

@@ -132,6 +132,9 @@ TEST_FUNC(test_slurp_mmap)
 #ifdef USE_ZLIB
 TEST_FUNC(test_slurp_gzip)
 #endif
+#ifdef USE_BZIP2
+TEST_FUNC(test_slurp_bzip2)
+#endif
 
 TEST_FUNC(test_config_file_defined_values)
 TEST_FUNC(test_config_file_undefined_values_in_defined_section)

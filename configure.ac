@@ -149,9 +149,14 @@ AC_ARG_WITH([sdl3],
 	[with_sdl3=check])
 
 AC_ARG_WITH([zlib],
-	[AS_HELP_STRING([--with-zlib],[Build with zlib support @<:@default=check@:>@])],
+	[AS_HELP_STRING([--with-zlib],[Build with zlib decompression support @<:@default=check@:>@])],
 	[],
 	[with_zlib=check])
+
+AC_ARG_WITH([bzip2],
+	[AS_HELP_STRING([--with-bzip2],[Build with bzip2 decompression support @<:@default=check@:>@])],
+	[],
+	[with_bzip2=check])
 
 AC_ARG_WITH([avformat],
 	[AS_HELP_STRING([--with-avformat],[Build with libavformat support @<:default=check@:>@])],
@@ -187,6 +192,11 @@ AC_ARG_ENABLE(zlib-linking,
 	AS_HELP_STRING([--enable-zlib-linking], [Link to zlib rather than loading at runtime @<:default=check@:>@]),
 	ZLIB_LINKING=$enableval,
 	ZLIB_LINKING=check)
+
+AC_ARG_ENABLE(bzip2-linking,
+	AS_HELP_STRING([--enable-bzip2-linking], [Link to bzip2 rather than loading at runtime @<:default=check@:>@]),
+	BZIP2_LINKING=$enableval,
+	BZIP2_LINKING=check)
 
 dnl We disable the tests by default. This is primarily to aid package maintainers,
 dnl who would be surprised to find a whole new binary :)
@@ -805,6 +815,7 @@ SCHISM_PKGCONFIG_CHECK([USE_FLAC], [LINK_TO_FLAC], [$with_flac], [$FLAC_LINKING]
 SCHISM_PKGCONFIG_CHECK([USE_JACK], [LINK_TO_JACK], [$with_jack], [$JACK_LINKING], [jack], [JACK], [USE_JACK], [JACK_DYNAMIC_LOAD], [JACK MIDI])
 SCHISM_PKGCONFIG_CHECK([USE_AVFORMAT], [LINK_TO_AVFORMAT], [$with_avformat], [$AVFORMAT_LINKING], [libavformat libavcodec libavutil], [AVFORMAT], [USE_AVFORMAT], [AVFORMAT_DYNAMIC_LOAD], [FFmpeg sample loading])
 SCHISM_PKGCONFIG_CHECK([USE_ZLIB], [LINK_TO_ZLIB], [$with_zlib], [$ZLIB_LINKING], [zlib], [ZLIB], [USE_ZLIB], [ZLIB_DYNAMIC_LOAD], [zlib])
+SCHISM_PKGCONFIG_CHECK([USE_BZIP2], [LINK_TO_BZIP2], [$with_bzip2], [$BZIP2_LINKING], [bzip2], [BZIP2], [USE_BZIP2], [BZIP2_DYNAMIC_LOAD], [bzip2])
 SCHISM_PKGCONFIG_CHECK([USE_SDL3], [LINK_TO_SDL3], [$with_sdl3], [$SDL3_LINKING], [sdl3], [SDL3], [SCHISM_SDL3], [SDL3_DYNAMIC_LOAD], [SDL 3])
 SCHISM_PKGCONFIG_CHECK([USE_SDL2], [LINK_TO_SDL2], [$with_sdl2], [$SDL2_LINKING], [sdl2], [SDL2], [SCHISM_SDL2], [SDL2_DYNAMIC_LOAD], [SDL 2])
 SCHISM_PKGCONFIG_CHECK([USE_SDL12], [LINK_TO_SDL12], [$with_sdl12], [$SDL12_LINKING], [sdl], [SDL12], [SCHISM_SDL12], [SDL12_DYNAMIC_LOAD], [SDL 1.2])

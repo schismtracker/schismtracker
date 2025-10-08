@@ -206,6 +206,11 @@ int slurp_init_nonseek(slurp_t *fp,
 int slurp_gzip(slurp_t *src);
 #endif
 
+#ifdef USE_BZIP2
+/* fmt/bzip2.c */
+int slurp_bzip2(slurp_t *src);
+#endif
+
 int slurp_available(slurp_t *fp, size_t x, int whence);
 
 #endif /* SCHISM_SLURP_H */
