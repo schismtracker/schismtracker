@@ -777,6 +777,9 @@ int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), siz
 /* TODO actually test this function within slurp crap */
 int slurp_available(slurp_t *fp, size_t x, int whence)
 {
+	if (!x)
+		return 1; /* ... */
+
 	if (fp->available) {
 		return fp->available(fp, x, whence);
 	} else if (fp->length) {
@@ -793,23 +796,7 @@ int slurp_available(slurp_t *fp, size_t x, int whence)
 
 		return ((fp->length(fp) - pos) >= x);
 	} else {
-		/* this is horribly inefficient but I can't come up with
-		 * anything better right now :)) */
-		unsigned char *buf = mem_alloc(x);
-		size_t r;
-		int64_t pos;
-
-		pos = slurp_tell(fp);
-
-		slurp_seek(fp, 0, whence);
-
-		r = slurp_peek(fp, buf, x);
-
-		free(buf);
-
-		slurp_seek(fp, pos, SEEK_SET);
-
-		return (r == x);
+		SCHISM_RUNTIME_ASSERT(0, "slurp: available or length is required");
 	}
 }
 

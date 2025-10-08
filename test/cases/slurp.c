@@ -161,6 +161,15 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	ASSERT(slurp_seek(fp, sizeof(buf) + 1, SEEK_SET) == -1);
 	ASSERT(slurp_tell(fp) == sizeof(buf));
 
+	/* slurp_available */
+	ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
+	ASSERT(slurp_available(fp, sizeof(buf), SEEK_SET));
+	ASSERT(!slurp_available(fp, sizeof(buf) + 1, SEEK_SET));
+
+	/* verify state */
+	ASSERT(slurp_tell(fp) == 0);
+	ASSERT(!slurp_eof(fp));
+
 	RETURN_PASS;
 }
 
