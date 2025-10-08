@@ -28,17 +28,26 @@
 
 /* --------------------------------------------------------------------- */
 
+#define SAMPLE_RAW_MAX (UINT32_C(1) << 22)
+
 // Impulse Tracker handles raw sample data as unsigned, EXCEPT when saving a 16-bit sample as raw.
 
 int fmt_raw_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	/* FIXME doesn't work on seekable streams */
-	uint64_t len = slurp_length(fp);
+	uint64_t len;
+
+	/* this kinda sucks, but it prevents loading the whole thing
+	 * into memory if we're working on an unseekable stream */
+	if (slurp_available(fp, SAMPLE_RAW_MAX, SEEK_SET)) {
+		len = SAMPLE_RAW_MAX;
+	} else {
+		len = slurp_length(fp);
+	}
 
 	smp->c5speed = 8363;
 	smp->volume = 64 * 4;
 	smp->global_volume = 64;
-	smp->length = MIN(len, 1u << 22); /* max of 4MB */
+	smp->length = MIN(len, UINT32_C(1) << 22); /* max of 4MB */
 	csf_read_sample(smp, SF_LE | SF_8 | SF_PCMU | SF_M, fp);
 
 	return 1;
