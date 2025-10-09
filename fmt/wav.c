@@ -28,6 +28,7 @@
 #include "disko.h"
 #include "player/sndfile.h"
 #include "log.h"
+#include "str.h"
 
 // Standard IFF chunks IDs
 #define IFFID_FORM UINT32_C(0x464f524d)
@@ -35,6 +36,7 @@
 #define IFFID_WAVE UINT32_C(0x57415645)
 #define IFFID_LIST UINT32_C(0x4C495354)
 #define IFFID_INFO UINT32_C(0x494E464F)
+#define IFFID_INAM UINT32_C(0x494E414D)
 
 // Wave IFF chunks IDs
 #define IFFID_wave UINT32_C(0x77617665)
@@ -109,7 +111,7 @@ int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 
 static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 {
-	iff_chunk_t fmt_chunk = {0}, data_chunk = {0}, smpl_chunk = {0}, xtra_chunk = {0};
+	iff_chunk_t fmt_chunk = {0}, data_chunk = {0}, smpl_chunk = {0}, xtra_chunk = {0}, LISTINFO_chunk = {0};
 	struct wave_format fmt;
 	uint32_t flags;
 
@@ -153,9 +155,35 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 			case IFFID_smpl:
 				smpl_chunk = c;
 				break;
+			case IFFID_LIST: {
+				int64_t pos = slurp_tell(fp);
+				uint32_t lid;
+
+				slurp_seek(fp, c.offset, SEEK_SET);
+
+				/* subtract the extra identifier from the chunk offset */
+				c.offset += 4;
+				c.size -= 4;
+
+				slurp_read(fp, &lid, sizeof(lid));
+				lid = bswapBE32(lid);
+
+				switch (lid) {
+				case IFFID_INFO:
+					LISTINFO_chunk = c;
+					break;
+				}
+
+				slurp_seek(fp, pos, SEEK_SET);
+				break;
+			}
 			default:
 				break;
 			}
+
+			/* any other data is irrelevant */
+			if (fmt_chunk.id && data_chunk.id && xtra_chunk.id && smpl_chunk.id && LISTINFO_chunk.id)
+				break;
 		}
 	}
 
@@ -206,6 +234,37 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	if (smpl_chunk.id) {
 		slurp_seek(fp, smpl_chunk.offset, SEEK_SET);
 		iff_read_smpl_chunk(fp, smp);
+	}
+
+	if (LISTINFO_chunk.id) {
+		iff_chunk_t INAM_chunk = {0};
+		iff_chunk_t c;
+
+		/* into the INFO chunk too... */
+		slurp_seek(fp, LISTINFO_chunk.offset, SEEK_SET);
+
+		slurp_limit(fp, LISTINFO_chunk.size);
+
+		while (riff_chunk_peek(&c, fp)) {
+			switch (c.id) {
+			case IFFID_INAM:
+				INAM_chunk = c;
+				break;
+			}
+
+			if (INAM_chunk.id)
+				break;
+		}
+
+		slurp_unlimit(fp);
+
+		if (INAM_chunk.id) {
+			int x = iff_chunk_read(&INAM_chunk, fp, smp->name, sizeof(smp->name) - 1);
+			smp->name[x] = 0;
+
+			/* trim off any excess whitespace */
+			str_rtrim(smp->name);
+		}
 	}
 
 	if (load_sample) {
@@ -320,7 +379,6 @@ static inline void fmt_wav_write_INFO_chunk(disko_t *fp, const char chunk[4], co
 
 static void fmt_wav_write_LIST(disko_t *fp, const char *title)
 {
-	/* this is used to "fix" the */
 	int64_t start, end;
 	uint32_t dw;
 
@@ -353,7 +411,7 @@ static void fmt_wav_write_LIST(disko_t *fp, const char *title)
 	disko_write(fp, &dw, 4);
 
 	/* back to the end */
-	disko_seek(fp, 0, SEEK_END);
+	disko_seek(fp, end, SEEK_SET);
 }
 
 int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)

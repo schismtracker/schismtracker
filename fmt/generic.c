@@ -24,6 +24,7 @@
 #include "headers.h"
 #include "fmt.h"
 #include "str.h"
+#include "mem.h"
 #include "bits.h"
 #include "log.h"
 #include "version.h"
@@ -475,6 +476,9 @@ void fmt_fill_file_from_sample(dmoz_file_t *file, const song_sample_t *smp)
 	file->smp_vibrato_speed = smp->vib_speed;
 	file->smp_vibrato_depth = smp->vib_depth;
 	file->smp_vibrato_rate  = smp->vib_rate;
+
+	if (smp->name[0])
+		file->title = strn_dup(smp->name, sizeof(smp->name));
 }
 
 int fmt_write_pcm(disko_t *fp, const uint8_t *data, size_t length, int bpf,

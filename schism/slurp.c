@@ -566,7 +566,7 @@ static int slurp_nonseek_available(slurp_t *fp, size_t x, int whence)
 	switch (whence) {
 	case SEEK_SET: break;
 	case SEEK_CUR: pos += fp->internal.memory.pos; break;
-	case SEEK_END: return 0;
+	case SEEK_END: return !x;
 	}
 
 	while (pos > (int64_t)ns->ds.length) {
@@ -814,7 +814,7 @@ int slurp_available(slurp_t *fp, size_t x, int whence)
 		if (pos < 0)
 			return 0;
 
-		return ((fp->length(fp) - pos) >= x);
+		return (pos + x) <= fp->length(fp);
 	} else {
 		SCHISM_RUNTIME_ASSERT(0, "slurp: available or length is required");
 	}
