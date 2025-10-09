@@ -66,7 +66,7 @@ enum {
 #define PROTO_SAVE_SAMPLE       (disko_t *fp, song_sample_t *smp)
 #define PROTO_LOAD_INSTRUMENT   (slurp_t *fp, int slot)
 #define PROTO_SAVE_INSTRUMENT   (disko_t *fp, song_t *song, song_instrument_t *ins)
-#define PROTO_EXPORT_HEAD       (disko_t *fp, int bits, int channels, uint32_t rate)
+#define PROTO_EXPORT_HEAD       (disko_t *fp, int bits, int channels, uint32_t rate, const char *title)
 #define PROTO_EXPORT_SILENCE    (disko_t *fp, long bytes)
 #define PROTO_EXPORT_BODY       (disko_t *fp, const uint8_t *data, size_t length)
 #define PROTO_EXPORT_TAIL       (disko_t *fp)

@@ -456,7 +456,7 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 }
 
 
-int fmt_aiff_export_head(disko_t *fp, int bits, int channels, uint32_t rate)
+int fmt_aiff_export_head(disko_t *fp, int bits, int channels, uint32_t rate, SCHISM_UNUSED const char *title)
 {
 	struct aiff_writedata *awd = malloc(sizeof(struct aiff_writedata));
 	if (!awd)

@@ -29,6 +29,7 @@
 #include "player/sndfile.h"
 #include "log.h"
 #include "str.h"
+#include "mem.h"
 
 // Standard IFF chunks IDs
 #define IFFID_FORM UINT32_C(0x464f524d)
@@ -315,6 +316,8 @@ struct wav_writedata {
 	int bps; // bytes per sample
 	int swap; // should be byteswapped?
 	int bpf; // bytes per frame
+
+	char *title;
 };
 
 /* returns bytes per frame */
@@ -457,7 +460,7 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 }
 
 
-int fmt_wav_export_head(disko_t *fp, int bits, int channels, uint32_t rate)
+int fmt_wav_export_head(disko_t *fp, int bits, int channels, uint32_t rate, const char *title)
 {
 	struct wav_writedata *wwd = malloc(sizeof(struct wav_writedata));
 	if (!wwd)
@@ -470,6 +473,8 @@ int fmt_wav_export_head(disko_t *fp, int bits, int channels, uint32_t rate)
 #else
 	wwd->swap = 0;
 #endif
+	if (title)
+		wwd->title = str_dup(title);
 
 	return DW_OK;
 }
@@ -501,7 +506,7 @@ int fmt_wav_export_tail(disko_t *fp)
 	struct wav_writedata *wwd = fp->userdata;
 	uint32_t ul;
 
-	fmt_wav_write_LIST(fp, NULL);
+	fmt_wav_write_LIST(fp, wwd->title);
 
 	/* fix the length in the file header */
 	ul = disko_tell(fp) - 8;
@@ -514,6 +519,7 @@ int fmt_wav_export_tail(disko_t *fp)
 	ul = bswapLE32(wwd->numbytes);
 	disko_write(fp, &ul, 4);
 
+	free(wwd->title);
 	free(wwd);
 
 	return DW_OK;

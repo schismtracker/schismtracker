@@ -838,7 +838,7 @@ int disko_export_song(const char *filename, const struct save_format *format)
 			disko_open(export_ds[n], filename);
 		}
 		if (!(export_ds[n] && format->f.export.head(export_ds[n], export_dwsong.mix_bits_per_sample,
-				export_dwsong.mix_channels, export_dwsong.mix_frequency) == DW_OK)) {
+				export_dwsong.mix_channels, export_dwsong.mix_frequency, export_dwsong.title) == DW_OK)) {
 			err = errno ? errno : EINVAL;
 			break;
 		}

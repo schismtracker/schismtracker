@@ -446,6 +446,9 @@ int fmt_flac_read_info(dmoz_file_t *file, slurp_t *fp)
 struct flac_writedata {
 	FLAC__StreamEncoder *encoder;
 
+	FLAC__StreamMetadata *metadata[3];
+	uint32_t num_metadata;
+
 	int bits;
 	int channels;
 };
@@ -479,6 +482,93 @@ static FLAC__StreamEncoderTellStatus write_on_tell(SCHISM_UNUSED const FLAC__Str
 	return FLAC__STREAM_ENCODER_TELL_STATUS_OK;
 }
 
+static SCHISM_FORMAT_PRINTF(2, 3) int flac_append_vorbis_comment(FLAC__StreamMetadata *metadata, const char *format, ...)
+{
+	char *s;
+	int x;
+
+	{
+		va_list ap;
+
+		va_start(ap, format);
+
+		x = vasprintf(&s, format, ap);
+
+		va_end(ap);
+	}
+
+	if (x > 0) {
+		FLAC__StreamMetadata_VorbisComment_Entry e;
+
+		e.length = x;
+		e.entry = (FLAC__byte *)s;
+
+		schism_FLAC_metadata_object_vorbiscomment_append_comment(metadata, e, 1);
+
+		free(s);
+
+		return 1;
+	}
+
+	return 0;
+}
+
+static void flac_add_metadata(struct flac_writedata *fwd, song_sample_t *smp, const char *title, uint32_t rate)
+{
+	size_t titlelen;
+
+	if (smp) {
+		title = smp->name;
+		titlelen = sizeof(smp->name);
+		rate = smp->c5speed;
+	} else if (title) {
+		titlelen = strlen(title);
+	}
+
+	fwd->num_metadata = 0;
+
+	if (smp) {
+		fwd->metadata[fwd->num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_APPLICATION);
+		if (fwd->metadata[fwd->num_metadata]) {
+			uint32_t length;
+			unsigned char xtra[IFF_XTRA_CHUNK_SIZE];
+
+			iff_fill_xtra_chunk(smp, xtra, &length);
+
+			/* now shove it into the metadata */
+			if (schism_FLAC_metadata_object_application_set_data(fwd->metadata[fwd->num_metadata], xtra, length, 1)) {
+				memcpy(fwd->metadata[fwd->num_metadata]->data.application.id, "riff", 4);
+				fwd->num_metadata++;
+			}
+		}
+
+		fwd->metadata[fwd->num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_APPLICATION);
+		if (fwd->metadata[fwd->num_metadata]) {
+			uint32_t length;
+			unsigned char smpl[IFF_SMPL_CHUNK_SIZE];
+
+			iff_fill_smpl_chunk(smp, smpl, &length);
+
+			if (schism_FLAC_metadata_object_application_set_data(fwd->metadata[fwd->num_metadata], smpl, length, 1)) {
+				memcpy(fwd->metadata[fwd->num_metadata]->data.application.id, "riff", 4);
+				fwd->num_metadata++;
+			}
+		}
+	}
+
+	/* this shouldn't be needed for export */
+	fwd->metadata[fwd->num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
+	if (fwd->metadata[fwd->num_metadata]) {
+		flac_append_vorbis_comment(fwd->metadata[fwd->num_metadata], "SAMPLERATE=%" PRIu32, rate);
+		if (title)
+			flac_append_vorbis_comment(fwd->metadata[fwd->num_metadata], "TITLE=%.*s", (int)titlelen, title);
+		fwd->num_metadata++;
+	}
+
+	if (!schism_FLAC_stream_encoder_set_metadata(fwd->encoder, fwd->metadata, fwd->num_metadata))
+		log_appendf(4, " FLAC__stream_encoder_set_metadata: %s", schism_FLAC_StreamEncoderStateString[schism_FLAC_stream_encoder_get_state(fwd->encoder)]);
+}
+
 static int flac_save_init_head(disko_t *fp, int bits, int channels, uint32_t rate, uint32_t estimate_num_samples)
 {
 	if (!flac_wasinit)
@@ -490,6 +580,9 @@ static int flac_save_init_head(disko_t *fp, int bits, int channels, uint32_t rat
 
 	fwd->channels = channels;
 	fwd->bits = bits;
+
+	/* nothing */
+	fwd->num_metadata = 0;
 
 	fwd->encoder = schism_FLAC_stream_encoder_new();
 	if (!fwd->encoder)
@@ -555,9 +648,14 @@ static int flac_save_init(disko_t *fp, int bits, int channels, uint32_t rate, ui
 	return 0;
 }
 
-int fmt_flac_export_head(disko_t *fp, int bits, int channels, uint32_t rate)
+int fmt_flac_export_head(disko_t *fp, int bits, int channels, uint32_t rate, const char *title)
 {
-	if (flac_save_init(fp, bits, channels, rate, 0))
+	if (flac_save_init_head(fp, bits, channels, rate, 0))
+		return DW_ERROR;
+
+	flac_add_metadata(fp->userdata, NULL, title, rate);
+
+	if (flac_save_init_tail(fp))
 		return DW_ERROR;
 
 	return DW_OK;
@@ -635,7 +733,12 @@ int fmt_flac_export_silence(disko_t *fp, long bytes)
 
 int fmt_flac_export_tail(disko_t *fp)
 {
+	uint32_t i;
 	struct flac_writedata *fwd = fp->userdata;
+
+	/* cleanup the metadata crap */
+	for (i = 0; i < fwd->num_metadata; i++)
+		schism_FLAC_metadata_object_delete(fwd->metadata[i]);
 
 	schism_FLAC_stream_encoder_finish(fwd->encoder);
 	schism_FLAC_stream_encoder_delete(fwd->encoder);
@@ -649,44 +752,9 @@ int fmt_flac_export_tail(disko_t *fp)
  * currently this is the same size as the buffer length in disko.c */
 #define SAMPLE_BUFFER_LENGTH 65536
 
-static SCHISM_FORMAT_PRINTF(2, 3) int flac_append_vorbis_comment(FLAC__StreamMetadata *metadata, const char *format, ...)
-{
-	char *s;
-	int x;
-
-	{
-		va_list ap;
-
-		va_start(ap, format);
-
-		x = vasprintf(&s, format, ap);
-
-		va_end(ap);
-	}
-
-	if (x > 0) {
-		FLAC__StreamMetadata_VorbisComment_Entry e;
-
-		e.length = x;
-		e.entry = (FLAC__byte *)s;
-
-		schism_FLAC_metadata_object_vorbiscomment_append_comment(metadata, e, 1);
-
-		free(s);
-
-		return 1;
-	}
-
-	return 0;
-}
-
 int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 {
 	struct flac_writedata *fwd;
-
-	/* metadata structures & the amount */
-	FLAC__StreamMetadata *metadata_ptrs[3] = {0};
-	uint32_t num_metadata = 0, i;
 
 	if (smp->flags & CHN_ADLIB)
 		return SAVE_UNSUPPORTED;
@@ -694,48 +762,9 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 	if (flac_save_init_head(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed, smp->length))
 		return SAVE_INTERNAL_ERROR;
 
-	/* okay, now we have to hijack the writedata, so we can set metadata */
 	fwd = fp->userdata;
 
-	metadata_ptrs[num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_APPLICATION);
-	if (metadata_ptrs[num_metadata]) {
-		uint32_t length;
-		unsigned char xtra[IFF_XTRA_CHUNK_SIZE];
-
-		iff_fill_xtra_chunk(smp, xtra, &length);
-
-		/* now shove it into the metadata */
-		if (schism_FLAC_metadata_object_application_set_data(metadata_ptrs[num_metadata], xtra, length, 1)) {
-			memcpy(metadata_ptrs[num_metadata]->data.application.id, "riff", 4);
-			num_metadata++;
-		}
-	}
-
-	metadata_ptrs[num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_APPLICATION);
-	if (metadata_ptrs[num_metadata]) {
-		uint32_t length;
-		unsigned char smpl[IFF_SMPL_CHUNK_SIZE];
-
-		iff_fill_smpl_chunk(smp, smpl, &length);
-
-		if (schism_FLAC_metadata_object_application_set_data(metadata_ptrs[num_metadata], smpl, length, 1)) {
-			memcpy(metadata_ptrs[num_metadata]->data.application.id, "riff", 4);
-			num_metadata++;
-		}
-	}
-
-	/* this shouldn't be needed for export */
-	metadata_ptrs[num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
-	if (metadata_ptrs[num_metadata]) {
-		if (flac_append_vorbis_comment(metadata_ptrs[num_metadata], "SAMPLERATE=%" PRIu32, smp->c5speed)
-			&& flac_append_vorbis_comment(metadata_ptrs[num_metadata], "TITLE=%.*s", (int)sizeof(smp->name), smp->name))
-			num_metadata++;
-	}
-
-	if (!schism_FLAC_stream_encoder_set_metadata(fwd->encoder, metadata_ptrs, num_metadata)) {
-		log_appendf(4, " FLAC__stream_encoder_set_metadata: %s", schism_FLAC_StreamEncoderStateString[schism_FLAC_stream_encoder_get_state(fwd->encoder)]);
-		return SAVE_INTERNAL_ERROR;
-	}
+	flac_add_metadata(fwd, smp, NULL, 0);
 
 	if (flac_save_init_tail(fp)) {
 		log_appendf(4, " flac_save_init_tail: %s", schism_FLAC_StreamEncoderStateString[schism_FLAC_stream_encoder_get_state(fwd->encoder)]);
@@ -755,10 +784,6 @@ int fmt_flac_save_sample(disko_t *fp, song_sample_t *smp)
 
 	if (fmt_flac_export_tail(fp) != DW_OK)
 		return SAVE_INTERNAL_ERROR;
-
-	/* cleanup the metadata crap */
-	for (i = 0; i < num_metadata; i++)
-		schism_FLAC_metadata_object_delete(metadata_ptrs[i]);
 
 	return SAVE_SUCCESS;
 }
