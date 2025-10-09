@@ -71,37 +71,77 @@ void cfg_save_disko(cfg_file_t *cfg)
 
 static void _dw_stdio_write(disko_t *ds, const void *buf, size_t len)
 {
+#ifdef HAVE_NONPOSIX_FSEEK
+	if (ds->seekpos != -1) {
+		/* Seeking past the end of the file, but our fseek doesn't support it. */
+		if (fseek(ds->file, 0, SEEK_END) != 0) {
+			disko_seterror(ds, errno);
+			return;
+		}
+
+		int64_t end = ftell(ds->file);
+		if (end < 0) {
+			disko_seterror(ds, errno);
+			return;
+		}
+
+		for (; end < ds->seekpos; end++) {
+			/* stdio is already buffered, so this shouldn't hurt performance. */
+			if (fputc('\0', ds->file) != EOF)
+				continue;
+
+			/* whoops, error (out of disk space?) */
+			disko_seterror(ds, errno);
+			return;
+		}
+
+		ds->seekpos = -1;
+	}
+#endif
+
 	if (fwrite(buf, len, 1, ds->file) != 1)
 		disko_seterror(ds, errno);
+}
+
+static int64_t _dw_stdio_tell(disko_t *ds)
+{
+	long pos;
+
+#ifdef HAVE_NONPOSIX_FSEEK
+	if (ds->seekpos != -1)
+		return ds->seekpos;
+#endif
+
+	pos = ftell(ds->file);
+	if (pos < 0)
+		disko_seterror(ds, errno);
+
+	return pos;
 }
 
 static void _dw_stdio_seek(disko_t *ds, int64_t pos, int whence)
 {
 #ifdef HAVE_NONPOSIX_FSEEK
-	// On some platforms, fseek() does not conform to the POSIX
-	// ideas of what should happen when you seek beyond EOF. On
-	// those odd platforms we'll "fake" the behavior by seeking
-	// to the end of the file and appending NUL bytes until we
-	// reach the desired position.
-	//
-	// Ideally, we would save the requested position, and shove
-	// the NUL byte crap into _dw_stdio_write, but this is good
-	// enough for now.
-
-	long start = ftell(ds->file);
-	if (fseek(ds->file, 0, SEEK_END) < 0) {
+	/* call _dw_stdio_tell to account for any existing fake-seek */
+	int64_t start = _dw_stdio_tell(ds);
+	if (start < 0) {
+		disko_seterror(ds, errno);
+		return;
+	}
+	if (fseek(ds->file, 0, SEEK_END) != 0) {
 		disko_seterror(ds, errno);
 		return;
 	}
 	long end = ftell(ds->file);
-	//seek back to where we started
-	if (fseek(ds->file, start, SEEK_SET) < 0) {
+	if (end < 0) {
 		disko_seterror(ds, errno);
 		return;
 	}
 
 	switch (whence) {
 	default:
+		disko_seterror(ds, EINVAL);
+		break;
 	case SEEK_SET:
 		break;
 	case SEEK_CUR:
@@ -112,29 +152,19 @@ static void _dw_stdio_seek(disko_t *ds, int64_t pos, int whence)
 		break;
 	}
 
-	if (fseek(ds->file, MIN(pos, end), SEEK_SET) < 0) {
-		disko_seterror(ds, errno);
+	if (pos > end) {
+		/* seeking past EOF; fake it */
+		ds->seekpos = pos;
 		return;
 	}
-	while (end++ < pos) {
-		if (fputc('\0', ds->file) != EOF)
-			continue;
 
+	/* do the actual seek */
+	if (fseek(ds->file, pos, SEEK_SET) != 0)
 		disko_seterror(ds, errno);
-		return;
-	}
 #else
-	if (fseek(ds->file, pos, whence) < 0)
+	if (fseek(ds->file, pos, whence) != 0)
 		disko_seterror(ds, errno);
 #endif
-}
-
-static int64_t _dw_stdio_tell(disko_t *ds)
-{
-	int64_t pos = ftell(ds->file);
-	if (pos < 0)
-		disko_seterror(ds, errno);
-	return pos;
 }
 
 // ---------------------------------------------------------------------------
@@ -273,6 +303,10 @@ int disko_open(disko_t *ds, const char *filename)
 		return -1;
 
 	memset(ds, 0, sizeof(*ds));
+
+#ifdef HAVE_NONPOSIX_FSEEK
+	ds->seekpos = -1;
+#endif
 
 	ds->filename = str_dup(filename);
 

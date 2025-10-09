@@ -51,8 +51,13 @@ struct disko {
 	/* untouched by diskwriter; driver may use for anything */
 	void *userdata;
 
-	// for memory buffers
+	// for memory buffers (note these are also abused by the diskwriter)
 	size_t pos, length, allocated;
+
+#ifdef HAVE_NONPOSIX_FSEEK
+	/* for systems that have buggy seek-past-EOF behavior */
+	int64_t seekpos;
+#endif
 };
 
 enum {
