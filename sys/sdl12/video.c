@@ -115,8 +115,6 @@ static struct video_cf {
 	uint32_t pal[256];
 } video;
 
-char *SDL_VideoDriverName(char *namebuf, int maxlen);
-
 static int (SDLCALL *sdl12_InitSubSystem)(Uint32 flags);
 static void (SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
 
@@ -375,14 +373,13 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 {
 	if (video.desktop.doublebuf)
 		sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
+
 	if (video.desktop.fullscreen) {
 		w = video.desktop.width;
 		h = video.desktop.height;
 	} else {
 		sdlflags |= SDL_RESIZABLE;
 	}
-
-	video_calculate_clip(w, h, &video.clip.x, &video.clip.y, &video.clip.w, &video.clip.h);
 
 	if (video.desktop.fb_hacks && video.surface) {
 		/* the original one will be _just fine_ */
@@ -404,21 +401,27 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 		 *
 		 * FIXME this seems to have issues toggling random hardware/fullscreen values,
 		 * and it actually grabs the mouse cursor and doesn't ungrab when going out
-		 * of fullscreen. */
+		 * of fullscreen.
+		 *
+		 * TODO maybe we should be doing this regardless? at least SDL2/SDL3 never
+		 * ever change the display resolution, and changing it is flaky and very 1990s */
 		if (video.desktop.fullscreen && video.desktop.swsurface) {
 			const SDL_VideoInfo* info = sdl12_GetVideoInfo();
 
 			if (info) {
 				w = info->current_w;
 				h = info->current_h;
-				video_calculate_clip(w, h,
-					&video.clip.x, &video.clip.y, &video.clip.w, &video.clip.h);
 			}
 		}
 
-		video.surface = sdl12_SetVideoMode(w, h,
-			video.desktop.bpp, sdlflags);
+		video.surface = sdl12_SetVideoMode(w, h, video.desktop.bpp, sdlflags);
 	}
+
+	/* use the actual w/h of the surface.
+	 * this fixes weird hi-dpi issues under SDL2 and SDL3,
+	 * I suppose it won't hurt here. */
+	video_calculate_clip(video.surface->w, video.surface->h,
+		&video.clip.x, &video.clip.y, &video.clip.w, &video.clip.h);
 
 	return video.surface;
 }
