@@ -556,10 +556,12 @@ static void flac_add_metadata(struct flac_writedata *fwd, song_sample_t *smp, co
 		}
 	}
 
-	/* this shouldn't be needed for export */
 	fwd->metadata[fwd->num_metadata] = schism_FLAC_metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT);
 	if (fwd->metadata[fwd->num_metadata]) {
+		static const char name[] = "Schism Tracker " VERSION;
+
 		flac_append_vorbis_comment(fwd->metadata[fwd->num_metadata], "SAMPLERATE=%" PRIu32, rate);
+		flac_append_vorbis_comment(fwd->metadata[fwd->num_metadata], "ENCODER=%s", name);
 		if (title)
 			flac_append_vorbis_comment(fwd->metadata[fwd->num_metadata], "TITLE=%.*s", (int)titlelen, title);
 		fwd->num_metadata++;
