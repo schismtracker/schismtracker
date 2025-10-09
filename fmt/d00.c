@@ -129,7 +129,6 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 	 * but v0-v1 d00 files have virtually no identifying information
 	 * if they haven't been reheadered. */
 	int64_t fppos;
-	uint64_t fplen;
 	static int (*const hdr_style[])(struct d00_header *hdr, slurp_t *fp) = {
 		/* in order of preference */
 		d00_header_read_new,
@@ -175,7 +174,7 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 
 	/* verify that parapointers are within range for the file */
 #define PARAPTR_VALID(ptr) \
-	(fppos <= ptr || slurp_available(fp, ptr, SEEK_CUR))
+	(fppos <= ptr || !slurp_available(fp, ptr, SEEK_SET))
 
 	/* these can never be invalid */
 	if (!PARAPTR_VALID(hdr->tpoin)
@@ -222,12 +221,14 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 			return 0; /* oops */
 
 		slurp_seek(fp, hdr->tpoin, SEEK_SET);
-		if (slurp_read(fp, ptrs, sizeof(ptrs)) != sizeof(ptrs))
+		if (slurp_read(fp, ptrs, sizeof(ptrs)) != sizeof(ptrs)) {
+			printf(";-;\n");
 			return 0;
+		}
 
 		for (j = 0; j < 9; j++) {
 			ptrs[j] = bswapLE16(ptrs[j]);
-			if (ptrs[j] >= fplen)
+			if (!slurp_available(fp, ptrs[j], SEEK_SET))
 				return 0;
 		}
 
