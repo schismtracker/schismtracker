@@ -507,7 +507,7 @@ static int aiff_header(disko_t *fp, int bits, int channels, uint32_t rate,
 			disko_putc(fp, '\0');
 	}
 
-	if (smp && (smp->flags & (CHN_LOOP|CHN_SUSTAINLOOP))) {
+	if (smp) {
 		/* Marker Chunk
 
 		typedef short MarkerId;
@@ -529,21 +529,12 @@ static int aiff_header(disko_t *fp, int bits, int channels, uint32_t rate,
 
 		disko_write(fp, "MARK", 4);
 
-		ckSize = 2;
-		if (smp->flags & CHN_LOOP)
-			ckSize += 14;
-		if (smp->flags & CHN_SUSTAINLOOP)
-			ckSize += 14;
+		ckSize = 2 + 14 + 14;
 
 		dw = bswapBE32(ckSize);
 		disko_write(fp, &dw, 4);
 
-		w = 0;
-		if (smp->flags & CHN_LOOP)
-			w += 2;
-		if (smp->flags & CHN_SUSTAINLOOP)
-			w += 2;
-		w = bswapBE16(w);
+		w = bswapBE16(4);
 		disko_write(fp, &w, 2);
 
 		enum {
@@ -566,15 +557,10 @@ do { \
 	disko_write(fp, "\0", 1); \
 } while (0)
 
-		if (smp->flags & CHN_LOOP) {
-			WRITE_MARKER(MID_LOOP_START, smp->loop_start);
-			WRITE_MARKER(MID_LOOP_END,   smp->loop_end);
-		}
-
-		if (smp->flags & CHN_SUSTAINLOOP) {
-			WRITE_MARKER(MID_SUSTAIN_START, smp->sustain_start);
-			WRITE_MARKER(MID_SUSTAIN_END,   smp->sustain_end);
-		}
+		WRITE_MARKER(MID_LOOP_START,    smp->loop_start);
+		WRITE_MARKER(MID_LOOP_END,      smp->loop_end);
+		WRITE_MARKER(MID_SUSTAIN_START, smp->sustain_start);
+		WRITE_MARKER(MID_SUSTAIN_END,   smp->sustain_end);
 
 #undef WRITE_MARKER
 
@@ -629,19 +615,14 @@ do { \
 
 #define WRITE_LOOP(LOOPFLAG, PINGPONGFLAG, MIDSTART, MIDEND) \
 do { \
-	if (smp->flags & (LOOPFLAG)) { \
-		w = bswapBE16((smp->flags & (PINGPONGFLAG)) ? 2 : 1); \
-		disko_write(fp, &w, 2); \
+	w = bswapBE16(!!(smp->flags & (LOOPFLAG)) + !!(smp->flags & (PINGPONGFLAG))); \
+	disko_write(fp, &w, 2); \
 \
-		w = bswapBE16(MIDSTART); \
-		disko_write(fp, &w, 2); \
+	w = bswapBE16(MIDSTART); \
+	disko_write(fp, &w, 2); \
 \
-		w = bswapBE16(MIDEND); \
-		disko_write(fp, &w, 2); \
-	} else { \
-		/* dummy loop; type of 0 means "no loop" */ \
-		disko_write(fp, "\0\0\0\0\0\0", 6); \
-	} \
+	w = bswapBE16(MIDEND); \
+	disko_write(fp, &w, 2); \
 } while (0)
 
 		WRITE_LOOP(CHN_SUSTAINLOOP, CHN_PINGPONGSUSTAIN, MID_SUSTAIN_START, MID_SUSTAIN_END);
