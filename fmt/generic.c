@@ -471,13 +471,13 @@ void fmt_fill_file_from_sample(dmoz_file_t *file, const song_sample_t *smp)
 	file->smp_loop_end      = smp->loop_end;
 	file->smp_sustain_start = smp->sustain_start;
 	file->smp_sustain_end   = smp->sustain_end;
-	file->smp_defvol        = smp->volume >> 2; //mphack
+	file->smp_defvol        = smp->volume;
 	file->smp_gblvol        = smp->global_volume;
 	file->smp_vibrato_speed = smp->vib_speed;
 	file->smp_vibrato_depth = smp->vib_depth;
 	file->smp_vibrato_rate  = smp->vib_rate;
 
-	if (smp->name[0])
+	if (!file->title && smp->name[0])
 		file->title = strn_dup(smp->name, sizeof(smp->name));
 }
 
