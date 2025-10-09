@@ -674,7 +674,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 
 #define WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, CHNS, NAME, NCHNS) \
 	case SF(BITS,CHNS,ENDIAN,PCMS): \
-		WRITE_##NAME##_SAMPLE_EX(BITS, /* none */, /* none */, /* none */); \
+		WRITE_##NAME##_SAMPLE_EX(BITS, /* none */, LOOPPRE, /* none */); \
 		len *= (BITS / 8); \
 		break; \
 	case SF(BITS,CHNS,ENDIAN,PCMU): \
