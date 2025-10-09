@@ -115,6 +115,12 @@ static int aiff_chunk_comm_read(const void *data, size_t size, void *void_comm)
 #define ID_AIFF UINT32_C(0x41494646)
 #define ID_COMM UINT32_C(0x434F4D4D)
 #define ID_SSND UINT32_C(0x53534E44)
+#define ID_MARK UINT32_C(0x4D41524B)
+#define ID_INST UINT32_C(0x494E5354)
+#define ID_APPL UINT32_C(0x4150504C)
+#define ID_Schm UINT32_C(0x5363686D)
+
+#define IFFID_xtra UINT32_C(0x78747261)
 
 /* --------------------------------------------------------------------- */
 
@@ -122,7 +128,8 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 {
 	uint32_t filetype = 0;
 	iff_chunk_t chunk = {0};
-	iff_chunk_t vhdr = {0}, body = {0}, name = {0}, auth = {0}, anno = {0}, ssnd = {0}, comm = {0};
+	iff_chunk_t vhdr = {0}, body = {0}, name = {0}, auth = {0}, anno = {0},
+	            ssnd = {0}, comm = {0}, mark = {0}, inst = {0}, applschm = {0};
 
 	if (!iff_chunk_peek(&chunk, fp))
 		return 0;
@@ -235,12 +242,42 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 	}
 	case ID_AIFF: {
 		struct aiff_chunk_comm chunk_comm;
+		/* this is an ugly hack for getting sample loops etc in the sample library */
+		song_sample_t tmpsmp = {0};
+		song_sample_t *psmp = (smp) ? smp : &tmpsmp;
 
 		while (iff_chunk_peek(&chunk, fp)) {
 			switch (chunk.id) {
 				case ID_COMM: comm = chunk; break;
 				case ID_SSND: ssnd = chunk; break;
 				case ID_NAME: name = chunk; break;
+				case ID_MARK: mark = chunk; break;
+				case ID_INST: inst = chunk; break;
+				case ID_APPL: {
+					int64_t pos = slurp_tell(fp);
+					uint32_t id;
+
+					/* figure out which type it is.
+					 * if it's from us, we want to read it in */
+					slurp_seek(fp, chunk.offset, SEEK_SET);
+
+					chunk.offset += 4;
+					chunk.size -= 4;
+
+					slurp_read(fp, &id, sizeof(id));
+					id = bswapBE32(id);
+
+					switch (id) {
+					case ID_Schm:
+						applschm = chunk;
+						break;
+					}
+
+					/* return back to the original pos */
+					slurp_seek(fp, pos, SEEK_SET);
+
+					break;
+				}
 				default: break;
 			}
 		}
@@ -250,13 +287,8 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 		if (!iff_chunk_receive(&comm, fp, aiff_chunk_comm_read, &chunk_comm))
 			return 0;
 
-		if (file) {
-			file->smp_speed = float_decode_ieee_80(chunk_comm.sample_rate);
-			file->smp_length = bswapBE32(chunk_comm.num_frames);
-
-			file->description = "Audio IFF sample";
-			file->type = TYPE_SAMPLE_PLAIN;
-		}
+		psmp->c5speed = float_decode_ieee_80(chunk_comm.sample_rate);
+		psmp->length = bswapBE32(chunk_comm.num_frames);
 
 		if (name.id) {
 			if (file) {
@@ -269,7 +301,113 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			}
 		}
 
-		/* TODO loop points */
+		if (inst.id && mark.id) {
+			/* wow this sucks */
+			uint16_t i, num_markers;
+			uint16_t loop_type, sustain_type;
+			uint16_t loop_start_id, loop_end_id, sustain_start_id, sustain_end_id;
+
+			/* seek to the stuff we actually care about (loop points) */
+			slurp_seek(fp, inst.offset + 8, SEEK_SET);
+
+			slurp_read(fp, &sustain_type, 2);
+			sustain_type = bswapBE16(sustain_type);
+
+			slurp_read(fp, &sustain_start_id, 2);
+			sustain_start_id = bswapBE16(sustain_start_id);
+
+			slurp_read(fp, &sustain_end_id, 2);
+			sustain_end_id = bswapBE16(sustain_end_id);
+
+			slurp_read(fp, &loop_type, 2);
+			loop_type = bswapBE16(loop_type);
+
+			slurp_read(fp, &loop_start_id, 2);
+			loop_start_id = bswapBE16(loop_start_id);
+
+			slurp_read(fp, &loop_end_id, 2);
+			loop_end_id = bswapBE16(loop_end_id);
+
+			slurp_seek(fp, mark.offset, SEEK_SET);
+
+			slurp_read(fp, &num_markers, 2);
+			num_markers = bswapBE16(num_markers);
+
+			for (i = 0; i < num_markers; i++) {
+				int c;
+				uint16_t marker_id;
+				uint32_t offset;
+
+				slurp_read(fp, &marker_id, 2);
+				marker_id = bswapBE16(marker_id);
+
+				slurp_read(fp, &offset, 4);
+				offset = bswapBE32(offset);
+
+				/* loops can share markers! */
+				if (marker_id == loop_start_id)
+					psmp->loop_start = offset;
+				if (marker_id == loop_end_id)
+					psmp->loop_end = offset;
+				if (marker_id == sustain_start_id)
+					psmp->sustain_start = offset;
+				if (marker_id == sustain_end_id)
+					psmp->sustain_end = offset;
+
+				/* skip name */
+				c = slurp_getc(fp);
+				if (c == EOF)
+					break; /* what */
+
+				slurp_seek(fp, c, SEEK_CUR);
+			}
+
+			/* okay, now we have everything; now find the markers */
+			switch (loop_type) {
+			case 2: psmp->flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
+			case 1: psmp->flags |= CHN_LOOP;
+			}
+
+			switch (sustain_type) {
+			case 2: psmp->flags |= CHN_PINGPONGSUSTAIN; SCHISM_FALLTHROUGH;
+			case 1: psmp->flags |= CHN_SUSTAINLOOP;
+			}
+		}
+
+		if (applschm.id) {
+			iff_chunk_t xtra = {0};
+
+			slurp_seek(fp, applschm.offset, SEEK_SET);
+
+			while (iff_chunk_peek(&chunk, fp)) {
+				switch (chunk.id) {
+				case IFFID_xtra:
+					xtra = chunk;
+					break;
+				}
+
+				if (xtra.id)
+					break; /* we have everything we want */
+			}
+
+			if (xtra.id) {
+				slurp_seek(fp, xtra.offset, SEEK_SET);
+
+				iff_read_xtra_chunk(fp, psmp);
+			}
+		}
+
+		if (file) {
+			fmt_fill_file_from_sample(file, psmp);
+
+			file->description = "Audio IFF sample";
+			file->type = TYPE_SAMPLE_PLAIN;
+
+			switch ((bswapBE32(chunk_comm.sample_size) + 7) & ~7) {
+			case 16: case 24: case 32:
+				file->smp_flags |= CHN_16BIT;
+			}
+		}
 
 		if (smp) {
 			uint32_t flags = SF_BE | SF_PCMS;
@@ -306,9 +444,6 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 
 			// TODO: data checking; make sure sample count and byte size agree
 			// (and if not, cut to shorter of the two)
-
-			smp->c5speed = float_decode_ieee_80(chunk_comm.sample_rate);
-			smp->length = bswapBE32(chunk_comm.num_frames);
 
 			// the audio data starts 8 bytes into the chunk
 			// (don't care about the block alignment stuff)
@@ -347,7 +482,7 @@ struct aiff_writedata {
 };
 
 static int aiff_header(disko_t *fp, int bits, int channels, uint32_t rate,
-	const char *name, size_t length, struct aiff_writedata *awd /* out */)
+	const char *name, size_t length, song_sample_t *smp, struct aiff_writedata *awd /* out */)
 {
 	int16_t s;
 	uint32_t ul;
@@ -370,6 +505,186 @@ static int aiff_header(disko_t *fp, int bits, int channels, uint32_t rate,
 		disko_write(fp, name, tlen);
 		if (tlen & 1)
 			disko_putc(fp, '\0');
+	}
+
+	if (smp && (smp->flags & (CHN_LOOP|CHN_SUSTAINLOOP))) {
+		/* Marker Chunk
+
+		typedef short MarkerId;
+
+		typedef struct {
+			MarkerId id;
+			unsigned long position;
+			pstring markerName;
+		} Marker;
+
+		typedef struct {
+			ID ckID;
+			long ckSize;
+			unsigned short numMarkers;
+			Marker Markers[];
+		} MarkerChunk; */
+		uint32_t ckSize, dw;
+		uint16_t mid, w;
+
+		disko_write(fp, "MARK", 4);
+
+		ckSize = 2;
+		if (smp->flags & CHN_LOOP)
+			ckSize += 14;
+		if (smp->flags & CHN_SUSTAINLOOP)
+			ckSize += 14;
+
+		dw = bswapBE32(ckSize);
+		disko_write(fp, &dw, 4);
+
+		w = 0;
+		if (smp->flags & CHN_LOOP)
+			w += 2;
+		if (smp->flags & CHN_SUSTAINLOOP)
+			w += 2;
+		w = bswapBE16(w);
+		disko_write(fp, &w, 2);
+
+		enum {
+			MID_LOOP_START = 1,
+			MID_LOOP_END = 2,
+			MID_SUSTAIN_START = 3,
+			MID_SUSTAIN_END = 4,
+		};
+
+		/* now start writing the markers. */
+#define WRITE_MARKER(id, x) \
+do { \
+	w = bswapBE16(id); \
+	disko_write(fp, &w, 2); \
+\
+	dw = bswapBE32(x); \
+	disko_write(fp, &dw, 4); \
+\
+	/* no name... */ \
+	disko_write(fp, "\0", 1); \
+} while (0)
+
+		if (smp->flags & CHN_LOOP) {
+			WRITE_MARKER(MID_LOOP_START, smp->loop_start);
+			WRITE_MARKER(MID_LOOP_END,   smp->loop_end);
+		}
+
+		if (smp->flags & CHN_SUSTAINLOOP) {
+			WRITE_MARKER(MID_SUSTAIN_START, smp->sustain_start);
+			WRITE_MARKER(MID_SUSTAIN_END,   smp->sustain_end);
+		}
+
+#undef WRITE_MARKER
+
+		/* Instrument Chunk
+			The Instrument Chunk defines basic parameters that an instrument, such as a sampler,
+			could use to play back the sound data.
+
+		typedef struct {
+		#define NoLooping 0
+		#define ForwardLooping 1
+		#define ForwardBackwardLooping 2
+			short playMode;
+			MarkerId beginLoop;
+			MarkerId endLoop;
+		} Loop; // size: 6
+
+		typedef struct {
+			ID ckID;         // 'INST'
+			long ckSize;
+			char baseNote;
+			char detune;
+			char lowNote;
+			char highNote;
+			char lowVelocity;
+			char highVelocity;
+			short gain;
+			Loop sustainLoop;
+			Loop releaseLoop;
+		} InstrumentChunk; // size: 20 */
+
+		disko_write(fp, "INST", 4);
+
+		dw = bswapBE32(20);
+		disko_write(fp, &dw, sizeof(dw));
+
+		/* base note (60 == C-5 ?) */
+		disko_putc(fp, 60);
+
+		/* detune in cents [-50, 50] (TODO) */
+		disko_putc(fp, 0);
+
+		disko_putc(fp, 0); /* lowNote */
+		disko_putc(fp, 127); /* highNote */
+
+		disko_putc(fp, 1); /* lowVelocity */
+		disko_putc(fp, 127); /* highVelocity */
+
+		/* gain (0 db) -- could possibly write volume here? I don't know */
+		disko_write(fp, "\0\0", 2);
+
+		/* finally, to the loops */
+
+#define WRITE_LOOP(LOOPFLAG, PINGPONGFLAG, MIDSTART, MIDEND) \
+do { \
+	if (smp->flags & (LOOPFLAG)) { \
+		w = bswapBE16((smp->flags & (PINGPONGFLAG)) ? 2 : 1); \
+		disko_write(fp, &w, 2); \
+\
+		w = bswapBE16(MIDSTART); \
+		disko_write(fp, &w, 2); \
+\
+		w = bswapBE16(MIDEND); \
+		disko_write(fp, &w, 2); \
+	} else { \
+		/* dummy loop; type of 0 means "no loop" */ \
+		disko_write(fp, "\0\0\0\0\0\0", 6); \
+	} \
+} while (0)
+
+		WRITE_LOOP(CHN_SUSTAINLOOP, CHN_PINGPONGSUSTAIN, MID_SUSTAIN_START, MID_SUSTAIN_END);
+		WRITE_LOOP(CHN_LOOP, CHN_PINGPONGLOOP, MID_LOOP_START, MID_LOOP_END);
+
+#undef WRITE_LOOP
+	}
+
+	/* Apple II style information chunk.
+	 * This is the only standard way I can find to store the encoder name... */
+	{
+		static const char name[] = "Schism Tracker " VERSION;
+		uint32_t dw;
+
+		disko_write(fp, "APPL", 4);
+
+		dw = bswapBE32(4 + sizeof(name));
+		disko_write(fp, &dw, sizeof(dw));
+
+		disko_write(fp, "pdos", 4);
+
+		/* write pascal string -- name of the application */
+		disko_putc(fp, sizeof(name) - 1);
+		disko_write(fp, name, sizeof(name) - 1);
+	}
+
+	/* Our information chunk -- stores Modplug-style 'xtra' data */
+	if (smp) {
+		unsigned char xtra[IFF_XTRA_CHUNK_SIZE];
+		uint32_t dw, length;
+
+		iff_fill_xtra_chunk(smp, xtra, &length);
+
+		disko_write(fp, "APPL", 4);
+
+		dw = bswapBE32(4 + length);
+		disko_write(fp, &dw, 4);
+
+		/* Reusing the Mac OS X bundle identifier here */
+		disko_write(fp, "Schm", 4);
+
+		/* This is stored WITH the 'xtra' ID and size */
+		disko_write(fp, xtra, length);
 	}
 
 	/* Common Chunk
@@ -437,14 +752,12 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 	flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
 	bpf = aiff_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
-		smp->c5speed, smp->name, smp->length, NULL);
+		smp->c5speed, smp->name, smp->length, smp, NULL);
 
 	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bpf) {
 		log_appendf(4, "AIFF: unexpected data size written");
 		return SAVE_INTERNAL_ERROR;
 	}
-
-	/* TODO: loop data */
 
 	/* fix the length in the file header */
 	ul = disko_tell(fp) - 8;
@@ -456,13 +769,13 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 }
 
 
-int fmt_aiff_export_head(disko_t *fp, int bits, int channels, uint32_t rate, SCHISM_UNUSED const char *title)
+int fmt_aiff_export_head(disko_t *fp, int bits, int channels, uint32_t rate, const char *title)
 {
 	struct aiff_writedata *awd = malloc(sizeof(struct aiff_writedata));
 	if (!awd)
 		return DW_ERROR;
 	fp->userdata = awd;
-	aiff_header(fp, bits, channels, rate, NULL, ~0, awd);
+	aiff_header(fp, bits, channels, rate, title, ~0, NULL, awd);
 	awd->numbytes = 0;
 #if WORDS_BIGENDIAN
 	awd->swap = 0;
