@@ -54,7 +54,7 @@ struct d00_header {
 };
 
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { unslurp(fp); return 0; } } while (0)
+	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
 
 static int d00_header_read_v1(struct d00_header *hdr, slurp_t *fp)
 {
@@ -221,10 +221,8 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 			return 0; /* oops */
 
 		slurp_seek(fp, hdr->tpoin, SEEK_SET);
-		if (slurp_read(fp, ptrs, sizeof(ptrs)) != sizeof(ptrs)) {
-			printf(";-;\n");
+		if (slurp_read(fp, ptrs, sizeof(ptrs)) != sizeof(ptrs))
 			return 0;
-		}
 
 		for (j = 0; j < 9; j++) {
 			ptrs[j] = bswapLE16(ptrs[j]);
