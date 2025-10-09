@@ -71,21 +71,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 	memset(t, 0, sizeof(*t));
 
 	if (!strcmp(filename, "-")) {
-		/* We can't seek on standard input! */
-		disko_t ds;
-		char buf[4096];
-		size_t r;
-
-		if (disko_memopen(&ds) < 0)
-			return -1;
-
-		while ((r = fread(buf, 1, 4096, stdin)) > 0)
-			disko_write(&ds, buf, r);
-
-		disko_memclose(&ds, 1);
-
-		/* :) */
-		slurp_memstream_free(t, ds.data, ds.length);
+		slurp_stdio(t, stdin);
 	} else {
 		if (buf) {
 			st = *buf;
@@ -202,34 +188,64 @@ void unslurp(slurp_t * t)
 /* --------------------------------------------------------------------- */
 /* stdio implementation */
 
+/* nonseek implementation for stdio streams ... */
+static size_t slurp_stdio_nonseek_read_(void *opaque, disko_t *ds, size_t z)
+{
+	size_t rr = 0;
+
+	while (z > 0) {
+		/* read into a temporary buffer and then append it to disko */
+		char buf[512];
+
+		size_t r = fread(buf, 1, MIN(z, 512), opaque);
+		if (!r)
+			return rr;
+
+		disko_write(ds, buf, r);
+
+		rr += r;
+		z -= r;
+	}
+
+	return rr;
+}
+
+static void slurp_stdio_nonseek_closure_(void *opaque)
+{
+	fclose(opaque);
+}
+
 /* this function does NOT automatically close the file */
 int slurp_stdio(slurp_t *t, FILE *fp)
 {
-	long end;
+	/* stdio streams have a chance of being nonseekable. if that's true,
+	 * then initialize it as a nonseekable stream. */
 
-	memset(t, 0, sizeof(*t));
+	if (fseek(fp, 0, SEEK_END)) {
+		slurp_init_nonseek(t, slurp_stdio_nonseek_read_, slurp_stdio_nonseek_closure_, fp);
+	} else {
+		long end;
 
-	t->internal.stdio.fp = fp;
+		memset(t, 0, sizeof(*t));
 
-	if (fseek(t->internal.stdio.fp, 0, SEEK_END))
-		return SLURP_OPEN_FAIL;
+		end = ftell(fp);
+		if (end < 0)
+			return SLURP_OPEN_FAIL;
 
-	end = ftell(t->internal.stdio.fp);
-	if (end < 0)
-		return SLURP_OPEN_FAIL;
+		/* return to monke */
+		if (fseek(fp, 0, SEEK_SET))
+			return SLURP_OPEN_FAIL;
 
-	/* return to monke */
-	if (fseek(t->internal.stdio.fp, 0, SEEK_SET))
-		return SLURP_OPEN_FAIL;
+		t->internal.stdio.fp = fp;
+		t->internal.stdio.length = end;
 
-	t->internal.stdio.length = MAX(0, end);
-
-	/* A BARBERSHOP HAIRCUT THAT COSTS A QUARTER */
-	t->seek = slurp_stdio_seek_;
-	t->tell = slurp_stdio_tell_;
-	t->eof  = slurp_stdio_eof_;
-	t->read = slurp_stdio_read_;
-	t->length = slurp_stdio_length_;
+		/* A BARBERSHOP HAIRCUT THAT COSTS A QUARTER */
+		t->seek = slurp_stdio_seek_;
+		t->tell = slurp_stdio_tell_;
+		t->eof  = slurp_stdio_eof_;
+		t->read = slurp_stdio_read_;
+		t->length = slurp_stdio_length_;
+	}
 
 	return SLURP_OPEN_SUCCESS;
 }
