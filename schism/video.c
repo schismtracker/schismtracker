@@ -1044,6 +1044,7 @@ static struct {
 	video_opengl_object_unload_spec object_unload;
 	video_opengl_set_attribute_spec set_attribute;
 	video_opengl_swap_buffers_spec  swap_buffers;
+	video_opengl_extension_supported_spec extension_supported;
 
 	int init;
 
@@ -1104,55 +1105,34 @@ static inline int opengl_ver_atleast(uint32_t major, uint32_t minor)
 
 static int opengl_extension_supported_default(const char *extension)
 {
-	if (opengl_ver_atleast(3, 0)) {
-		GLint i, count;
+	const char *start, *extensions;
+	const char *where, *terminator;
 
-		schism_glGetIntegerv(GL_NUM_EXTENSIONS, &count);
-		if (schism_glGetError() == GL_NO_ERROR) {
-			for (i = 0; i < count; i++) {
-				const char *ext = schism_glGetStringi(GL_EXTENSIONS, i);
-				if (!ext)
-					break; /* ??? */
+	/* Extension names should not have spaces. */
+	where = strchr(extension, ' ');
+	if (where || *extension == '\0')
+		return 0;
 
-				if (!strcmp(ext, extension))
-					return 1;
-			}
-		}
-	}
-#if 0 /* we can use this as a fallback if the gl 3.0 impl is broken */
-	else
-#endif
-	{
+	extensions = (const char *)schism_glGetString(GL_EXTENSIONS);
+	if (!extensions)
+		return 0;
 
-		const char *start, *extensions;
-		const char *where, *terminator;
+	/* It takes a bit of care to be fool-proof about parsing the
+	 * OpenGL extensions string. Don't be fooled by sub-strings,
+	 * etc. */
+	start = extensions;
 
-		/* Extension names should not have spaces. */
-		where = strchr(extension, ' ');
-		if (where || *extension == '\0')
-			return 0;
+	for (;;) {
+		where = strstr(start, extension);
+		if (!where)
+			break;
 
-		extensions = (const char *)schism_glGetString(GL_EXTENSIONS);
-		if (!extensions)
-			return 0;
+		terminator = where + strlen(extension);
+		if (where == start || *(where - 1) == ' ')
+			if (*terminator == ' ' || *terminator == '\0')
+				return 1;
 
-		/* It takes a bit of care to be fool-proof about parsing the
-		 * OpenGL extensions string. Don't be fooled by sub-strings,
-		 * etc. */
-		start = extensions;
-
-		for (;;) {
-			where = strstr(start, extension);
-			if (!where)
-				break;
-
-			terminator = where + strlen(extension);
-			if (where == start || *(where - 1) == ' ')
-				if (*terminator == ' ' || *terminator == '\0')
-					return 1;
-
-			start = terminator;
-		}
+		start = terminator;
 	}
 
 	return 0;
@@ -1173,8 +1153,11 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 
 	memset(&video_gl, 0, sizeof(video_gl));
 
-	if (!extension_supported)
-		extension_supported = opengl_extension_supported_default;
+	if (extension_supported) {
+		video_gl.extension_supported = extension_supported;
+	} else {
+		video_gl.extension_supported = opengl_extension_supported_default;
+	}
 
 	if (object_load(NULL)
 #ifdef SCHISM_WIN32
@@ -1183,6 +1166,7 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 		|| object_load("libGL.so") || object_load("GL")
 #endif
 	) {
+		/* load in all of the funcs */
 		loaded = 1;
 
 #define Z(q) \
@@ -1237,13 +1221,15 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 #undef Z
 
 		if (!setup_callback())
-			goto fail;
+			return 0;
 
+		/* grab opengl version */
 		if (!opengl_ver_init())
-			goto fail;
+			return 0;
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
-		if (extension_supported("GL_NV_pixel_data_range")) {
+		/* check if nvidia pixel data crap is supported */
+		if (video_gl.extension_supported("GL_NV_pixel_data_range")) {
 			video_gl.pixel_data_range = (schism_glPixelDataRangeNV
 				&& schism_wglAllocateMemoryNV
 				&& schism_wglFreeMemoryNV);
@@ -1285,6 +1271,18 @@ void video_opengl_reset_interpolation(void)
 	schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, x);
 }
 
+static void opengl_set_attributes(void)
+{
+	video_gl.set_attribute(VIDEO_GL_DOUBLEBUFFER, 1);
+	video_gl.set_attribute(VIDEO_GL_STENCIL_SIZE, 0);
+	video_gl.set_attribute(VIDEO_GL_DEPTH_SIZE, 32);
+	video_gl.set_attribute(VIDEO_GL_ACCUM_RED_SIZE, 0);
+	video_gl.set_attribute(VIDEO_GL_ACCUM_GREEN_SIZE, 0);
+	video_gl.set_attribute(VIDEO_GL_ACCUM_BLUE_SIZE, 0);
+	video_gl.set_attribute(VIDEO_GL_ACCUM_ALPHA_SIZE, 0);
+	video_gl.set_attribute(VIDEO_GL_SWAP_CONTROL, 0);
+}
+
 int video_opengl_setup(uint32_t w, uint32_t h,
 	int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph))
 {
@@ -1292,32 +1290,30 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 	int32_t texsize;
 	uint32_t x, y;
 
+#define GL_ASSERT(X) \
+do { \
+	GLenum err; \
+\
+	X; \
+\
+	err = schism_glGetError(); \
+	if (err != GL_NO_ERROR) { \
+		log_appendf(4, "OpenGL error: `" #X "`: %d", (int)err); \
+		return 0; \
+	} \
+} while (0)
+
 	if (!video_gl.init)
 		return 0;
 
-	video_gl.set_attribute(VIDEO_GL_DOUBLEBUFFER, 1);
-	video_gl.set_attribute(VIDEO_GL_STENCIL_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_DEPTH_SIZE, 32);
-	video_gl.set_attribute(VIDEO_GL_ACCUM_RED_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_ACCUM_GREEN_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_ACCUM_BLUE_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_ACCUM_ALPHA_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_SWAP_CONTROL, 0);
+	opengl_set_attributes();
 
 	if (!callback(&x, &y, &w, &h))
 		return 0; /* ? */
 	
-	/* is this really necessary? */
-	video_gl.set_attribute(VIDEO_GL_DOUBLEBUFFER, 1);
-	video_gl.set_attribute(VIDEO_GL_STENCIL_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_DEPTH_SIZE, 32);
-	video_gl.set_attribute(VIDEO_GL_ACCUM_RED_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_ACCUM_GREEN_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_ACCUM_BLUE_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_ACCUM_ALPHA_SIZE, 0);
-	video_gl.set_attribute(VIDEO_GL_SWAP_CONTROL, 0);
+	opengl_set_attributes();
 
-	schism_glViewport(x, y, w, h);
+	GL_ASSERT(schism_glViewport(x, y, w, h));
 
 	texsize = 2 << int32_log2(NATIVE_SCREEN_WIDTH);
 
@@ -1346,31 +1342,29 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 			return 0; /* okay */
 	}
 
-	schism_glMatrixMode(GL_PROJECTION);
-	schism_glDeleteTextures(1, &video_gl.texture);
-	schism_glGenTextures(1, &video_gl.texture);
-	schism_glBindTexture(GL_TEXTURE_2D, video_gl.texture);
-	schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	GL_ASSERT(schism_glMatrixMode(GL_PROJECTION));
+	GL_ASSERT(schism_glDeleteTextures(1, &video_gl.texture));
+	GL_ASSERT(schism_glGenTextures(1, &video_gl.texture));
+	GL_ASSERT(schism_glBindTexture(GL_TEXTURE_2D, video_gl.texture));
+	GL_ASSERT(schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP));
+	GL_ASSERT(schism_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP));
 
 	video_opengl_reset_interpolation();
 
-	schism_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
-		0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0);
-	if (schism_glGetError() != GL_NO_ERROR)
-		return 0; /* nope */
+	GL_ASSERT(schism_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
+		0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0));
 
-	schism_glClearColor(0.0, 0.0, 0.0, 1.0);
-	schism_glClear(GL_COLOR_BUFFER_BIT);
+	GL_ASSERT(schism_glClearColor(0.0, 0.0, 0.0, 1.0));
+	GL_ASSERT(schism_glClear(GL_COLOR_BUFFER_BIT));
 	video_gl.swap_buffers();
-	schism_glClear(GL_COLOR_BUFFER_BIT);
-	schism_glShadeModel(GL_FLAT);
-	schism_glDisable(GL_DEPTH_TEST);
-	schism_glDisable(GL_LIGHTING);
-	schism_glDisable(GL_CULL_FACE);
-	schism_glEnable(GL_TEXTURE_2D);
-	schism_glMatrixMode(GL_MODELVIEW);
-	schism_glLoadIdentity();
+	GL_ASSERT(schism_glClear(GL_COLOR_BUFFER_BIT));
+	GL_ASSERT(schism_glShadeModel(GL_FLAT));
+	GL_ASSERT(schism_glDisable(GL_DEPTH_TEST));
+	GL_ASSERT(schism_glDisable(GL_LIGHTING));
+	GL_ASSERT(schism_glDisable(GL_CULL_FACE));
+	GL_ASSERT(schism_glEnable(GL_TEXTURE_2D));
+	GL_ASSERT(schism_glMatrixMode(GL_MODELVIEW));
+	GL_ASSERT(schism_glLoadIdentity());
 
 	tex_width = ((GLfloat)(NATIVE_SCREEN_WIDTH) / (GLfloat)texsize);
 	tex_height = ((GLfloat)(NATIVE_SCREEN_HEIGHT) / (GLfloat)texsize);
@@ -1378,43 +1372,24 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 	if (schism_glIsList(video_gl.displaylist))
 		schism_glDeleteLists(video_gl.displaylist, 1);
 
-	video_gl.displaylist = schism_glGenLists(1);
-	schism_glNewList(video_gl.displaylist, GL_COMPILE);
-	schism_glBindTexture(GL_TEXTURE_2D, video_gl.texture);
+	GL_ASSERT(video_gl.displaylist = schism_glGenLists(1));
+	GL_ASSERT(schism_glNewList(video_gl.displaylist, GL_COMPILE));
+	GL_ASSERT(schism_glBindTexture(GL_TEXTURE_2D, video_gl.texture));
 
-	if (opengl_ver_atleast(3, 1)) {
-		/* GL_QUADS was removed in OpenGL 3.1 */
-		schism_glBegin(GL_TRIANGLES);
+	/* use quads */
+	GL_ASSERT(schism_glBegin(GL_QUADS));
 
-		schism_glTexCoord2f(0, tex_height);
-		schism_glVertex2f(-1.0f, -1.0f);
-		schism_glTexCoord2f(tex_width, tex_height);
-		schism_glVertex2f(1.0f, -1.0f);
-		schism_glTexCoord2f(tex_width, 0);
-		schism_glVertex2f(1.0f, 1.0f);
+	GL_ASSERT(schism_glTexCoord2f(0, tex_height));
+	GL_ASSERT(schism_glVertex2f(-1.0f, -1.0f));
+	GL_ASSERT(schism_glTexCoord2f(tex_width, tex_height));
+	GL_ASSERT(schism_glVertex2f(1.0f, -1.0f));
+	GL_ASSERT(schism_glTexCoord2f(tex_width, 0));
+	GL_ASSERT(schism_glVertex2f(1.0f, 1.0f));
+	GL_ASSERT(schism_glTexCoord2f(0, 0));
+	GL_ASSERT(schism_glVertex2f(-1.0f, 1.0f));
 
-		schism_glTexCoord2f(0, tex_height);
-		schism_glVertex2f(-1.0f, -1.0f);
-		schism_glTexCoord2f(tex_width, 0);
-		schism_glVertex2f(1.0f, 1.0f);
-		schism_glTexCoord2f(0, 0);
-		schism_glVertex2f(-1.0f, 1.0f);
-	} else {
-		/* use quads */
-		schism_glBegin(GL_QUADS);
-
-		schism_glTexCoord2f(0, tex_height);
-		schism_glVertex2f(-1.0f, -1.0f);
-		schism_glTexCoord2f(tex_width, tex_height);
-		schism_glVertex2f(1.0f, -1.0f);
-		schism_glTexCoord2f(tex_width, 0);
-		schism_glVertex2f(1.0f, 1.0f);
-		schism_glTexCoord2f(0, 0);
-		schism_glVertex2f(-1.0f, 1.0f);
-	}
-
-	schism_glEnd();
-	schism_glEndList();
+	GL_ASSERT(schism_glEnd());
+	GL_ASSERT(schism_glEndList());
 
 	return 1;
 }
@@ -1458,6 +1433,9 @@ void video_opengl_quit(void)
 		video_gl.object_unload();
 		video_gl.object_unload = NULL;
 	}
+
+	/* zero it out */
+	memset(&video_gl, 0, sizeof(video_gl));
 }
 
 int video_opengl_used(void)

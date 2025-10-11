@@ -110,8 +110,6 @@ static struct video_cf {
 		unsigned int doublebuf : 1;
 	} desktop;
 
-	SDL_Rect clip;
-
 	struct {
 		uint32_t x, y, w, h;
 	} clip;
@@ -255,6 +253,7 @@ static int sdl12_video_startup(void)
 {
 	SDL_Rect **modes;
 	int i, x = -1, y = -1;
+	const SDL_VideoInfo* info;
 
 	/* center the window on startup by default.
 	 * this is what the SDL 2 backend does, and it's annoying to
@@ -287,6 +286,26 @@ static int sdl12_video_startup(void)
 		}
 	}
 #endif
+
+	/* Do this before any call to SDL_SetVideoMode!!
+	 *
+	 * This effectively makes our fullscreen resolution the same as
+	 * the regular desktop resolution, which is the sane behavior.
+	 * Especially considering we aren't doing anything very taxing
+	 * graphically.
+	 *
+	 * If we can't, fine, we'll fall back to the old SDL_ListModes
+	 * crap, and just use 640x480 (lol ok) if all else fails. */
+	info = sdl12_GetVideoInfo();
+	if (info) {
+		x = info->current_w;
+		y = info->current_h;
+	}
+
+	video_opengl_init(sdl12_opengl_object_load,
+		sdl12_opengl_function_load, NULL, NULL,
+		sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers,
+		sdl12_opengl_setup_callback);
 
 	/* no scaling when using the SDL surfaces directly */
 	video.desktop.swsurface = !cfg_video_hardware;
@@ -340,6 +359,8 @@ static int sdl12_video_startup(void)
 	}
 	video.desktop.bpp = video.surface->format->BitsPerPixel;
 
+	/* old cruft to get the "best" fullscreen resolution; only done
+	 * if SDL_GetVideoInfo fails. */
 	if (x < 0 || y < 0) {
 		modes = sdl12_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
 		if (modes != (SDL_Rect**)0 && modes != (SDL_Rect**)-1) {
@@ -365,9 +386,7 @@ static int sdl12_video_startup(void)
 		y = 480;
 	}
 
-	/* log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
-	video.desktop.width = x;
-	video.desktop.height = y;
+	log_appendf(2, "Ideal desktop size: %dx%d", x, y);
 
 	/* this call builds the surface */
 	video_fullscreen(video.desktop.fullscreen);
@@ -386,8 +405,8 @@ static int sdl12_video_startup(void)
 	SDL_SysWMinfo wm_info;
 	SDL_VERSION(&wm_info.version);
 	if (sdl12_GetWMInfo(&wm_info)) {
-		LONG_PTR x = GetWindowLongPtrA(wm_info.window, GWL_EXSTYLE);
-		SetWindowLongPtrA(wm_info.window, GWL_EXSTYLE, x | WS_EX_ACCEPTFILES);
+		LONG_PTR xx = GetWindowLongPtrA(wm_info.window, GWL_EXSTYLE);
+		SetWindowLongPtrA(wm_info.window, GWL_EXSTYLE, xx | WS_EX_ACCEPTFILES);
 	}
 #endif
 
@@ -397,7 +416,7 @@ static int sdl12_video_startup(void)
 	return 1;
 }
 
-static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int sdlflags)
+static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, uint32_t sdlflags)
 {
 	if (video.desktop.doublebuf)
 		sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
@@ -426,27 +445,12 @@ static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, unsigned int 
 		sdlflags |= (video.desktop.swsurface
 				? SDL_SWSURFACE
 				: SDL_HWSURFACE);
-		
-		/* if using swsurface, get a surface the size of the whole native monitor res
-		 * to avoid issues with weirdo display modes
-		 *
-		 * FIXME this seems to have issues toggling random hardware/fullscreen values,
-		 * and it actually grabs the mouse cursor and doesn't ungrab when going out
-		 * of fullscreen.
-		 *
-		 * TODO maybe we should be doing this regardless? at least SDL2/SDL3 never
-		 * ever change the display resolution, and changing it is flaky and very 1990s */
-		if (video.desktop.fullscreen && video.desktop.swsurface) {
-			const SDL_VideoInfo* info = sdl12_GetVideoInfo();
-
-			if (info) {
-				w = info->current_w;
-				h = info->current_h;
-			}
-		}
 
 		video.surface = sdl12_SetVideoMode(w, h, video.desktop.bpp, sdlflags);
 	}
+
+	if (!video.surface)
+		fprintf(stderr, "SDL_SetVideoMode: %s\n", sdl12_get_error());
 
 	/* use the actual w/h of the surface.
 	 * this fixes weird hi-dpi issues under SDL2 and SDL3,
@@ -463,6 +467,8 @@ static int sdl12_video_opengl_setup_callback(uint32_t *x, uint32_t *y,
 	int r;
 
 	r = !!setup_surface_(*w, *h, SDL_OPENGL);
+	if (video.surface->format->BitsPerPixel < 15)
+		return 0; /* automatic fail */
 
 	*x = video.clip.x;
 	*y = video.clip.y;
@@ -479,27 +485,8 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	video.draw.width = width;
 	video.draw.height = height;
 
-	if (cfg_video_hardware) {
-		/* any previous opengl crap is presumably garbage here? */
-		if (video_opengl_used())
-			video_opengl_quit();
-
-		video_opengl_init(sdl12_opengl_object_load,
-			sdl12_opengl_function_load, NULL, NULL,
-			sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers,
-			sdl12_opengl_setup_callback);
-		video.draw.width = cfg_video_width;
-		video.draw.height = cfg_video_height;
-	}
-
 	if (cfg_video_hardware
-#ifdef SCHISM_WIN32
-		/* opengl fullscreen is buggy on windows */
-		&& !video.desktop.fullscreen
-#endif
-		&& video_opengl_used()
-		&& video_opengl_setup(width, height,
-			sdl12_video_opengl_setup_callback)) {
+		&& video_opengl_setup(width, height, sdl12_video_opengl_setup_callback)) {
 		/* nothing */
 	} else {
 		setup_surface_(width, height, 0);
@@ -529,6 +516,7 @@ static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t
 SCHISM_HOT static void sdl12_video_blit(void)
 {
 	if (video.surface->flags & SDL_OPENGL) {
+		/* TODO handle opengl errors; need to fallback to surface if all else fails */
 		video_opengl_blit();
 	} else {
 		if (SDL_MUSTLOCK(video.surface))
@@ -574,7 +562,9 @@ static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int
 		x, y);
 }
 
-static int sdl12_video_is_hardware(void) {
+static int sdl12_video_is_hardware(void)
+{
+	/* opengl doesn't really imply hardware */
 	return !!(video.surface->flags & (SDL_HWSURFACE|SDL_OPENGL));
 }
 
@@ -760,15 +750,7 @@ static void sdl12_opengl_swap_buffers(void)
 
 static int sdl12_opengl_setup_callback(void)
 {
-	int width, height;
-
-	width = video.draw.width;
-	height = video.draw.height;
-
-	if (!width) width = 640;
-	if (!height) height = 400;
-
-	video.surface = sdl12_SetVideoMode(width, height, 0, SDL_OPENGL|SDL_RESIZABLE);
+	video.surface = sdl12_SetVideoMode(640, 400, 0, SDL_OPENGL|SDL_RESIZABLE);
 	if (!video.surface)
 		fprintf(stderr, "SDL_SetVideoMode: %s\n", sdl12_get_error());
 
@@ -883,6 +865,9 @@ static int sdl12_video_init(void)
 
 static void sdl12_video_quit(void)
 {
+	if (video_opengl_used())
+		video_opengl_quit();
+
 	sdl12_QuitSubSystem(SDL_INIT_VIDEO);
 
 	sdl12_quit();
