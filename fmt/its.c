@@ -171,7 +171,7 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 		return 0;
 
 	/* alright, let's get started */
-	smp->length = bswapLE32(its.length);
+	smp->length = its.length;
 	if ((its.flags & 1) == 0) {
 		// sample associated with header
 		return 0;
@@ -237,7 +237,7 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 	} else if (its.flags & 1) {
 		slurp_seek(fp, its.samplepointer, SEEK_SET);
 
-		// endianness (always zero)
+		// endianness
 		uint32_t flags = SF_LE;
 		// channels
 		flags |= (its.flags & 4) ? SF_SS : SF_M;
@@ -268,7 +268,7 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 
 int fmt_its_load_sample(slurp_t *fp, song_sample_t *smp)
 {
-	return load_its_sample(fp, smp, 0x0214);
+	return !!load_its_sample(fp, smp, 0x0214);
 }
 
 void save_its_header(disko_t *fp, song_sample_t *smp)
@@ -358,7 +358,7 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 
 	/* Write the sample pointer. In an ITS file, the sample data is right after the header,
 	 * so its position in the file will be the same as the size of the header. */
-	unsigned int tmp = bswapLE32(sizeof(struct it_sample));
+	uint32_t tmp = bswapLE32(80);
 	disko_seek(fp, 0x48, SEEK_SET);
 	disko_write(fp, &tmp, 4);
 
