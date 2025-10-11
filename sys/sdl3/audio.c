@@ -123,12 +123,12 @@ static inline SCHISM_ALWAYS_INLINE void _free_devices(void)
 	size_t i;
 
 	for (i = 0; i < DEVICES_MAX_; i++) {
-		if (devices[i].arr)
-			free(devices[i].arr);
-
-		/* zero it out */
-		memset(devices + i, 0, sizeof(*devices));
+		/* This array is owned by SDL's allocator */
+		sdl3_free(devices[i].arr);
 	}
+
+	/* zero it */
+	memset(devices, 0, sizeof(devices));
 }
 
 static uint32_t sdl3_audio_device_count(uint32_t flags)
