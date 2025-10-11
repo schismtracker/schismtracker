@@ -27,7 +27,8 @@
 // We have to include this **before** headers.h because
 // otherwise tgmath.h doesn't work quite right combined
 // with intrin.h under Win32. What the hell.
-#include <build-config.h>
+
+#include "headers.h"
 
 /* stupid win32 crap */
 #define NO_OLDNAMES
@@ -35,13 +36,14 @@
 
 #ifdef SCHISM_OS2
 // Work around weird compiler bug?
+//
+// ...erm, its because SDL expects a 486 or better.
+// We probably should too.
 # undef __386__
 # include <SDL_endian.h>
 # define __386__
 #endif
 #include <SDL.h>
-
-#include "headers.h"
 
 int sdl2_init(void);
 void sdl2_quit(void);

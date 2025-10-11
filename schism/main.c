@@ -1158,6 +1158,7 @@ int schism_main(int argc, char** argv)
 
 	/* mt is no longer required  --paper */
 	mt_init();
+	SCHISM_RUNTIME_ASSERT(!util_initumask(), "Failed to initialize umask mutex");
 	SCHISM_RUNTIME_ASSERT(!atm_init(), "Failed to initialize atomics!");
 	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
 

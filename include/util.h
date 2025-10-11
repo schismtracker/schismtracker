@@ -97,6 +97,8 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE short dB2_power_s(int noisefloor
 	return dB2_power((db * noisefloor / 128.0f) - noisefloor - correction_dBs);
 }
 
+/* TODO move this stuff to bits.h ?? */
+
 /* integer sqrt (very fast; 32 bits limited) */
 SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_sqrt(uint32_t r)
 {
@@ -122,6 +124,14 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_pow(uint32_t base, ui
 		r *= base;
 	return r;
 }
+
+/* return value: 0 if success, negative if error
+ * this needs to be here for thread-safety! */
+int util_getumask(mode_t *m);
+int util_setumask(mode_t m);
+
+int util_initumask(void);
+void util_quitumask(void);
 
 FILE *mkfstemp(char *template);
 

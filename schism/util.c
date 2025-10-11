@@ -29,14 +29,90 @@ extraneous libraries (i.e. GLib). */
 #include "osdefs.h"
 #include "mem.h"
 #include "cpu.h"
+#include "mt.h"
+
+#if defined(HAVE_MKSTEMP) && defined(HAVE_FDOPEN) && !defined(SCHISM_WIN32)
+# define MKFSTEMP_USE_MKSTEMP 1
+#endif
+
+#ifdef HAVE_UMASK
+static mt_mutex_t *umask_mutex = NULL;
+
+# ifdef SCHISM_WIN32
+#  define umask _umask
+# endif
+#endif
+
+int util_getumask(mode_t *pmask)
+{
+#ifdef HAVE_UMASK
+	mode_t mask;
+
+	if (!umask_mutex)
+		return -1; /* call util_initumask() */
+
+	mt_mutex_lock(umask_mutex);
+	mask = umask(0777);
+	umask(mask);
+	mt_mutex_unlock(umask_mutex);
+
+	*pmask = mask;
+
+	return 0;
+#else
+	/* make something up */
+	*pmask = 0022;
+	return 0;
+#endif
+}
+
+/* we don't really need this.. */
+int util_setumask(mode_t mask)
+{
+#ifdef HAVE_UMASK
+	if (!umask_mutex)
+		return -1; /* call util_initumask() */
+
+	mt_mutex_lock(umask_mutex);
+	umask(mask);
+	mt_mutex_unlock(umask_mutex);
+
+	return 0;
+#else
+	return -1;
+
+	(void)mask;
+#endif
+}
+
+int util_initumask(void)
+{
+#ifdef HAVE_UMASK
+	umask_mutex = mt_mutex_create();
+	if (!umask_mutex)
+		return -1;
+#endif
+
+	return 0;
+}
+
+void util_quitumask(void)
+{
+#ifdef HAVE_UMASK
+	if (umask_mutex)
+		mt_mutex_delete(umask_mutex);
+#endif
+}
 
 /* This function is roughly equivalent to the mkstemp() function on POSIX
  * operating systems, but instead of returning a file descriptor it returns
- * a C stdio file pointer. */
+ * a C stdio file pointer. It also receives a file mask to set the file to,
+ * but it's completely ignored on systems that don't implement mkstemp(). */
 FILE *mkfstemp(char *template)
 {
-#if defined(HAVE_MKSTEMP) && defined(HAVE_FDOPEN) && !defined(SCHISM_WIN32)
-	/* Just forward to mkstemp */
+#ifdef MKFSTEMP_USE_MKSTEMP
+	/* Just forward to mkstemp; by definition an fclose() on a FILE * returned
+	 * by fdopen() will close the file descriptor as well. */
 	int fd;
 
 	fd = mkstemp(template);
@@ -46,7 +122,7 @@ FILE *mkfstemp(char *template)
 	return fdopen(fd, "w+b");
 #else
 	static const char letters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	static size_t letters_len = ARRAY_SIZE(letters) - 1;
+	static const size_t letters_len = ARRAY_SIZE(letters) - 1;
 	static uint64_t value;
 	int count;
 
@@ -62,8 +138,7 @@ FILE *mkfstemp(char *template)
 	/* rand() is already initialized by the time we use this function */
 	value += rand();
 
-	for (count = 0; count < TMP_MAX; ++count)
-	{
+	for (count = 0; count < TMP_MAX; ++count) {
 		uint64_t v = value;
 		FILE *fp;
 

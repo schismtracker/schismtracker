@@ -75,9 +75,10 @@
 #endif
 
 #include <math.h>
-#if defined(HAVE_TGMATH_H) && !defined(SCHISM_MACOS) /* Macintosh toolchain has tgmath.h, but it's broken as shit */
-# include <tgmath.h>
-#endif
+// this seems to cause more problems than it solves:
+//#if defined(HAVE_TGMATH_H) && !defined(SCHISM_MACOS) /* Macintosh toolchain has tgmath.h, but it's broken as shit */
+//# include <tgmath.h>
+//#endif
 
 /* Math constants, not standard but in most toolchains, notably
  * OpenWatcom doesn't have them. */

@@ -343,12 +343,35 @@ int disko_close(disko_t *ds, int backup)
 	if (fclose(ds->file) == EOF && !err) {
 		err = errno;
 	} else if (!err) {
+		// preserve file mode, or set it sanely -- mkstemp() sets file mode to 0600
+#ifdef SCHISM_WIN32
+		/* Windows NT has a completely different idea of file permissions
+		 * than POSIX */
+#elif defined(HAVE_CHMOD)
+		struct stat st;
+
+		if (os_stat(ds->filename, &st) < 0) {
+			/* Probably didn't exist already, let's make something up. */
+			mode_t m;
+			util_getumask(&m);
+			st.st_mode = 0666 & ~m;
+		}
+
+		/* TODO st_mode contains some extraneous crap, but
+		 * maybe it's not important to clip that stuff off */
+#endif
+
 		// back up the old file
 		if (backup)
 			dmoz_path_make_backup(ds->filename, (backup != 1));
 
-		if (dmoz_path_rename(ds->tempname, ds->filename, 1) < 0)
+		if (dmoz_path_rename(ds->tempname, ds->filename, 1) < 0) {
 			err = errno;
+		} else {
+#if defined(HAVE_CHMOD) && !defined(SCHISM_WIN32)
+			chmod(ds->filename, st.st_mode);
+#endif
+		}
 	}
 	// If anything failed so far, kill off the temp file
 	//
