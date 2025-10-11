@@ -31,14 +31,14 @@ struct atm {
 };
 
 struct atm_ptr {
-	volatile void *x;
+	void *volatile x;
 };
 
 /* init/quit functions are ONLY for mutexes */
 int atm_init(void);
 void atm_quit(void);
 
-int atm_load(struct atm *atm);
+int32_t atm_load(struct atm *atm);
 void atm_store(struct atm *atm, int32_t x);
 
 void *atm_ptr_load(struct atm_ptr *atm);

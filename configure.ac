@@ -347,6 +347,9 @@ AC_TYPE_MODE_T
 AC_TYPE_SSIZE_T
 AC_STRUCT_TM
 
+dnl need size of void pointer
+AC_CHECK_SIZEOF([void *])
+
 dnl --------------------------------------------------------------------------
 dnl XBOX doesn't have this.
 

@@ -21,8 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* ... TODO: proper atomic implementation */
-
 #include "atomic.h"
 
 #if (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_ATOMICS__)
@@ -32,7 +30,7 @@
 int atm_init(void) { return 0; }
 void atm_quit(void) { }
 
-int atm_load(struct atm *atm)
+int32_t atm_load(struct atm *atm)
 {
 	return atomic_load((const _Atomic volatile int32_t *)&atm->x);
 }
@@ -52,7 +50,137 @@ void atm_ptr_store(struct atm_ptr *atm, void *x)
 	atomic_store((volatile void *_Atomic *)&atm->x, x);
 }
 
+#elif !defined(USE_THREADS)
+
+/* eh */
+
+int atm_init(void) { return 0; }
+void atm_quit(void) { }
+
+int32_t atm_load(struct atm *atm)
+{
+	return atm->x;
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	atm->x = x;
+}
+
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+	return atm->x;
+}
+
+void atm_ptr_store(struct atm_ptr *atm, void *x)
+{
+	atm->x = x;
+}
+
+#elif SCHISM_GNUC_HAS_BUILTIN(__atomic_load, 4, 7, 0)
+
+int atm_init(void) { return 0; }
+void atm_quit(void) { }
+
+int32_t atm_load(struct atm *atm)
+{
+	int32_t r;
+	__atomic_load(&atm->x, &r, __ATOMIC_SEQ_CST);
+	return r;
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	__atomic_store(&atm->x, &x, __ATOMIC_SEQ_CST);
+}
+
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+	void *r;
+	__atomic_load(&atm->x, &r, __ATOMIC_SEQ_CST);
+	return r;
+}
+
+void atm_ptr_store(struct atm_ptr *atm, void *x)
+{
+	__atomic_store(&atm->x, &x, __ATOMIC_SEQ_CST);
+}
+
+#elif SCHISM_GNUC_HAS_BUILTIN(__sync_synchronize, 4, 1, 0)
+/* I hope this is right */
+
+int atm_init(void) { return 0; }
+void atm_quit(void) { }
+
+int32_t atm_load(struct atm *atm)
+{
+	__sync_synchronize();
+	return atm->x;
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	atm->x = x;
+	__sync_synchronize();
+}
+
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+	__sync_synchronize();
+	return atm->x;
+}
+
+void atm_ptr_store(struct atm_ptr *atm, void *x)
+{
+	atm->x = x;
+	__sync_synchronize();
+}
+
+#elif defined(SCHISM_WIN32)
+/* Interlocked* */
+
+#include <windows.h>
+
+SCHISM_STATIC_ASSERT(sizeof(LONG) == sizeof(int32_t), "LONG must be 32-bit");
+
+int atm_init(void) { return 0; }
+void atm_quit(void) { }
+
+int32_t atm_load(struct atm *atm)
+{
+	return InterlockedOr((volatile LONG *)&atm->x, 0);
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	InterlockedExchange((volatile LONG *)&atm->x, x);
+}
+
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+#if SIZEOF_VOID_P == 8
+	return (void *)InterlockedOr64((volatile LONG64 *)&atm->x, 0);
+#elif SIZEOF_VOID_P == 4
+	return (void *)InterlockedOr((volatile LONG *)&atm->x, 0);
 #else
+# error what?
+#endif
+}
+
+void atm_ptr_store(struct atm_ptr *atm, void *x)
+{
+#if SIZEOF_VOID_P == 8
+	InterlockedExchange64((volatile LONG64 *)&atm->x, (LONG64)x);
+#elif SIZEOF_VOID_P == 4
+	InterlockedExchange((volatile LONG *)&atm->x, (LONG)x);
+#else
+# error what?
+#endif
+}
+
+#else
+/* TODO: SDL has atomics, probably with more platforms than
+ * we support now. We should be able to import it. */
 
 #include "mt.h"
 
