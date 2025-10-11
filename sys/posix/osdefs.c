@@ -60,8 +60,6 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 			if (!arg)
 				break;
 
-			printf("%s\n", arg);
-
 			argv[i] = str_dup(arg);
 		}
 		argv[i] = NULL;
