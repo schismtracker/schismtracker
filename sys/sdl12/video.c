@@ -112,6 +112,8 @@ static struct video_cf {
 		uint32_t x, y, w, h;
 	} clip;
 
+	SDL_Color imap[256];
+
 	uint32_t pal[256];
 } video;
 
@@ -435,7 +437,22 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 
 	setup_surface_(width, height, 0);
 
+	/* reset color palette; necessary under windib */
+	if (video.surface->format->BytesPerPixel == 1)
+		sdl12_SetColors(video.surface, video.imap, 0, 256);
+
 	status.flags |= (NEED_UPDATE);
+}
+
+/* for indexed color */
+static void sdl8bit_pal_(unsigned int i, unsigned char rgb[3])
+{
+	video.pal[i] = i;
+
+	/* copy RGB values into the color map */
+	video.imap[i].r = rgb[0];
+	video.imap[i].g = rgb[1];
+	video.imap[i].b = rgb[2];
 }
 
 static void sdl_pal_(unsigned int i, unsigned char rgb[3])
@@ -446,7 +463,14 @@ static void sdl_pal_(unsigned int i, unsigned char rgb[3])
 
 static void sdl12_video_colors(unsigned char palette[16][3])
 {
-	video_colors_iterate(palette, sdl_pal_);
+	if (video.surface->format->BytesPerPixel == 1) {
+		/* yay! */
+		video_colors_iterate(palette, sdl8bit_pal_);
+
+		sdl12_SetColors(video.surface, video.imap, 0, 256);
+	} else {
+		video_colors_iterate(palette, sdl_pal_);
+	}
 }
 
 static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t b)
