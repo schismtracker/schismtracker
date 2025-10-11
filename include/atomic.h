@@ -38,9 +38,11 @@ struct atm_ptr {
 int atm_init(void);
 void atm_quit(void);
 
+int atm_cmpxchg(struct atm *atm, int32_t oldval, int32_t newval);
 int32_t atm_load(struct atm *atm);
 void atm_store(struct atm *atm, int32_t x);
 
+int atm_ptr_cmpxchg(struct atm_ptr *atm, void *oldval, void *newval);
 void *atm_ptr_load(struct atm_ptr *atm);
 void atm_ptr_store(struct atm_ptr *atm, void *x);
 
