@@ -60,6 +60,8 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 			if (!arg)
 				break;
 
+			printf("%s\n", arg);
+
 			argv[i] = str_dup(arg);
 		}
 		argv[i] = NULL;
@@ -90,7 +92,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 		if (dir && (chdir(dir) == -1))
 			_exit(255);
 		execv(name, argv);
-		/* oops, execl wasn't supposed to return!
+		/* oops, execv wasn't supposed to return!
 		 * couldn't exec the specified command name */
 		_exit(255);
 	};
@@ -123,8 +125,12 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 	{
 		int st;
 
-		/* older API; in virtually all POSIX versions */
-		while (waitpid(pid, &st, 0) == -1);
+		/* older API; in virtually all POSIX versions
+		 *
+		 * NOTE: old mac os x returns ECHILD if the process
+		 * exits before we call waitpid(), hence we check
+		 * explicitly for EINTR. */
+		while (waitpid(pid, &st, 0) == -1 && errno == EINTR);
 
 		if (WIFEXITED(st)) {
 			if (status)
@@ -158,19 +164,20 @@ fail: /* do NOT jump here in the child process in case of fork() */
 int posix_run_hook(const char *dir, const char *name, const char *maybe_arg)
 {
 	int st;
+	int crash;
 	char *bat_name;
 
 	if (asprintf(&bat_name, "./%s", name) < 0)
 		return 0;
 
-	if (!os_exec(&st, NULL, dir, bat_name, maybe_arg, (char *)NULL)) {
+	if (!os_exec(&st, &crash, dir, bat_name, maybe_arg, (char *)NULL)) {
 		free(bat_name);
 		return 0; /* what? */
 	}
 
 	free(bat_name);
 
-	return (st == 0);
+	return (st == 0 && !crash);
 }
 
 #endif
