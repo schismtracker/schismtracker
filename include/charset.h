@@ -178,7 +178,8 @@ charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset);
 /* charset_iconv for newbies.
  * This is preferred to using the below macro, because it is less prone to memory leaks.
  * Do note that it assumes the input is NUL terminated. */
-inline SCHISM_ALWAYS_INLINE void *charset_iconv_easy(const void *in, charset_t inset, charset_t outset) {
+SCHISM_ALWAYS_INLINE static inline
+void *charset_iconv_easy(const void *in, charset_t inset, charset_t outset) {
 	void *out;
 	if (!charset_iconv(in, &out, inset, outset, SIZE_MAX))
 		return out;

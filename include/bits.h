@@ -122,7 +122,8 @@ SCHISM_SIGNED_RSHIFT_VARIANT(max)
 /* roll our own; it is now safe to assume that all byteswap
  * routines will act like a function and not like a macro */
 #ifndef bswap_64
-SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint64_t bswap_64_schism_internal_(uint64_t x)
+SCHISM_CONST SCHISM_ALWAYS_INLINE
+static inline uint64_t bswap_64_schism_internal_(uint64_t x)
 {
 	return (
 		  ((x & UINT64_C(0x00000000000000FF)) << 56)
@@ -140,7 +141,8 @@ SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint64_t bswap_64_schism_internal_(uint
 #endif
 
 #ifndef bswap_32
-SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint32_t bswap_32_schism_internal_(uint32_t x)
+SCHISM_CONST SCHISM_ALWAYS_INLINE
+static inline uint32_t bswap_32_schism_internal_(uint32_t x)
 {
 	return (
 		  ((x & UINT32_C(0x000000FF)) << 24)
@@ -154,7 +156,8 @@ SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint32_t bswap_32_schism_internal_(uint
 #endif
 
 #ifndef bswap_16
-SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint16_t bswap_16_schism_internal_(uint16_t x)
+SCHISM_CONST SCHISM_ALWAYS_INLINE
+static inline uint16_t bswap_16_schism_internal_(uint16_t x)
 {
 	return (
 		  ((x & UINT16_C(0x00FF)) << 8)
@@ -189,7 +192,7 @@ SCHISM_CONST SCHISM_ALWAYS_INLINE inline uint16_t bswap_16_schism_internal_(uint
  * (x < 0) ? (uintX_t)(~x + 1) : (uintX_t)x, which gets wrong results
  * on INT32_MIN after turning optimizations on (WEIRD!!) */
 #define SCHISM_ABS_VARIANT(BITS) \
-	static inline SCHISM_ALWAYS_INLINE \
+	static inline SCHISM_CONST SCHISM_ALWAYS_INLINE \
 	uint##BITS##_t babs##BITS(int##BITS##_t x) \
 	{ \
 		return (x < 0) ? (~(uint##BITS##_t)x + 1) : (uint##BITS##_t)x; \
