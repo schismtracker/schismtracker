@@ -1918,3 +1918,72 @@ void csf_insert_restart_pos(song_t *csf, uint32_t restart_order)
 	}
 }
 
+/* ------------------------------------------------------------------------ */
+/* little hacky function to get the length of a song.
+ *
+ * currently it does this by duplicating the whole song structure,
+ * which sucks; ideally we would save all of the relevant playback
+ * bits ONLY, and work from there, but I suppose that the "relevant
+ * playback bits" is actually a lot of the structure anyway ;) */
+
+/* I've tried to optimize this as much as I can, but there's a good chunk
+ * of stuff this function doesn't care about that the playback code has
+ * to care about (e.g. volume changes, sample changes) */
+uint32_t csf_get_length(song_t *csf)
+{
+	/* This sucks, but it's the simplest thing I can come up with right now
+	 * TODO: optimize this further; */
+	uint32_t nchan;
+	song_voice_t *chan;
+	int32_t buf[MIXBUFFERSIZE * 2];
+	uint32_t total;
+#ifdef USE_THREADS
+	song_t *csfcopy;
+
+	csfcopy = mem_alloc(sizeof(*csfcopy));
+#else
+	/* allocate it as a global. */
+	static song_t csfcopier;
+	song_t *csfcopy = &csfcopier;
+#endif
+
+	/* copy the contents */
+	memcpy(csfcopy, csf, sizeof(*csf));
+
+	/* no expensive MIDI stuff */
+	csf_init_midi(csfcopy, NULL);
+
+	csf_set_current_order(csfcopy, 0);
+
+	/* if someone attempts FT2-style song looping,
+	 * don't go into an infinite loop */
+	csfcopy->mix_flags |= SNDMIX_NOBACKWARDJUMPS | SNDMIX_CALCLENGTH;
+
+	csfcopy->repeat_count = -1;
+	csfcopy->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
+	csfcopy->stop_at_order = -1;
+	csfcopy->stop_at_row = -1;
+
+	/* the bulk of the processing:
+	 * go through each row until we hit a dead end */
+	total = 0;
+	for (;;) {
+		/* Only process the first tick of each row, which are the only
+		 * ones relevant to us. */
+		csfcopy->tick_count = 1;
+
+		if (!csf_process_tick(csfcopy))
+			break;
+
+		total += csf_calculate_tick_length(csfcopy) * csfcopy->tick_count;
+	}
+
+	/* round to the nearest second (avoid overflow via 64-bit cast) */
+	total = (((((uint64_t)total << 1) / csfcopy->mix_frequency) + 1) >> 1);
+
+#ifdef USE_THREADS
+	free(csfcopy);
+#endif
+
+	return total;
+}

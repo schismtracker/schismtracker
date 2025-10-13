@@ -245,6 +245,7 @@
 #define SNDMIX_NOSURROUND       0x200000 // ignore S91
 //#define SNDMIX_NOMIXING       0x400000
 #define SNDMIX_NORAMPING        0x800000 // don't apply ramping on volume change (causes clicks)
+#define SNDMIX_CALCLENGTH       0x1000000 // length calculation optimizations (i.e. no instrument/note change)
 
 enum {
 	SRCMODE_NEAREST,
@@ -981,6 +982,13 @@ static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldivr(int32_t a,
 	int32_t b, int32_t c)
 {
 	return ((int64_t) a * (int64_t) b + rshift_signed(c, 1)) / c;
+}
+
+SCHISM_CONST SCHISM_ALWAYS_INLINE static inline
+uint32_t csf_calculate_tick_length(song_t *csf)
+{
+	return (csf->mix_frequency * 5 * csf->tempo_factor)
+		/ (csf->current_tempo << 8);
 }
 
 #endif /* SCHISM_PLAYER_SNDFILE_H_ */

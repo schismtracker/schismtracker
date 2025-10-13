@@ -32,6 +32,7 @@
 
 #include "midi.h" /* midi_event_length */
 #include "util.h" /* for clamp/min */
+#include "mem.h"
 
 #include "it.h" // needed for status.flags (UGH)
 
@@ -1231,161 +1232,6 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 	}
 }
 
-
-////////////////////////////////////////////////////////////
-// Length
-
-// because the setloop bitmask only has 64 bits in it
-SCHISM_STATIC_ASSERT(MAX_CHANNELS <= 64, "csf_get_length assumes <=64 channels");
-
-uint32_t csf_get_length(song_t *csf)
-{
-	/* This function is definitely wrong now.
-	 *
-	 * What we should likely be doing is just duplicate the song,
-	 * do a "fake" csf_read with all channels at volume 0, which will
-	 * prevent them from being mixed at all, and wait until a SONG_ENDREACHED
-	 * or the last order. */
-	uint32_t elapsed = 0, row = 0, next_row = 0, cur_order = 0, next_order = 0, pat = csf->orderlist[0],
-		speed = csf->initial_speed, tempo = csf->initial_tempo, psize, n;
-	uint32_t patloop[MAX_CHANNELS] = {0};
-	uint8_t mem_tempo[MAX_CHANNELS] = {0};
-	uint64_t setloop = 0; // bitmask
-	const song_note_t *pdata;
-
-	for (;;) {
-		uint32_t speed_count = 0;
-		row = next_row;
-		cur_order = next_order;
-
-		// Check if pattern is valid
-		pat = csf->orderlist[cur_order];
-		while (pat >= MAX_PATTERNS) {
-			// End of song ?
-			if (pat == ORDER_LAST || cur_order >= MAX_ORDERS) {
-				pat = ORDER_LAST; // cause break from outer loop too
-				break;
-			} else {
-				cur_order++;
-				pat = (cur_order < MAX_ORDERS) ? csf->orderlist[cur_order] : ORDER_LAST;
-			}
-			next_order = cur_order;
-		}
-		// Weird stuff?
-		if (pat >= MAX_PATTERNS)
-			break;
-		pdata = csf->patterns[pat];
-		if (pdata) {
-			psize = csf->pattern_size[pat];
-		} else {
-			pdata = blank_pattern;
-			psize = 64;
-		}
-		// guard against Cxx to invalid row, etc.
-		if (row >= psize)
-			row = 0;
-		// Update next position
-		next_row = row + 1;
-		if (next_row >= psize) {
-			next_order = cur_order + 1;
-			next_row = 0;
-		}
-
-		/* muahahaha */
-		if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
-			if (csf->stop_at_order <= (signed) cur_order && csf->stop_at_row <= (signed) row)
-				break;
-			if (csf->stop_at_time > 0) {
-				/* stupid api decision */
-				if (((elapsed + 500) / 1000) >= csf->stop_at_time) {
-					csf->stop_at_order = cur_order;
-					csf->stop_at_row = row;
-					break;
-				}
-			}
-		}
-
-		/* This is nasty, but it fixes inaccuracies with SB0 SB1 SB1. (Simultaneous
-		loops in multiple channels are still wildly incorrect, though.) */
-		if (!row)
-			setloop = ~(uint64_t)0;
-		if (setloop) {
-			for (n = 0; n < MAX_CHANNELS; n++)
-				if (setloop & (UINT64_C(1) << n))
-					patloop[n] = elapsed;
-			setloop = 0;
-		}
-		const song_note_t *note = pdata + row * MAX_CHANNELS;
-		for (n = 0; n < MAX_CHANNELS; note++, n++) {
-			uint32_t param = note->param;
-			switch (note->effect) {
-			case FX_NONE:
-				break;
-			case FX_POSITIONJUMP:
-				next_order = param > cur_order ? param : cur_order + 1;
-				next_row = 0;
-				break;
-			case FX_PATTERNBREAK:
-				next_order = cur_order + 1;
-				next_row = param;
-				break;
-			case FX_SPEED:
-				if (param)
-					speed = param;
-				break;
-			case FX_TEMPO: {
-				if (param)
-					mem_tempo[n] = param;
-				else
-					param = mem_tempo[n];
-
-				// WTF is this doing? --paper
-				int d = (param & 0xf);
-				switch (param >> 4) {
-				default:
-					tempo = param;
-					break;
-				case 0:
-					d = -d;
-					SCHISM_FALLTHROUGH;
-				case 1:
-					d = d * (speed - 1) + tempo;
-					tempo = CLAMP(d, 32, 255);
-					break;
-				}
-				break;
-			}
-			case FX_SPECIAL:
-				switch (param >> 4) {
-				case 0x6:
-					speed_count = param & 0x0F;
-					break;
-				case 0xb:
-					if (param & 0x0F) {
-						elapsed += (elapsed - patloop[n]) * (param & 0x0F);
-						patloop[n] = 0xffffffff;
-						setloop = 1;
-					} else {
-						patloop[n] = elapsed;
-					}
-					break;
-				case 0xe:
-					speed_count = (param & 0x0F) * speed;
-					break;
-				}
-				break;
-			}
-		}
-		//  sec/tick = 5 / (2 * tempo)
-		// msec/tick = 5000 / (2 * tempo)
-		//           = 2500 / tempo
-		elapsed += (speed + speed_count) * 2500 / tempo;
-	}
-
-	return (elapsed + 500) / 1000;
-}
-
-
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Effects
 
@@ -1955,7 +1801,8 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 }
 
 // XXX why is `porta` here, and what was it used for?
-static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SCHISM_UNUSED int porta, int firsttick)
+static inline SCHISM_ALWAYS_INLINE
+void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SCHISM_UNUSED int porta, int firsttick)
 {
 	song_voice_t *chan = csf->voices + nchan;
 
@@ -2187,7 +2034,8 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 	}
 }
 
-static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t vol,
+static inline SCHISM_ALWAYS_INLINE
+void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t vol,
 	int firsttick, int start_note)
 {
 	/* A few notes, paraphrased from ITTECH.TXT:
@@ -2381,7 +2229,10 @@ void csf_process_effects(song_t *csf, int firsttick)
 		}
 
 		// Handles note/instrument/volume changes
-		if (start_note) {
+
+		/* csf_get_length: don't take this code path.
+		 * it's expensive, and we don't care anyway */
+		if (start_note && !(csf->mix_flags & SNDMIX_CALCLENGTH)) {
 			uint32_t note = chan->row_note;
 			/* MPT test case InstrumentNumberChange.it */
 			if (csf->flags & SONG_INSTRUMENTMODE && (NOTE_IS_NOTE(note) || note == NOTE_NONE)) {
@@ -2546,7 +2397,9 @@ void csf_process_effects(song_t *csf, int firsttick)
 			}
 		}
 
-		handle_voleffect(csf, chan, volcmd, vol, firsttick, start_note);
+		/* csf_get_length: volume column effects are completely irrelevant */
+		if (!(csf->mix_flags & SNDMIX_CALCLENGTH))
+			handle_voleffect(csf, chan, volcmd, vol, firsttick, start_note);
 		handle_effect(csf, nchan, cmd, param, porta, firsttick);
 
 		/* stupid hax: handling effect column after volume column breaks
@@ -2558,7 +2411,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 			&& (cmd == FX_VIBRATO/* || cmd == FX_VIBRATOVOL -- do we also need this? */))
 			fx_vibrato(chan, vol);
 
-		/* If there is any pattern loop, save the state for Cxx and Bxx handling */
+		/* If there is any pattern loop, save the state for Cxx handling */
 		if (chan->cd_patloop)
 			patloop = 1;
 	}

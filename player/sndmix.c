@@ -720,7 +720,6 @@ int32_t csf_init_player(song_t *csf, int reset)
 	return 1;
 }
 
-
 uint32_t csf_read(song_t *csf, void * v_buffer, uint32_t bufsize)
 {
 	uint8_t * buffer = (uint8_t *)v_buffer;
@@ -869,7 +868,8 @@ uint32_t csf_read(song_t *csf, void * v_buffer, uint32_t bufsize)
 /////////////////////////////////////////////////////////////////////////////
 // Handles navigation/effects
 
-static int32_t increment_order(song_t *csf)
+static inline SCHISM_ALWAYS_INLINE
+int32_t increment_order(song_t *csf)
 {
 	csf->process_row = csf->break_row; /* [ProcessRow = BreakRow] */
 	csf->break_row = 0;                  /* [BreakRow = 0] */
@@ -938,10 +938,12 @@ static int32_t increment_order(song_t *csf)
 	return 1;
 }
 
-
+/* do_midi is a boolean saying whether to bypass midi processing.
+ * that ALONE improves speeds drastically. */
 int32_t csf_process_tick(song_t *csf)
 {
 	csf->flags &= ~SONG_FIRSTTICK;
+
 	/* [Decrease tick counter. Is tick counter 0?] */
 	if (--csf->tick_count == 0) {
 		/* [-- Yes --] */
@@ -992,7 +994,8 @@ int32_t csf_process_tick(song_t *csf)
 			// commands... ALL WE DO is dump raw midi data to
 			// our super-secret "midi buffer"
 			// -mrsb
-			csf_midi_out_note(csf, nchan, m);
+			if (!(csf->mix_flags & SNDMIX_CALCLENGTH))
+				csf_midi_out_note(csf, nchan, m);
 
 			chan->row_note = m->note;
 
@@ -1020,9 +1023,11 @@ int32_t csf_process_tick(song_t *csf)
 
 		song_note_t *m = csf->patterns[csf->current_pattern] + csf->row * MAX_CHANNELS;
 
-		for (uint32_t nchan=0; nchan<MAX_CHANNELS; nchan++, m++) {
-			/* m == NULL allows schism to receive notification of SDx and Scx commands */
-			csf_midi_out_note(csf, nchan, NULL);
+		if (!(csf->mix_flags & SNDMIX_CALCLENGTH)) {
+			for (uint32_t nchan=0; nchan<MAX_CHANNELS; nchan++, m++) {
+				/* m == NULL allows schism to receive notification of SDx and Scx commands */
+				csf_midi_out_note(csf, nchan, NULL);
+			}
 		}
 
 		if (!(csf->tick_count % (csf->current_speed + csf->frame_delay))) {
@@ -1084,7 +1089,7 @@ int32_t csf_read_note(song_t *csf)
 	if (!csf->current_tempo)
 		return 0;
 
-	csf->buffer_count = (csf->mix_frequency * 5 * csf->tempo_factor) / (csf->current_tempo << 8);
+	csf->buffer_count = csf_calculate_tick_length(csf);
 
 	// chaseback hoo hah
 	if (csf->stop_at_order > -1 && csf->stop_at_row > -1) {
