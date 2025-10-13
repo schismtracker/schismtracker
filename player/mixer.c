@@ -112,6 +112,9 @@
 
 
 #define SNDMIX_ENDSAMPLELOOP \
+		pvol[0] += vol_lx; \
+		pvol[1] += vol_rx; \
+		pvol += 2; \
 		position = csf_smp_pos_add(position, chan->increment); \
 	} while (pvol < pbufmax); \
 	chan->vu_meter = max; \
@@ -119,6 +122,8 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // Mono
+
+#define SNDMIX_GETNOIDOPOS /* nothing */
 
 #define SNDMIX_GETLINEARPOS \
 	int32_t poshi   = csf_smp_pos_get_whole(position); \
@@ -139,14 +144,12 @@
 
 // Linear Interpolation
 #define SNDMIX_GETMONOVOLLINEAR(bits) \
-	SNDMIX_GETLINEARPOS \
 	int32_t srcvol  = p[poshi]; \
 	int32_t destvol = p[poshi + 1]; \
 	int32_t vol     = lshift_signed(srcvol, -bits + 16) + rshift_signed(poslo * (destvol - srcvol), bits - 8);
 
 // spline interpolation (2 guard bits should be enough???)
 #define SNDMIX_GETMONOVOLSPLINE(bits) \
-	SNDMIX_GETSPLINEPOS \
 	int32_t vol   = rshift_signed( \
 		  cubic_spline_lut[poslo + 0] * (int32_t)p[poshi - 1] \
 		+ cubic_spline_lut[poslo + 1] * (int32_t)p[poshi + 0] \
@@ -156,7 +159,6 @@
 
 // fir interpolation
 #define SNDMIX_GETMONOVOLFIRFILTER(bits) \
-	SNDMIX_GETFIRFILTERPOS \
 	int32_t firidx = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
 	int32_t vol = rshift_signed( \
 		rshift_signed( \
@@ -181,7 +183,6 @@
 	int32_t vol_r = lshift_signed(p[(csf_smp_pos_get_whole(position)) * 2 + 1], -bits + 16);
 
 #define SNDMIX_GETSTEREOVOLLINEAR(bits) \
-	SNDMIX_GETLINEARPOS \
 	int32_t srcvol_l = p[poshi * 2 + 0]; \
 	int32_t srcvol_r = p[poshi * 2 + 1]; \
 	int32_t vol_l    = lshift_signed(srcvol_l, -bits + 16) + rshift_signed(poslo * (p[poshi * 2 + 2] - srcvol_l), bits - 8); \
@@ -189,7 +190,6 @@
 
 // Spline Interpolation
 #define SNDMIX_GETSTEREOVOLSPLINE(bits) \
-	SNDMIX_GETSPLINEPOS \
 	int32_t vol_l   = rshift_signed( \
 			cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2] + \
 			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2] + \
@@ -205,7 +205,6 @@
 
 // fir interpolation
 #define SNDMIX_GETSTEREOVOLFIRFILTER(bits) \
-	SNDMIX_GETFIRFILTERPOS \
 	int32_t firidx  = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
 	int32_t vol_l = rshift_signed( \
 		rshift_signed( \
@@ -243,46 +242,38 @@
 // FIXME why are these backwards? what?
 #define SNDMIX_STOREMONOVOL \
 	int32_t vol_lx = vol * chan->right_volume; \
-	int32_t vol_rx = vol * chan->left_volume; \
-	SNDMIX_STOREVUMETER \
-	pvol[0] += vol_lx; \
-	pvol[1] += vol_rx; \
-	pvol += 2;
+	int32_t vol_rx = vol * chan->left_volume;
 
 #define SNDMIX_STORESTEREOVOL \
 	int32_t vol_lx = vol_l * chan->right_volume; \
-	int32_t vol_rx = vol_r * chan->left_volume; \
-	SNDMIX_STOREVUMETER \
-	pvol[0] += vol_lx; \
-	pvol[1] += vol_rx; \
-	pvol += 2;
+	int32_t vol_rx = vol_r * chan->left_volume;
 
 #define SNDMIX_RAMPMONOVOL \
 	left_ramp_volume += chan->left_ramp; \
 	right_ramp_volume += chan->right_ramp; \
 	int32_t vol_lx = vol * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
-	SNDMIX_STOREVUMETER \
-	pvol[0] += vol_lx; \
-	pvol[1] += vol_rx; \
-	pvol += 2;
+	int32_t vol_rx = vol * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION);
 
 #define SNDMIX_RAMPSTEREOVOL \
 	left_ramp_volume += chan->left_ramp; \
 	right_ramp_volume += chan->right_ramp; \
 	int32_t vol_lx = vol_l * rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
-	SNDMIX_STOREVUMETER \
-	pvol[0] += vol_lx; \
-	pvol[1] += vol_rx; \
-	pvol += 2;
+	int32_t vol_rx = vol_r * rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION);
 
 ///////////////////////////////////////////////////
 // Resonant Filters
 
-/* 32x32 -> 64 */
-#define MUL_32_TO_64(x, y) ((int64_t)(int32_t)(x) * (int32_t)(y))
-#define FILT_CLIP(i) CLAMP(i, -65536, 65534)
+static inline SCHISM_ALWAYS_INLINE
+int64_t MixerMul32To64(int32_t x, int32_t y)
+{
+	return (int64_t)x * y;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+int32_t FlitClip(int32_t x)
+{
+	return CLAMP(x, -65536, 65534);
+}
 
 #define MIX_BEGIN_FILTER(chn) \
 	int32_t fy##chn##1 = channel->filter_y[chn][0]; \
@@ -291,9 +282,9 @@
 
 #define SNDMIX_PROCESSFILTER(outchn, volume) \
 	t##outchn = rshift_signed( \
-		MUL_32_TO_64(volume, chan->filter_a0) \
-			+ MUL_32_TO_64(FILT_CLIP(fy##outchn##1), chan->filter_b0) \
-			+ MUL_32_TO_64(FILT_CLIP(fy##outchn##2), chan->filter_b1) \
+		MixerMul32To64(volume, chan->filter_a0) \
+			+ MixerMul32To64(FlitClip(fy##outchn##1), chan->filter_b0) \
+			+ MixerMul32To64(FlitClip(fy##outchn##2), chan->filter_b1) \
 			+ lshift_signed(1, FILTERPRECISION - 1), \
 		FILTERPRECISION); \
 	fy##outchn##2 = fy##outchn##1; fy##outchn##1 = t##outchn; volume = t##outchn;
@@ -311,113 +302,86 @@
 #define MIX_END_STEREO_FILTER MIX_END_FILTER(0) MIX_END_FILTER(1)
 #define SNDMIX_PROCESSSTEREOFILTER SNDMIX_PROCESSFILTER(0, vol_l) SNDMIX_PROCESSFILTER(1, vol_r)
 
+#define MIX_BEGIN_RAMP \
+	int32_t right_ramp_volume = channel->right_ramp_volume; \
+	int32_t left_ramp_volume  = channel->left_ramp_volume;
+
+#define MIX_END_RAMP \
+	channel->right_ramp_volume = right_ramp_volume; \
+	channel->right_volume      = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->left_ramp_volume  = left_ramp_volume; \
+	channel->left_volume       = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION);
+
 //////////////////////////////////////////////////////////
 // Interfaces
 
 typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 
-
-#define BEGIN_MIX_INTERFACE(func) \
-	static void func(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
+/* this is the big one */
+#define DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, RAMP, RAMPUPPER, BEGINRAMP, ENDRAMP) \
+	static void FLTNAM##CHNS##BITS##Bit##RESAMPLING##RAMP##Mix(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
 	{ \
-		struct song_smp_pos position;
-
-
-#define END_MIX_INTERFACE() \
+		struct song_smp_pos position; \
+		BEGINRAMP \
+		BEGINFILTER \
+		SNDMIX_BEGINSAMPLELOOP(BITS) \
+		SNDMIX_GET##RESAMPUPPER##POS \
+		SNDMIX_GET##CHNSUPPER##VOL##RESAMPUPPER(BITS) \
+		FILTER \
+		SNDMIX_##RAMPUPPER##CHNSUPPER##VOL \
+		SNDMIX_STOREVUMETER \
 		SNDMIX_ENDSAMPLELOOP \
+		ENDFILTER \
+		ENDRAMP \
 	}
 
-// Volume Ramps
-#define BEGIN_RAMPMIX_INTERFACE(func) \
-	BEGIN_MIX_INTERFACE(func) \
-		int32_t right_ramp_volume = channel->right_ramp_volume; \
-		int32_t left_ramp_volume  = channel->left_ramp_volume;
+#define DEFINE_MIX_INTERFACE_RAMP(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER) \
+	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
+		/* nothing */, STORE, /* nothing */,  /* nothing */) \
+	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
+		Ramp,          RAMP,  MIX_BEGIN_RAMP, MIX_END_RAMP)
 
+/* defines all resampling variations */
+#define DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER) \
+	DEFINE_MIX_INTERFACE_RAMP(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, \
+		/* nothing */, /* nothing */, /* nothing */, /* nothing */) \
+	DEFINE_MIX_INTERFACE_RAMP(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, \
+		Filter, SNDMIX_PROCESS##CHNSUPPER##FILTER, MIX_BEGIN_##CHNSUPPER##_FILTER, MIX_END_##CHNSUPPER##_FILTER)
 
-#define END_RAMPMIX_INTERFACE() \
-		SNDMIX_ENDSAMPLELOOP \
-		channel->right_ramp_volume = right_ramp_volume; \
-		channel->right_volume      = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-		channel->left_ramp_volume  = left_ramp_volume; \
-		channel->left_volume       = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
-	}
+#define DEFINE_MIX_INTERFACE_RESAMPLING(BITS, CHNS, CHNSUPPER) \
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, /* none */, NOIDO) \
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Linear,     LINEAR) \
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Spline,     SPLINE) \
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, FirFilter,  FIRFILTER)
 
+#define DEFINE_MIX_INTERFACE_CHANNELS(BITS) \
+	DEFINE_MIX_INTERFACE_RESAMPLING(BITS, Mono,   MONO) \
+	DEFINE_MIX_INTERFACE_RESAMPLING(BITS, Stereo, STEREO) \
 
-// Mono Resonant Filters
-#define BEGIN_MIX_MONO_FLT_INTERFACE(func) \
-	BEGIN_MIX_INTERFACE(func) \
-		MIX_BEGIN_MONO_FILTER
+DEFINE_MIX_INTERFACE_CHANNELS(8)
+DEFINE_MIX_INTERFACE_CHANNELS(16)
 
+//////////////////////////////////////////////////////////
+// Resampling
 
-#define END_MIX_MONO_FLT_INTERFACE() \
-		SNDMIX_ENDSAMPLELOOP \
-		MIX_END_MONO_FILTER \
-	}
-
-
-#define BEGIN_RAMPMIX_MONO_FLT_INTERFACE(func) \
-	BEGIN_MIX_INTERFACE(func) \
-		int32_t right_ramp_volume = channel->right_ramp_volume; \
-		int32_t left_ramp_volume  = channel->left_ramp_volume; \
-		MIX_BEGIN_MONO_FILTER
-
-
-#define END_RAMPMIX_MONO_FLT_INTERFACE() \
-		SNDMIX_ENDSAMPLELOOP \
-		MIX_END_MONO_FILTER \
-		channel->right_ramp_volume = right_ramp_volume; \
-		channel->right_volume      = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-		channel->left_ramp_volume  = left_ramp_volume; \
-		channel->left_volume       = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
-	}
-
-
-// Stereo Resonant Filters
-#define BEGIN_MIX_STEREO_FLT_INTERFACE(func) \
-	BEGIN_MIX_INTERFACE(func) \
-		MIX_BEGIN_STEREO_FILTER
-
-
-#define END_MIX_STEREO_FLT_INTERFACE() \
-		SNDMIX_ENDSAMPLELOOP \
-		MIX_END_STEREO_FILTER \
-	}
-
-
-#define BEGIN_RAMPMIX_STEREO_FLT_INTERFACE(func) \
-	BEGIN_MIX_INTERFACE(func) \
-		int32_t right_ramp_volume = channel->right_ramp_volume; \
-		int32_t left_ramp_volume  = channel->left_ramp_volume; \
-		MIX_BEGIN_STEREO_FILTER
-
-
-#define END_RAMPMIX_STEREO_FLT_INTERFACE() \
-		SNDMIX_ENDSAMPLELOOP \
-		MIX_END_STEREO_FILTER \
-		channel->right_ramp_volume = right_ramp_volume; \
-		channel->right_volume      = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-		channel->left_ramp_volume  = left_ramp_volume; \
-		channel->left_volume       = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION); \
-	}
-
-#define BEGIN_RESAMPLE_INTERFACE(func, sampletype, numchannels) \
-	SCHISM_SIMD void func(sampletype *oldbuf, sampletype *newbuf, uint32_t oldlen, uint32_t newlen) \
+#define BEGIN_RESAMPLE_INTERFACE(FUNC, SAMPLETYPE, NUMCHANNELS) \
+	SCHISM_SIMD void FUNC(SAMPLETYPE *oldbuf, SAMPLETYPE *newbuf, uint32_t oldlen, uint32_t newlen) \
 	{ \
 		struct song_smp_pos position = csf_smp_pos(0,0); \
-		const sampletype *p = oldbuf; \
-		sampletype *pvol = newbuf; \
-		const sampletype *pbufmax = &newbuf[newlen* numchannels]; \
+		const SAMPLETYPE *p = oldbuf; \
+		SAMPLETYPE *pvol = newbuf; \
+		const SAMPLETYPE *pbufmax = &newbuf[newlen * NUMCHANNELS]; \
 		struct song_smp_pos increment = csf_smp_pos_div_whole(csf_smp_pos(oldlen, 0), newlen); \
 		do {
 
-#define END_RESAMPLE_INTERFACE_MONO() \
+#define END_RESAMPLE_INTERFACE_MONO \
 			*pvol = vol; \
 			pvol++; \
 			position = csf_smp_pos_add(position, increment); \
 		} while (pvol < pbufmax); \
 	}
 
-#define END_RESAMPLE_INTERFACE_STEREO() \
+#define END_RESAMPLE_INTERFACE_STEREO \
 			pvol[0] = vol_l; \
 			pvol[1] = vol_r; \
 			pvol += 2; \
@@ -425,56 +389,24 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 		} while (pvol < pbufmax); \
 	}
 
-/* --------------------------------------------------------------------------- */
-/* generate processing functions */
-
-/* This is really just a diet version of C++'s templates. */
-#define DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, filter, fltnam, fltint, ramp, rampupper, rmpint) \
-	BEGIN_ ## rmpint ## MIX_ ## fltint ## INTERFACE(fltnam ## chns ## bits ## Bit ## resampling ## ramp ## Mix) \
-		SNDMIX_BEGINSAMPLELOOP(bits) \
-		SNDMIX_GET ## chnsupper ## VOL ## resampupper(bits) \
-		filter \
-		SNDMIX_ ## rampupper ## chnsupper ## VOL \
-	END_ ## rmpint ## MIX_ ## fltint ## INTERFACE()
-
-/* defines all ramping variations */
-#define DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, resampling, resampupper) \
-	DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, filter, fltnam, fltint, /* none */, STORE, /* none */) \
-	DEFINE_MIX_INTERFACE_ALL(bits, chns, chnsupper, resampling, resampupper, filter, fltnam, fltint, Ramp,       RAMP,  RAMP)
-
-/* defines all resampling variations */
-#define DEFINE_MIX_INTERFACE_RESAMPLING(bits, chns, chnsupper, filter, fltnam, fltint) \
-	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, /* none */, NOIDO) \
-	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, Linear,     LINEAR) \
-	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, Spline,     SPLINE) \
-	DEFINE_MIX_INTERFACE_RAMP(bits, chns, chnsupper, filter, fltnam, fltint, FirFilter,  FIRFILTER)
-
-/* defines filter + no-filter variants */
-#define DEFINE_MIX_INTERFACE(bits) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Mono,   MONO,   /* none */,                 /* none */, /* none */) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Mono,   MONO,   SNDMIX_PROCESSMONOFILTER,   Filter,     MONO_FLT_) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Stereo, STEREO, /* none */,                 /* none */, /* none */) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(bits, Stereo, STEREO, SNDMIX_PROCESSSTEREOFILTER, Filter,     STEREO_FLT_)
-
-DEFINE_MIX_INTERFACE(8)
-DEFINE_MIX_INTERFACE(16)
-
 // Public Resampling Methods
 #define DEFINE_MONO_RESAMPLE_INTERFACE(bits) \
 	BEGIN_RESAMPLE_INTERFACE(ResampleMono##bits##BitFirFilter, int##bits##_t, 1) \
+		SNDMIX_GETFIRFILTERPOS \
 		SNDMIX_GETMONOVOLFIRFILTER(bits) \
 		vol  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
 		vol = CLAMP(vol, INT##bits##_MIN, INT##bits##_MAX); \
-	END_RESAMPLE_INTERFACE_MONO()
+	END_RESAMPLE_INTERFACE_MONO
 
 #define DEFINE_STEREO_RESAMPLE_INTERFACE(bits) \
 	BEGIN_RESAMPLE_INTERFACE(ResampleStereo##bits##BitFirFilter, int##bits##_t, 2) \
+		SNDMIX_GETFIRFILTERPOS \
 		SNDMIX_GETSTEREOVOLFIRFILTER(bits) \
 		vol_l  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
 		vol_r  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
 		vol_l = CLAMP(vol_l, INT##bits##_MIN, INT##bits##_MAX); \
 		vol_r = CLAMP(vol_r, INT##bits##_MIN, INT##bits##_MAX); \
-	END_RESAMPLE_INTERFACE_STEREO()
+	END_RESAMPLE_INTERFACE_STEREO
 
 DEFINE_MONO_RESAMPLE_INTERFACE(8)
 DEFINE_MONO_RESAMPLE_INTERFACE(16)
