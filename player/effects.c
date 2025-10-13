@@ -670,7 +670,6 @@ static void fx_pattern_loop(song_t *csf, song_voice_t *chan, uint32_t param)
 				//     ... .. .. SB1
 				// it still doesn't work right in a few strange cases, but oh well :P
 				chan->patloop_row = csf->row + 1;
-				csf->patloop = 0;
 				return; // don't loop!
 			}
 		} else {
@@ -678,7 +677,6 @@ static void fx_pattern_loop(song_t *csf, song_voice_t *chan, uint32_t param)
 		}
 		csf->process_row = chan->patloop_row - 1;
 	} else {
-		csf->patloop = 1;
 		chan->patloop_row = csf->row;
 	}
 }
@@ -1242,6 +1240,12 @@ SCHISM_STATIC_ASSERT(MAX_CHANNELS <= 64, "csf_get_length assumes <=64 channels")
 
 uint32_t csf_get_length(song_t *csf)
 {
+	/* This function is definitely wrong now.
+	 *
+	 * What we should likely be doing is just duplicate the song,
+	 * do a "fake" csf_read with all channels at volume 0, which will
+	 * prevent them from being mixed at all, and wait until a SONG_ENDREACHED
+	 * or the last order. */
 	uint32_t elapsed = 0, row = 0, next_row = 0, cur_order = 0, next_order = 0, pat = csf->orderlist[0],
 		speed = csf->initial_speed, tempo = csf->initial_tempo, psize, n;
 	uint32_t patloop[MAX_CHANNELS] = {0};
@@ -2152,17 +2156,21 @@ static void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t pa
 		break;
 
 	case FX_POSITIONJUMP:
+		/* a position jump (Bxx) on the same row as the end of a pattern loop
+		 * prevents the loop from being executed if it is right of the SBx effect.
+		 *
+		 * apparently this is already handled correctly, I won't touch it... */
 		if (!(csf->mix_flags & SNDMIX_NOBACKWARDJUMPS) || csf->process_order < param)
 			csf->process_order = param - 1;
 		csf->process_row = PROCESS_NEXT_ORDER;
 		break;
 
+#if 0  // this is handled later
 	case FX_PATTERNBREAK:
-		if (!csf->patloop) {
-			csf->break_row = param;
-			csf->process_row = PROCESS_NEXT_ORDER;
-		}
+		csf->break_row = param;
+		csf->process_row = PROCESS_NEXT_ORDER;
 		break;
+#endif
 
 	case FX_NOTESLIDEUP:
 		fx_note_slide(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, param, 1);
@@ -2296,9 +2304,18 @@ static void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, u
 /* firsttick is only used for SDx at the moment */
 void csf_process_effects(song_t *csf, int firsttick)
 {
-	song_voice_t *chan = csf->voices;
-	for (uint32_t nchan = 0; nchan < MAX_CHANNELS; nchan++, chan++) {
-		/* ignore effects and notes */
+	song_voice_t *chan;
+	uint32_t nchan;
+	int patloop;
+
+	/* toggle this off */
+	patloop = 0;
+
+	for (nchan = 0, chan = csf->voices; nchan < MAX_CHANNELS; nchan++, chan++) {
+		/* ignore effects and notes
+		 * TODO: don't do this. instead, have an offset into the voices
+		 * that is specifically for keyjazz. then on any new note/instrument
+		 * we can mute the keyjazz channel. (at least in theory anyway) */
 		if (chan->flags & CHN_NOPLAY)
 			continue;
 
@@ -2540,5 +2557,23 @@ void csf_process_effects(song_t *csf, int firsttick)
 		if (volcmd == VOLFX_VIBRATODEPTH
 			&& (cmd == FX_VIBRATO/* || cmd == FX_VIBRATOVOL -- do we also need this? */))
 			fx_vibrato(chan, vol);
+
+		/* If there is any pattern loop, save the state for Cxx and Bxx handling */
+		if (chan->cd_patloop)
+			patloop = 1;
+	}
+
+	/* Once we've finished that, we can process other effects. */
+	for (nchan = 0, chan = csf->voices; nchan < MAX_CHANNELS; nchan++, chan++) {
+		switch (chan->row_effect) {
+		case FX_PATTERNBREAK: /* Cxx */
+			/* only loop if any pattern loop is finished */
+			if (patloop)
+				break;
+
+			csf->break_row = chan->row_param;
+			csf->process_row = PROCESS_NEXT_ORDER;
+			break;
+		}
 	}
 }

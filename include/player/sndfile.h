@@ -853,8 +853,6 @@ typedef struct song {
 	song_midi_out_raw_spec_t midi_out_raw;
 	// -----------------------------------------------------------------------
 
-	int patloop; // effects.c: need this for stupid pattern break compatibility
-
 	// noise reduction filter
 	int32_t left_nr, right_nr;
 
