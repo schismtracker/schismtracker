@@ -417,7 +417,7 @@ int widget_numentry_handle_text(struct widget *w, const char *text)
 
 	len = strspn(text, valid_digits);
 	if (len < 1)
-		return 1;
+		return 0;
 
 	value = w->d.numentry.value;
 
