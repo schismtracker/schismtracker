@@ -72,10 +72,7 @@
 #define CHN_NEWNOTE             0x2000000 // note was triggered, reset filter
 //#define CHN_REVERB            0x4000000
 //#define CHN_NOREVERB          0x8000000
-#define CHN_NOPLAY              0x10000000 // turn off all effect processing for this channel
-                                           // this was originally CHN_NNAMUTE, but that's dumb,
-                                           // and I'd rather notes not cobble keyjazz when the
-                                           // channel is meant to be muted.
+#define CHN_NNAMUTE             0x10000000 // turn off mute, but have it reset later
 #define CHN_ADLIB               0x20000000 // OPL mode
 #define CHN_LOOP_WRAPPED        0x40000000 // loop has just wrapped to the beginning
 

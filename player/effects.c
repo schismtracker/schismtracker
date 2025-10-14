@@ -1625,8 +1625,12 @@ uint32_t csf_get_nna_channel(song_t *csf, uint32_t nchan)
 	for (uint32_t i=MAX_CHANNELS; i<MAX_VOICES; i++, pi++) {
 		if (!pi->length) {
 			if (pi->flags & CHN_MUTE) {
-				/* this channel is muted; skip */
-				continue;
+				if (pi->flags & CHN_NNAMUTE) {
+					pi->flags &= ~(CHN_NNAMUTE|CHN_MUTE);
+				} else {
+					/* this channel is muted; skip */
+					continue;
+				}
 			}
 			return i;
 		}
@@ -1653,7 +1657,7 @@ uint32_t csf_get_nna_channel(song_t *csf, uint32_t nchan)
 	}
 	if (result) {
 		/* unmute new nna channel */
-		csf->voices[result].flags &= ~(CHN_MUTE);
+		csf->voices[result].flags &= ~(CHN_MUTE|CHN_NNAMUTE);
 	}
 	return result;
 }
@@ -2160,13 +2164,6 @@ void csf_process_effects(song_t *csf, int firsttick)
 	patloop = 0;
 
 	for (nchan = 0, chan = csf->voices; nchan < MAX_CHANNELS; nchan++, chan++) {
-		/* ignore effects and notes
-		 * TODO: don't do this. instead, have an offset into the voices
-		 * that is specifically for keyjazz. then on any new note/instrument
-		 * we can mute the keyjazz channel. (at least in theory anyway) */
-		if (chan->flags & CHN_NOPLAY)
-			continue;
-
 		chan->n_command = 0;
 
 		uint32_t instr = chan->row_instr;

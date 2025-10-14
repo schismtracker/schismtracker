@@ -565,8 +565,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->flags = (s->flags & CHN_SAMPLE_FLAGS) | (c->flags & CHN_MUTE);
 
 		if (c->flags & CHN_MUTE) {
-			/* this is fucking dumb */
-			c->flags |= CHN_NOPLAY;
+			c->flags |= CHN_NNAMUTE;
 		}
 
 		c->cutoff = 0x7f;

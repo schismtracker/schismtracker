@@ -578,7 +578,7 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 	if (chan->flags & CHN_PINGPONGFLAG)
 		chan->increment = csf_smp_pos_negate(chan->increment);
 
-	if ((chan->flags & CHN_MUTE) && !(chan->flags & CHN_NOPLAY)) {
+	if (chan->flags & CHN_MUTE) {
 		chan->left_volume = chan->right_volume = 0;
 	} else if (!(csf->mix_flags & SNDMIX_NORAMPING) &&
 	    (chan->flags & CHN_VOLUMERAMP) &&
@@ -639,7 +639,7 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 // chan->instrument_volume = 0..64  (corresponds to the sample global volume and instrument global volume)
 static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num, int32_t freq, int32_t vol)
 {
-	if ((chan->flags & CHN_MUTE) && !(chan->flags & CHN_NOPLAY)) {
+	if (chan->flags & CHN_MUTE) {
 		// don't do anything
 		return;
 	} else if (csf->flags & SONG_INSTRUMENTMODE &&
@@ -1047,11 +1047,6 @@ int32_t csf_read_note(song_t *csf)
 {
 	song_voice_t *chan;
 	uint32_t cn;
-
-	for (cn = 0, chan = csf->voices; cn < MAX_CHANNELS; cn++, chan++) {
-		if ((chan->flags & CHN_NOPLAY) && !(chan->flags & CHN_MUTE))
-			chan->flags &= ~CHN_NOPLAY;
-	}
 
 	// Checking end of row ?
 	if (csf->flags & SONG_PAUSED) {
