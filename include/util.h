@@ -29,26 +29,30 @@
 /*Conversion*/
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE float dB(float amplitude)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
+float dB(float amplitude)
 {
 	return 20.0f * log10(amplitude);
 }
 
 /// deciBell -> linear*/
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE float dB2_amp(float db)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
+float dB2_amp(float db)
 {
 	return pow(10.0f, db / 20.0f);
 }
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE float pdB(float power)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
+float pdB(float power)
 {
 	return 10.0f * log10(power);
 }
 
 /* deciBell -> linear*/
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE float dB2_power(float db)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
+float dB2_power(float db)
 {
 	return pow(10.0f, db / 10.0f);
 }
@@ -58,7 +62,8 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE float dB2_power(float db)
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE short dB_s(int noisefloor, float amplitude, float correction_dBs)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
+short dB_s(int noisefloor, float amplitude, float correction_dBs)
 {
 	const float db = dB(amplitude) + correction_dBs;
 	const int x = (int)(128.0f * (db + noisefloor)) / noisefloor;
@@ -70,7 +75,8 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE short dB_s(int noisefloor, float
 /* ([0..128] = [-noisefloor..0dB])*/
 /* amplitude normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE short dB2_amp_s(int noisefloor, int db, float correction_dBs)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
+short dB2_amp_s(int noisefloor, int db, float correction_dBs)
 {
 	return dB2_amp((db * noisefloor / 128.0f) - noisefloor - correction_dBs);
 }
@@ -80,7 +86,8 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE short dB2_amp_s(int noisefloor, 
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE short pdB_s(int noisefloor, float power, float correction_dBs)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
+short pdB_s(int noisefloor, float power, float correction_dBs)
 {
 	const float db = pdB(power) + correction_dBs;
 	const int x = (int)(128.0f * (db + noisefloor)) / noisefloor;
@@ -92,41 +99,15 @@ SCHISM_CONST static inline SCHISM_ALWAYS_INLINE short pdB_s(int noisefloor, floa
 /* ([0..128] = [-noisefloor..0dB])*/
 /* power normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE short dB2_power_s(int noisefloor, int db, float correction_dBs)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
+short dB2_power_s(int noisefloor, int db, float correction_dBs)
 {
 	return dB2_power((db * noisefloor / 128.0f) - noisefloor - correction_dBs);
 }
 
-/* TODO move this stuff to bits.h ?? */
+/* this should be somewhere else */
 
-/* integer sqrt (very fast; 32 bits limited) */
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_sqrt(uint32_t r)
-{
-	uint32_t t, b, c = 0;
-
-	for (b = 0x10000000; b != 0; b >>= 2) {
-		t = c + b;
-		c >>= 1;
-		if (t <= r) {
-			r -= t;
-			c += b;
-		}
-	}
-
-	return c;
-}
-
-/* integer pow(). subject to overflow :) */
-SCHISM_CONST static inline SCHISM_ALWAYS_INLINE uint32_t i_pow(uint32_t base, uint32_t exponent)
-{
-	uint32_t r = 1, i;
-	for (i = 0; i < exponent; i++)
-		r *= base;
-	return r;
-}
-
-/* return value: 0 if success, negative if error
- * this needs to be here for thread-safety! */
+/* return value: 0 if success, negative if error */
 int util_getumask(mode_t *m);
 int util_setumask(mode_t m);
 

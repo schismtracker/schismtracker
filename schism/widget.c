@@ -29,6 +29,7 @@
 #include "widget.h"
 #include "vgamem.h"
 #include "str.h"
+#include "bits.h"
 
 /* --------------------------------------------------------------------- */
 /* create_* functions (the constructors, if you will) */
@@ -403,7 +404,7 @@ static inline SCHISM_ALWAYS_INLINE uint32_t fast_pow10(uint32_t n)
 	};
 
 	/* use our cache if we can to avoid buffer overrun */
-	return (n < ARRAY_SIZE(tens)) ? tens[n] : i_pow(10, n);
+	return (n < ARRAY_SIZE(tens)) ? tens[n] : bpow32(10, n);
 }
 
 int widget_numentry_handle_text(struct widget *w, const char *text)

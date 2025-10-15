@@ -335,6 +335,39 @@ SCHISM_SPLACES_VARIANT(64)
 #undef SCHISM_SPLACES_VARIANT
 
 /* ------------------------------------------------------------------------ */
+/* pow(base, exponent) */
+
+SCHISM_CONST SCHISM_ALWAYS_INLINE static inline
+uint32_t bpow32(uint32_t base, uint32_t exponent)
+{
+	uint32_t r = 1, i;
+	for (i = 0; i < exponent; i++)
+		r *= base;
+	return r;
+}
+
+/* ------------------------------------------------------------------------ */
+/* sqrt(x) */
+
+/* integer sqrt (very fast; 32 bits limited) */
+SCHISM_CONST SCHISM_ALWAYS_INLINE static inline
+uint32_t bsqrt32(uint32_t r)
+{
+	uint32_t t, b, c = 0;
+
+	for (b = 0x10000000; b != 0; b >>= 2) {
+		t = c + b;
+		c >>= 1;
+		if (t <= r) {
+			r -= t;
+			c += b;
+		}
+	}
+
+	return c;
+}
+
+/* ------------------------------------------------------------------------ */
 /* bitarrays.
  * this has the same general idea as the UNIX-y fd_set, with the added
  * benefit of being expandible to whatever size.

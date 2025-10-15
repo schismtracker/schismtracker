@@ -1649,7 +1649,8 @@ static int _env_handle_mouse(struct key_event *k, song_envelope_t *env, int *cur
 
 			dx = abs(x - (int) k->fx);
 			dy = abs(y - (int) k->fy);
-			dist = i_sqrt((dx*dx)+(dy*dy));
+			/* pythagoras would be proud */
+			dist = bsqrt32((dx*dx)+(dy*dy));
 			if (best_dist_node == -1 || dist < best_dist) {
 				if (dist <= 5) {
 					best_dist = dist;
