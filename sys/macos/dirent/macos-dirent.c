@@ -38,8 +38,6 @@
 struct dir_ {
 	long dirid;
 	int nextfile;
-
-	// dynamically allocated
 	struct dirent dir;
 };
 
@@ -48,17 +46,11 @@ DIR *opendir(const char *path)
 {
 	/* Schism never opens more than one directory at a time,
 	 * so we can just use one static DIR structure. */
-	static DIR dir = {0};
-
-	if (dir.nextfile) {
-		errno = ENFILE;
-		return NULL;
-	}
-
 	OSErr err = noErr;
 	WDPBRec pb;
 	unsigned char ppath[256];
 	FSSpec spec;
+	DIR *dir;
 
 	{
 		// We can just pass the full path to PBOpenWD
@@ -108,10 +100,15 @@ DIR *opendir(const char *path)
 		return NULL;
 	}
 
-	dir.dirid    = pb.ioVRefNum;
-	dir.nextfile = 1;
+	dir = calloc(1, sizeof(DIR));
+	if (!dir) {
+		errno = ENOMEM;
+		return NULL;
+	}
+	dir->dirid    = pb.ioVRefNum;
+	dir->nextfile = 1;
 
-	return &dir;
+	return dir;
 }
 
 /* Close an open directory. */
@@ -121,8 +118,7 @@ void closedir(DIR *dirp)
 	
 	pb.ioVRefNum = dirp->dirid;
 	(void) PBCloseWD(&pb, 0);
-	dirp->dirid = 0;
-	dirp->nextfile = 0;
+	free(dirp);
 }
 
 /* Read the next directory entry. */
