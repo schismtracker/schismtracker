@@ -346,17 +346,40 @@ int dmoz_path_from_fsspec(const void *pvref, char **path)
 
 int dmoz_path_to_fsspec(const char *path, void *pvref)
 {
+#if 1
+	int trunc;
+	unsigned char ppath[256];
+
+	str_to_pascal(path, ppath, &trunc);
+	if (trunc)
+		return 0; /* sorry, we can't handle large paths :( */
+
+	/* If fileName specifies a full pathname, FSMakeFSSpec ignores both the
+	 * vRefNum and dirID parameters. Thus, we can send our pascal-path
+	 * directly into FSMakeFSSpec */
+	return (FSMakeFSSpec(0, 0, ppath, pvref) == noErr);
+#else
+	/* This doesn't work!!
+	 * I sourced it from some old Apache program, but we never ended
+	 * up needing it since we never had to convert to FSSpec.
+	 * It just gives some error that I can't be bothered to figure
+	 * out, so I've replaced it with the (more concise) code above.
+	 * Maybe later on we could support paths over 255 bytes, but
+	 * I really don't think it's worth it. */
 	OSErr err = noErr;
-	FSSpec spec = *(const FSSpec *)pvref;
+	FSSpec spec;
 	Str255 name; // Must be long enough for a partial pathname consisting of two segments (64 bytes)
-	
+
 	const char* p = path;
 	const char* pEnd;
 	size_t segLen;
 	// Find the end of the path segment
 	for (pEnd = ++p; *pEnd && *pEnd != ':'; ++pEnd);
 	segLen = pEnd - p;
-	
+
+	/* zero out the FSSpec */
+	memset(&spec, 0, sizeof(spec));
+
 	// Try to find a volume that matches this name
 	for (ItemCount volIndex = 1; err == noErr; ++volIndex)
 	{
@@ -455,6 +478,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 	memcpy(pvref, &spec, sizeof(spec));
 
 	return err == noErr;
+#endif
 }
 #endif
 
