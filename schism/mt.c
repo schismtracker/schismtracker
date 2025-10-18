@@ -89,10 +89,9 @@ void mt_mutex_delete(mt_mutex_t *mutex)
 		return;
 	}
 #endif
-/*
+
 	SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
 		"make sure we're actually a mutex?");
-*/
 }
 
 void mt_mutex_lock(mt_mutex_t *mutex)
@@ -104,10 +103,8 @@ void mt_mutex_lock(mt_mutex_t *mutex)
 	}
 #endif
 
-/*
 	SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
 		"make sure we're actually a mutex?");
-*/
 }
 
 void mt_mutex_unlock(mt_mutex_t *mutex)
@@ -119,10 +116,8 @@ void mt_mutex_unlock(mt_mutex_t *mutex)
 	}
 #endif
 
-/*
 	SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
 		"make sure we're actually a mutex?");
-*/
 }
 
 // ---------------------------------------------------------------------------
