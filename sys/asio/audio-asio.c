@@ -798,7 +798,7 @@ static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
 
 #undef BSWAP
 
-			case 3: BSWAP_EX(8, { uint8_t tmp = xx[0]; xx[0] = xx[2]; xx[2] = tmp; } ); break;
+			case 3: BSWAP_EX(8, { uint8_t tmp = xx[i*3+0]; xx[i*3+0] = xx[i*3+2]; xx[i*3+2] = tmp; } ); break;
 
 #undef BSWAP_EX
 
