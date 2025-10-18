@@ -30,8 +30,18 @@
 #include "log.h"
 #include "mt.h"
 #include "video.h"
+#include "str.h"
 
-#include <windows.h>
+#ifdef SCHISM_WIN32
+# include <windows.h>
+#elif defined(SCHISM_MACOS)
+/* eh, okay */
+# include <Files.h>
+# include <CodeFragments.h>
+# include <Resources.h>
+
+# include "macos-dirent.h"
+#endif
 
 #define ASIO_C_WRAPPERS
 
@@ -39,19 +49,30 @@
 
 /* ------------------------------------------------------------------------ */
 
+#ifdef SCHISM_WIN32
 typedef HRESULT (WINAPI *OLE32_CLSIDFromStringSpec)(LPCOLESTR,LPCLSID);
 typedef BOOL (WINAPI *SHELL32_GUIDFromStringASpec)(LPCSTR,LPGUID);
 typedef BOOL (WINAPI *SHELL32_GUIDFromStringWSpec)(LPCWSTR,LPGUID);
 static OLE32_CLSIDFromStringSpec OLE32_CLSIDFromString;
 static SHELL32_GUIDFromStringASpec SHELL32_GUIDFromStringA;
 static SHELL32_GUIDFromStringWSpec SHELL32_GUIDFromStringW;
+#endif
 
 /* this is actually drivers, but OH WELL */
-static struct {
+static struct asio_device {
+#ifdef SCHISM_WIN32
 	CLSID clsid;
+#elif defined(SCHISM_MACOS)
+	FSSpec spec;
+#else
+# error Ooops, your files have been encrypted!
+#endif
 	char *description; /* UTF-8 */
 } *devices = NULL;
 static uint32_t devices_size = 0;
+#ifdef SCHISM_MACOS
+static uint32_t devices_alloc = 0;
+#endif
 
 static void asio_free_devices(void)
 {
@@ -60,6 +81,9 @@ static void asio_free_devices(void)
 		free(devices[i].description);
 
 	devices_size = 0;
+#ifdef SCHISM_MACOS
+	devices_alloc = 0;
+#endif
 	free(devices);
 	devices = NULL;
 }
@@ -67,6 +91,7 @@ static void asio_free_devices(void)
 /* "drivers" are refreshed every time this is called */
 static uint32_t asio_device_count(uint32_t flags)
 {
+#ifdef SCHISM_WIN32
 	/* this function is one of the unholiest of spaghettis ive ever written */
 	LONG lstatus; /* LSTATUS isn't defined in older MinGW headers */
 	HKEY hkey;
@@ -254,6 +279,75 @@ static uint32_t asio_device_count(uint32_t flags)
 	}
 
 	return devices_size;
+#elif defined(SCHISM_MACOS)
+	/* we do a little song-and-dance between these two char pointers */
+	char *ptr, *ptr2;
+	DIR *dir;
+	struct dirent *ent;
+
+	/* free any existing devices */
+	asio_free_devices();
+
+	/* get current exe directory */
+	ptr = dmoz_get_exe_directory();
+
+	ptr2 = dmoz_path_concat(ptr, "ASIO Drivers");
+	free(ptr);
+
+	log_appendf(1, "%s", ptr2);
+
+	dir = opendir(ptr2);
+	if (!dir) {
+		log_appendf(4, "[ASIO] failed to load ASIO driver directory?");
+		return 0;
+	}
+
+	/* ptr2 is not free'd here; it's needed to convert
+	 * the asio driver path to an fsspec */
+
+	while ((ent = readdir(dir)) != NULL) {
+		struct asio_device *dev;
+
+		/* allocate more devices if needed.
+		 * if we are uninitialized (i.e. both sizes are 0),
+		 * then this will simply allocate what we need */
+		if (devices_size >= devices_alloc) {
+			devices_alloc = (devices_alloc)
+				? (devices_alloc * 2)
+				/* sane default value I guess */
+				: 4;
+
+			/* reallocate */
+			devices = mem_realloc(devices, devices_alloc * sizeof(struct asio_device));
+		}
+
+		dev = devices + devices_size;
+
+		/* Store the FSSpec */
+		ptr = dmoz_path_concat(ptr2, ent->d_name);
+		if (!dmoz_path_to_fsspec(ptr, &dev->spec)) {
+			/* what the hell? */
+			free(ptr);
+			return 0;
+		}
+		free(ptr);
+
+		/* FIXME: To do this properly, we have to
+		 *  1. open the resource fork
+		 *  2. read in the whole 'Asio' resource
+		 *  3. call GetResInfo to get the name
+		 *  4. convert that name to UTF-8
+		 * This will be okay for now though. */
+		dev->description = str_dup(ent->d_name);
+
+		devices_size++;
+	}
+
+	closedir(dir);
+	free(ptr2);
+
+	return devices_size;
+#endif
 }
 
 static const char *asio_device_name(uint32_t i)
@@ -265,36 +359,22 @@ static const char *asio_device_name(uint32_t i)
 
 /* ---------------------------------------------------------------------------- */
 
-static const char *drivers[] = {
-	"asio",
-};
-
 static int asio_driver_count(void)
 {
-	return ARRAY_SIZE(drivers);
+	return 1;
 }
 
 static const char *asio_driver_name(int i)
 {
-	if (i >= ARRAY_SIZE(drivers) || i < 0)
-		return NULL;
-
-	return drivers[i];
+	switch (i) {
+	case 0: return "asio";
+	default: return NULL;
+	}
 }
 
 static int asio_init_driver(const char *driver)
 {
-	int fnd, i;
-
-	fnd = 0;
-
-	for (i = 0; i < ARRAY_SIZE(drivers); i++) {
-		if (!strcmp(drivers[i], driver)) {
-			fnd = 1;
-			break;
-		}
-	}
-	if (!fnd)
+	if (strcmp("asio", driver))
 		return -1;
 
 	(void)asio_device_count(0);
@@ -308,14 +388,274 @@ static void asio_quit_driver(void)
 
 /* ---------------------------------------------------------------------------- */
 
+#ifdef SCHISM_WIN32
+/* initialized in asio_init() */
 typedef HRESULT (WINAPI *OLE32_CoCreateInstanceSpec)(REFCLSID rclsid,
 	LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv);
-typedef HRESULT (WINAPI *OLE32_CoInitializeExSpec)(LPVOID, DWORD);
-typedef void (WINAPI *OLE32_CoUninitializeSpec)(void);
-
 static OLE32_CoCreateInstanceSpec OLE32_CoCreateInstance;
-static OLE32_CoInitializeExSpec OLE32_CoInitializeEx;
-static OLE32_CoUninitializeSpec OLE32_CoUninitialize;
+
+static IAsio *asio_get_device(struct asio_device *dev)
+{
+	/* "ASIO under Windows is accessed as a COM in-process server object"
+	 *  - ASIO4ALL Private API specification.
+	 *
+	 * https://asio4all.org/about/developer-resources/private-api-v2-0/
+	 *
+	 * Yet despite this fact, it is using the same value for CLSID as IID.
+	 * If it were truly COM, the IAsio interface would have its own IID.
+	 * But I digress. */
+	HRESULT hres;
+	IAsio *asio;
+
+	hres = OLE32_CoCreateInstance(&dev->clsid, NULL,
+		CLSCTX_INPROC_SERVER, &dev->clsid, (LPVOID *)&asio);
+
+	return SUCCEEDED(hres) ? asio : NULL;
+}
+#elif defined(SCHISM_MACOS)
+/* Mac OS 9 ASIO isn't even COM; have to fake it */
+struct CAsioFake {
+	IAsioVtbl *lpVtbl;
+
+	ULONG refcnt;
+	Handle handle;
+	CFragConnectionID conn;
+	short resfile;
+
+	/* This is our ACTUAL vtable.
+	 * TODO store all of this data in an audio-asio-mac-vtable.h or something */
+	AsioError (*Init)(void *unk1);
+	AsioError (*Quit)(void);
+	AsioError (*Start)(void);
+	AsioError (*Stop)(void);
+	AsioError (*GetChannels)(uint32_t *pinchns, uint32_t *poutchns);
+	AsioError (*GetLatencies)(uint32_t *pinlatency, uint32_t *poutlatency);
+	AsioError (*GetBufferSize)(uint32_t *pmin, uint32_t *pmax, uint32_t *pwanted, uint32_t *punknown);
+	AsioError (*CheckSampleRate)(double rate);
+	AsioError (*GetSampleRate)(double *prate);
+	AsioError (*SetSampleRate)(double rate);
+	AsioError (*GetClockSources)(struct AsioClockSource *srcs, uint32_t *size);
+	AsioError (*SetClockSource)(uint32_t src);
+	AsioError (*GetSamplePosition)(uint64_t *unk1, uint64_t *unk2);
+	AsioError (*GetChannelInfo)(struct AsioChannelInfo *pinfo);
+	AsioError (*CreateBuffers)(struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs);
+	AsioError (*DestroyBuffers)(void);
+	AsioError (*ControlPanel)(void);
+	AsioError (*Future)(uint32_t which);
+	AsioError (*OutputReady)(void);
+};
+
+#define ASIO_MAC_EASY_EX(retval, name, params, call, RETURN) \
+	static retval asio_mac_##name params \
+	{ \
+		struct CAsioFake *asio_fake = (struct CAsioFake *)This; \
+	\
+		RETURN asio_fake->name call; \
+	}
+
+#define ASIO_MAC_EASY(retval, name, params, call) \
+	ASIO_MAC_EASY_EX(retval, name, params, call, return)
+#define ASIO_MAC_EASY_VOID(name, params, call) \
+	ASIO_MAC_EASY_EX(void, name, params, call, /* nothing */)
+
+static ULONG asio_mac_AddRef(IAsio *This)
+{
+	struct CAsioFake *asio_fake = (struct CAsioFake *)This;
+
+	return ++asio_fake->refcnt;
+}
+
+static ULONG asio_mac_Release(IAsio *This)
+{
+	ULONG ref;
+	struct CAsioFake *asio_fake = (struct CAsioFake *)This;
+
+	ref = --asio_fake->refcnt;
+
+	if (ref) return ref;
+
+	/* kill it all off! */
+	asio_fake->Quit();
+	CloseConnection(&asio_fake->conn);
+	ReleaseResource(asio_fake->handle);
+	CloseResFile(asio_fake->resfile);
+	free(asio_fake);
+
+	return ref;
+}
+
+static void asio_mac_GetDriverName(IAsio *This, char name[32])
+{
+	/* dummy.
+	 *
+	 * TODO: ASIO_Init on mac os 9 takes in a ASIODriverInfo
+	 * structure (according to name mangling) so this info
+	 * is probably stored in there somewhere. */
+	name[0] = 0;
+}
+
+static uint32_t asio_mac_GetDriverVersion(IAsio *This)
+{
+	return 0;
+}
+
+static void asio_mac_GetErrorMessage(IAsio *This, char msg[128])
+{
+	/* ??? */
+	msg[0] = 0;
+}
+
+static AsioError asio_mac_Init(IAsio *This, void *unk1)
+{
+	/* Fake an ASIODriverInfo structure. Align it onto
+	 * 8 bytes, just to be absolutely sure we're not
+	 * violating anything
+	 *
+	 * TODO: Need to make a file dump of whatever is
+	 * in this structure; it's bound to be useful */
+	unsigned char dummy[512] __attribute__((__aligned__(8)));
+	struct CAsioFake *fake = (struct CAsioFake *)This;
+
+	memset(dummy, 0, 512);
+
+	return fake->Init(dummy);
+}
+
+ASIO_MAC_EASY(AsioError, Start, (IAsio *This), ())
+ASIO_MAC_EASY(AsioError, Stop, (IAsio *This), ())
+ASIO_MAC_EASY(AsioError, GetChannels, (IAsio *This, uint32_t *pinchns, uint32_t *poutchns), (pinchns, poutchns))
+ASIO_MAC_EASY(AsioError, GetLatencies, (IAsio *This, uint32_t *pinlatency, uint32_t *poutlatency), (pinlatency, poutlatency))
+ASIO_MAC_EASY(AsioError, GetBufferSize, (IAsio *This, uint32_t *pmin, uint32_t *pmax, uint32_t *pwanted, uint32_t *punknown), (pmin, pmax, pwanted, punknown))
+ASIO_MAC_EASY(AsioError, CheckSampleRate, (IAsio *This, double rate), (rate))
+ASIO_MAC_EASY(AsioError, GetSampleRate, (IAsio *This, double *prate), (prate))
+ASIO_MAC_EASY(AsioError, SetSampleRate, (IAsio *This, double rate), (rate))
+ASIO_MAC_EASY(AsioError, GetClockSources, (IAsio *This, struct AsioClockSource *srcs, uint32_t *size), (srcs, size))
+ASIO_MAC_EASY(AsioError, SetClockSource, (IAsio *This, uint32_t src), (src))
+ASIO_MAC_EASY(AsioError, GetSamplePosition, (IAsio *This, uint64_t *unk1, uint64_t *unk2), (unk1, unk2))
+ASIO_MAC_EASY(AsioError, GetChannelInfo, (IAsio *This, struct AsioChannelInfo *pinfo), (pinfo))
+ASIO_MAC_EASY(AsioError, CreateBuffers, (IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs), (bufs, numbufs, buffer_size, cbs))
+ASIO_MAC_EASY(AsioError, DestroyBuffers, (IAsio *This), ())
+ASIO_MAC_EASY(AsioError, ControlPanel, (IAsio *This), ())
+ASIO_MAC_EASY(AsioError, Future, (IAsio *This, uint32_t which), (which))
+ASIO_MAC_EASY(AsioError, OutputReady, (IAsio *This), ())
+
+/* this is never even used anywhere. it's a COM-specific thing.
+ * TODO: need to de-COM-ify audio-asio.h (and make it more complete) */
+#define asio_mac_QueryInterface NULL
+
+IAsioVtbl asio_mac_vtable = {
+#define ASIO_FUNC(type, name, paramswtype, params, calltype) \
+	asio_mac_##name,
+#include "audio-asio-vtable.h"
+};
+
+#undef asio_mac_QueryInterface
+#undef ASIO_MAC_EASY
+#undef ASIO_MAC_EASY_EX
+#undef ASIO_MAC_EASY_VOID
+
+static IAsio *asio_get_device(struct asio_device *dev)
+{
+	struct CAsioFake *asio;
+	OSErr err;
+	short resfile;
+	short oldresfile;
+	Handle res;
+	uint32_t (*mainfunc)(void);
+	Str255 errname;
+	CFragConnectionID conn;
+
+	resfile = FSpOpenResFile(&dev->spec, fsRdPerm);
+	if (resfile < 0)
+		return NULL;
+
+	/* back this up... */
+	oldresfile = CurResFile();
+
+	UseResFile(resfile);
+
+	res = GetResource('Asio', 0);
+
+	/* restore it before doing anytihng else */
+	UseResFile(oldresfile);
+
+	if (!res) {
+		/* handle it */
+		CloseResFile(resfile);
+		return NULL;
+	}
+	HLock(res);
+	err = GetMemFragment(*res, GetHandleSize(res),
+		"\xd" "ASIO fragment", kReferenceCFrag, &conn,
+		(Ptr *)&mainfunc, errname);
+	HUnlock(res);
+
+	if (err != noErr) {
+		log_appendf(4, " Failed to load ASIO code: %.*s", (int)errname[0], errname + 1);
+		CloseResFile(resfile);
+		return NULL;
+	}
+
+	if (mainfunc && mainfunc() != 0x4153494F /* 'ASIO' */)
+		log_appendf(4, "[ASIO]: Main function did not return 'ASIO' ?!?!");
+
+	asio = mem_calloc(1, sizeof(*asio));
+
+#define LOAD_SYMBOL(name, namemangled) \
+do { \
+	SCHISM_STATIC_ASSERT(sizeof(#namemangled) < 256, "function name must not exceed 255 chars"); \
+\
+	unsigned char pname[256]; \
+	CFragSymbolClass cls; \
+\
+	/* hmm, this might actually be a data symbol; in the object file it's a pointer */ \
+	str_to_pascal(#namemangled, pname, NULL); \
+	err = FindSymbol(conn, pname, (Ptr *)&asio->name, &cls); \
+\
+	if (err != noErr) { \
+		log_appendf(4, "[ASIO]: Function %s missing from driver", #name); \
+		free(asio); \
+		CloseConnection(&conn); \
+		ReleaseResource(res); \
+		CloseResFile(resfile); \
+		return NULL; \
+	} \
+} while (0)
+
+	LOAD_SYMBOL(OutputReady, ASIOOutputReady__Fv);
+	LOAD_SYMBOL(Future, ASIOFuture__FlPv);
+	LOAD_SYMBOL(ControlPanel, ASIOControlPanel__Fv);
+	LOAD_SYMBOL(DestroyBuffers, ASIODisposeBuffers__Fv);
+	LOAD_SYMBOL(CreateBuffers, ASIOCreateBuffers__FP14ASIOBufferInfollP13ASIOCallbacks);
+	LOAD_SYMBOL(GetChannelInfo, ASIOGetChannelInfo__FP15ASIOChannelInfo);
+	LOAD_SYMBOL(GetSamplePosition, ASIOGetSamplePosition__FP11ASIOSamplesP13ASIOTimeStamp);
+	LOAD_SYMBOL(SetClockSource, ASIOSetClockSource__Fl);
+	LOAD_SYMBOL(GetClockSources, ASIOGetClockSources__FP15ASIOClockSourcePl);
+	LOAD_SYMBOL(SetSampleRate, ASIOSetSampleRate__Fd);
+	LOAD_SYMBOL(GetSampleRate, ASIOGetSampleRate__FPd);
+	LOAD_SYMBOL(CheckSampleRate, ASIOCanSampleRate__Fd);
+	LOAD_SYMBOL(GetBufferSize, ASIOGetBufferSize__FPlPlPlPl);
+	LOAD_SYMBOL(GetLatencies, ASIOGetLatencies__FPlPl);
+	LOAD_SYMBOL(GetChannels, ASIOGetChannels__FPlPl);
+	LOAD_SYMBOL(Stop, ASIOStop__Fv);
+	LOAD_SYMBOL(Start, ASIOStart__Fv);
+	LOAD_SYMBOL(Quit, ASIOExit__Fv);
+	LOAD_SYMBOL(Init, ASIOInit__FP14ASIODriverInfo);
+
+#undef LOAD_SYMBOL
+
+	/* all of our symbols are loaded now, and we have no more work to do
+	 * so fill in data in the structure... */
+
+	asio->lpVtbl = &asio_mac_vtable;
+	asio->refcnt = 1;
+	asio->handle = res;
+	asio->conn = conn;
+	asio->resfile = resfile;
+
+	return (IAsio *)asio;
+}
+#endif
 
 struct schism_audio_device {
 	IAsio *asio;
@@ -347,7 +687,7 @@ struct schism_audio_device {
 /* butt-ugly global because ASIO has an API from the stone age */
 static schism_audio_device_t *current_device = NULL;
 
-static uint32_t __cdecl asio_msg(uint32_t class, uint32_t msg,
+static uint32_t ASIO_CDECL asio_msg(uint32_t class, uint32_t msg,
 	SCHISM_UNUSED void *unk3, SCHISM_UNUSED void *unk4)
 {
 	schism_audio_device_t *dev = current_device;
@@ -373,12 +713,12 @@ static uint32_t __cdecl asio_msg(uint32_t class, uint32_t msg,
 	return 0;
 }
 
-static void __cdecl asio_dummy2(void)
+static void ASIO_CDECL asio_dummy2(void)
 {
 	/* dunno what this is */
 }
 
-static void __cdecl asio_buffer_flip(uint32_t buf,
+static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
 	SCHISM_UNUSED uint32_t unk1)
 {
 	schism_audio_device_t *dev = current_device;
@@ -438,7 +778,7 @@ static void __cdecl asio_buffer_flip(uint32_t buf,
 	IAsio_OutputReady(dev->asio);
 }
 
-static void *__cdecl asio_buffer_flip_ex(SCHISM_UNUSED void *unk1,
+static void *ASIO_CDECL asio_buffer_flip_ex(SCHISM_UNUSED void *unk1,
 	uint32_t buf, SCHISM_UNUSED uint32_t unk2)
 {
 	/* BUG: Steinberg's "built-in" ASIO driver completely ignores the
@@ -471,7 +811,6 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 	const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	schism_audio_device_t *dev;
-	HRESULT hres;
 	AsioError err;
 	uint32_t i;
 
@@ -508,9 +847,8 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 	 * Yet despite this fact, it is using the same value for CLSID as IID.
 	 * If it were truly COM, the IAsio interface would have its own IID.
 	 * But I digress. */
-	hres = OLE32_CoCreateInstance(&devices[id].clsid, NULL,
-		CLSCTX_INPROC_SERVER, &devices[id].clsid, (LPVOID *)&dev->asio);
-	if (FAILED(hres))
+	dev->asio = asio_get_device(devices + id);
+	if (!dev->asio)
 		goto ASIO_fail;
 
 	err = IAsio_Init(dev->asio, NULL);
@@ -691,8 +1029,16 @@ static void asio_pause_device(schism_audio_device_t *dev, int paused)
 
 /* ------------------------------------------------------------------------ */
 
+#ifdef SCHISM_WIN32
+
 static void *lib_ole32;
 static void *lib_shell32;
+
+typedef HRESULT (WINAPI *OLE32_CoInitializeExSpec)(LPVOID, DWORD);
+typedef void (WINAPI *OLE32_CoUninitializeSpec)(void);
+
+static OLE32_CoInitializeExSpec OLE32_CoInitializeEx;
+static OLE32_CoUninitializeSpec OLE32_CoUninitialize;
 
 static int asio_init(void)
 {
@@ -755,6 +1101,15 @@ static void asio_quit(void)
 	if (lib_shell32)
 		loadso_object_unload(lib_shell32);
 }
+
+#elif defined(SCHISM_MACOS)
+
+/* just stubs for now; we don't have any big initialization to do.
+ * the most we'd need to do is call into Gestalt I think */
+static int asio_init(void) { return 1; }
+static void asio_quit(void) { }
+
+#endif
 
 /* ---------------------------------------------------------------------------- */
 

@@ -604,8 +604,10 @@ if test "x$use_win32" = "xyes"; then
 	)
 
 	if test "x$use_asio" = "xyes"; then
-		AC_DEFINE([USE_ASIO], [1], [Compile ASIO support on Windows])
+		AC_DEFINE([USE_ASIO], [1], [Compile ASIO support])
 	fi
+elif test "x$use_macos" = "xyes"; then
+	AC_DEFINE([USE_ASIO], [1], [Compile ASIO support])
 fi
 
 if test "x$use_macosx" = "xyes"; then

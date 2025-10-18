@@ -25,7 +25,19 @@
 #define ASIO_INCL_H_
 
 #include <stdint.h>
-#include <windows.h>
+
+#ifdef _WIN32
+# include <windows.h>
+
+# define ASIO_CDECL __cdecl
+#else
+/* just enough to get things to compile */
+typedef int32_t HRESULT;
+typedef uint32_t ULONG;
+typedef void *REFIID;
+
+# define ASIO_CDECL
+#endif
 
 typedef uint32_t AsioBool; /* always 0 or 1 */
 
@@ -126,19 +138,19 @@ struct AsioCreateBufferCallbacks {
 	 *
 	 * buf: the buffer to fill
 	 * unknown1: TODO */
-	void (__cdecl *buffer_flip)(uint32_t buf, uint32_t unknown1);
+	void (ASIO_CDECL *buffer_flip)(uint32_t buf, uint32_t unknown1);
 	/* no idea what this one is; nothing I have calls it */
-	void (__cdecl *unk2)(void);
+	void (ASIO_CDECL *unk2)(void);
 	/* message handler:
 	 * cls: class of message 'ASIO_CLASS_*'
 	 * msg: the actual message itself
 	 * unknown1: TODO
 	 * unknown2: TODO */
-	uint32_t (__cdecl *msg)(uint32_t cls, uint32_t msg, void *unknown1,
+	uint32_t (ASIO_CDECL *msg)(uint32_t cls, uint32_t msg, void *unknown1,
 		void *unknown2);
 	/* an expanded form of buffer_flip; takes in a pointer
 	 * and returns one. I don't really know what it's for though. */
-	void *(__cdecl *buffer_flip_ex)(void *unk1, uint32_t buf, uint32_t unk2);
+	void *(ASIO_CDECL *buffer_flip_ex)(void *unk1, uint32_t buf, uint32_t unk2);
 };
 
 /* ------------------------------------------------------------------------ */
@@ -149,15 +161,20 @@ typedef struct IAsio IAsio;
 
 struct IAsioVtbl {
 
-#define ASIO_FUNC(type, name, paramswtype, params, callconv) \
+#ifdef _WIN32
+# define ASIO_FUNC(type, name, paramswtype, params, callconv) \
 	type (callconv *name) paramswtype;
+#elif defined(macintosh) || defined(Macintosh) || defined(__MACOS__)
+# define ASIO_FUNC(type, name, paramswtype, params, callconv) \
+	type (*name) paramswtype;
+#endif
 
 #include "audio-asio-vtable.h"
 
 };
 
 struct IAsio {
-	CONST_VTBL IAsioVtbl *lpVtbl;
+	IAsioVtbl *lpVtbl;
 };
 
 /* ------------------------------------------------------------------------ */

@@ -572,7 +572,7 @@ void macos_sysinit(int *pargc, char ***pargv)
 	} else {
 		/* Where are we now ? */
 	}
-		
+
 	if (CommandKeyIsDown()) {
 		/* enum-ified  --paper */
 		enum {

@@ -170,8 +170,8 @@ noinst_HEADERS = \
 	sys/sdl2/init.h \
 	sys/x11/init.h \
 	sys/win32/win32-vista.h \
-	sys/win32/audio-asio-vtable.h \
-	sys/win32/audio-asio.h
+	sys/asio/audio-asio-vtable.h \
+	sys/asio/audio-asio.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -324,7 +324,7 @@ endif
 
 if USE_ASIO
 files_asio = \
-	sys/win32/audio-asio.c
+	sys/asio/audio-asio.c
 cflags_asio =
 lib_asio =
 endif
@@ -420,7 +420,8 @@ files_macos = \
 	sys/macos/osdefs.c \
 	sys/macos/dirent/macos-dirent.c \
 	sys/macos/dmoz.c \
-	sys/macos/clippy.c
+	sys/macos/clippy.c \
+	sys/asio/audio-asio.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
 libs_macos= \
 	-lAppearanceLib \
