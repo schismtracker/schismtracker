@@ -70,6 +70,11 @@ typedef int32_t AsioError;
 
 /* ------------------------------------------------------------------------ */
 
+/* USB ASIO driver on Mac OS 9 */
+#define ASIO_SAMPLE_TYPE_INT16BE   (0)
+#define ASIO_SAMPLE_TYPE_INT24BE   (1)
+#define ASIO_SAMPLE_TYPE_INT32BE   (2)
+
 //#define ASIO_SAMPLE_TYPE_INT8LE (15) // ?
 
 /* FlexASIO can do these four */

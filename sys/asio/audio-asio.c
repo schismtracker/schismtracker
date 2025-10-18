@@ -298,7 +298,7 @@ static uint32_t asio_device_count(uint32_t flags)
 
 	dir = opendir(ptr2);
 	if (!dir) {
-		log_appendf(4, "[ASIO] failed to load ASIO driver directory?");
+		log_appendf(4, "[ASIO] failed to load ASIO driver directory");
 		return 0;
 	}
 
@@ -326,9 +326,9 @@ static uint32_t asio_device_count(uint32_t flags)
 		/* Store the FSSpec */
 		ptr = dmoz_path_concat(ptr2, ent->d_name);
 		if (!dmoz_path_to_fsspec(ptr, &dev->spec)) {
-			/* what the hell? */
+			/* ??? */
 			free(ptr);
-			return 0;
+			continue;
 		}
 		free(ptr);
 
@@ -674,6 +674,7 @@ struct schism_audio_device {
 	uint32_t bufsmps; /* buffer length in samples */
 	uint32_t bps;     /* bytes per sample */
 	uint32_t buflen;  /* bufsmps * bytes per sample * numbufs (only used for mono) */
+	unsigned int swap : 1; /* need to byteswap? */
 
 	/* Some ASIO drivers are BUGGY AS FUCK; they copy the callbacks POINTER,
 	 * and not the actual data contained within it.
@@ -772,6 +773,36 @@ static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
 		default: DEINTERLEAVE_MEMCPY(dev->bps); break;
 
 #undef DEINTERLEAVE_MEMCPY
+		}
+
+		/* swap the bytes if necessary */
+		if (dev->swap) {
+			switch (dev->bps) {
+#define BSWAP_EX(BITS, INLOOP) \
+	do { \
+		uint32_t j; \
+	\
+		for (j = 0; j < dev->numbufs; j++) { \
+			uint##BITS##_t *xx = dev->buffers[j].ptrs[buf]; \
+			for (i = 0; i < dev->bufsmps; i++) { \
+				INLOOP \
+			} \
+		} \
+	} while (0)
+
+#define BSWAP(BITS) BSWAP_EX(BITS, { xx[i] = bswap_##BITS(xx[i]); } )
+
+			case 2: BSWAP(16); break;
+			case 4: BSWAP(32); break;
+			case 8: BSWAP(64); break;
+
+#undef BSWAP
+
+			case 3: BSWAP_EX(8, { uint8_t tmp = xx[0]; xx[0] = xx[2]; xx[2] = tmp; } ); break;
+
+#undef BSWAP_EX
+
+			}
 		}
 	}
 
@@ -908,6 +939,7 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 	dev->buffers = mem_calloc(dev->numbufs, sizeof(*dev->buffers));
 	for (i = 0; i < dev->numbufs; i++) {
 		struct AsioChannelInfo chninfo;
+		int be;
 
 		chninfo.index = i;
 		chninfo.input = 0;
@@ -919,31 +951,55 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 		}
 
 		switch (chninfo.sample_type) {
-		case ASIO_SAMPLE_TYPE_INT16LE:
-			obtained->bits = 16;
+		case ASIO_SAMPLE_TYPE_INT16BE:
 			obtained->fp = 0;
 			dev->bps = 2;
+			be = 1;
 			break;
-		case ASIO_SAMPLE_TYPE_INT24LE:
-			obtained->bits = 24;
+		case ASIO_SAMPLE_TYPE_INT24BE:
 			obtained->fp = 0;
 			dev->bps = 3;
+			be = 1;
 			break;
-		case ASIO_SAMPLE_TYPE_INT32LE:
-			obtained->bits = 32;
+		case ASIO_SAMPLE_TYPE_INT32BE:
 			obtained->fp = 0;
 			dev->bps = 4;
+			be = 1;
+			break;
+		case ASIO_SAMPLE_TYPE_INT16LE:
+			obtained->fp = 0;
+			dev->bps = 2;
+			be = 0;
+			break;
+		case ASIO_SAMPLE_TYPE_INT24LE:
+			obtained->fp = 0;
+			dev->bps = 3;
+			be = 0;
+			break;
+		case ASIO_SAMPLE_TYPE_INT32LE:
+			obtained->fp = 0;
+			dev->bps = 4;
+			be = 0;
 			break;
 		case ASIO_SAMPLE_TYPE_FLOAT32LE:
-			obtained->bits = 32;
 			obtained->fp = 1;
 			dev->bps = 4;
+			be = 0;
 			break;
 		default:
 			log_appendf(4, "[ASIO] unknown sample type %" PRIx32,
 				chninfo.sample_type);
 			goto ASIO_fail;
 		}
+
+		obtained->bits = (dev->bps << 3);
+
+#ifdef WORDS_BIGENDIAN
+		/* toggle byteswapping */
+		if (!be) dev->swap = 1;
+#else
+		if (be) dev->swap = 1;
+#endif
 
 		dev->buffers[i].input = 0;
 		dev->buffers[i].channel = i;
