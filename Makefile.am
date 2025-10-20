@@ -170,7 +170,6 @@ noinst_HEADERS = \
 	sys/sdl2/init.h \
 	sys/x11/init.h \
 	sys/win32/win32-vista.h \
-	sys/asio/audio-asio-vtable.h \
 	sys/asio/audio-asio.h
 
 dist_man_MANS = sys/posix/schismtracker.1
@@ -323,8 +322,10 @@ lib_mediafoundation=-luuid $(MEDIAFOUNDATION_LIBS)
 endif
 
 if USE_ASIO
+# this is dumb -- we should be using this path for mac os and win32
 files_asio = \
-	sys/asio/audio-asio.c
+	sys/asio/audio-asio.c \
+	sys/asio/audio-asio-win32.c
 cflags_asio =
 lib_asio =
 endif
@@ -421,7 +422,8 @@ files_macos = \
 	sys/macos/dirent/macos-dirent.c \
 	sys/macos/dmoz.c \
 	sys/macos/clippy.c \
-	sys/asio/audio-asio.c
+	sys/asio/audio-asio.c \
+	sys/asio/audio-asio-mac.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
 libs_macos= \
 	-lAppearanceLib \

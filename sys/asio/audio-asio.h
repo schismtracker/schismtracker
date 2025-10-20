@@ -24,18 +24,21 @@
 #ifndef ASIO_INCL_H_
 #define ASIO_INCL_H_
 
+/* I don't care about C89 */
 #include <stdint.h>
 
 #ifdef _WIN32
-# include <windows.h>
+# define ASIO_WIN32
+#elif defined(macintosh) || defined(Macintosh) || defined(__MACOS__)
+# define ASIO_MAC
+#else
+# error unsupported platform
+#endif
 
+/* __cdecl is only supported on win32 */
+#ifdef ASIO_WIN32
 # define ASIO_CDECL __cdecl
 #else
-/* just enough to get things to compile */
-typedef int32_t HRESULT;
-typedef uint32_t ULONG;
-typedef void *REFIID;
-
 # define ASIO_CDECL
 #endif
 
@@ -159,42 +162,58 @@ struct AsioCreateBufferCallbacks {
 };
 
 /* ------------------------------------------------------------------------ */
-/* now, the actual IAsio structure itself */
+/* IAsio functions
+ *
+ * TODO move the documentation that used to be contained in
+ * audio-asio-vtable.h into here */
 
-typedef struct IAsioVtbl IAsioVtbl;
 typedef struct IAsio IAsio;
 
-struct IAsioVtbl {
-
-#ifdef _WIN32
-# define ASIO_FUNC(type, name, paramswtype, params, callconv) \
-	type (callconv *name) paramswtype;
-#elif defined(macintosh) || defined(Macintosh) || defined(__MACOS__)
-# define ASIO_FUNC(type, name, paramswtype, params, callconv) \
-	type (*name) paramswtype;
-#endif
-
-#include "audio-asio-vtable.h"
-
-};
-
-struct IAsio {
-	IAsioVtbl *lpVtbl;
-};
+AsioError IAsio_Init(IAsio *This);
+/* the pointer is not valid after this, i.e. you can't re-init it.
+ * this might change in the future. */
+void IAsio_Quit(IAsio *This);
+void IAsio_GetDriverName(IAsio *This, char name[32]);
+uint32_t IAsio_GetDriverVersion(IAsio *This);
+void IAsio_GetErrorMessage(IAsio *This, char msg[128]);
+AsioError IAsio_Start(IAsio *This);
+AsioError IAsio_Stop(IAsio *This);
+AsioError IAsio_GetChannels(IAsio *This, uint32_t *pinchns, uint32_t *poutchns);
+AsioError IAsio_GetLatencies(IAsio *This, uint32_t *pinlatency, uint32_t *poutlatency);
+AsioError IAsio_GetBufferSize(IAsio *This, uint32_t *pmin, uint32_t *pmax, uint32_t *pwanted, uint32_t *punknown);
+AsioError IAsio_CheckSampleRate(IAsio *This, double rate);
+AsioError IAsio_GetSampleRate(IAsio *This, double *prate);
+AsioError IAsio_SetSampleRate(IAsio *This, double rate);
+AsioError IAsio_GetClockSources(IAsio *This, struct AsioClockSource *srcs, uint32_t *size);
+AsioError IAsio_SetClockSource(IAsio *This, uint32_t src);
+AsioError IAsio_GetSamplePosition(IAsio *This, uint64_t *unk1, uint64_t *unk2);
+AsioError IAsio_GetChannelInfo(IAsio *This, struct AsioChannelInfo *pinfo);
+AsioError IAsio_CreateBuffers(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs);
+AsioError IAsio_DestroyBuffers(IAsio *This);
+AsioError IAsio_ControlPanel(IAsio *This);
+AsioError IAsio_Future(IAsio *This, uint32_t which);
+AsioError IAsio_OutputReady(IAsio *This);
 
 /* ------------------------------------------------------------------------ */
-/* Optional C-style wrappers, in the spirit of COM #define OBJCMACROS */
+/* Driver listing */
 
-#ifdef ASIO_C_WRAPPERS
+/* This function, despite the name, polls for audio devices every time
+ * it is called. This is similar to SDL's audio API. You'll never guess
+ * the reason why :) */
+uint32_t Asio_DriverCount(void);
+/* this pointer is only guaranteed to be valid until the next call to
+ * Asio_DriverCount(). */
+const char *Asio_DriverDescription(uint32_t x);
+/* OS-specific poll for the driver.
+ * This returns the pointer to the ASIO interface, but it is *not*
+ * actually initialized yet. You must call IAsio_Init() before doing
+ * anything important. */
+IAsio *Asio_DriverGet(uint32_t x);
 
-#define ASIO_FUNC(type, name, paramswtype, params, callconv) \
-	static inline type IAsio_##name paramswtype \
-	{ \
-		return This->lpVtbl->name params; \
-	}
+/* ------------------------------------------------------------------------ */
+/* Library initialization functions */
 
-#include "audio-asio-vtable.h"
+int32_t Asio_Init(void);
+void Asio_Quit(void);
 
-#endif /* ASIO_C_WRAPPERS */
-
-#endif
+#endif /* ASIO_INCL_H_ */
