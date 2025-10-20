@@ -371,6 +371,23 @@ static void sdl3_pump_events(void)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+static bool (SDLCALL *sdl3_AddEventWatch)(SDL_EventFilter filter, void *userdata);
+
+/* For smooth resizing on Windows */
+static bool SDLCALL sdl3_event_filter(void *userdata, SDL_Event *e)
+{
+	switch (e->type) {
+	case SDL_EVENT_WINDOW_EXPOSED:
+		video_blit();
+		break;
+	}
+
+	/* Return value for this function is ignored */
+	return false;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // dynamic loading
 
 static int sdl3_events_load_syms(void)
@@ -387,6 +404,8 @@ static int sdl3_events_load_syms(void)
 #ifdef SCHISM_USE_X11
 	SCHISM_SDL3_SYM(SetX11EventHook);
 #endif
+
+	SCHISM_SDL3_SYM(AddEventWatch);
 
 	SCHISM_SDL3_SYM(free);
 
@@ -411,6 +430,8 @@ static int sdl3_events_init(void)
 #ifdef SCHISM_WIN32
 	sdl3_SetWindowsMessageHook(sdl3_win32_msg_hook, NULL);
 #endif
+
+	sdl3_AddEventWatch(sdl3_event_filter, NULL);
 
 	return 1;
 }
