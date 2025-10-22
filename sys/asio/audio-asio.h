@@ -162,47 +162,103 @@ struct AsioCreateBufferCallbacks {
 };
 
 /* ------------------------------------------------------------------------ */
-/* IAsio functions
- *
- * TODO move the documentation that used to be contained in
- * audio-asio-vtable.h into here */
+/* IAsio functions */
 
 typedef struct IAsio IAsio;
 
+/* Initializes the IAsio structure.
+ * Assume any and all function calls will fail if you DON'T call this.
+ * This includes stuff like IAsio_GetDriverName, since that function
+ * is "faked" under Macintosh. */
 AsioError IAsio_Init(IAsio *This);
-/* the pointer is not valid after this, i.e. you can't re-init it.
- * this might change in the future. */
+/* De-initializes the IAsio structure.
+ * This functions also completely kills off the pointer, i.e. you should
+ * not try to use the IAsio pointer after this. */
 void IAsio_Quit(IAsio *This);
+/* Get the driver name. */
 void IAsio_GetDriverName(IAsio *This, char name[32]);
+/* Get the driver version. */
 uint32_t IAsio_GetDriverVersion(IAsio *This);
+/* Get the last error message. */
 void IAsio_GetErrorMessage(IAsio *This, char msg[128]);
+/* Start/unpause playback */
 AsioError IAsio_Start(IAsio *This);
+/* Stop/pause playback */
 AsioError IAsio_Stop(IAsio *This);
+/* Gets the number of channels for input and output respectively. */
 AsioError IAsio_GetChannels(IAsio *This, uint32_t *pinchns, uint32_t *poutchns);
+/* Gets the latency in samples for input and output respectively. */
 AsioError IAsio_GetLatencies(IAsio *This, uint32_t *pinlatency, uint32_t *poutlatency);
+/* Gets the supported buffer size values.
+ *  -- pmin: minimum supported buffer size.
+ *  -- pmax: maximum supported buffer size.
+ *  -- pwanted: the buffer size the driver wants you to use
+ *  -- punknown: ??? */
 AsioError IAsio_GetBufferSize(IAsio *This, uint32_t *pmin, uint32_t *pmax, uint32_t *pwanted, uint32_t *punknown);
-AsioError IAsio_CheckSampleRate(IAsio *This, double rate);
+/* Check whether a driver supports a given sample rate.
+ *  -- rate: sample rate as a 64-bit IEEE floating-point number */
+AsioError IAsio_SupportsSampleRate(IAsio *This, double rate);
+/* Get the current sample rate the driver is using.
+ *  -- prate: pointer to a 64-bit IEEE floating-point number receiving the sample rate */
 AsioError IAsio_GetSampleRate(IAsio *This, double *prate);
+/* Set the current sample rate the driver is using.
+ *  -- rate: sample rate as a 64-bit IEEE floating-point number */
 AsioError IAsio_SetSampleRate(IAsio *This, double rate);
+/* Gets the supplied clock sources.
+ * I'm not really sure what the point of this is, but hey, it's here.
+ * None of these fields are documented at all, since I really can't be bothered.
+ *  -- srcs: pointer to array of Asio clock sources
+ *  -- size: on input, the size of the array pointed to by 'srcs'
+ *           on output, the actual number of items returned */
 AsioError IAsio_GetClockSources(IAsio *This, struct AsioClockSource *srcs, uint32_t *size);
+/* Sets the current clock source.
+ *  -- src: ??? */
 AsioError IAsio_SetClockSource(IAsio *This, uint32_t src);
+/* Gets the current sample position.
+ *  -- punk1: ???
+ *  -- punk2: ??? */
 AsioError IAsio_GetSamplePosition(IAsio *This, uint64_t *unk1, uint64_t *unk2);
+/* Gets channel info.
+ *  -- pinfo: see definition of the AsioChannelInfo struct for input
+ *            and output parameters */
 AsioError IAsio_GetChannelInfo(IAsio *This, struct AsioChannelInfo *pinfo);
+/* Create buffers for playback/recording.
+ *  -- bufs: pointer to array of AsioBuffer structures
+ *           see definition of AsioBuffers struct for input/output params
+ *  -- numbufs: number of elements in the array pointed to by 'bufs'
+ *  -- buffer_size: the requested buffer size.
+ *                  this must be within the bounds given by GetBufferSize
+ *  -- cbs: pointer to a structure initialized with pointers to callback
+ *          functions as described in the definition of
+ *          'AsioCreateBufferCallbacks'.
+ * WARNING: the 'cbs' pointer MUST be valid for the entirety of the lifetime
+ * of the IAsio. Many drivers do NOT copy the data inside the pointer, but
+ * simply copy the pointer itself. You should probably store this data as
+ * a global or alongside the IAsio. */
 AsioError IAsio_CreateBuffers(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs);
+/* Destroys buffers previously allocated with IAsio_CreateBuffers. */
 AsioError IAsio_DestroyBuffers(IAsio *This);
+/* Opens the driver control panel. */
 AsioError IAsio_ControlPanel(IAsio *This);
+/* Polls for future additions to the driver. */
 AsioError IAsio_Future(IAsio *This, uint32_t which);
+/* Notifies the driver that any output buffers are ready for processing */
 AsioError IAsio_OutputReady(IAsio *This);
 
 /* ------------------------------------------------------------------------ */
 /* Driver listing */
 
-/* This function, despite the name, polls for audio devices every time
- * it is called. This is similar to SDL's audio API. You'll never guess
- * the reason why :) */
+/* Polls for drivers */
+void Asio_DriverPoll(void);
+
+/* Returns the current driver count.
+ * Note that if you don't call Asio_DriverPoll() before this,
+ * this function will return 0. */
 uint32_t Asio_DriverCount(void);
-/* this pointer is only guaranteed to be valid until the next call to
- * Asio_DriverCount(). */
+/* This pointer is only guaranteed to be valid UNTIL the next call
+ * into Asio_DriverPoll.
+ * Hopefully no one needs two parts of their program to interact
+ * with this... */
 const char *Asio_DriverDescription(uint32_t x);
 /* OS-specific poll for the driver.
  * This returns the pointer to the ASIO interface, but it is *not*

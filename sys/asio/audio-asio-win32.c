@@ -46,7 +46,7 @@ struct IAsioVtbl {
 	AsioError (__thiscall *GetChannels)(IAsio *This, uint32_t *pinchns, uint32_t *poutchns);
 	AsioError (__thiscall *GetLatencies)(IAsio *This, uint32_t *pinlatency, uint32_t *poutlatency);
 	AsioError (__thiscall *GetBufferSize)(IAsio *This, uint32_t *pmin, uint32_t *pmax, uint32_t *pwanted, uint32_t *punknown);
-	AsioError (__thiscall *CheckSampleRate)(IAsio *This, double rate);
+	AsioError (__thiscall *SupportsSampleRate)(IAsio *This, double rate);
 	AsioError (__thiscall *GetSampleRate)(IAsio *This, double *prate);
 	AsioError (__thiscall *SetSampleRate)(IAsio *This, double rate);
 	AsioError (__thiscall *GetClockSources)(IAsio *This, struct AsioClockSource *srcs, uint32_t *size);
@@ -174,7 +174,7 @@ static void Asio_Win32_FreeDrivers(void)
 	drivers = NULL;
 }
 
-uint32_t Asio_DriverCount(void)
+void Asio_DriverPoll(void)
 {
 	/* this function is one of the unholiest of spaghettis ive ever written */
 	LONG lstatus; /* LSTATUS isn't defined in older MinGW headers */
@@ -201,13 +201,13 @@ uint32_t Asio_DriverCount(void)
 
 	/* WHAT'S IN THE BOX? */
 	if (lstatus != ERROR_SUCCESS)
-		return 0;
+		return;
 
 	lstatus = RegQueryInfoKeyA(hkey, NULL, NULL, NULL, &max_subkey,
 		&max_subkey_len, NULL, NULL, NULL, NULL, NULL, NULL);
 	if (lstatus != ERROR_SUCCESS) {
 		RegCloseKey(hkey);
-		return 0;
+		return;
 	}
 
 	ASIO_ANSI_UNICODE({
@@ -222,7 +222,7 @@ uint32_t Asio_DriverCount(void)
 		free(drivers);
 		free(subkey.v);
 		RegCloseKey(hkey);
-		return 0;
+		return;
 	}
 
 	for (i = 0; i < max_subkey; i++) {
@@ -360,7 +360,10 @@ uint32_t Asio_DriverCount(void)
 
 		drivers_size++;
 	}
+}
 
+uint32_t Asio_DriverCount(void)
+{
 	return drivers_size;
 }
 
@@ -455,9 +458,9 @@ AsioError IAsio_GetBufferSize(IAsio *This, uint32_t *pmin, uint32_t *pmax, uint3
 	return This->lpVtbl->GetBufferSize(This, pmin, pmax, pwanted, punknown);
 }
 
-AsioError IAsio_CheckSampleRate(IAsio *This, double rate)
+AsioError IAsio_SupportsSampleRate(IAsio *This, double rate)
 {
-	return This->lpVtbl->CheckSampleRate(This, rate);
+	return This->lpVtbl->SupportsSampleRate(This, rate);
 }
 
 AsioError IAsio_GetSampleRate(IAsio *This, double *prate)

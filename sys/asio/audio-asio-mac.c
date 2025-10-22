@@ -194,7 +194,7 @@ static char *Asio_Mac_PascalStrDup(unsigned char *pstr)
 	return q;
 }
 
-uint32_t Asio_DriverCount(void)
+void Asio_DriverPoll(void)
 {
 	char DriverDirName[] = {
 		13, /* length */
@@ -210,7 +210,7 @@ uint32_t Asio_DriverCount(void)
 	Asio_Mac_ClearDrivers();
 
 	if (Asio_Mac_GetExecutablePath(&spec) < 0)
-		return 0;
+		return;
 
 	pb.ioNamePtr = DriverDirName;
 	pb.ioVRefNum = spec.vRefNum;
@@ -218,7 +218,7 @@ uint32_t Asio_DriverCount(void)
 	pb.ioWDProcID = 0; /* I don't care */
 
 	if (PBOpenWD(&pb, 0) != noErr)
-		return 0;
+		return;
 
 	{
 		CInfoPBRec pbr;
@@ -272,7 +272,10 @@ uint32_t Asio_DriverCount(void)
 	}
 
 	(void)PBCloseWD(&pb, 0);
+}
 
+uint32_t Asio_DriverCount(void)
+{
 	return drivers_size;
 }
 
@@ -472,7 +475,7 @@ AsioError IAsio_GetBufferSize(IAsio *This, uint32_t *pmin, uint32_t *pmax, uint3
 	return This->GetBufferSize(pmin, pmax, pwanted, punknown);
 }
 
-AsioError IAsio_CheckSampleRate(IAsio *This, double rate)
+AsioError IAsio_SupportsSampleRate(IAsio *This, double rate)
 {
 	return This->CheckSampleRate(rate);
 }

@@ -43,6 +43,8 @@ static uint32_t asio_device_count(uint32_t flags)
 	if (flags & AUDIO_BACKEND_CAPTURE)
 		return 0;
 
+	Asio_DriverPoll();
+
 	return Asio_DriverCount();
 }
 
@@ -71,7 +73,8 @@ static int asio_init_driver(const char *driver)
 	if (strcmp("asio", driver))
 		return -1;
 
-	(void)asio_device_count(0);
+	/* Do the initial poll for drivers here */
+	Asio_DriverPoll();
 	return 0;
 }
 
@@ -330,7 +333,7 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 	{
 		double rate = desired->freq;
 
-		err = IAsio_CheckSampleRate(dev->asio, rate);
+		err = IAsio_SupportsSampleRate(dev->asio, rate);
 		if (err >= 0)
 			IAsio_SetSampleRate(dev->asio, rate);
 
