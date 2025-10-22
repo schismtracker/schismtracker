@@ -422,6 +422,7 @@ files_macos = \
 	sys/macos/dirent/macos-dirent.c \
 	sys/macos/dmoz.c \
 	sys/macos/clippy.c \
+	sys/macos/midi-midimgr.c \
 	sys/asio/audio-asio.c \
 	sys/asio/audio-asio-mac.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
@@ -435,7 +436,8 @@ libs_macos= \
 	-lTextCommon \
 	-lContextualMenu \
 	-lDrawSprocketLib \
-	-lDialogsLib
+	-lDialogsLib \
+	-lInterfaceLib
 
 # Specific to the Retro68 toolchain to create MacBinary files
 schismtracker.bin: schismtracker.pef $(top_srcdir)/sys/macos/resource.r

@@ -207,6 +207,7 @@ int alsa_midi_setup(void);      // USE_ALSA
 int jack_midi_setup(void);      // USE_JACK
 int win32mm_midi_setup(void);   // SCHISM_WIN32
 int macosx_midi_setup(void);    // SCHISM_MACOSX
+int midimgr_midi_setup(void);   // SCHISM_MACOS
 
 /* called by audio system when buffer stuff change */
 void midi_queue_alloc(int buffer_size, int channels, int samples_per_second);

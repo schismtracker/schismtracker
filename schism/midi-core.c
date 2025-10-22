@@ -267,6 +267,9 @@ static void _midi_engine_connect(void)
 #ifdef SCHISM_MACOSX
 	macosx_midi_setup();
 #endif
+#ifdef SCHISM_MACOS
+	midimgr_midi_setup();
+#endif
 }
 
 void midi_engine_poll_ports(void)
