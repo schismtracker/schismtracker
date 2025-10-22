@@ -30,6 +30,13 @@
 
 #include "init.h"
 
+/*
+This causes a segfault if we're using software video.
+Just disable it for now I guess
+
+#define SCHISM_SDL3_SMOOTH_RESIZING 1
+*/
+
 static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
 static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
@@ -372,6 +379,8 @@ static void sdl3_pump_events(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef SCHISM_SDL3_SMOOTH_RESIZING
+
 static bool (SDLCALL *sdl3_AddEventWatch)(SDL_EventFilter filter, void *userdata);
 
 /* For smooth resizing on Windows */
@@ -386,6 +395,8 @@ static bool SDLCALL sdl3_event_filter(void *userdata, SDL_Event *e)
 	/* Return value for this function is ignored */
 	return false;
 }
+
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // dynamic loading
@@ -405,7 +416,9 @@ static int sdl3_events_load_syms(void)
 	SCHISM_SDL3_SYM(SetX11EventHook);
 #endif
 
+#ifdef SCHISM_SDL3_SMOOTH_RESIZING
 	SCHISM_SDL3_SYM(AddEventWatch);
+#endif
 
 	SCHISM_SDL3_SYM(free);
 
@@ -431,7 +444,9 @@ static int sdl3_events_init(void)
 	sdl3_SetWindowsMessageHook(sdl3_win32_msg_hook, NULL);
 #endif
 
+#ifdef SCHISM_SDL3_SMOOTH_RESIZING
 	sdl3_AddEventWatch(sdl3_event_filter, NULL);
+#endif
 
 	return 1;
 }
