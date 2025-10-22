@@ -623,6 +623,7 @@ SCHISM_NORETURN static void event_loop(void)
 					if (status.dialog_type == DIALOG_NONE) {
 						if (kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
 							if (kk.state == KEY_RELEASE && kk.mouse_button == MOUSE_BUTTON_RIGHT) {
+								video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);
 								menu_show();
 								break;
 							} else if (kk.state == KEY_PRESS && kk.mouse_button == MOUSE_BUTTON_LEFT) {
