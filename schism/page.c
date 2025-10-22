@@ -1599,6 +1599,8 @@ void set_page(int new_page)
 		status.previous_page = prev_page;
 	status.current_page = new_page;
 
+	video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);
+
 	_set_from_f3();
 	_set_from_f4();
 
