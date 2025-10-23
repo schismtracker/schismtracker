@@ -784,6 +784,12 @@ void video_translate_calculate(uint32_t vx, uint32_t vy,
 	/* return */
 	unsigned int *x, unsigned int *y)
 {
+	/* handle negative mouse coordinates when the mouse is
+	 * dragged outside of window bounds */
+	if ((int32_t)vx < 0) vx = 0;
+	if ((int32_t)vy < 0) vy = 0;
+
+	/* I'm 99% sure this can be done simpler, but hey, whatever. :) */
 	vx = MAX(vx, cx);
 	vx -= cx;
 
