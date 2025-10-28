@@ -553,6 +553,7 @@ schismtracker_SOURCES = \
 	fmt/aiff.c			\
 	fmt/ams.c			\
 	fmt/au.c			\
+	fmt/brr.c			\
 	fmt/compression.c		\
 	fmt/d00.c			\
 	fmt/dsm.c			\

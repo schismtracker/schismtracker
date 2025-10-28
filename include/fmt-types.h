@@ -150,6 +150,15 @@ at all. I might move this toward the top if I can figure out how to identify an 
 READ_INFO(mp3)
 #endif
 
+/* SNES .brr; this has very little info hence why it's so low here,
+ * but the loader has quite a few checks to make sure it's actually
+ * a .brr (but it's not perfect)
+ *
+ * This is above the big sample-loading libraries simply because
+ * I don't trust them enough to not false-flag these as something
+ * else entirely.  --paper */
+READ_INFO(brr) LOAD_SAMPLE(brr)
+
 /* avformat actually seems to work faster than the native library
  * on windows (not sure about macosx though, might be comparable?)
  * I used an ~800 MB MP4 file with AAC encoded audio to compare.
