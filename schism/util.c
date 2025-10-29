@@ -179,44 +179,6 @@ FILE *mkfstemp(char *template)
 #endif
 }
 
-static void util_envvar_helper(const char *name, const char *val)
-{
-	if (val) {
-		(void)setenv(name, val, 1);
-	} else {
-		(void)unsetenv(name);
-	}
-}
-
-/* this is used for hacking around SDL's stupid envvar crap. */
-int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
-	const char *val)
-{
-	char *orig;
-	int ret;
-
-	SCHISM_RUNTIME_ASSERT(name != NULL, "need an envvar to set");
-
-	{
-		const char *x = getenv(name);
-
-		orig = (x) ? str_dup(x) : NULL;
-	}
-
-	/* XXX: should `val` being NULL unset the envvar, or just do nothing ? */
-	util_envvar_helper(name, val);
-
-	ret = cb(p);
-
-	/* clean up our dirty work, or empty the var */
-	util_envvar_helper(name, orig);
-
-	free(orig);
-
-	/* forward any error, if any */
-	return ret;
-}
-
 /* ------------------------------------------------------------------------ */
 
 /* uses os_show_message_box to show a formatted string */

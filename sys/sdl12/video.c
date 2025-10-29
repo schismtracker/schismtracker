@@ -149,6 +149,7 @@ static int (SDLCALL *sdl12_GetWMInfo)(SDL_SysWMinfo *);
 #ifdef SCHISM_MACOS
 static void (SDLCALL *sdl12_InitQuickDraw)(struct QDGlobals *the_qd);
 #endif
+static int (SDLCALL *sdl12_putenv)(const char *var);
 
 static const char *sdl12_video_driver_name(void)
 {
@@ -263,15 +264,7 @@ static int sdl12_video_startup(void)
 	SDL_Rect **modes;
 	int32_t i, x = -1, y = -1;
 	const SDL_VideoInfo* info;
-
-	/* center the window on startup by default.
-	 * this is what the SDL 2 backend does, and it's annoying to
-	 * have the window pop up in the top left every time. */
-	int center_enabled = 0;
-	if (!getenv("SDL_VIDEO_WINDOW_POS")) {
-		setenv("SDL_VIDEO_WINDOW_POS", "center", 1);
-		center_enabled = 1;
-	}
+	int center_enabled;
 
 	sdl12_WM_SetCaption("Schism Tracker", "Schism Tracker");
 #ifndef SCHISM_MACOSX
@@ -295,6 +288,15 @@ static int sdl12_video_startup(void)
 		}
 	}
 #endif
+
+	/* center the window on startup by default.
+	 * this is what the SDL 2 backend does, and it's annoying to
+	 * have the window pop up in the top left every time. */
+	center_enabled = 0;
+	if (!getenv("SDL_VIDEO_WINDOW_POS")) {
+		sdl12_putenv("SDL_VIDEO_WINDOW_POS=center");
+		center_enabled = 1;
+	}
 
 	/* Do this before any call to SDL_SetVideoMode!!
 	 *
@@ -340,7 +342,7 @@ static int sdl12_video_startup(void)
 						x = NATIVE_SCREEN_WIDTH;
 					y = s.yres;
 				}
-				setenv("SDL_VIDEODRIVER", "fbcon", 1);
+				sdl12_putenv("SDL_VIDEODRIVER=fbcon");
 				video.desktop.bpp = s.bits_per_pixel;
 				video.desktop.fb_hacks = 1;
 				video.desktop.doublebuf = 1;
@@ -408,7 +410,7 @@ static int sdl12_video_startup(void)
 	 * SDL will re-center the window every time it's
 	 * resized. */
 	if (center_enabled)
-		unsetenv("SDL_VIDEO_WINDOW_POS");
+		sdl12_putenv("SDL_VIDEO_WINDOW_POS=");
 
 #ifdef SCHISM_WIN32
 	/* We want to edit the window style so it accepts drag & drop */
@@ -859,6 +861,8 @@ static int sdl12_video_load_syms(void)
 	SCHISM_SDL12_SYM(GL_SetAttribute);
 	SCHISM_SDL12_SYM(GL_GetProcAddress);
 	SCHISM_SDL12_SYM(GL_SwapBuffers);
+
+	SCHISM_SDL12_SYM(putenv);
 
 	return 0;
 }

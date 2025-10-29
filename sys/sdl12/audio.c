@@ -44,24 +44,28 @@ static void (SDLCALL *sdl12_PauseAudio)(int);
 
 static char *(SDLCALL *sdl12_AudioDriverName)(char *buf, int maxlen);
 
+static int (SDLCALL *sdl12_putenv)(const char *var);
+
 /* ---------------------------------------------------------- */
 /* drivers */
 
-static int sdl12_audio_init_driver_cb(SCHISM_UNUSED void *p)
-{
-	return sdl12_InitSubSystem(SDL_INIT_AUDIO);
-}
-
 static int sdl12_audio_init_driver(const char *name)
 {
+	/* sigh... */
+	static char var[512];
 	char buf[256];
+	int x;
 
-	int x = util_call_func_with_envvar(sdl12_audio_init_driver_cb, NULL,
-		"SDL_AUDIODRIVER", name);
+	snprintf(var, sizeof(var), "SDL_AUDIODRIVER=%s", name);
 
-	/* verify that our driver is the one we want */
-	sdl12_AudioDriverName(buf, sizeof(buf));
+	sdl12_putenv(var);
+
+	x = sdl12_InitSubSystem(SDL_INIT_AUDIO);
+
 	if (x >= 0) {
+		/* verify that our driver is the one we want */
+		sdl12_AudioDriverName(buf, sizeof(buf));
+
 		if (!strcmp(buf, name))
 			return 0;
 
@@ -295,6 +299,8 @@ static int sdl12_audio_load_syms(void)
 	SCHISM_SDL12_SYM(PauseAudio);
 
 	SCHISM_SDL12_SYM(AudioDriverName);
+
+	SCHISM_SDL12_SYM(putenv);
 
 	return 0;
 }

@@ -58,10 +58,7 @@ static const char * (SDLCALL *sdl2_GetError)(void);
 static void (SDLCALL *sdl2_ClearError)(void);
 static int (SDLCALL *sdl2_SetError)(const char *fmt, ...);
 
-static int schism_init_audio_impl_cb(SCHISM_UNUSED void *p)
-{
-	return sdl2_InitSubSystem(SDL_INIT_AUDIO);
-}
+static int (SDLCALL *sdl2_setenv)(const char *name, const char *val, int overwrite);
 
 /* explanation for this:
  * in 2.0.18, the logic for SDL's audio initialization functions
@@ -73,8 +70,11 @@ static int schism_init_audio_impl_cb(SCHISM_UNUSED void *p)
  * under SDL pre-2.0.18. */
 static int SDLCALL schism_init_audio_impl(const char *name)
 {
-	return util_call_func_with_envvar(schism_init_audio_impl_cb, NULL,
-		"SDL_AUDIODRIVER", name);
+	sdl2_setenv("SDL_AUDIODRIVER", name, 1);
+
+	return sdl2_InitSubSystem(SDL_INIT_AUDIO);
+
+	/* don't even bother cleaning up... it won't matter */
 }
 
 static void SDLCALL schism_quit_audio_impl(void)
@@ -309,6 +309,8 @@ static int sdl2_audio_load_syms(void)
 	SCHISM_SDL2_SYM(ClearError);
 	SCHISM_SDL2_SYM(SetError);
 
+	SCHISM_SDL2_SYM(setenv);
+
 	return 0;
 }
 
@@ -320,7 +322,8 @@ static int sdl2_audio_init(void)
 	if (sdl2_audio_load_syms())
 		return 0;
 
-	// see if we can use the normal audio init and quit functions
+	/* see if we can use the normal audio init and quit functions
+	 * fortunately, this still works under sdl2-compat... */
 	if (sdl2_ver_atleast(2, 0, 18)) {
 		sdl2_audio_init_func = sdl2_AudioInit;
 		sdl2_audio_quit_func = sdl2_AudioQuit;

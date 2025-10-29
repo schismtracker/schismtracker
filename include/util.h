@@ -116,10 +116,6 @@ void util_quitumask(void);
 
 FILE *mkfstemp(char *template);
 
-/* this is used for hacking around SDL's stupid envvar crap. */
-int util_call_func_with_envvar(int (*cb)(void *p), void *p, const char *name,
-	const char *val);
-
 /* open a message box with printf formatted string. */
 int msgboxv(int style, const char *title, const char *fmt, va_list ap);
 int msgbox(int style, const char *title, const char *fmt, ...);

@@ -35,6 +35,15 @@ extern int cfg_video_want_fixed_width;
 extern int cfg_video_want_fixed_height;
 extern int cfg_video_mousecursor;
 extern int cfg_video_width, cfg_video_height;
+/* eventual TODO: SDL 1.2 can do software, hardware, or OpenGL.
+ * Generally OpenGL can probably be considered "hardware", and
+ * when hardware *is* enabled it tries these in order:
+ *   1. OpenGL
+ *   2. Surfaces in hardware video memory
+ *   3. Surfaces in software memory
+ * I'm not entirely sure whether "surfaces in hardware video
+ * memory" should be considered "hardware", though since it's
+ * just a fallback anyway it shouldn't be that big of a deal. */
 extern int cfg_video_hardware;
 extern int cfg_video_want_menu_bar;
 
