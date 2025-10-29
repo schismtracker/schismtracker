@@ -204,6 +204,9 @@ static const char *sndmgr_audio_device_name(SCHISM_UNUSED uint32_t i)
 static pascal void sndmgr_double_cb(SndChannelPtr chan,
 	SndDoubleBufferPtr newbuf)
 {
+	/* XXX The "screamer" build of QEMU seems to be finicky with this,
+	 * and it leaves the buffer in a weird broken state. Not sure why,
+	 * probably buggy emulation? */
 	schism_audio_device_t *dev;
 
 	dev = (schism_audio_device_t *)newbuf->dbUserInfo[0];

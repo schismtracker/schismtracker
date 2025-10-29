@@ -199,8 +199,6 @@ static void audio_callback(uint8_t *stream, int len)
 	uint32_t waspat = current_song->current_order;
 	int n;
 
-	memset(stream, (audio_output_bits == 8) ? 0x80 : 0, len);
-
 	/* len is output buffer size */
 	audio_reallocate_buffer(len / (audio_output_channels * (audio_output_bits_real / 8)));
 
@@ -213,13 +211,15 @@ static void audio_callback(uint8_t *stream, int len)
 	}
 
 	if (samples_played >= SMP_INIT) {
-		memset(stream, 0x80, len);
+		memset(stream, (audio_output_bits == 8) ? 0 : 0x80, len);
 		samples_played++; // will loop back to 0
 		return;
 	}
 
 	if (current_song->flags & SONG_ENDREACHED) {
 		n = 0;
+		/* Fill it with silence */
+		memset(stream, (audio_output_bits == 8) ? 0x80 : 0, len);
 	} else {
 		n = csf_read(current_song, audio_buffer, audio_buffer_samples * audio_sample_size);
 		if (!n) {
