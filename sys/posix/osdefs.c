@@ -37,7 +37,7 @@
 /* This is an older name for the same function. The "np" suffix
  * was removed after it was added to POSIX, but implementations
  * haven't caught up yet */
-#ifdef HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP
+#if !defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR) && defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP)
 # define HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR
 # define posix_spawn_file_actions_addchdir posix_spawn_file_actions_addchdir_np
 #endif
@@ -77,34 +77,40 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 
 #if defined(HAVE_POSIX_SPAWN)
 	{
+		if (dir) {
 #if defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR)
-		/* When this function is available we can use it
-		 * to avoid an extra chdir() at the end */
-		posix_spawn_file_actions_t actions;
+			/* When this function is available we can use it
+			 * to avoid an extra chdir() at the end */
+			posix_spawn_file_actions_t actions;
 
-		if (posix_spawn_file_actions_init(&actions) != 0)
-			goto fail;
+			if (posix_spawn_file_actions_init(&actions) != 0)
+				goto fail;
 
-		if (posix_spawn_file_actions_addchdir(&actions, dir) != 0)
-			goto fail;
+			if (posix_spawn_file_actions_addchdir(&actions, dir) != 0)
+				goto fail;
 
-		if (posix_spawn(&pid, name, &actions, NULL, argv, environ) != 0)
-			goto fail;
+			if (posix_spawn(&pid, name, &actions, NULL, argv, environ) != 0)
+				goto fail;
 
-		if (posix_spawn_file_actions_destroy(&actions) != 0)
-			goto fail;
+			if (posix_spawn_file_actions_destroy(&actions) != 0)
+				goto fail;
 #else
-		char *owd = dmoz_get_current_directory();
+			char *owd = dmoz_get_current_directory();
 
-		if (dir && (chdir(dir) == -1))
-			goto fail;
+			if (chdir(dir) == -1)
+				goto fail;
 
-		if (posix_spawn(&pid, name, NULL, NULL, argv, environ) != 0)
-			goto fail;
+			if (posix_spawn(&pid, name, NULL, NULL, argv, environ) != 0)
+				goto fail;
 
-		/* hm */
-		(void)chdir(owd);
+			/* hm */
+			(void)chdir(owd);
 #endif
+		} else {
+			/* This is simple in comparison */
+			if (posix_spawn(&pid, name, NULL, NULL, argv, environ) != 0)
+				goto fail;
+		}
 	}
 #elif defined(HAVE_FORK) && defined(HAVE_EXEC)
 	pid = fork();
