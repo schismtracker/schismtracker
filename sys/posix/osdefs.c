@@ -62,13 +62,13 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 
 		va_start(ap, name);
 
-		argv[0] = str_dup(name);
+		argv[0] = name;
 		for (i = 1; i < (ARRAY_SIZE(argv) - 1); i++) {
-			const char *arg = va_arg(ap, const char *);
+			char *arg = va_arg(ap, const char *);
 			if (!arg)
 				break;
 
-			argv[i] = str_dup(arg);
+			argv[i] = arg;
 		}
 		argv[i] = NULL;
 
@@ -182,10 +182,6 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 #endif
 
 fail: /* do NOT jump here in the child process in case of fork() */
-	/* clean up the mess we've made */
-	for (i = 0; argv[i]; i++)
-		free(argv[i]);
-
 	return r;
 }
 
