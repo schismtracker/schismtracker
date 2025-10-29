@@ -1003,8 +1003,19 @@ typedef void GLvoid;
 
 #define SCHISM_NVIDIA_PIXELDATARANGE 1
 
+/* Use pixel-buffer-objects to asynchronously transfer
+ * to the GPU. This is in essence a more modern take on
+ * the NVidia pixel-data-range extension. */
+#define SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT 1
+
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 # define GL_WRITE_PIXEL_DATA_RANGE_NV      0x8878
+#endif
+
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+# define GL_PIXEL_UNPACK_BUFFER 0x88EC
+#define GL_WRITE_ONLY                     0x88B9
+#define GL_STREAM_DRAW                    0x88E0
 #endif
 
 #define VIDEO_GL_PITCH (NATIVE_SCREEN_WIDTH * 4) /* bruh */
@@ -1048,6 +1059,14 @@ struct video_opengl_funcs {
 
 	void (APIENTRY *glPixelDataRangeNV)(GLenum, GLsizei, GLvoid *);
 	/* void (APIENTRY *glFlushPixelDataRangeNV)(GLenum); */
+#endif
+
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+	void (APIENTRY *glGenBuffers)(GLsizei n, GLuint *buffers);
+	void (APIENTRY *glBindBuffer)(GLenum target, GLuint buffer);
+	void (APIENTRY *glBufferData)(GLenum,GLsizeiptr,const void *,GLenum);
+	void *(APIENTRY *glMapBuffer)(GLenum,GLenum);
+	GLboolean (APIENTRY *glUnmapBuffer)(GLenum);
 #endif
 };
 
@@ -1105,6 +1124,14 @@ static int video_opengl_reload_funcs(struct video_opengl_funcs *f,
 	Z(wglFreeMemoryNV);
 #endif
 
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+	Z(glGenBuffers);
+	Z(glBindBuffer);
+	Z(glBufferData);
+	Z(glMapBuffer);
+	Z(glUnmapBuffer);
+#endif
+
 #undef Z
 
 	return 0;
@@ -1130,7 +1157,12 @@ static struct {
 	GLint max_texture_size;
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
-	int pixel_data_range;
+	unsigned int pixel_data_range : 1;
+#endif
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+	GLuint pbo;
+
+	unsigned int pixel_buffer_object : 1;
 #endif
 } video_gl = {0};
 
@@ -1287,11 +1319,37 @@ do { \
 	}
 #endif
 
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+	/* ARB and EXT are functionally equivalent */
+	if (video_gl.extension_supported("GL_ARB_pixel_buffer_object")
+			|| video_gl.extension_supported("GL_EXT_pixel_buffer_object")) {
+		video_gl.pixel_buffer_object = (video_gl.f.glGenBuffers
+			&& video_gl.f.glBindBuffer
+			&& video_gl.f.glBufferData
+			&& video_gl.f.glMapBuffer
+			&& video_gl.f.glUnmapBuffer);
+	}
+#endif
+
 	GL_ASSERT(video_gl.f.glViewport(x, y, w, h));
 
 	texsize = INT32_C(2) << int32_log2(NATIVE_SCREEN_WIDTH);
 
-	if (!video_gl.framebuffer) {
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+	if (video_gl.pixel_buffer_object) {
+		/* ehhhhhh... */
+		video_gl.f.glGenBuffers(1, &video_gl.pbo);
+		if (video_gl.f.glGetError()) video_gl.pixel_buffer_object = 0;
+		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, video_gl.pbo);
+		if (video_gl.f.glGetError()) video_gl.pixel_buffer_object = 0;
+		video_gl.f.glBufferData(GL_PIXEL_UNPACK_BUFFER, NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4, NULL, GL_STREAM_DRAW);
+		if (video_gl.f.glGetError()) video_gl.pixel_buffer_object = 0;
+		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+		if (video_gl.f.glGetError()) video_gl.pixel_buffer_object = 0;
+	}
+#endif
+
+	if (!video_gl.pixel_buffer_object && !video_gl.framebuffer) {
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 		if (video_gl.pixel_data_range) {
 			video_gl.framebuffer = video_gl.f.wglAllocateMemoryNV(
@@ -1370,18 +1428,45 @@ do { \
 
 SCHISM_HOT void video_opengl_blit(void)
 {
-	if (!video_gl.init || !video_gl.framebuffer)
+	if (!video_gl.init)
 		return;
 
-	/* we should probably be using RGBA and not BGRA */
-	video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video.tc_bgr32);
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+	if (video_gl.pixel_buffer_object) {
+		void *fb;
 
-	video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
-	video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-		NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-		GL_BGRA_EXT,
-		GL_UNSIGNED_INT_8_8_8_8_REV,
-		video_gl.framebuffer);
+		/* Bind the buffer -- important! */
+		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, video_gl.pbo);
+
+		fb = video_gl.f.glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		video_blit11(4, fb, VIDEO_GL_PITCH, video.tc_bgr32);
+		video_gl.f.glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+		video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
+		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
+			GL_BGRA_EXT,
+			GL_UNSIGNED_INT_8_8_8_8_REV, 0);
+
+		/* Unbind -- equally as important */
+		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	} else
+#endif
+	{
+		if (!video_gl.framebuffer)
+			return;
+
+		/* we should probably be using RGBA and not BGRA */
+		video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video.tc_bgr32);
+
+		video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
+		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
+			GL_BGRA_EXT,
+			GL_UNSIGNED_INT_8_8_8_8_REV,
+			video_gl.framebuffer);
+	}
+
 	video_gl.f.glCallList(video_gl.displaylist);
 
 	/* flip */
@@ -1420,5 +1505,9 @@ void video_opengl_report(int hw, int accel)
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	if (video_gl.pixel_data_range)
 		log_append(5,0, " NVidia pixel range extensions available");
+#endif
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+	if (video_gl.pixel_buffer_object)
+		log_append(5,0, " Pixel buffer object extensions available");
 #endif
 }
