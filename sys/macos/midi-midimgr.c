@@ -26,7 +26,12 @@
  * Though the API seems a bit eerily similar to this!
  *
  * TODO: MIDI Manager actually DOES have support for scheduled MIDI
- * sending, but it requires a bit more care than what I've hacked up. */
+ * sending, but it requires a bit more care than what I've hacked up.
+ *
+ * Also this code is pretty much entirely untested for now...
+ * I need to figure out how to get MIDI Manager and OMS to talk
+ * to each other so I can properly get MIDI In/Out from one of
+ * my keyboards. :') */
 
 #include "headers.h"
 #include "mem.h"
@@ -44,6 +49,34 @@
 #define SCHISM_MIDIMGR_INPUT_PORT_NAME "MIDI In"
 #define SCHISM_MIDIMGR_OUTPUT_PORT_NAME "MIDI Out"
 #define SCHISM_MIDIMGR_PORT_BUFFER_SIZE (1024)     /* ehhhh */
+
+/* Enable debug prints.
+ * This should probably be enabled always considering how
+ * relatily untested everything still is.
+ *
+ * TODO maybe we could have a toggle-option in the log to show
+ * "debug" info? Our log still kinds of sucks lol */
+#define SCHISM_MIDIMGR_DEBUG 1
+
+#ifdef SCHISM_MIDIMGR_DEBUG
+static void midimgr_logf(const char *fmt, ...)
+{
+	va_list ap;
+	char *s;
+	int r;
+
+	va_start(ap, fmt);
+	r = vasprintf(&s, fmt, ap);
+	va_end(ap);
+
+	if (r < 0)
+		return;
+
+	log_appendf(1, "[MIDImgr]: %s", s);
+
+	free(s);
+}
+#endif
 
 struct midimgr_midi_provider {
 	short refnum_in;
@@ -117,7 +150,7 @@ static void _midimgr_send(struct midi_port *p, const unsigned char *data,
 
 		MIDIWritePacket(q->refnum_out, &pkt);
 	} else {
-		pkt.flags = 0;
+		pkt.flags = 0x80;
 		pkt.len = len;
 		memcpy(pkt.data, data, len);
 
@@ -251,8 +284,12 @@ static void _midimgr_poll(struct midi_provider *q)
 
 	/* Get all clients */
 	clientlisthdl = MIDIGetClients();
-	if (!clientlisthdl)
+	if (!clientlisthdl) {
+#ifdef SCHISM_MIDIMGR_DEBUG
+		midimgr_logf("Failed to receive MIDI clients");
+#endif
 		return; /* What? */
+	}
 
 	/* do this before we lock */
 	midi_provider_mark_ports(q);
@@ -270,8 +307,12 @@ static void _midimgr_poll(struct midi_provider *q)
 			continue;
 
 		portlisthdl = MIDIGetPorts(clientID);
-		if (!portlisthdl)
+		if (!portlisthdl) {
+#ifdef SCHISM_MIDIMGR_DEBUG
+			midimgr_logf("Failed to receive MIDI ports for client 0x%" PRIx32, clientID);
+#endif
 			continue; /* Client was removed in between the call? */
+		}
 
 		HLock((Handle)portlisthdl);
 
@@ -297,7 +338,11 @@ midiMorePacket = 1;
 midiNoMorePacket = 2; */
 static pascal short _midimgr_read_hook(MIDIPacketPtr pkt, uint32_t refCon)
 {
-	/* This is a stub for now... */
+	/* Just a stub for now to make sure I've handled all of the
+	 * universal procedure pointer things correctly. */
+#ifdef SCHISM_MIDIMGR_DEBUG
+	midimgr_logf("Received MIDI packet of length %u\n", pkt.len);
+#endif
 	return 2;
 }
 
@@ -342,6 +387,9 @@ int midimgr_midi_setup(void)
 	err = MIDISignIn(SCHISM_MIDIMGR_CLIENT_ID, 0, NULL, pstr);
 
 	if (err != noErr) {
+#ifdef SCHISM_MIDIMGR_DEBUG
+		midimgr_logf("Failed to sign in with error %d", (int)err);
+#endif
 		free(prov);
 		return 0;
 	}
@@ -366,6 +414,9 @@ int midimgr_midi_setup(void)
 	err = MIDIAddPort(SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_PORT_BUFFER_SIZE,
 		&prov->refnum_in, &params);
 	if (err != noErr) {
+#ifdef SCHISM_MIDIMGR_DEBUG
+		midimgr_logf("Failed to add input port with error %d", (int)err);
+#endif
 		free(prov);
 		return 0;
 	}
@@ -385,6 +436,9 @@ int midimgr_midi_setup(void)
 	err = MIDIAddPort(SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_PORT_BUFFER_SIZE,
 		&prov->refnum_out, &params);
 	if (err != noErr) {
+#ifdef SCHISM_MIDIMGR_DEBUG
+		midimgr_logf("Failed to add output port with error %d", (int)err);
+#endif
 		free(prov);
 		return 0;
 	}
