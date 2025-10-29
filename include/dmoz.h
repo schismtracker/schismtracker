@@ -195,6 +195,8 @@ const char *dmoz_path_get_extension(const char *filename);
 char *dmoz_path_get_parent_directory(const char *dirname);
 int dmoz_path_make_backup(const char *filename, int numbered);
 int dmoz_path_rename(const char *old, const char *new, int overwrite);
+/* deletes/unlinks a file */
+int dmoz_path_remove(const char *path);
 int dmoz_path_mkdir_recursive(const char *path, int mode);
 int dmoz_path_is_file(const char *filename);
 int dmoz_path_is_directory(const char *filename);

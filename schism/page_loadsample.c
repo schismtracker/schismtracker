@@ -632,7 +632,7 @@ static void do_delete_file(SCHISM_UNUSED void *data)
 	ptr = flist.files[current_file]->path;
 
 	/* would be neat to send it to the trash can if there is one */
-	remove(ptr);
+	dmoz_path_remove(ptr);
 
 	/* remember the list positions */
 	old_top_file = top_file;

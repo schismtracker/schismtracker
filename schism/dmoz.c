@@ -696,14 +696,7 @@ end:
 
 	return ret;
 #elif defined(SCHISM_MACOS)
-	// This is stupid, but it's what MacPerl does, so I guess
-	// this is probbaly the only way we can pull this off
-	// sanely.
-	//
-	// Note: there is in fact a HFS function to do exactly this
-	// (namely PBHMoveRename) but unfortunately I think it only
-	// actually works on network shares which is completely
-	// useless for us.
+	/* This is asinine */
 	OSErr err = noErr;
 	unsigned char pold[256], pnew[256];
 
@@ -781,21 +774,37 @@ end:
 	}
 
 	return 0;
-#else
-# ifdef SCHISM_OS2
-	// XXX maybe this should be the regular implementation too?
-	if (!overwrite && (access(new, F_OK) == -1)) {
+#elif defined(SCHISM_OS2)
+	char *old_w = charset_iconv_easy(old, CHARSET_UTF8, CHARSET_DOSCP);
+	char *new_w = charset_iconv_easy(new, CHARSET_UTF8, CHARSET_DOSCP);
+	FILESTATUS3 fs;
+	int r;
+
+	if (!overwrite && (DosQueryPathInfo(new_w, FIL_STANDARD, &fs, sizeof(fs)) != 0)) {
 		errno = EEXIST;
-		return -1;
+		r = -1;
+	} else {
+		if (overwrite) {
+			/* probably redundant? */
+			DosDelete(new_w, 0);
+		}
+
+		r = (DosMove(old_w, new_w) != 0) ? -1 : 0;
 	}
-# else
+
+	free(old_w);
+	free(new_w);
+
+	return r;
+#else
+	/* "assume" POSIX, but it *could* not be POSIX... */
 	if (!overwrite) {
 		if (link(old, new) == -1)
 			return -1;
 
 		/* This can occur when people are using a system with
 		 * broken link() semantics, or if the user can create files
-		 * that he cannot remove. these systems are decidedly not POSIX.1
+		 * that they cannot remove. these systems are decidedly not POSIX.1
 		 * but they may try to compile schism, and we won't know they
 		 * are broken unless we warn them.
 		*/
@@ -803,9 +812,7 @@ end:
 			fprintf(stderr, "link() succeeded, but unlink() failed. something is very wrong\n");
 
 		return 0;
-	} else
-# endif
-	{
+	} else {
 		int r = rename(old, new);
 
 		/* Broken rename()? Try smashing the old file first,
@@ -815,6 +822,63 @@ end:
 
 		return r;
 	}
+#endif
+}
+
+/* Delete/unlink a file.
+ * On most systems this is just a stub that calls remove().
+ * On many ancient systems we have to specifically convert the
+ * path from the internal UTF-8 representation. Ugh. */
+int dmoz_path_remove(const char *path)
+{
+#ifdef SCHISM_WIN32
+	BOOL b;
+
+	SCHISM_ANSI_UNICODE({
+		LPSTR npath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI);
+		b = DeleteFileA(npath);
+		free(npath);
+	}, {
+		LPWSTR npath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T);
+		b = DeleteFileW(npath);
+		free(npath);
+	})
+
+	return (b ? 0 : -1);
+#elif defined(SCHISM_MACOS)
+	/* this stinks */
+	FSSpec spec;
+
+	{
+		char *npath = dmoz_path_normal(path);
+		path = charset_iconv_easy(npath, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
+		free(npath);
+	}
+
+	if (!dmoz_path_to_fsspec(path, &spec)) {
+		free(path);
+		return -1;
+	}
+
+	free(path);
+
+	if (FSpDelete(&spec) != noErr)
+		return -1;
+
+	return 0;
+#elif defined(SCHISM_OS2)
+	/* FAPI call */
+	PSZ s;
+	USHORT rc;
+
+	s = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_DOSCP);
+	rc = DosDelete(s, 0);
+	free(s);
+
+	return (rc == 0) ? 0 : -1;
+#else
+	/* unlink() is more sane here than remove() */
+	return unlink(path);
 #endif
 }
 
@@ -1818,7 +1882,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 /*	char *home;
 	home = get_home_directory();*/
 	dmoz_add_file_or_dir(flist, dlist, str_dup("/"), str_dup("/"), NULL, -1024);
-/*      dmoz_add_file_or_dir(flist, dlist, home, str_dup("~"), NULL, -5); */
+/*	dmoz_add_file_or_dir(flist, dlist, home, str_dup("~"), NULL, -5); */
 
 #endif /* platform */
 
@@ -1830,7 +1894,10 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* on success, this will fill the lists and return 0. if something goes
-wrong, it adds a 'stub' entry for the root directory, and returns -1. */
+wrong, it adds a 'stub' entry for the root directory, and returns -1.
+
+XXX this is in desperate need of a refactor. all of the OS-specific stuff should
+be in a separate function that abstracts everything away. */
 int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
 {

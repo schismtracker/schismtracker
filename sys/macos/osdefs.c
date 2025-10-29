@@ -437,7 +437,7 @@ static inline SCHISM_ALWAYS_INLINE void cleanup_output_file(FILE *fp, const char
 	 * want to delete anything possibly valuable, so no
 	 * deleting if it's over 0. */
 	if (!ft)
-		remove(name);
+		dmoz_path_remove(name);
 }
 
 /* Remove the output files if there was no output written */

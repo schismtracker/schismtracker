@@ -23,6 +23,7 @@
 
 #include "headers.h"
 #include "util.h"
+#include "dmoz.h" /* dmoz_path_remove */
 
 #include "test-tempfile.h"
 
@@ -75,9 +76,7 @@ FILE *test_temp_file2(char temp_file[TEST_TEMP_FILE_NAME_LENGTH], const char *te
 		return f;
 	} else {
 		fclose(f);
-		// TODO still need to make an os_remove, or a
-		// dmoz_path_remove, or whatever
-		remove(temp_file);
+		dmoz_path_remove(temp_file);
 		return NULL;
 	}
 }
@@ -110,13 +109,12 @@ void test_temp_files_cleanup(void)
 
 			temp_file[TEST_TEMP_FILE_NAME_LENGTH - 1] = 0;
 
-			/* portability: `unlink` -> `remove` */
-			remove(temp_file);
+			dmoz_path_remove(temp_file);
 		}
 
 		/* close, then remove */
 		fclose(log);
 
-		remove(TEST_LIST_FILENAME);
+		dmoz_path_remove(TEST_LIST_FILENAME);
 	}
 }
