@@ -28,14 +28,22 @@
 
 #include <SDL.h>
 
+#ifdef SCHISM_WIN32
+/* dsfsdheswuifhewiurwqyhirudehsafuisefghsiyuv */
+# define putenv _putenv
+#endif
+
 static int (SDLCALL *sdl12_Init)(Uint32 flags);
 static void (SDLCALL *sdl12_Quit)(void);
 static char *(SDLCALL *sdl12_GetError)(void);
 
 static int (SDLCALL *sdl12_putenv_)(const char *penv);
 
-/* I guess gcc 2.96 is probably early enough */
-#if !defined(SDL12_DYNAMIC_LOAD) && SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 2, 96, 0)
+/* FIXME is there a #define for ELF platforms?? */
+#if !defined(SDL12_DYNAMIC_LOAD) \
+	&& SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 2, 96, 0) \
+	&& !defined(SCHISM_WIN32) \
+	&& !defined(SCHISM_MACOS)
 # define SDL12_WEAK_LINK
 #endif
 
