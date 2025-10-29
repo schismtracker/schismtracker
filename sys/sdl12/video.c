@@ -261,7 +261,7 @@ static int sdl12_opengl_setup_callback(void);
 static int sdl12_video_startup(void)
 {
 	SDL_Rect **modes;
-	int i, x = -1, y = -1;
+	int32_t i, x = -1, y = -1;
 	const SDL_VideoInfo* info;
 
 	/* center the window on startup by default.
@@ -395,6 +395,8 @@ static int sdl12_video_startup(void)
 	}
 
 	/* log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
+	video.desktop.width = x;
+	video.desktop.height = y;
 
 	/* this call builds the surface */
 	video_fullscreen(video.desktop.fullscreen);
@@ -528,7 +530,7 @@ static void sdl_pal_(unsigned int i, unsigned char rgb[3])
 static void sdl12_video_colors(unsigned char palette[16][3])
 {
 	if (video.surface->format->BytesPerPixel == 1) {
-		/* yay! */
+		/* ;) */
 		video_colors_iterate(palette, sdl8bit_pal_);
 
 		sdl12_SetColors(video.surface, video.imap, 0, 256);
@@ -691,10 +693,14 @@ static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 #endif
 
 #ifdef SCHISM_WIN32
-	if (!cache_size && (video.type == VIDEO_OPENGL)) {
-		/* stupid hack, menu bar behavior when opengl is used
-		 * is the OPPOSITE of when regular surfaces are used */
-		int a, b, h;
+	/* weird magic that makes menu bars work right when
+	 * using OpenGL. Tested this with messing around
+	 * a lot between fullscreen and menu bar and
+	 * it seems to work right */
+	if (!(video.surface->flags & SDL_FULLSCREEN)
+			&& !cache_size
+			&& (video.type == VIDEO_OPENGL)) {
+		int h;
 		RECT w, c;
 
 		GetWindowRect(wm_info.window, &w);
