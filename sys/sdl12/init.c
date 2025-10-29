@@ -39,11 +39,12 @@ static char *(SDLCALL *sdl12_GetError)(void);
 
 static int (SDLCALL *sdl12_putenv_)(const char *penv);
 
-/* FIXME is there a #define for ELF platforms?? */
+/* FIXME do autoconf test for this -- this is flaky */
 #if !defined(SDL12_DYNAMIC_LOAD) \
 	&& SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 2, 96, 0) \
 	&& !defined(SCHISM_WIN32) \
-	&& !defined(SCHISM_MACOS)
+	&& !defined(SCHISM_MACOS) \
+	&& !defined(SCHISM_MACOSX)
 # define SDL12_WEAK_LINK
 #endif
 
