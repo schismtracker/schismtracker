@@ -62,7 +62,7 @@ static bool (SDLCALL *sdl3_SetWindowSize)(SDL_Window * window, int w, int h);
 static float (SDLCALL *sdl3_GetWindowDisplayScale)(SDL_Window * window);
 static bool (SDLCALL *sdl3_SetWindowFullscreen)(SDL_Window * window, bool fullscreen);
 static bool (SDLCALL *sdl3_GetWindowPosition)(SDL_Window * window, int *x, int *y);
-static SDL_Window * (SDLCALL *sdl3_CreateWindow)(const char *title, int w, int h, SDL_WindowFlags flags);
+static SDL_Window * (SDLCALL *sdl3_CreateWindowWithProperties)(SDL_PropertiesID);
 static SDL_Renderer * (SDLCALL *sdl3_CreateRenderer)(SDL_Window *window, const char *name);
 static SDL_Texture * (SDLCALL *sdl3_CreateTexture)(SDL_Renderer * renderer, SDL_PixelFormat format, SDL_TextureAccess access, int w, int h);
 static const SDL_PixelFormatDetails * (SDLCALL *sdl3_GetPixelFormatDetails)(Uint32 pixel_format);
@@ -123,6 +123,13 @@ static int sdl3_video_get_wm_data(video_wm_data_t *wm_data);
 
 static SDL_Surface *(SDLCALL *sdl3_CreateSurfaceFrom)(int width, int height, SDL_PixelFormat format, void *pixels, int pitch);
 static SDL_PixelFormat (SDLCALL *sdl3_GetPixelFormatForMasks)(int bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
+
+static bool (SDLCALL *sdl3_SetStringProperty)(SDL_PropertiesID props, const char *name, const char *value);
+static bool (SDLCALL *sdl3_SetBooleanProperty)(SDL_PropertiesID props, const char *name, bool value);
+static bool (SDLCALL *sdl3_SetNumberProperty)(SDL_PropertiesID props, const char *name, Sint64 value);
+
+static SDL_PropertiesID (SDLCALL *sdl3_CreateProperties)(void);
+static void (SDLCALL *sdl3_DestroyProperties)(SDL_PropertiesID props);
 
 static void sdl3_video_setup(int quality);
 
@@ -471,6 +478,12 @@ static void sdl3_video_setup(int interpolation)
 
 static int sdl3_video_startup(void)
 {
+	SDL_PropertiesID props;
+
+	props = sdl3_CreateProperties();
+	if (!props)
+		return 0; /* Give up */
+
 	vgamem_clear();
 	vgamem_flip();
 
@@ -483,9 +496,22 @@ static int sdl3_video_startup(void)
 
 	video.scale = 1.0;
 
-	video.window = sdl3_CreateWindow(WINDOW_TITLE, video.width, video.height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+	/* Ugh ugh ugh ugh ugh this API is stupid */
+	sdl3_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, WINDOW_TITLE);
+	sdl3_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+	sdl3_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
+	sdl3_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, video.width);
+	sdl3_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, video.height);
+	sdl3_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
+	sdl3_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
+
+	video.window = sdl3_CreateWindowWithProperties(props);
 	if (!video.window)
 		return 0;
+
+	sdl3_DestroyProperties(props);
+
+	sdl3_SetWindowPosition(video.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
 	/* on Windows, the display scale is immediately available. */
 	sdl3_display_scale_changed_cb();
@@ -910,7 +936,7 @@ static int sdl3_video_load_syms(void)
 	SCHISM_SDL3_SYM(SetWindowSize);
 	SCHISM_SDL3_SYM(SetWindowFullscreen);
 	SCHISM_SDL3_SYM(GetWindowPosition);
-	SCHISM_SDL3_SYM(CreateWindow);
+	SCHISM_SDL3_SYM(CreateWindowWithProperties);
 	SCHISM_SDL3_SYM(CreateRenderer);
 	SCHISM_SDL3_SYM(CreateTexture);
 	SCHISM_SDL3_SYM(GetPixelFormatDetails);
@@ -963,6 +989,12 @@ static int sdl3_video_load_syms(void)
 	SCHISM_SDL3_SYM(GetWindowDisplayScale);
 
 	SCHISM_SDL3_SYM(TextInputActive);
+
+	SCHISM_SDL3_SYM(SetNumberProperty);
+	SCHISM_SDL3_SYM(SetStringProperty);
+	SCHISM_SDL3_SYM(SetBooleanProperty);
+	SCHISM_SDL3_SYM(CreateProperties);
+	SCHISM_SDL3_SYM(DestroyProperties);
 
 	return 0;
 }
