@@ -36,6 +36,7 @@
 #include "headers.h"
 #include "mem.h"
 #include "str.h"
+#include "log.h"
 
 #include "midi.h" /* schism midi header */
 
@@ -341,7 +342,7 @@ static pascal short _midimgr_read_hook(MIDIPacketPtr pkt, uint32_t refCon)
 	/* Just a stub for now to make sure I've handled all of the
 	 * universal procedure pointer things correctly. */
 #ifdef SCHISM_MIDIMGR_DEBUG
-	midimgr_logf("Received MIDI packet of length %u\n", pkt.len);
+	midimgr_logf("Received MIDI packet of length %u\n", pkt->len);
 #endif
 	return 2;
 }
