@@ -44,8 +44,6 @@ static void (SDLCALL *sdl12_PauseAudio)(int);
 
 static char *(SDLCALL *sdl12_AudioDriverName)(char *buf, int maxlen);
 
-static int (SDLCALL *sdl12_putenv)(const char *var);
-
 /* ---------------------------------------------------------- */
 /* drivers */
 
@@ -299,8 +297,6 @@ static int sdl12_audio_load_syms(void)
 	SCHISM_SDL12_SYM(PauseAudio);
 
 	SCHISM_SDL12_SYM(AudioDriverName);
-
-	SCHISM_SDL12_SYM(putenv);
 
 	return 0;
 }

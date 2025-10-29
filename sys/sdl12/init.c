@@ -32,6 +32,19 @@ static int (SDLCALL *sdl12_Init)(Uint32 flags);
 static void (SDLCALL *sdl12_Quit)(void);
 static char *(SDLCALL *sdl12_GetError)(void);
 
+static int (SDLCALL *sdl12_putenv_)(const char *penv);
+
+/* I guess gcc 2.96 is probably early enough */
+#if !defined(SDL12_DYNAMIC_LOAD) && SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 2, 96, 0)
+# define SDL12_WEAK_LINK
+#endif
+
+#ifdef SDL12_WEAK_LINK
+/* unholy hack */
+# undef SDL_putenv
+__attribute__((__weak__)) extern int SDL_putenv(const char *penv);
+#endif
+
 static int load_sdl12_syms(void);
 
 #ifdef SDL12_DYNAMIC_LOAD
@@ -93,11 +106,26 @@ static int sdl12_dlinit(void)
 
 #endif
 
+/* Terrible terrible damage */
+static int load_sdl12_putenv(void)
+{
+#if defined(SDL12_DYNAMIC_LOAD)
+	sdl12_load_sym("SDL_putenv", &sdl12_putenv_);
+#elif defined(SDL12_WEAK_LINK)
+	/* ehhhh */
+	sdl12_putenv_ = SDL_putenv;
+#endif
+
+	return 0;
+}
+
 static int load_sdl12_syms(void)
 {
 	SCHISM_SDL12_SYM(Init);
 	SCHISM_SDL12_SYM(Quit);
 	SCHISM_SDL12_SYM(GetError);
+
+	load_sdl12_putenv();
 
 	return 0;
 }
@@ -143,4 +171,18 @@ const char *sdl12_get_error(void)
 		return sdl12_GetError();
 
 	return "";
+}
+
+/* fugly underscore */
+int sdl12_putenv(const char *penv)
+{
+	if (sdl12_putenv_)
+		return sdl12_putenv_(penv);
+
+#ifdef HAVE_PUTENV
+	/* damn ugly cast */
+	return putenv((char *)penv);
+#else
+	return -1;
+#endif
 }

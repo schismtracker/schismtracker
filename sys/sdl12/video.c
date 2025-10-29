@@ -149,7 +149,6 @@ static int (SDLCALL *sdl12_GetWMInfo)(SDL_SysWMinfo *);
 #ifdef SCHISM_MACOS
 static void (SDLCALL *sdl12_InitQuickDraw)(struct QDGlobals *the_qd);
 #endif
-static int (SDLCALL *sdl12_putenv)(const char *var);
 
 static const char *sdl12_video_driver_name(void)
 {
@@ -860,8 +859,6 @@ static int sdl12_video_load_syms(void)
 	SCHISM_SDL12_SYM(GL_SetAttribute);
 	SCHISM_SDL12_SYM(GL_GetProcAddress);
 	SCHISM_SDL12_SYM(GL_SwapBuffers);
-
-	SCHISM_SDL12_SYM(putenv);
 
 	return 0;
 }

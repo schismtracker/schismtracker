@@ -34,6 +34,8 @@ void sdl12_quit(void);
 // eh?
 const char *sdl12_get_error(void);
 
+int sdl12_putenv(const char *penv);
+
 #ifdef SDL12_DYNAMIC_LOAD
 
 // must be called AFTER sdl12_init()
