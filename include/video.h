@@ -242,7 +242,7 @@ void video_opengl_blit(void);
 void video_opengl_quit(void);
 
 /* reports info to the log */
-void video_opengl_report(int hw, int accel);
+void video_opengl_report(void);
 
 void video_opengl_reset_interpolation(void);
 

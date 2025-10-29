@@ -1497,11 +1497,9 @@ void video_opengl_quit(void)
 	memset(&video_gl, 0, sizeof(video_gl));
 }
 
-void video_opengl_report(int hw, int accel)
+void video_opengl_report(void)
 {
-	log_appendf(5, " %s%s OpenGL interface",
-		(hw) ? "Hardware" : "Software",
-		(accel) ? " accelerated" : "");
+	log_appendf(5, " OpenGL interface");
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	if (video_gl.pixel_data_range)
 		log_append(5,0, " NVidia pixel range extensions available");

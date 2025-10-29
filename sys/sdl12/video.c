@@ -166,8 +166,7 @@ static void sdl12_video_report(void)
 
 	switch (video.type) {
 	case VIDEO_OPENGL:
-		video_opengl_report(video.surface->flags & SDL_HWSURFACE,
-			video.surface->flags & SDL_HWACCEL);
+		video_opengl_report();
 		break;
 	case VIDEO_SURFACE:
 		log_appendf(5, " %s%s video surface",
