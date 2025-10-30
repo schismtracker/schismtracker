@@ -786,7 +786,7 @@ end:
 	} else {
 		if (overwrite) {
 			/* probably redundant? */
-			DosDelete(new_w, 0);
+			DosDelete(new_w);
 		}
 
 		r = (DosMove(old_w, new_w) != 0) ? -1 : 0;
@@ -831,7 +831,7 @@ end:
  * path from the internal UTF-8 representation. Ugh. */
 int dmoz_path_remove(const char *path)
 {
-#ifdef SCHISM_WIN32
+#if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 	BOOL b;
 
 	SCHISM_ANSI_UNICODE({
@@ -872,7 +872,7 @@ int dmoz_path_remove(const char *path)
 	USHORT rc;
 
 	s = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_DOSCP);
-	rc = DosDelete(s, 0);
+	rc = DosDelete(s);
 	free(s);
 
 	return (rc == 0) ? 0 : -1;
@@ -1892,161 +1892,241 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
+/* dmoz_read */
 
-/* on success, this will fill the lists and return 0. if something goes
-wrong, it adds a 'stub' entry for the root directory, and returns -1.
-
-XXX this is in desperate need of a refactor. all of the OS-specific stuff should
-be in a separate function that abstracts everything away. */
-int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
-		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
-{
 #if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
+typedef struct dmoz_DIR_ dmoz_DIR;
+typedef struct dmoz_dirent_ dmoz_dirent;
+
+struct dmoz_dirent_ {
+	char *d_name;
+};
+
+struct dmoz_DIR_ {
+	HANDLE find;
+
+	/* CHAR * on ANSI and WCHAR * on UNICODE */
+	void *searchpath_v;
+
+	/* Error flag; can't do anything after this */
+	unsigned int dead : 1;
+
+	dmoz_dirent ent;
+};
+
+static dmoz_DIR *dmoz_opendir(const char *path)
+{
+	dmoz_DIR *dir;
 	DWORD attrib;
+	void *path_v;
 
 	SCHISM_ANSI_UNICODE({
-		char* path_a = NULL;
-		if (charset_iconv(path, &path_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return -1;
+		if (charset_iconv(path, &path_v, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+			errno = ENOMEM;
+			return NULL;
+		}
 
-		attrib = GetFileAttributesA(path_a);
-
-		free(path_a);
+		attrib = GetFileAttributesA(path_v);
 	}, {
-		wchar_t* path_w = NULL;
-		if (charset_iconv(path, &path_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return -1;
+		if (charset_iconv(path, &path_v, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+			errno = ENOMEM;
+			return NULL;
+		}
 
-		attrib = GetFileAttributesW(path_w);
-
-		free(path_w);
+		attrib = GetFileAttributesW(path_v);
 	});
 
-	const size_t pathlen = strlen(path);
+	free(path_v);
 
-	if (attrib & FILE_ATTRIBUTE_DIRECTORY) {
-		union {
-# if defined(SCHISM_WIN32_COMPILE_ANSI) || defined(SCHISM_XBOX)
-			WIN32_FIND_DATAA a;
-# endif
-# ifdef SCHISM_WIN32
-			WIN32_FIND_DATAW w;
-# endif
-		} ffd;
+	if (!(attrib & FILE_ATTRIBUTE_DIRECTORY)) {
+		errno = ENOTDIR;
+		return NULL;
+	}
 
-		HANDLE find = NULL;
-		{
-			char* searchpath_n = dmoz_path_concat_len(path, "*", strlen(path), 1);
-			if (!searchpath_n)
-				return -1;
+	{
+		/* Sigh */
+		char *searchpath_n = dmoz_path_concat_len(path, "*", strlen(path), 1);
+		if (!searchpath_n)
+			return NULL;
 
-			SCHISM_ANSI_UNICODE({
-				char *searchpath;
-				if (!charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-					find = FindFirstFileA(searchpath, &ffd.a);
-					free(searchpath);
-				}
-			}, {
-				wchar_t* searchpath;
-				if (!charset_iconv(searchpath_n, &searchpath, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-					find = FindFirstFileW(searchpath, &ffd.w);
-					free(searchpath);
-				}
-			});
+		SCHISM_ANSI_UNICODE({
+			path_v = charset_iconv_easy(searchpath_n, CHARSET_UTF8, CHARSET_ANSI);
+		}, {
+			path_v = charset_iconv_easy(searchpath_n, CHARSET_UTF8, CHARSET_WCHAR_T);
+		});
 
-			free(searchpath_n);
-		}
+		free(searchpath_n);
+	}
 
-		// give up
-		if (find == INVALID_HANDLE_VALUE) {
-			add_platform_dirs(path, flist, dlist);
-			return -1;
-		}
+	if (!path_v)
+		return NULL;
 
-		/* do-while to process the first file... */
-		for (;;) {
-			DWORD file_attrib = 0;
-			char *filename = NULL;
-			char *fullpath = NULL;
+	dir = mem_calloc(1, sizeof(dmoz_DIR));
+	dir->find = INVALID_HANDLE_VALUE;
+	dir->searchpath_v = path_v;
 
-			SCHISM_ANSI_UNICODE({
-				// ANSI
-				if (FindNextFileA(find, &ffd.a)) {
-					file_attrib = ffd.a.dwFileAttributes;
-					if (charset_iconv(ffd.a.cFileName, &filename, CHARSET_ANSI, CHARSET_UTF8, sizeof(ffd.a.cFileName)))
-						continue;
-					fullpath = dmoz_path_concat_len(path, filename, pathlen, strlen(filename));
-				} else {
-					// ...
-					break;
-				}
-			}, {
-				if (FindNextFileW(find, &ffd.w)) {
-					file_attrib = ffd.w.dwFileAttributes;
-					if (charset_iconv(ffd.w.cFileName, &filename, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(ffd.w.cFileName)))
-						continue;
-					fullpath = dmoz_path_concat_len(path, filename, pathlen, strlen(filename));
-				} else {
-					break;
-				}
-			});
-			
-			if (!strcmp(filename, ".")
-				|| !strcmp(filename, "..")
-				|| filename[strlen(filename)-1] == '~'
-				|| file_attrib & FILE_ATTRIBUTE_HIDDEN) {
-				free(filename);
-				free(fullpath);
-				continue;
-			}
+	return dir;
+}
 
-			struct stat st;
-			if (os_stat(fullpath, &st) < 0) {
-				/* doesn't exist? */
-				log_perror(fullpath);
-				free(fullpath);
-				free(filename);
-				continue; /* better luck next time */
-			}
-	
-			st.st_mtime = MAX(0, st.st_mtime);
-	
-			if (file_attrib & FILE_ATTRIBUTE_DIRECTORY) {
-				dmoz_add_file_or_dir(flist, dlist, fullpath, filename, &st, 0);
-			} else if (file_attrib == INVALID_FILE_ATTRIBUTES) {
-				free(fullpath);
-				free(filename);
-			} else {
-				dmoz_add_file(flist, fullpath, filename, &st, 1);
-			}
-		}
-
-		FindClose(find);
-
-		add_platform_dirs(path, flist, dlist);
-	} else if (attrib == INVALID_FILE_ATTRIBUTES) {
-		add_platform_dirs(path, flist, dlist);
+static int dmoz_closedir(dmoz_DIR *dir)
+{
+	if (!dir)
 		return -1;
+
+	if (dir->find != INVALID_HANDLE_VALUE)
+		FindClose(dir->find);
+
+	/* hm */
+	free(dir->ent.d_name);
+	free(dir->searchpath_v);
+	free(dir);
+	return 0;
+}
+
+static dmoz_dirent *dmoz_readdir(dmoz_DIR *dir)
+{
+	union {
+#if defined(SCHISM_WIN32_COMPILE_ANSI) || defined(SCHISM_XBOX)
+		WIN32_FIND_DATAA a;
+#endif
+#ifdef SCHISM_WIN32
+		WIN32_FIND_DATAW w;
+#endif
+	} ffd;
+
+	if (!dir)
+		return NULL;
+
+	/* Free any existing name, and set it
+	 * to NULL to avoid double-free on closedir() */
+	free(dir->ent.d_name);
+	dir->ent.d_name = NULL;
+
+	if (dir->dead)
+		return NULL;
+
+	if (dir->find == INVALID_HANDLE_VALUE) {
+		/* We've started up */
+
+		SCHISM_ANSI_UNICODE({
+			dir->find = FindFirstFileA(dir->searchpath_v, &ffd.a);
+		}, {
+			dir->find = FindFirstFileW(dir->searchpath_v, &ffd.w);
+		})
+
+		free(dir->searchpath_v);
+		dir->searchpath_v = NULL;
+
+		if (dir->find == INVALID_HANDLE_VALUE) {
+			/* Uh oh */
+			dir->dead = 1;
+			return NULL;
+		}
+
+		/* Now we're on our way */
 	} else {
-		/* file? probably.
-		 * make sure when editing this code to keep it in sync
-		 * with the below code for non-Windows platforms */
-		if (load_library && !load_library(path, flist, dlist)) {
-			char* ptr = dmoz_path_get_parent_directory(path);
-			if (ptr)
-				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup("."), NULL, -10);
-			else
-				add_platform_dirs(path, flist, dlist);
+		BOOL b;
+
+		/* Process the next file */
+		SCHISM_ANSI_UNICODE({
+			do {
+				b = FindNextFileA(dir->find, &ffd.a);
+			} while (b && (ffd.a.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN));
+		}, {
+			do {
+				b = FindNextFileW(dir->find, &ffd.w);
+			} while (b && (ffd.w.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN));
+		})
+
+		if (!b) {
+			/* either end of directory or error. either way, die */
+			dir->dead = 1;
+			return NULL;
 		}
 	}
 
-	/* sort */
-	dmoz_sort(flist, dlist);
+	SCHISM_ANSI_UNICODE({
+		dir->ent.d_name = charset_iconv_easy(ffd.a.cFileName, CHARSET_ANSI, CHARSET_UTF8);
+	}, {
+		dir->ent.d_name = charset_iconv_easy(ffd.w.cFileName, CHARSET_WCHAR_T, CHARSET_UTF8);
+	})
+
+	return &dir->ent;
+}
+#elif defined(SCHISM_OS2)
+/* Need to convert file paths here to UTF-8 */
+typedef struct dmoz_dirent_ dmoz_dirent;
+typedef struct dmoz_DIR_ dmoz_DIR;
+
+struct dmoz_dirent_ {
+	char *d_name;
+};
+
+struct dmoz_DIR_ {
+	DIR *dirp;
+
+	struct dmoz_dirent_ ent;
+};
+
+static dmoz_DIR *dmoz_opendir(const char *path)
+{
+	DIR *dirp;
+	dmoz_DIR *dir;
+
+	dirp = opendir(path);
+	if (!dirp)
+		return NULL;
+
+	dir = mem_calloc(1, sizeof(*dir));
+
+	dir->dirp = dirp;
+
+	return dir;
+}
+
+static int dmoz_closedir(dmoz_DIR *dir)
+{
+	if (!dir) return -1;
+
+	closedir(dir->dirp);
+	free(dir->ent.d_name);
+	free(dir);
 
 	return 0;
+}
+
+static dmoz_dirent *dmoz_readdir(dmoz_DIR *dir)
+{
+	if (!dir) return NULL;
+
+	free(dir->ent.d_name);
+	dir->ent.d_name = NULL;
+
+	struct dirent *ent = readdir(dir->dirp);
+	if (!ent) return NULL;
+
+	dir->ent.d_name = charset_iconv_easy(ent->d_name, CHARSET_DOSCP, CHARSET_UTF8);
+	return &dir->ent;
+}
+/* TODO we can move the mac os 9 code up here too... */
 #else
-	DIR *dir;
-	struct dirent *ent;
+/* Assume we have opendir() and friends; if we don't, this code will
+ * just fail to compile, and the user will have to implement all of
+ * this separately. */
+typedef DIR dmoz_DIR;
+typedef struct dirent dmoz_dirent;
+# define dmoz_opendir opendir
+# define dmoz_closedir closedir
+# define dmoz_readdir readdir
+#endif
+
+/* on success, this will fill the lists and return 0. if something goes
+wrong, it adds a 'stub' entry for the root directory, and returns -1. */
+int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
+		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
+{
+	dmoz_DIR *dir;
+	dmoz_dirent *ent;
 	char *ptr;
 	struct stat st;
 	int pathlen, namlen, lib = 0, err = 0;
@@ -2068,31 +2148,22 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 		}
 	}
 #endif
-	dir = opendir(path);
+	dir = dmoz_opendir(path);
 	if (dir) {
-		while ((ent = readdir(dir)) != NULL) {
+		while ((ent = dmoz_readdir(dir)) != NULL) {
 			namlen = strlen(ent->d_name);
 			/* ignore hidden/backup files (TODO: make this code more portable;
 			some OSes have different ideas of whether a file is hidden) */
 
+			/* this also handles "." and ".." on Windows (why does it give those?
+			 * I don't know, windows is stupid) */
 			if (ent->d_name[0] == '.')
 				continue;
 
 			if (ent->d_name[namlen - 1] == '~')
 				continue;
 
-			{
-				char *utf8;
-#ifdef SCHISM_OS2
-				utf8 = charset_iconv_easy(ent->d_name, CHARSET_DOSCP, CHARSET_UTF8);
-#else
-				utf8 = ent->d_name;
-#endif
-				ptr = dmoz_path_concat_len(path, utf8, pathlen, namlen);
-#ifdef SCHISM_OS2
-				free(utf8);
-#endif
-			}
+			ptr = dmoz_path_concat_len(path, ent->d_name, pathlen, namlen);
 
 			if (os_stat(ptr, &st) < 0) {
 				/* doesn't exist? */
@@ -2100,7 +2171,10 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 				free(ptr);
 				continue; /* better luck next time */
 			}
+
+			/* why? */
 			if (st.st_mtime < 0) st.st_mtime = 0;
+
 			if (S_ISDIR(st.st_mode))
 				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(ent->d_name), &st, 0);
 			else if (S_ISREG(st.st_mode))
@@ -2108,7 +2182,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			else
 				free(ptr);
 		}
-		closedir(dir);
+		dmoz_closedir(dir);
 	} else if (errno == ENOTDIR) {
 		/* oops, it's a file! -- load it as a library */
 		if (load_library && load_library(path, flist, dlist) != 0)
@@ -2138,7 +2212,6 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	} else {
 		return 0;
 	}
-#endif
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
