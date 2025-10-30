@@ -654,7 +654,16 @@ AM_CONDITIONAL([USE_XBOX], [test "x$use_xbox" = "xyes"])
 AM_CONDITIONAL([USE_ASIO], [test "x$use_asio" = "xyes"])
 
 if test "x$THREADS" = "xyes"; then
-	AC_DEFINE([USE_THREADS], [1], [Use multithreading])
+	if test "x$use_os2" = "xyes"; then
+		dnl FIXME -- I'm not sure why this is the case, but it regressed
+		dnl shortly after 20250825 was released. Disabling threads entirely
+		dnl fixes it, so it's likely a bug somewhere that's specific to
+		dnl threads.
+
+		AC_MSG_WARN([*** Sorry, threads are bugged here])
+	else
+		AC_DEFINE([USE_THREADS], [1], [Use multithreading])
+	fi
 fi
 
 AM_CONDITIONAL([USE_THREADS], [test "x$THREADS" = "xyes"])
