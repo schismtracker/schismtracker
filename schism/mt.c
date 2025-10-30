@@ -27,7 +27,8 @@
 
 #include "backend/mt.h"
 
-#define MT_DUMMY_ADDR ((void *)0xDEADBEEFCAFEBABE)
+/* Avoid weird overflow errors by casting to uintptr_t first */
+#define MT_DUMMY_ADDR ((void *)(uintptr_t)0xDEADBEEFCAFEBABE)
 
 #ifdef USE_THREADS
 static const schism_mt_backend_t *mt_backend = NULL;
@@ -227,18 +228,30 @@ int mt_init(void)
 		 * and provide no way except starting a thread to detect
 		 * whether it was even compiled. NICE! */
 		t = backends[i]->thread_create(mt_test_thread_, "mt test thread", MT_DUMMY_ADDR);
-		if (!t)
+		if (!t) {
+			backends[i]->quit();
 			continue;
+		}
 
+		/* Check if we can retrieve the status */
+		st = -1;
 		backends[i]->thread_wait(t, &st);
-		SCHISM_RUNTIME_ASSERT(st == 0, "WHOOPS! threads are borked");
+		if (st != 0) {
+			/* Threading implementation doesn't work right,
+			 * or doesn't support getting the status code. */
+			fprintf(stderr, "[mt]: thread backend #%d sanity check failed.\n", i);
+			backends[i]->quit();
+			continue;
+		}
 
 		mt_backend = backends[i];
 		break;
 	}
 
-	if (!mt_backend)
+	if (!mt_backend) {
+		fprintf(stderr, "[mt]: no (sane) backends found; disabling threads\n");
 		return 0;
+	}
 
 	return 1;
 #else
