@@ -138,14 +138,16 @@ int sdl3_init(void)
 
 void sdl3_quit(void)
 {
-	if (roll > 0)
-		roll--;
+	if (roll <= 0)
+		return;
 
-	if (roll == 0) {
-		sdl3_Quit();
-		sdl3_dlend();
-		ver = 0;
-	}
+	if (--roll > 0)
+		return;
+
+	printf("SDL3 Quit\n");
+	sdl3_Quit();
+	sdl3_dlend();
+	ver = 0;
 }
 
 int sdl3_ver_atleast(int major, int minor, int patch)

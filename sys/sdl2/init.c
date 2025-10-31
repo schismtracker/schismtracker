@@ -135,14 +135,15 @@ int sdl2_init(void)
 
 void sdl2_quit(void)
 {
-	if (roll > 0)
-		roll--;
+	if (roll <= 0)
+		return;
 
-	if (roll == 0) {
-		sdl2_Quit();
-		sdl2_dlend();
-		memset(&ver, 0, sizeof(ver));
-	}
+	if (--roll > 0)
+		return;
+
+	sdl2_Quit();
+	sdl2_dlend();
+	memset(&ver, 0, sizeof(ver));
 }
 
 int sdl2_ver_atleast(int major, int minor, int patch)

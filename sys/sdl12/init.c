@@ -165,13 +165,14 @@ int sdl12_init(void)
 
 void sdl12_quit(void)
 {
-	if (roll > 0)
-		roll--;
+	if (roll <= 0)
+		return;
 
-	if (roll == 0) {
-		sdl12_Quit();
-		sdl12_dlend();
-	}
+	if (--roll > 0)
+		return;
+
+	sdl12_Quit();
+	sdl12_dlend();
 }
 
 const char *sdl12_get_error(void)
