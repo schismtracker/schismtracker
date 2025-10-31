@@ -553,7 +553,7 @@ static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t
 {
 	SDL_PixelFormat *format = (SDL_PixelFormat *)data;
 
-	switch (format->BitsPerPixel) {
+	switch (format->BytesPerPixel) {
 	case 4:
 		/* inline MapRGB */
 		return 0xFF000000 | ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
@@ -577,10 +577,9 @@ static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t
 				((g << 2) & 0x03E0) |
 				(b >> 3);
 		}
-	default:
-		break;
 	}
 
+	/* we're using palettes (really damn slow) */
 	return sdl12_MapRGB(format, r, g, b);
 }
 
