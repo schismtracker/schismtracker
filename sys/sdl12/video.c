@@ -149,6 +149,7 @@ static int (SDLCALL *sdl12_GetWMInfo)(SDL_SysWMinfo *);
 #ifdef SCHISM_MACOS
 static void (SDLCALL *sdl12_InitQuickDraw)(struct QDGlobals *the_qd);
 #endif
+static int (SDLCALL *sdl12_VideoModeOK)(int width, int height, int bpp, Uint32 flags);
 
 static const char *sdl12_video_driver_name(void)
 {
@@ -309,7 +310,42 @@ static int sdl12_video_startup(void)
 	if (info) {
 		x = info->current_w;
 		y = info->current_h;
+
+		/* Grab current bpp without extra hassle */
+		if (info->vfmt)
+			video.desktop.bpp = info->vfmt->BitsPerPixel;
 	}
+
+	/* old cruft to get the "best" fullscreen resolution; only done
+	 * if SDL_GetVideoInfo fails. */
+	if (x < 0 || y < 0) {
+		modes = sdl12_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
+		if (modes != (SDL_Rect**)0 && modes != (SDL_Rect**)-1) {
+			for (i = 0; modes[i]; i++) {
+				if (modes[i]->w < NATIVE_SCREEN_WIDTH) continue;
+				if (modes[i]->h < NATIVE_SCREEN_HEIGHT)continue;
+				if (x == -1 || y == -1 || modes[i]->w < x || modes[i]->h < y) {
+					if (modes[i]->w != NATIVE_SCREEN_WIDTH
+					||  modes[i]->h != NATIVE_SCREEN_HEIGHT) {
+						if (x == NATIVE_SCREEN_WIDTH || y == NATIVE_SCREEN_HEIGHT)
+							continue;
+					}
+					x = modes[i]->w;
+					y = modes[i]->h;
+					if (best_resolution(x,y))
+						break;
+				}
+			}
+		}
+	}
+	if (x < 0 || y < 0) {
+		x = 640;
+		y = 480;
+	}
+
+	/* log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
+	video.desktop.width = x;
+	video.desktop.height = y;
 
 	video_opengl_init(sdl12_opengl_object_load,
 		sdl12_opengl_function_load, NULL, NULL,
@@ -357,48 +393,22 @@ static int sdl12_video_startup(void)
 	}
 #endif
 
-	if (!video.surface) {
-		/* if we already got one... */
+	if (!video.desktop.bpp)
+		video.desktop.bpp = sdl12_VideoModeOK(640, 400, 0, SDL_RESIZABLE);
+
+	if (!video.desktop.bpp) {
+		/* Ugh, just set the video mode */
 		video.surface = sdl12_SetVideoMode(640, 400, 0, SDL_RESIZABLE);
-		if (!video.surface) {
-			fprintf(stderr, "SDL_SetVideoMode: %s\n", sdl12_get_error());
-			return 0;
-		}
-	}
-	video.desktop.bpp = video.surface->format->BitsPerPixel;
-
-	/* old cruft to get the "best" fullscreen resolution; only done
-	 * if SDL_GetVideoInfo fails. */
-	if (x < 0 || y < 0) {
-		modes = sdl12_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
-		if (modes != (SDL_Rect**)0 && modes != (SDL_Rect**)-1) {
-			for (i = 0; modes[i]; i++) {
-				if (modes[i]->w < NATIVE_SCREEN_WIDTH) continue;
-				if (modes[i]->h < NATIVE_SCREEN_HEIGHT)continue;
-				if (x == -1 || y == -1 || modes[i]->w < x || modes[i]->h < y) {
-					if (modes[i]->w != NATIVE_SCREEN_WIDTH
-					||  modes[i]->h != NATIVE_SCREEN_HEIGHT) {
-						if (x == NATIVE_SCREEN_WIDTH || y == NATIVE_SCREEN_HEIGHT)
-							continue;
-					}
-					x = modes[i]->w;
-					y = modes[i]->h;
-					if (best_resolution(x,y))
-						break;
-				}
-			}
-		}
-	}
-	if (x < 0 || y < 0) {
-		x = 640;
-		y = 480;
+		if (video.surface) {
+			video.desktop.bpp = video.surface->format->BitsPerPixel;
+		} /* else we will probably fail anyway... */
 	}
 
-	/* log_appendf(2, "Ideal desktop size: %dx%d", x, y); */
-	video.desktop.width = x;
-	video.desktop.height = y;
+	/* Uh oh... just set a reasonable default ??? */
+	if (!video.desktop.bpp)
+		video.desktop.bpp = 16;
 
-	/* this call builds the surface */
+	/* Build the surface! */
 	video_fullscreen(video.desktop.fullscreen);
 
 	if (!video.surface)
@@ -542,6 +552,34 @@ static void sdl12_video_colors(unsigned char palette[16][3])
 static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t b)
 {
 	SDL_PixelFormat *format = (SDL_PixelFormat *)data;
+
+	switch (format->BitsPerPixel) {
+	case 4:
+		/* inline MapRGB */
+		return 0xFF000000 | ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
+	case 3:
+		/* inline MapRGB */
+		return ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
+	case 2:
+		/* inline MapRGB if possible */
+		if (format->palette) {
+			/* err... */
+			break;
+		} else if (format->Gloss == 2) {
+			/* RGB565 */
+			return (((uint32_t)r << 8) & 0xF800) |
+				(((uint32_t)g << 3) & 0x07E0) |
+				((uint32_t)b >> 3);
+		} else {
+			/* RGB555 */
+			return 0x8000 |
+				((r << 7) & 0x7C00) |
+				((g << 2) & 0x03E0) |
+				(b >> 3);
+		}
+	default:
+		break;
+	}
 
 	return sdl12_MapRGB(format, r, g, b);
 }
@@ -859,6 +897,8 @@ static int sdl12_video_load_syms(void)
 	SCHISM_SDL12_SYM(GL_SetAttribute);
 	SCHISM_SDL12_SYM(GL_GetProcAddress);
 	SCHISM_SDL12_SYM(GL_SwapBuffers);
+
+	SCHISM_SDL12_SYM(VideoModeOK);
 
 	return 0;
 }
