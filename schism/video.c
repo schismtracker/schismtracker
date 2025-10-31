@@ -217,7 +217,7 @@ void video_mousecursor(int vis)
 /* mouse drawing */
 
 static void make_mouseline(unsigned int x, unsigned int v, unsigned int y,
-	uint32_t mouseline[80], uint32_t mouseline_mask[80], unsigned int mouse_y)
+	uint32_t mouseline[80], uint32_t mouseline_mask[80])
 {
 	const struct mouse_cursor *cursor = &cursors[video.mouse.shape];
 	uint32_t i;
@@ -231,9 +231,9 @@ static void make_mouseline(unsigned int x, unsigned int v, unsigned int y,
 
 	if (video_mousecursor_visible() != MOUSE_EMULATED
 		|| !video_is_focused()
-		|| (mouse_y >= cursor->center_y && y < mouse_y - cursor->center_y)
+		|| (video.mouse.y >= cursor->center_y && y < video.mouse.y - cursor->center_y)
 		|| y < cursor->center_y
-		|| y >= mouse_y + cursor->height - cursor->center_y) {
+		|| y >= video.mouse.y + cursor->height - cursor->center_y) {
 		return;
 	}
 
@@ -241,8 +241,8 @@ static void make_mouseline(unsigned int x, unsigned int v, unsigned int y,
 	swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
 	centeroffset = cursor->center_x % 8;
 
-	z  = cursor->pointer[y - mouse_y + cursor->center_y];
-	zm = cursor->mask[y - mouse_y + cursor->center_y];
+	z  = cursor->pointer[y - video.mouse.y + cursor->center_y];
+	zm = cursor->mask[y - video.mouse.y + cursor->center_y];
 
 	z <<= 8;
 	zm <<= 8;
@@ -286,46 +286,58 @@ static void make_mouseline(unsigned int x, unsigned int v, unsigned int y,
 
 void video_blitLN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, uint32_t width, uint32_t height)
 {
-	unsigned char cv32backing[NATIVE_SCREEN_WIDTH * 8];
-
-	uint32_t *csp, *esp, *dp;
-	uint32_t c00, c01, c10, c11;
-	uint32_t outr, outg, outb;
+	uint32_t cv32backing[NATIVE_SCREEN_WIDTH * 2];
+	uint32_t *csp, *esp;
 	uint32_t pad;
 	int32_t fixedx, fixedy, scalex, scaley;
-	uint32_t y, x,ey,ex,t1,t2;
-	uint32_t mouseline[80];
-	uint32_t mouseline_mask[80];
+	uint32_t y, x;
 	unsigned int mouseline_x, mouseline_v;
 	int32_t iny, lasty;
 
 	mouseline_x = (video.mouse.x / 8);
-	mouseline_v = (video.mouse.y % 8);
+	mouseline_v = (video.mouse.x % 8);
 
-	csp = (uint32_t *)cv32backing;
-	esp = csp + NATIVE_SCREEN_WIDTH;
+	csp = cv32backing;
+	esp = cv32backing + NATIVE_SCREEN_WIDTH;
 	lasty = -2;
-	iny = 0;
 	pad = pitch - (width * bpp);
-	scalex = INT2FIXED(NATIVE_SCREEN_WIDTH-1) / width;
-	scaley = INT2FIXED(NATIVE_SCREEN_HEIGHT-1) / height;
+	scalex = (INT2FIXED(NATIVE_SCREEN_WIDTH) - 1) / width;
+	scaley = (INT2FIXED(NATIVE_SCREEN_HEIGHT) - 1) / height;
 	for (y = 0, fixedy = 0; y < height; y++, fixedy += scaley) {
 		iny = FIXED2INT(fixedy);
+
 		if (iny != lasty) {
-			make_mouseline(mouseline_x, mouseline_v, iny, mouseline, mouseline_mask, video.mouse.y);
+			uint32_t mouseline[80];
+			uint32_t mouseline_mask[80];
 
 			/* we'll downblit the colors later */
 			if (iny == lasty + 1) {
+				uint32_t *dp;
+
 				/* move up one line */
+				make_mouseline(mouseline_x, mouseline_v, iny+1, mouseline, mouseline_mask);
 				vgamem_scan32(iny+1, csp, video.tc_bgr32, mouseline, mouseline_mask);
-				dp = esp; esp = csp; csp=dp;
+
+				/* only need to swap the buffer pointers */
+				dp  = esp;
+				esp = csp;
+				csp = dp;
 			} else {
-				vgamem_scan32(iny, (csp = (uint32_t *)cv32backing), video.tc_bgr32, mouseline, mouseline_mask);
-				vgamem_scan32(iny+1, (esp = (csp + NATIVE_SCREEN_WIDTH)), video.tc_bgr32, mouseline, mouseline_mask);
+				make_mouseline(mouseline_x, mouseline_v, iny,   mouseline, mouseline_mask);
+				vgamem_scan32(iny,   csp, video.tc_bgr32, mouseline, mouseline_mask);
+				make_mouseline(mouseline_x, mouseline_v, iny+1, mouseline, mouseline_mask);
+				vgamem_scan32(iny+1, esp, video.tc_bgr32, mouseline, mouseline_mask);
 			}
+
 			lasty = iny;
 		}
+
 		for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
+			uint32_t ex, ey;
+			uint32_t c00, c01, c10, c11;
+			uint32_t outr, outg, outb;
+			uint32_t t1, t2;
+
 			ex = FRAC(fixedx);
 			ey = FRAC(fixedy);
 
@@ -430,7 +442,7 @@ void video_blitNN(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 
 		// only scan again if we have to, or if this the first scan
 		if (y == 0 || scaled_y != last_scaled_y) {
-			make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, video.mouse.y);
+			make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask);
 			switch (bpp) {
 			case 1:
 				vgamem_scan8(scaled_y, pixels_u.uc, tpal, mouseline, mouseline_mask);
@@ -491,7 +503,7 @@ void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 	int y;
 
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, video.mouse.y);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
 
 		vgamem_scan16(y, pixels_r, tpal, mouseline, mouseline_mask);
 		memcpy(pixels, pixels_r, pitch);
@@ -510,7 +522,7 @@ void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 
 	int y;
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, video.mouse.y);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
 		vgamem_scan8(y, pixels, tpal, mouseline, mouseline_mask);
 		pixels += pitch;
 	}
@@ -526,7 +538,7 @@ void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 	uint32_t y, x;
 
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, video.mouse.y);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
 		vgamem_scan8(y, cv8backing, tpal, mouseline, mouseline_mask);
 		for (x = 0; x < pitch; x += 2)
 			*pixels++ = cv8backing[x+1] | (cv8backing[x] << 4);
@@ -543,7 +555,7 @@ void video_blit11(unsigned int bpp, unsigned char *pixels, unsigned int pitch, u
 	uint32_t mouseline_mask[80];
 
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask, video.mouse.y);
+		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
 		switch (bpp) {
 		case 1:
 			vgamem_scan8(y, (uint8_t *)pixels, tpal, mouseline, mouseline_mask);
