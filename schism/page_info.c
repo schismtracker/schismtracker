@@ -223,6 +223,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 	int vu, smp, ins, n, pos, fg, fg2, c;
 	char buf[11];
 	char *ptr;
+	float vus[MAX_CHANNELS];
 
 	draw_fill_chars(5, base + 1, 28, base + height - 2, DEFAULT_FG, 0);
 	draw_fill_chars(31, base + 1, 61, base + height - 2, DEFAULT_FG, 0);
@@ -252,6 +253,8 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 		return;
 	}
 
+	csf_calculate_vu_meters(current_song, vus);
+
 	for (pos = base + 1, c = first_channel; pos < base + height - 1; pos++, c++) {
 		song_voice_t *voice = current_song->voices + c - 1;
 		/* always draw the channel number */
@@ -271,7 +274,8 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 		if (velocity_mode)
 			vu = voice->final_volume >> 8;
 		else
-			vu = voice->vu_meter >> 2;
+			vu = vus[c - 1] * 64.0f;
+
 		if (voice->flags & CHN_MUTE) {
 			fg = 1; fg2 = 2;
 		} else {

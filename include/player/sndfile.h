@@ -964,6 +964,9 @@ void csf_forget_history(song_t *csf); // Send the edit log down the memory hole.
 /* apply a preset Adlib patch */
 void adlib_patch_apply(song_sample_t *smp, int32_t patchnum);
 
+/* calculate VU meters */
+void csf_calculate_vu_meters(song_t *csf, float vus[MAX_CHANNELS]);
+
 /* ------------------------------------------------------------------------ */
 
 // Return (a*b)/c - no divide error

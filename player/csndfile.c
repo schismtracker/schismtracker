@@ -1987,3 +1987,51 @@ uint32_t csf_get_length(song_t *csf)
 
 	return total;
 }
+
+/* ------------------------------------------------------------------------ */
+/* get channel VU meters; these are stored in a float which returns
+ * values between 0.0f and 1.0f, with 1.0f being the highest
+ *
+ * We only ever need this once, so doing it here is fine for now.
+ * If we ever need it more than once we can probably get away with
+ * caching it inside the csf and making that invalid on next csf_read. */
+
+void csf_calculate_vu_meters(song_t *csf, float vus[MAX_CHANNELS])
+{
+	uint32_t c;
+
+	/* Zero-initialize the buffer */
+	for (c = 0; c < MAX_CHANNELS; c++)
+		vus[c] = 0.0f;
+
+	for (c = 0; c < MAX_VOICES; c++) {
+		song_voice_t *voice;
+		float vu;
+		int mc; /* master channel */
+
+		voice = csf->voices + c;
+
+		if ((!(voice->current_sample_data && voice->length) && !(voice->flags & CHN_ADLIB)))
+			continue;
+
+		/* get master channel value */
+		mc = voice->master_channel ? (voice->master_channel - 1) : c;
+
+		if (mc < 0 || mc >= MAX_CHANNELS)
+			continue; /* This is a bug */
+
+		/* VU meter ranges from 0..255
+		 * We want a value between zero and one
+		 * TODO we should #define the VU meter max/bit precision */
+		vu = (voice->vu_meter * (1.0f/255.0f));
+
+		vus[mc] += (vu * vu);
+	}
+
+	for (c = 0; c < MAX_CHANNELS; c++) {
+		vus[c] = sqrt(vus[c]);
+		if (vus[c] > 1.0f)
+			vus[c] = 1.0f; /* cap */
+		/* by definition vus[c] cannot be negative */
+	}
+}
