@@ -47,7 +47,8 @@ static timer_ticks_t sdl12_timer_ticks_us(void)
 
 static void sdl12_usleep(uint64_t us)
 {
-	sdl12_Delay(us / 1000);
+	/* divide rounding up; always wait at least 'us' microseconds */
+	sdl12_Delay((us + 999) / 1000);
 }
 
 static void sdl12_msleep(uint32_t ms)

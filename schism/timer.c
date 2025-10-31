@@ -53,8 +53,8 @@ void timer_usleep(uint64_t usec)
 	while (nanosleep(&s, &s) == -1);
 #elif defined(HAVE_USLEEP) && !defined(SCHISM_WIN32)
 	while (usec) {
-		// useconds_t is only guaranteed to contain 0-1000000
-		useconds_t t = MIN(usec, 1000000);
+		/* usleep is only guaranteed to succeed on 0-999999 */
+		useconds_t t = MIN(usec, 999999);
 		usleep(t);
 		usec -= t;
 	}

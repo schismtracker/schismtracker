@@ -75,7 +75,7 @@ static timer_ticks_t sdl2_timer_ticks_us(void)
 
 static void sdl2_timer_usleep(uint64_t us)
 {
-	sdl2_Delay(us / 1000);
+	sdl2_Delay((us + 999) / 1000);
 }
 
 static void sdl2_timer_msleep(uint32_t ms)
