@@ -34,6 +34,7 @@
 #include "osdefs.h"
 #include "vgamem.h"
 #include "mem.h"
+#include "palettes.h"
 
 #include "backend/video.h"
 
@@ -147,6 +148,12 @@ static struct {
 
 	uint32_t tc_bgr32[256];
 	uint32_t pal_opengl[256];
+
+	struct {
+		uint32_t pal_y[256];
+		uint32_t pal_u[256];
+		uint32_t pal_v[256];
+	} yuv;
 } video = {
 	.mouse = {
 		.visible = MOUSE_EMULATED,
@@ -160,7 +167,9 @@ static const schism_video_backend_t *backend = NULL;
 
 void video_rgb_to_yuv(uint32_t *y, uint32_t *u, uint32_t *v, unsigned char rgb[3])
 {
-	// YCbCr
+	/* YCbCr. This results in somewhat less saturated colors when
+	 * using SDL 1.2 software overlays, but this is the official
+	 * translation. */
 	*y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
 	*u = -0.148 * rgb[0] - 0.291 * rgb[1] + 0.439 * rgb[2] + 128;
 	*v =  0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
@@ -704,6 +713,7 @@ void video_fullscreen(int new_fs_flag)
 void video_resize(unsigned int width, unsigned int height)
 {
 	backend->resize(width, height);
+	palette_apply();
 	status.flags |= NEED_UPDATE;
 }
 
@@ -942,6 +952,141 @@ void video_calculate_clip(uint32_t w, uint32_t h,
 	}
 }
 
+/* ------------------------------------------------------------------------ */
+/* I'm so yuv! */
+
+static uint32_t yuvformat = VIDEO_YUV_NONE;
+
+void video_yuv_setformat(uint32_t format)
+{
+	yuvformat = format;
+}
+
+/* video_colors callback for built-in yuv stuff */
+void video_yuv_pal(unsigned int i, unsigned char rgb[3])
+{
+	uint32_t y, u, v, t;
+	video_rgb_to_yuv(&y, &u, &v, rgb);
+
+	/* Swap the u and v values. Makes everything else
+	 * just a bit less complicated, since a few of these
+	 * formats just swap u/v from others */
+	switch (yuvformat) {
+	case VIDEO_YUV_YV12:
+	case VIDEO_YUV_YV12_TV:
+	case VIDEO_YUV_NV21:
+		t = v;
+		v = u;
+		u = t;
+		break;
+	}
+
+	switch (yuvformat) {
+	case VIDEO_YUV_YV12_TV:
+	case VIDEO_YUV_IYUV_TV:
+		/* halfwidth */
+		video.yuv.pal_y[i] = y;
+		video.yuv.pal_u[i] = (u >> 4) & 0xF;
+		video.yuv.pal_v[i] = (v >> 4) & 0xF;
+		break;
+	case VIDEO_YUV_YV12:
+	case VIDEO_YUV_IYUV:
+		video.yuv.pal_y[i] = y | (y << 8);
+		video.yuv.pal_u[i] = u;
+		video.yuv.pal_v[i] = v;
+		break;
+	case VIDEO_YUV_NV12:
+	case VIDEO_YUV_NV21:
+		video.yuv.pal_y[i] = y | (y << 8);
+		/* U/V interleaved */
+#ifdef WORDS_BIGENDIAN
+		video.yuv.pal_u[i] = (u << 8) | v;
+#else
+		video.yuv.pal_u[i] = (v << 8) | u;
+#endif
+		break;
+	default:
+		break; // err
+	}
+}
+
+/* blit in the current yuv format
+ * planes:  planes to blit
+ * pitches: pitches for each plane
+ * the number of planes depends on the YUV format.
+ * for example, IYUV has three planes, in the order Y + U + V.
+ * NV12 has two planes, Y and then U/V interleaved. */
+void video_yuv_blit(unsigned char *plane0, unsigned char *plane1, unsigned char *plane2,
+	uint32_t pitch0, uint32_t pitch1, uint32_t pitch2)
+{
+	switch (yuvformat) {
+	case VIDEO_YUV_IYUV:
+	case VIDEO_YUV_YV12:
+		video_blitYY(plane0, pitch0, video.yuv.pal_y);
+		video_blitUV(plane1, pitch1, video.yuv.pal_u);
+		video_blitUV(plane2, pitch2, video.yuv.pal_v);
+		break;
+	case VIDEO_YUV_IYUV_TV:
+	case VIDEO_YUV_YV12_TV:
+		video_blitUV(plane0, pitch0, video.yuv.pal_y);
+		video_blitTV(plane1, pitch1 << 1, video.yuv.pal_u);
+		video_blitTV(plane2, pitch2 << 1, video.yuv.pal_v);
+		break;
+	case VIDEO_YUV_NV12:
+	case VIDEO_YUV_NV21:
+		video_blitYY(plane0, pitch0, video.yuv.pal_y);
+		video_blit11(2, plane1, pitch1, video.yuv.pal_u);
+		break;
+	}
+}
+
+/* sequential blit */
+void video_yuv_blit_sequenced(unsigned char *pixels, uint32_t pitch)
+{
+	switch (yuvformat) {
+	case VIDEO_YUV_IYUV:
+	case VIDEO_YUV_YV12:
+		video_yuv_blit(pixels,
+			pixels + ((NATIVE_SCREEN_HEIGHT * pitch) << 1),
+			pixels + ((NATIVE_SCREEN_HEIGHT * pitch) << 1) + ((NATIVE_SCREEN_HEIGHT * pitch) >> 1),
+			pitch, pitch >> 1, pitch >> 1);
+		break;
+	case VIDEO_YUV_IYUV_TV:
+	case VIDEO_YUV_YV12_TV:
+		video_yuv_blit(pixels,
+			pixels + (NATIVE_SCREEN_HEIGHT * pitch),
+			pixels + (NATIVE_SCREEN_HEIGHT * pitch) + ((NATIVE_SCREEN_HEIGHT * pitch) >> 2),
+			pitch, pitch >> 1, pitch >> 1);
+		break;
+	case VIDEO_YUV_NV12:
+	case VIDEO_YUV_NV21:
+		video_yuv_blit(pixels, pixels + ((NATIVE_SCREEN_HEIGHT * pitch) << 1), NULL, pitch, pitch, 0);
+		break;
+	}
+}
+
+void video_yuv_report(void)
+{
+	struct {
+		uint32_t num;
+		const char *name, *type;
+	} yuv_layouts[] = {
+		{VIDEO_YUV_IYUV, "IYUV", "planar"},
+		{VIDEO_YUV_YV12, "YV12", "planar"},
+		{VIDEO_YUV_YV12_TV, "YV12", "planar+tv"},
+		{VIDEO_YUV_IYUV_TV, "IYUV", "planar+tv"},
+		{VIDEO_YUV_NV21, "NV21", "planar"},
+		{VIDEO_YUV_NV12, "NV12", "planar"},
+		{0, NULL, NULL},
+	}, *layout = yuv_layouts;
+
+	while (yuvformat != layout->num && layout->name != NULL)
+		layout++;
+	if (layout->name)
+		log_appendf(5, " Display format: %s (%s)", layout->name, layout->type);
+	else
+		log_appendf(5, " Display format: %x", yuvformat);
+}
 
 /* ------------------------------------------------------------------------ */
 /* OpenGL crap

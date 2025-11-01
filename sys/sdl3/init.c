@@ -144,7 +144,6 @@ void sdl3_quit(void)
 	if (--roll > 0)
 		return;
 
-	printf("SDL3 Quit\n");
 	sdl3_Quit();
 	sdl3_dlend();
 	ver = 0;

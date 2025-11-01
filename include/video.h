@@ -206,6 +206,42 @@ int video_get_wm_data(video_wm_data_t *wm_data);
 int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 
 /* ------------------------------------------------------------------------ */
+
+#define VIDEO_YUV_YV12          0x32315659
+#define VIDEO_YUV_IYUV          0x56555949
+#define VIDEO_YUV_YV12_TV       (VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
+#define VIDEO_YUV_IYUV_TV       (VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
+#define VIDEO_YUV_NV12          0x4E563132
+#define VIDEO_YUV_NV21          0x4E563231
+/* TODO NV12 tv format ??? */
+#if 0
+#define VIDEO_YUV_YVYU          0x55595659
+#define VIDEO_YUV_UYVY          0x59565955
+#define VIDEO_YUV_YUY2          0x32595559
+
+/* RGB formats (???) */
+#define VIDEO_YUV_RGBA          0x41424752
+#define VIDEO_YUV_RGBT          0x54424752
+#define VIDEO_YUV_RGB565        0x32424752
+#define VIDEO_YUV_RGB24         0x0
+#define VIDEO_YUV_RGB32         0x3
+#endif
+
+#define VIDEO_YUV_NONE          0xFFFFFFFF
+
+/* format: one of the #defines above */
+void video_yuv_setformat(uint32_t format);
+void video_yuv_report(void);
+
+/* sets colors */
+void video_yuv_pal(unsigned int i, unsigned char rgb[3]);
+/* blit in the current yuv format */
+void video_yuv_blit(unsigned char *plane0, unsigned char *plane1, unsigned char *plane2,
+	uint32_t pitch0, uint32_t pitch1, uint32_t pitch2);
+/* sequenced blit */
+void video_yuv_blit_sequenced(unsigned char *pixels, uint32_t pitch);
+
+/* ------------------------------------------------------------------------ */
 /* opengl */
 
 /* enums for video_opengl_set_attribute callback

@@ -86,7 +86,7 @@ enum {
 
 	// removed...
 	//VIDEO_DDRAW = 1,
-	//VIDEO_YUV = 2,
+	VIDEO_YUV = 2,
 	VIDEO_OPENGL = 3,
 };
 
@@ -94,6 +94,8 @@ static struct video_cf {
 	int type; /* enum above */
 
 	SDL_Surface *surface;
+
+	SDL_Overlay *overlay;
 
 	/* actual window/screen coordinates */
 	struct {
@@ -111,6 +113,8 @@ static struct video_cf {
 #endif
 		unsigned int fullscreen : 1;
 		unsigned int doublebuf : 1;
+
+		uint32_t yuvformat; /* VIDEO_YUV_* */
 	} desktop;
 
 	struct {
@@ -151,6 +155,12 @@ static void (SDLCALL *sdl12_InitQuickDraw)(struct QDGlobals *the_qd);
 #endif
 static int (SDLCALL *sdl12_VideoModeOK)(int width, int height, int bpp, Uint32 flags);
 
+static void (SDLCALL *sdl12_FreeYUVOverlay)(SDL_Overlay *overlay);
+static int (SDLCALL *sdl12_DisplayYUVOverlay)(SDL_Overlay *overlay, SDL_Rect *dstrect);
+static SDL_Overlay *(SDLCALL *sdl12_CreateYUVOverlay)(int width, int height, Uint32 format, SDL_Surface *display);
+static int (SDLCALL *sdl12_LockYUVOverlay)(SDL_Overlay *overlay);
+static void (SDLCALL *sdl12_UnlockYUVOverlay)(SDL_Overlay *overlay);
+
 static const char *sdl12_video_driver_name(void)
 {
 	static char buf[256];
@@ -167,6 +177,12 @@ static void sdl12_video_report(void)
 	switch (video.type) {
 	case VIDEO_OPENGL:
 		video_opengl_report();
+		log_appendf(5, " Display format: %d bits/pixel", (int)video.surface->format->BitsPerPixel);
+		break;
+	case VIDEO_YUV:
+		log_appendf(5, " %s-accelerated video overlay",
+			video.overlay->hw_overlay ? "Hardware" : "Non");
+		video_yuv_report();
 		break;
 	case VIDEO_SURFACE:
 		log_appendf(5, " %s%s video surface",
@@ -174,11 +190,9 @@ static void sdl12_video_report(void)
 			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
 		if (SDL_MUSTLOCK(video.surface))
 			log_append(4, 0, " Must lock surface");
+		log_appendf(5, " Display format: %d bits/pixel", (int)video.surface->format->BitsPerPixel);
 		break;
 	}
-
-	log_appendf(5, " Display format: %d bits/pixel", (int)video.surface->format->BitsPerPixel);
-
 
 	if (video.desktop.fullscreen
 #ifdef HAVE_LINUX_FB_H
@@ -244,10 +258,19 @@ static void sdl12_video_fullscreen(int tri)
 	video_report();
 }
 
-static void sdl12_video_setup(SCHISM_UNUSED int interpolation)
+static void sdl12_video_setup(int interpolation)
 {
-	if (video.type == VIDEO_OPENGL)
+	switch (video.type) {
+	case VIDEO_OPENGL:
 		video_opengl_reset_interpolation();
+		break;
+	case VIDEO_YUV:
+		/* Rebuild the surface w/ a different type if
+		 * interpolation != nearest */
+		if (interpolation != VIDEO_INTERPOLATION_NEAREST)
+			video_resize(video.draw.width, video.draw.height);
+		break;
+	}
 }
 
 /* defined lower in this file */
@@ -295,6 +318,26 @@ static int sdl12_video_startup(void)
 	if (!getenv("SDL_VIDEO_WINDOW_POS")) {
 		sdl12_putenv("SDL_VIDEO_WINDOW_POS=center");
 		center_enabled = 1;
+	}
+
+	video.desktop.yuvformat = VIDEO_YUV_NONE;
+
+	if (*cfg_video_format) {
+		if (!strcmp(cfg_video_format, "RGB888") || !strcmp(cfg_video_format, "ARGB8888")) {
+			video.desktop.bpp = 32;
+		} else if (!strcmp(cfg_video_format, "RGB24")) {
+			video.desktop.bpp = 24; /* ehhh */
+		} else if (!strcmp(cfg_video_format, "RGB565")) {
+			video.desktop.bpp = 16;
+		} else if (!strcmp(cfg_video_format, "RGB555") || !strcmp(cfg_video_format, "ARGB8888")) {
+			video.desktop.bpp = 15;
+		} else if (!strcmp(cfg_video_format, "RGB332")) {
+			video.desktop.bpp = 8;
+		} else if (!strcmp(cfg_video_format, "IYUV")) {
+			video.desktop.yuvformat = VIDEO_YUV_IYUV;
+		} else if (!strcmp(cfg_video_format, "YV12")) {
+			video.desktop.yuvformat = VIDEO_YUV_YV12;
+		}
 	}
 
 	/* Do this before any call to SDL_SetVideoMode!!
@@ -508,16 +551,56 @@ static void sdl12_video_resize(unsigned int width, unsigned int height)
 	if (cfg_video_hardware
 		&& video_opengl_setup(width, height, sdl12_video_opengl_setup_callback)) {
 		video.type = VIDEO_OPENGL;
-
+		return;
 		/* We get a nasty little black flicker here, ugh */
-	} else {
-		setup_surface_(width, height, 0);
-		video.type = VIDEO_SURFACE;
+	} else if ((cfg_video_hardware && cfg_video_interpolation == VIDEO_INTERPOLATION_NEAREST) || video.desktop.yuvformat != VIDEO_YUV_NONE) {
+		if (video.overlay) {
+			sdl12_FreeYUVOverlay(video.overlay);
+			video.overlay = NULL;
+		}
+		if (setup_surface_(width, height, 0)) {
+			uint32_t yuvfmt = (video.desktop.yuvformat != VIDEO_YUV_NONE) 
+				? video.desktop.yuvformat
+				: VIDEO_YUV_IYUV;
 
-		/* reset color palette; necessary under windib */
-		if (video.surface->format->BytesPerPixel == 1)
-			sdl12_SetColors(video.surface, video.imap, 0, 256);
+			switch (yuvfmt) {
+			case VIDEO_YUV_YV12:
+				video.overlay = sdl12_CreateYUVOverlay
+					(2 * NATIVE_SCREEN_WIDTH,
+					 2 * NATIVE_SCREEN_HEIGHT,
+					 SDL_YV12_OVERLAY, video.surface);
+				break;
+			case VIDEO_YUV_IYUV:
+				video.overlay = sdl12_CreateYUVOverlay
+					(2 * NATIVE_SCREEN_WIDTH,
+					 2 * NATIVE_SCREEN_HEIGHT,
+					 SDL_IYUV_OVERLAY, video.surface);
+				break;
+			case VIDEO_YUV_YV12_TV:
+				video.overlay = sdl12_CreateYUVOverlay
+					(NATIVE_SCREEN_WIDTH,
+					 NATIVE_SCREEN_HEIGHT,
+					 SDL_YV12_OVERLAY, video.surface);
+				break;
+			case VIDEO_YUV_IYUV_TV:
+				video.overlay = sdl12_CreateYUVOverlay
+					(NATIVE_SCREEN_WIDTH,
+					 NATIVE_SCREEN_HEIGHT,
+					 SDL_IYUV_OVERLAY, video.surface);
+				break;
+			}
+
+			if (video.overlay && video.overlay->planes == 3 &&
+				 ((video.desktop.yuvformat != VIDEO_YUV_NONE) || video.overlay->hw_overlay)) {
+				video.type = VIDEO_YUV;
+				video_yuv_setformat(yuvfmt);
+				return;
+			}
+		}
 	}
+
+	setup_surface_(width, height, 0);
+	video.type = VIDEO_SURFACE;
 }
 
 /* for indexed color */
@@ -539,7 +622,9 @@ static void sdl_pal_(unsigned int i, unsigned char rgb[3])
 
 static void sdl12_video_colors(unsigned char palette[16][3])
 {
-	if (video.surface->format->BytesPerPixel == 1) {
+	if (video.type == VIDEO_YUV) {
+		video_colors_iterate(palette, video_yuv_pal);
+	} else if (video.surface->format->BytesPerPixel == 1) {
 		/* ;) */
 		video_colors_iterate(palette, sdl8bit_pal_);
 
@@ -590,6 +675,24 @@ SCHISM_HOT static void sdl12_video_blit(void)
 		/* TODO handle opengl errors; need to fallback to surface if all else fails */
 		video_opengl_blit();
 		break;
+	case VIDEO_YUV: {
+		SDL_Rect clip;
+
+		clip.x = video.clip.x;
+		clip.y = video.clip.y;
+		clip.w = video.clip.w;
+		clip.h = video.clip.h;
+
+		while (sdl12_LockYUVOverlay(video.overlay) < 0)
+			sdl12_Delay(10);
+
+		sdl12_LockYUVOverlay(video.overlay);
+		video_yuv_blit(video.overlay->pixels[0], video.overlay->pixels[1], video.overlay->pixels[2],
+			video.overlay->pitches[0], video.overlay->pitches[1], video.overlay->pitches[2]);
+		sdl12_UnlockYUVOverlay(video.overlay);
+		sdl12_DisplayYUVOverlay(video.overlay, &clip);
+		break;
+	}
 	case VIDEO_SURFACE:
 		if (SDL_MUSTLOCK(video.surface))
 			while (sdl12_LockSurface(video.surface) < 0)
@@ -637,6 +740,9 @@ static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int
 
 static int sdl12_video_is_hardware(void)
 {
+	if (video.type == VIDEO_YUV && video.overlay)
+		return video.overlay->hw_overlay;
+
 	return !!(video.surface->flags & (SDL_HWSURFACE|SDL_OPENGL));
 }
 
@@ -700,6 +806,7 @@ static int sdl12_video_have_menu(void)
 
 static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 {
+	/* ... */
 	if (!video_have_menu())
 		return;
 
@@ -734,9 +841,9 @@ static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 	 * using OpenGL. Tested this with messing around
 	 * a lot between fullscreen and menu bar and
 	 * it seems to work right */
-	if (!(video.surface->flags & SDL_FULLSCREEN)
-			&& !cache_size
-			&& (video.type == VIDEO_OPENGL)) {
+	if ((video.type == VIDEO_OPENGL)
+			&& !(video.surface->flags & SDL_FULLSCREEN)
+			&& !cache_size) {
 		int h;
 		RECT w, c;
 
@@ -898,6 +1005,12 @@ static int sdl12_video_load_syms(void)
 	SCHISM_SDL12_SYM(GL_SwapBuffers);
 
 	SCHISM_SDL12_SYM(VideoModeOK);
+
+	SCHISM_SDL12_SYM(CreateYUVOverlay);
+	SCHISM_SDL12_SYM(FreeYUVOverlay);
+	SCHISM_SDL12_SYM(DisplayYUVOverlay);
+	SCHISM_SDL12_SYM(LockYUVOverlay);
+	SCHISM_SDL12_SYM(UnlockYUVOverlay);
 
 	return 0;
 }

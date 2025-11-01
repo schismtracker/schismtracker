@@ -188,9 +188,6 @@ static inline uint16_t bswap_16_schism_internal_(uint16_t x)
 /* ------------------------------------------------------------------------ */
 /* absolute value */
 
-/* this seems to work, and doesn't suffer from the same problems as
- * (x < 0) ? (uintX_t)(~x + 1) : (uintX_t)x, which gets wrong results
- * on INT32_MIN after turning optimizations on (WEIRD!!) */
 #define SCHISM_ABS_VARIANT(BITS) \
 	static inline SCHISM_CONST SCHISM_ALWAYS_INLINE \
 	uint##BITS##_t babs##BITS(int##BITS##_t x) \

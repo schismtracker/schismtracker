@@ -165,11 +165,7 @@ static struct {
 
 	int fullscreen;
 
-	struct {
-		uint32_t pal_y[256];
-		uint32_t pal_u[256];
-		uint32_t pal_v[256];
-	} yuv;
+	unsigned int yuv_tv : 1;
 
 	uint32_t pal[256];
 } video = {0};
@@ -198,7 +194,7 @@ static const struct {
 	{SDL_PIXELFORMAT_YV12, "YV12"},
 	// {SDL_PIXELFORMAT_UYVY, "UYVY"},
 	// {SDL_PIXELFORMAT_YVYU, "YVYU"},
-	// {SDL_PIXELFORMAT_YUY2, "YUY2"},
+	{SDL_PIXELFORMAT_YUY2, "YUY2"},
 	// {SDL_PIXELFORMAT_NV12, "NV12"},
 	// {SDL_PIXELFORMAT_NV21, "NV21"},
 	// ------------------------------------
@@ -226,26 +222,13 @@ static const char *sdl2_video_driver_name(void)
 
 static void sdl2_video_report(void)
 {
-	struct {
-		uint32_t num;
-		const char *name, *type;
-	} yuv_layouts[] = {
-		{SDL_PIXELFORMAT_YV12, "YV12", "planar+tv"},
-		{SDL_PIXELFORMAT_IYUV, "IYUV", "planar+tv"},
-		{SDL_PIXELFORMAT_YVYU, "YVYU", "packed"},
-		{SDL_PIXELFORMAT_UYVY, "UYVY", "packed"},
-		{SDL_PIXELFORMAT_YUY2, "YUY2", "packed"},
-		{SDL_PIXELFORMAT_NV12, "NV12", "planar"},
-		{SDL_PIXELFORMAT_NV21, "NV21", "planar"},
-		{0, NULL, NULL},
-	}, *layout = yuv_layouts;
-
 	log_appendf(5, " Using driver '%s'", sdl2_GetCurrentVideoDriver());
 
 	switch (video.type) {
 	case VIDEO_TYPE_RENDERER: {
 		SDL_RendererInfo renderer;
 		sdl2_GetRendererInfo(video.u.r.renderer, &renderer);
+
 		log_appendf(5, " %sware%s renderer '%s'",
 			(renderer.flags & SDL_RENDERER_SOFTWARE) ? "Soft" : "Hard",
 			(renderer.flags & SDL_RENDERER_ACCELERATED) ? "-accelerated" : "",
@@ -271,13 +254,7 @@ static void sdl2_video_report(void)
 	case SDL_PIXELFORMAT_YUY2:
 	case SDL_PIXELFORMAT_NV12:
 	case SDL_PIXELFORMAT_NV21:
-		while (video.format != layout->num && layout->name != NULL)
-			layout++;
-
-		if (layout->name)
-			log_appendf(5, " Display format: %s (%s)", layout->name, layout->type);
-		else
-			log_appendf(5, " Display format: %" PRIx32, video.format);
+		video_yuv_report();
 		break;
 	default:
 		log_appendf(5, " Display format: %" PRIu32 " bits/pixel", SDL_BITSPERPIXEL(video.format));
@@ -338,6 +315,8 @@ static void video_redraw_texture(void)
 	case VIDEO_TYPE_RENDERER: {
 		size_t pref_last = ARRAY_SIZE(native_formats);
 		uint32_t format = SDL_PIXELFORMAT_RGB888;
+		uint32_t twidth;
+		uint32_t theight;
 
 		if (*cfg_video_format) {
 			size_t i;
@@ -366,7 +345,42 @@ static void video_redraw_texture(void)
 		}
 
 got_format:
-		video.u.r.texture = sdl2_CreateTexture(video.u.r.renderer, format, SDL_TEXTUREACCESS_STREAMING, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT);
+		/* option? */
+		video.yuv_tv = 0;
+
+		twidth = NATIVE_SCREEN_WIDTH;
+		theight = NATIVE_SCREEN_HEIGHT;
+
+		switch (format) {
+		case SDL_PIXELFORMAT_NV12:
+		case SDL_PIXELFORMAT_NV21:
+			video.yuv_tv = 0;
+			SCHISM_FALLTHROUGH;
+		case SDL_PIXELFORMAT_IYUV:
+		case SDL_PIXELFORMAT_YV12:
+			if (!video.yuv_tv) {
+				twidth *= 2;
+				theight *= 2;
+			}
+			break;
+		}
+
+		switch (format) {
+		case SDL_PIXELFORMAT_NV12:
+			video_yuv_setformat(VIDEO_YUV_NV12);
+			break;
+		case SDL_PIXELFORMAT_NV21:
+			video_yuv_setformat(VIDEO_YUV_NV21);
+			break;
+		case SDL_PIXELFORMAT_IYUV:
+			video_yuv_setformat(video.yuv_tv ? VIDEO_YUV_IYUV_TV : VIDEO_YUV_IYUV);
+			break;
+		case SDL_PIXELFORMAT_YV12:
+			video_yuv_setformat(video.yuv_tv ? VIDEO_YUV_YV12_TV : VIDEO_YUV_YV12);
+			break;
+		}
+
+		video.u.r.texture = sdl2_CreateTexture(video.u.r.renderer, format, SDL_TEXTUREACCESS_STREAMING, twidth, theight);
 		video.format = format;
 		break;
 	}
@@ -569,23 +583,6 @@ static void sdl2_video_resize(unsigned int width, unsigned int height)
 	video_recalculate_fixed_width();
 }
 
-static void yuv_pal_(unsigned int i, unsigned char rgb[3])
-{
-	uint32_t y, u, v;
-	video_rgb_to_yuv(&y, &u, &v, rgb);
-
-	switch (video.format) {
-	case SDL_PIXELFORMAT_IYUV:
-	case SDL_PIXELFORMAT_YV12:
-		video.yuv.pal_y[i] = y;
-		video.yuv.pal_u[i] = u >> 4;
-		video.yuv.pal_v[i] = v >> 4;
-		break;
-	default:
-		break; // err
-	}
-}
-
 static void sdl_pal_(unsigned int i, unsigned char rgb[3])
 {
 	video.pal[i] = sdl2_MapRGB(video.pixel_format, rgb[0], rgb[1], rgb[2]);
@@ -596,7 +593,9 @@ static void sdl2_video_colors(unsigned char palette[16][3])
 	switch (video.format) {
 	case SDL_PIXELFORMAT_IYUV:
 	case SDL_PIXELFORMAT_YV12:
-		video_colors_iterate(palette, yuv_pal_);
+	case SDL_PIXELFORMAT_NV12:
+	case SDL_PIXELFORMAT_NV21:
+		video_colors_iterate(palette, video_yuv_pal);
 		break;
 	default:
 		video_colors_iterate(palette, sdl_pal_);
@@ -777,26 +776,15 @@ SCHISM_HOT static void sdl2_video_blit(void)
 		sdl2_LockTexture(video.u.r.texture, NULL, (void **)&pixels, &pitch);
 
 		switch (video.format) {
-		case SDL_PIXELFORMAT_IYUV: {
-			video_blitUV(pixels, pitch, video.yuv.pal_y);
-			pixels += (NATIVE_SCREEN_HEIGHT * pitch);
-			video_blitTV(pixels, pitch, video.yuv.pal_u);
-			pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
-			video_blitTV(pixels, pitch, video.yuv.pal_v);
+		case SDL_PIXELFORMAT_IYUV:
+		case SDL_PIXELFORMAT_YV12:
+		case SDL_PIXELFORMAT_NV12:
+		case SDL_PIXELFORMAT_NV21:
+			video_yuv_blit_sequenced(pixels, pitch);
 			break;
-		}
-		case SDL_PIXELFORMAT_YV12: {
-			video_blitUV(pixels, pitch, video.yuv.pal_y);
-			pixels += (NATIVE_SCREEN_HEIGHT * pitch);
-			video_blitTV(pixels, pitch, video.yuv.pal_v);
-			pixels += (NATIVE_SCREEN_HEIGHT * pitch) / 4;
-			video_blitTV(pixels, pitch, video.yuv.pal_u);
-			break;
-		}
-		default: {
+		default:
 			video_blit11(video.bpp, pixels, pitch, video.pal);
 			break;
-		}
 		}
 		sdl2_UnlockTexture(video.u.r.texture);
 		sdl2_RenderCopy(video.u.r.renderer, video.u.r.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
