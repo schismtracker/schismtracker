@@ -524,17 +524,7 @@ void video_blitYY(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 
 void video_blitUV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 {
-	const unsigned int mouseline_x = (video.mouse.x / 8);
-	const unsigned int mouseline_v = (video.mouse.x % 8);
-	uint32_t mouseline[80];
-	uint32_t mouseline_mask[80];
-
-	int y;
-	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y++) {
-		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
-		vgamem_scan8(y, pixels, tpal, mouseline, mouseline_mask);
-		pixels += pitch;
-	}
+	video_blit11(1, pixels, pitch, tpal);
 }
 
 void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
@@ -546,11 +536,14 @@ void video_blitTV(unsigned char *pixels, unsigned int pitch, uint32_t tpal[256])
 	uint32_t mouseline_mask[80];
 	uint32_t y, x;
 
+	uint32_t len = MIN(pitch, NATIVE_SCREEN_WIDTH);
+
 	for (y = 0; y < NATIVE_SCREEN_HEIGHT; y += 2) {
 		make_mouseline(mouseline_x, mouseline_v, y, mouseline, mouseline_mask);
 		vgamem_scan8(y, cv8backing, tpal, mouseline, mouseline_mask);
-		for (x = 0; x < pitch; x += 2)
-			*pixels++ = cv8backing[x+1] | (cv8backing[x] << 4);
+		for (x = 0; x < len; x += 2)
+			pixels[x >> 1] = cv8backing[x+1] | (cv8backing[x] << 4);
+		pixels += (pitch >> 1);
 	}
 }
 
