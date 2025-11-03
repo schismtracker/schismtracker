@@ -848,19 +848,20 @@ int dmoz_path_remove(const char *path)
 #elif defined(SCHISM_MACOS)
 	/* this stinks */
 	FSSpec spec;
+	char *cpath;
 
 	{
 		char *npath = dmoz_path_normal(path);
-		path = charset_iconv_easy(npath, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
+		cpath = charset_iconv_easy(npath, CHARSET_UTF8, CHARSET_SYSTEMSCRIPT);
 		free(npath);
 	}
 
-	if (!dmoz_path_to_fsspec(path, &spec)) {
-		free(path);
+	if (!dmoz_path_to_fsspec(cpath, &spec)) {
+		free(cpath);
 		return -1;
 	}
 
-	free(path);
+	free(cpath);
 
 	if (FSpDelete(&spec) != noErr)
 		return -1;
