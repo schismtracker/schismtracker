@@ -556,15 +556,15 @@ struct key_event {
 	int midi_channel;
 	int midi_volume; /* -1 for not a midi key otherwise 0...128 */
 	int midi_bend;  /* normally 0; -8192 to +8192  */
-	unsigned int sx, sy; /* start x and y position (character) */
-	unsigned int x, hx, fx; /* x position of mouse (character, halfcharacter, fine) */
-	unsigned int y, fy; /* y position of mouse (character, fine) */
+	uint32_t sx, sy; /* start x and y position (character) */
+	uint32_t x, hx, fx; /* x position of mouse (character, halfcharacter, fine) */
+	uint32_t y, fy; /* y position of mouse (character, fine) */
 
-	unsigned int rx, ry; /* x/y resolution */
+	uint32_t rx, ry; /* x/y resolution */
 
-	int is_repeat;
-	int on_target;
-	int is_synthetic; /* 1 came from paste */
+	unsigned int is_repeat : 1;
+	unsigned int on_target : 1;
+	unsigned int is_synthetic : 1; /* 1 came from paste */
 };
 
 int numeric_key_event(struct key_event *k, int kponly);

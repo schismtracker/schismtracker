@@ -39,7 +39,7 @@ typedef struct {
 	void (*setup)(int interpolation);
 	int (*startup)(void);
 	void (*fullscreen)(int new_fs_flag);
-	void (*resize)(unsigned int width, unsigned int height);
+	void (*resize)(uint32_t width, uint32_t height);
 	void (*colors)(unsigned char palette[16][3]);
 	int (*is_focused)(void);
 	int (*is_visible)(void);
@@ -48,11 +48,11 @@ typedef struct {
 	void (*show_system_cursor)(int show);
 	int (*is_screensaver_enabled)(void);
 	void (*toggle_screensaver)(int enabled);
-	void (*translate)(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y);
+	void (*translate)(uint32_t vx, uint32_t vy, uint32_t *x, uint32_t *y);
 	void (*get_logical_coordinates)(int x, int y, int *trans_x, int *trans_y);
 	int (*is_input_grabbed)(void);
 	void (*set_input_grabbed)(int enabled);
-	void (*warp_mouse)(unsigned int x, unsigned int y);
+	void (*warp_mouse)(uint32_t x, uint32_t y);
 	int (*have_menu)(void);
 	void (*toggle_menu)(int on);
 	void (*blit)(void);

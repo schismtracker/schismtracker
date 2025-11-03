@@ -574,7 +574,7 @@ static void sdl2_video_fullscreen(int new_fs_flag)
 	}
 }
 
-static void sdl2_video_resize(unsigned int width, unsigned int height)
+static void sdl2_video_resize(uint32_t width, uint32_t height)
 {
 	video.width = width;
 	video.height = height;
@@ -656,7 +656,7 @@ static void sdl2_video_toggle_screensaver(int enabled)
 /* ---------------------------------------------------------- */
 /* coordinate translation */
 
-static void sdl2_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
+static void sdl2_video_translate(uint32_t vx, uint32_t vy, uint32_t *x, uint32_t *y)
 {
 	uint32_t cx, cy, cw, ch;
 
@@ -701,7 +701,7 @@ static void sdl2_video_set_input_grabbed(int enabled)
 /* -------------------------------------------------- */
 /* warp mouse position */
 
-static void sdl2_video_warp_mouse(unsigned int x, unsigned int y)
+static void sdl2_video_warp_mouse(uint32_t x, uint32_t y)
 {
 	sdl2_WarpMouseInWindow(video.window, x, y);
 }

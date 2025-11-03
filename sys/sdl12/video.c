@@ -479,7 +479,7 @@ static int sdl12_video_startup(void)
 	return 1;
 }
 
-static SDL_Surface *setup_surface_(unsigned int w, unsigned int h, uint32_t sdlflags)
+static SDL_Surface *setup_surface_(uint32_t w, uint32_t h, uint32_t sdlflags)
 {
 	if (video.desktop.doublebuf)
 		sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
@@ -541,7 +541,7 @@ static int sdl12_video_opengl_setup_callback(uint32_t *x, uint32_t *y,
 	return r;
 }
 
-static void sdl12_video_resize(unsigned int width, unsigned int height)
+static void sdl12_video_resize(uint32_t width, uint32_t height)
 {
 	if (!width) width = cfg_video_width;
 	if (!height) height = cfg_video_height;
@@ -727,7 +727,7 @@ SCHISM_HOT static void sdl12_video_blit(void)
 	}
 }
 
-static void sdl12_video_translate(unsigned int vx, unsigned int vy, unsigned int *x, unsigned int *y)
+static void sdl12_video_translate(uint32_t vx, uint32_t vy, uint32_t *x, uint32_t *y)
 {
 	/* callback~! */
 
@@ -782,7 +782,7 @@ static int sdl12_video_is_wm_available(void)
 	return (sdl12_GetVideoInfo()->wm_available);
 }
 
-static void sdl12_video_warp_mouse(unsigned int x, unsigned int y)
+static void sdl12_video_warp_mouse(uint32_t x, uint32_t y)
 {
 	sdl12_WarpMouse(x, y);
 }
