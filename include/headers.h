@@ -498,6 +498,18 @@ struct stat {
 #endif
 
 /* ------------------------------------------------------------------------ */
+/* alignof */
+
+#if 0// (__STDC_VERSION__ >= 201112L)
+#define SCHISM_ALIGNOF(type) \
+	_Alignof(type)
+#else
+/* clever use of offsetof() */
+#define SCHISM_ALIGNOF(type) \
+	offsetof(struct { char a; type b; }, b)
+#endif
+
+/* ------------------------------------------------------------------------ */
 /* Assertion */
 
 /* SCHISM_RUNTIME_ASSERT() is our replacement for the assert() macro in

@@ -178,6 +178,44 @@ void atm_ptr_store(struct atm_ptr *atm, void *x)
 #endif
 }
 
+#elif defined(__WATCOMC__) && defined(__386__)
+SCHISM_STATIC_ASSERT(sizeof(void *) == sizeof(int32_t),
+	"atomic code assumes that pointer is 32-bit");
+
+static int32_t _watcom_xchg(volatile int32_t *a, int32_t v);
+#pragma aux _watcom_xchg = \
+	"lock xchg [ecx], eax" \
+	parm [ecx] [eax] \
+	value [eax] \
+	modify exact [eax];
+
+static int32_t _watcom_xadd(volatile int32_t *a, int32_t v);
+#pragma aux _watcom_xadd = \
+	"lock xadd [ecx], eax" \
+	parm [ecx] [eax] \
+	value [eax] \
+	modify exact [eax];
+
+int32_t atm_load(struct atm *atm)
+{
+	return _watcom_xadd(&atm->x, 0);
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	_watcom_xchg(&atm->x, x);
+}
+
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+	return _watcom_xadd((volatile int32_t *)&atm->x, 0);
+}
+
+void atm_ptr_store(struct atm_ptr *atm, void *x)
+{
+	_watcom_xchg((volatile int32_t *)&atm->x, x);
+}
+
 #else
 /* TODO: SDL has atomics, probably with more platforms than
  * we support now. We should be able to import it. */
@@ -222,7 +260,7 @@ static inline SCHISM_ALWAYS_INLINE
 mt_mutex_t *atm_get_mutex(struct atm *atm)
 {
 	/* TODO use alignof() here ... */
-	return mutexes[((uintptr_t)atm / sizeof(*atm)) % MUTEXES_SIZE];
+	return mutexes[((uintptr_t)atm / SCHISM_ALIGNOF(struct atm)) % MUTEXES_SIZE];
 }
 
 int atm_load(struct atm *atm)
@@ -250,7 +288,7 @@ static inline SCHISM_ALWAYS_INLINE
 mt_mutex_t *atm_ptr_get_mutex(struct atm_ptr *atm)
 {
 	/* TODO use alignof() here ... */
-	return mutexes[((uintptr_t)atm / sizeof(*atm)) % MUTEXES_SIZE];
+	return mutexes[((uintptr_t)atm / SCHISM_ALIGNOF(struct atm_ptr)) % MUTEXES_SIZE];
 }
 
 void *atm_ptr_load(struct atm_ptr *atm)
