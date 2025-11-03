@@ -42,6 +42,8 @@
 # endif
 #elif defined(SCHISM_MACOSX)
 # include <sys/sysctl.h>
+#elif defined(SCHISM_MACOS)
+# include <Gestalt.h>
 #elif SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_init, 4, 8, 0) \
 		&& SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_supports, 4, 8, 0) \
 		&& !defined(SCHISM_XBOX) /* broken toolchain */
@@ -90,6 +92,22 @@ do { \
 	CPU_FEATURE("avx512bw", CPU_FEATURE_AVX512BW); /* XXX is this correct? */
 
 # undef CPU_FEATURE
+#elif defined(SCHISM_MACOS)
+	long feat = 0;
+	OSErr err;
+
+	/* weird */
+	err = Gestalt(gestaltPowerPCProcessorFeatures, &feat);
+	if (err != noErr)
+		return -1;
+
+# define CPU_FEATURE(NAME,BIT) \
+do { \
+	if ((feat) & (1UL << (NAME))) \
+		BITARRAY_SET(features, (BIT)); \
+} while (0)
+
+	CPU_FEATURE(gestaltPowerPCHasVectorInstructions, CPU_FEATURE_ALTIVEC);
 
 	return 0;
 #elif defined(SCHISM_HAS_GNUC_CPU_BUILTINS)
