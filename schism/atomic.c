@@ -42,12 +42,12 @@ void atm_store(struct atm *atm, int32_t x)
 
 void *atm_ptr_load(struct atm_ptr *atm)
 {
-	return atomic_load((const volatile void * _Atomic*)&atm->x);
+	return atomic_load((void *const volatile _Atomic*)&atm->x);
 }
 
 void atm_ptr_store(struct atm_ptr *atm, void *x)
 {
-	atomic_store((volatile void *_Atomic *)&atm->x, x);
+	atomic_store((void *volatile _Atomic *)&atm->x, x);
 }
 
 #elif !defined(USE_THREADS)
