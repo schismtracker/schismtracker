@@ -92,6 +92,8 @@ do { \
 	CPU_FEATURE("avx512bw", CPU_FEATURE_AVX512BW); /* XXX is this correct? */
 
 # undef CPU_FEATURE
+
+	return 0;
 #elif defined(SCHISM_MACOS)
 	long feat = 0;
 	OSErr err;
