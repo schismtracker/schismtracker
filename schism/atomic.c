@@ -50,33 +50,6 @@ void atm_ptr_store(struct atm_ptr *atm, void *x)
 	atomic_store((void *volatile _Atomic *)&atm->x, x);
 }
 
-#elif !defined(USE_THREADS)
-
-/* eh */
-
-int atm_init(void) { return 0; }
-void atm_quit(void) { }
-
-int32_t atm_load(struct atm *atm)
-{
-	return atm->x;
-}
-
-void atm_store(struct atm *atm, int32_t x)
-{
-	atm->x = x;
-}
-
-void *atm_ptr_load(struct atm_ptr *atm)
-{
-	return atm->x;
-}
-
-void atm_ptr_store(struct atm_ptr *atm, void *x)
-{
-	atm->x = x;
-}
-
 #elif SCHISM_GNUC_HAS_BUILTIN(__atomic_load, 4, 7, 0)
 
 int atm_init(void) { return 0; }
@@ -196,6 +169,9 @@ static int32_t _watcom_xadd(volatile int32_t *a, int32_t v);
 	value [eax] \
 	modify exact [eax];
 
+int atm_init(void) { return 0; }
+void atm_quit(void) { }
+
 int32_t atm_load(struct atm *atm)
 {
 	return _watcom_xadd(&atm->x, 0);
@@ -208,12 +184,39 @@ void atm_store(struct atm *atm, int32_t x)
 
 void *atm_ptr_load(struct atm_ptr *atm)
 {
-	return _watcom_xadd((volatile int32_t *)&atm->x, 0);
+	return (void *)_watcom_xadd((volatile int32_t *)&atm->x, 0);
 }
 
 void atm_ptr_store(struct atm_ptr *atm, void *x)
 {
-	_watcom_xchg((volatile int32_t *)&atm->x, x);
+	_watcom_xchg((volatile int32_t *)&atm->x, (int32_t)x);
+}
+
+#elif !defined(USE_THREADS)
+
+/* eh */
+
+int atm_init(void) { return 0; }
+void atm_quit(void) { }
+
+int32_t atm_load(struct atm *atm)
+{
+	return atm->x;
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	atm->x = x;
+}
+
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+	return atm->x;
+}
+
+void atm_ptr_store(struct atm_ptr *atm, void *x)
+{
+	atm->x = x;
 }
 
 #else

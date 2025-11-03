@@ -79,7 +79,7 @@ jobs:
           export PATH="$RUNNER_TEMP/WATCOM/binl64:$PATH"
           export WATCOM="$RUNNER_TEMP/WATCOM"
           cd utf8proc-$UTF8PROC_VERSION
-          owcc -I"$RUNNER_TEMP/WATCOM/h" -za99 -c -o utf8proc.obj utf8proc.c
+          owcc -I"$RUNNER_TEMP/WATCOM/h" -O2 -za99 -fno-short-enum -march=i386 -mtune=i586 -c -o utf8proc.obj utf8proc.c
           wlib -n utf8proc.lib utf8proc.obj
           cp "utf8proc.lib" "$RUNNER_TEMP/i386prefix/lib"
           cp "utf8proc.h" "$RUNNER_TEMP/i386prefix/h"
@@ -107,7 +107,7 @@ jobs:
           cd schism
           mkdir build
           cd build
-          ../configure "CPP=owcc -E" "CPPFLAGS=-I$RUNNER_TEMP/WATCOM/h -I$RUNNER_TEMP/WATCOM/h/os2 -b OS2V2_PM" CC=owcc "CFLAGS=-b OS2V2_PM -O2 -za99 -fno-short-enum -march=i386 -mthreads" "LDFLAGS=-b OS2V2_PM" --host=i386-pc-os2 "OBJEXT=.obj" "EXEEXT=.exe" --without-jack --with-sdl2 --enable-sdl2-linking PKG_CONFIG=false SDL2_CFLAGS="-I$RUNNER_TEMP/i386prefix/h/SDL2" SDL2_LIBS="$RUNNER_TEMP/i386prefix/lib/SDL2.lib" UTF8PROC_CFLAGS="-I$RUNNER_TEMP/i386prefix/h" UTF8PROC_LIBS="$RUNNER_TEMP/i386prefix/lib/utf8proc.lib" || cat config.log
+          ../configure "CPP=owcc -E" "CPPFLAGS=-I$RUNNER_TEMP/WATCOM/h -I$RUNNER_TEMP/WATCOM/h/os2 -b OS2V2_PM" CC=owcc "CFLAGS=-b OS2V2_PM -O2 -za99 -fno-short-enum -march=i386 -mtune=i586 -mthreads" "LDFLAGS=-b OS2V2_PM" --host=i386-pc-os2 "OBJEXT=.obj" "EXEEXT=.exe" --without-jack --with-sdl2 --enable-sdl2-linking PKG_CONFIG=false SDL2_CFLAGS="-I$RUNNER_TEMP/i386prefix/h/SDL2" SDL2_LIBS="$RUNNER_TEMP/i386prefix/lib/SDL2.lib" UTF8PROC_CFLAGS="-I$RUNNER_TEMP/i386prefix/h" UTF8PROC_LIBS="$RUNNER_TEMP/i386prefix/lib/utf8proc.lib" || cat config.log
           make
           # stupid autoconf
           mv schismtracker schismtracker.exe
