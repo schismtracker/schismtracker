@@ -173,6 +173,13 @@ void cfg_load(void)
 		} else if (!strcasecmp(ptr, "best")) {
 			cfg_video_interpolation = VIDEO_INTERPOLATION_BEST;
 		}
+	} else {
+		/* Old setting -- was specific to OpenGL but here it is anyway.
+		 * This option was previously ignored since the port to SDL 2.
+		 * Unfortunately we cannot simply revert the damage, but we can
+		 * at least honor the setting for older versions. */
+		int x = cfg_get_number(&cfg, "Video", "gl_bilinear", 0);
+		cfg_video_interpolation = (x ? VIDEO_INTERPOLATION_LINEAR : VIDEO_INTERPOLATION_NEAREST);
 	}
 
 #ifdef SCHISM_XBOX
@@ -417,6 +424,10 @@ static void cfg_save_world(cfg_file_t *cfg)
 
 		cfg_set_string(cfg, "Video", "interpolation", names[cfg_video_interpolation]);
 	}
+
+	/* Set this for older versions that understand gl_bilinear but not
+	 * interpolation */
+	cfg_set_number(cfg, "Video", "gl_bilinear", cfg_video_interpolation != VIDEO_INTERPOLATION_NEAREST);
 
 	cfg_set_number(cfg, "Video", "fullscreen", !!(video_is_fullscreen()));
 	cfg_set_number(cfg, "Video", "mouse_cursor", video_mousecursor_visible());
