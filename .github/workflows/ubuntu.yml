@@ -6,7 +6,82 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    # TODO test more variants; we should be regularly testing
+    #   - dynamic load / linked variants, for libraries
+    #   - maybe others as well; possibly we can force-disable
+    #     stuff like avx2 to be able to test MOAR variants
+
+    # ALSO for the test suite, we need to have a public API
+    # that tests whether each given backend works as it
+    # should (as long as it initializes fine). we should also
+    # have a test that does a sanity check for the C time
+    # library, e.g. time() -> localtime() -> mktime() should
+    # ALWAYS return the same value as was returned by time().
+
+    # ALSO ALSO, we need to test video blitters; in the case
+    # of asan it would also be nice to do a full render of
+    # a song (or multiple songs) to make sure we don't
+    # overstep any memory boundaries
+
+    strategy:
+      fail-fast: false
+      matrix:
+        threads: [
+          { flag: '--disable-threads', name: '' },
+          { flag: '--enable-threads', name: '-threaded' },
+        ]
+        asan: [
+          # We want two builds, one with asan on and the other with it off
+          { flag: '', name: '' },
+          { flag: '-fsanitize=address', name: '-asan' },
+        ]
+        sys: [
+          # TODO add more hosts
+          { host: ubuntu-22.04 },
+        ]
+    concurrency:
+      group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.host}}-${{matrix.sys.compiler}}${{matrix.threads.name}}${{matrix.asan.name}}
+      cancel-in-progress: true
+    runs-on: ${{matrix.sys.host}}
+
+    steps:
+      - name: 'Install dependencies'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libsdl1.2-dev libasound2-dev libflac-dev git libtool zip wget
+
+      - name: 'Checkout'
+        uses: actions/checkout@v4
+
+      - name: 'autoreconf -i'
+        run: autoreconf -i
+
+      - name: 'Build Schism'
+        env:
+          THREAD_FLAG: ${{ matrix.threads.flags }}
+          CFLAGS: '${{ matrix.asan.flag }} -g -O2'
+          LDFLAGS: '${{ matrix.asan.flag }}'
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --with-flac --with-alsa --with-jack --enable-tests
+          make
+          cd ..
+
+      - name: 'Run test suite'
+        run: |
+          # this should fail with an error code if any of the tests fail.
+          cd build
+          ./schismtrackertest
+          cd ..
+
   ubuntu:
+    # TODO for release variants, it would be nice to link against
+    # either a very old glibc (backwards compatibility is a fuck)
+    # OR we can static link against musl libc. or we could not
+    # care and just build an AppImage. Not sure, but either way
+    # it would be better than the ./run.sh hack  --paper
     runs-on: ubuntu-22.04
 
     steps:
@@ -29,16 +104,8 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --with-flac --with-alsa --with-jack --enable-tests
+          ../configure --with-flac --with-alsa --with-jack
           make
-          cd ..
-
-        # FIXME need to test this with --disable-threads as well.
-      - name: 'Run test suite'
-        run: |
-          # this should fail with an error code if any of the tests fail.
-          cd build
-          ./schismtrackertest
           cd ..
 
       - name: 'Create package'
