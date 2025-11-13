@@ -59,10 +59,28 @@ int cpu_init(void)
 	BITARRAY_ZERO(features);
 
 #ifdef SCHISM_WIN32
+	/* Load kernel32 functions dynamically; this function
+	 * doesn't exist on Windows 95 */
+	HMODULE kernel32;
+	typedef BOOL (WINAPI *LPFN_K32_IsProcessorFeaturePresent)(DWORD);
+	LPFN_K32_IsProcessorFeaturePresent K32_IsProcessorFeaturePresent;
+
+	kernel32 = LoadLibraryA("KERNEL32.DLL");
+	if (!kernel32)
+		return -1;
+
+	/* sigh */
+	K32_IsProcessorFeaturePresent =
+		(LPFN_K32_IsProcessorFeaturePresent)GetProcAddress(kernel32,
+			"IsProcessorFeaturePresent");
+	if (!K32_IsProcessorFeaturePresent) {
+		FreeLibrary(kernel32);
+		return -1;
+	}
 
 # define CPU_FEATURE(WINBIT, BIT) \
 do { \
-	if (IsProcessorFeaturePresent(WINBIT)) \
+	if (K32_IsProcessorFeaturePresent(WINBIT)) \
 		BITARRAY_SET(features, (BIT)); \
 } while (0)
 
@@ -72,6 +90,8 @@ do { \
 	/* TODO avx512bw */
 
 # undef CPU_FEATURE
+
+	FreeLibrary(kernel32);
 
 	return 0;
 #elif defined(SCHISM_MACOSX)
