@@ -172,10 +172,6 @@ int load_its_sample(slurp_t *fp, song_sample_t *smp, uint16_t cwtv)
 
 	/* alright, let's get started */
 	smp->length = its.length;
-	if ((its.flags & 1) == 0) {
-		// sample associated with header
-		return 0;
-	}
 
 	smp->global_volume = its.gvl;
 	if (its.flags & 16) {
