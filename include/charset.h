@@ -111,6 +111,10 @@ typedef struct {
 	/* -- output, decoder initializes these */
 	uint32_t codepoint; /* decoded codepoint if successful, undefined if not */
 	int state;          /* one of DECODER_* definitions above; negative values are errors */
+
+	/* TODO: for specific backends, we will need a void * userdata field.
+	 * eventually we'll also need a charset_decode_end or something
+	 * to have proper deletion of the decoder */
 } charset_decode_t;
 
 SCHISM_CONST int char_digraph(int k1, int k2);

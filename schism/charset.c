@@ -31,6 +31,7 @@
 #include "log.h"
 #ifdef SCHISM_WIN32
 # include "osdefs.h"
+# include <windows.h>
 #endif
 
 int char_digraph(int k1, int k2)
@@ -199,6 +200,7 @@ static void utf8_to_ucs4(charset_decode_t *decoder)
 		memcpy(&wc, decoder->in + decoder->offset, sizeof(wc)); \
 		wc = bswap##x##16(wc); \
 		decoder->offset += 2; \
+		decoder->state = DECODER_STATE_NEED_MORE; \
 	\
 		if (wc < 0xD800 || wc > 0xDFFF) { \
 			decoder->codepoint = wc; \
@@ -928,6 +930,116 @@ static int ucs4_to_wchar(uint32_t ch, disko_t *out)
 {
 	return (win32_ntver_atleast(5, 0, 0) ? ucs4_to_utf16LE : ucs4_to_ucs2LE)(ch, out);
 }
+
+static void ansi_to_ucs4(charset_decode_t *decoder)
+{
+	/* half-assed ANSI to UCS-4 converter */
+	size_t i;
+	size_t j;
+	wchar_t wc[8];
+	int r = 0;
+	charset_decode_t wcd;
+
+	switch (GetACP()) {
+	//case 1252:
+	//	windows1252_to_ucs4(decoder);
+	//	return;
+	case 437:
+		cp437_to_ucs4(decoder);
+		return;
+	}
+
+	/* ok, here's the thing: the ANSI windows codepage can be variable width,
+	 * which means we can't simply convert one byte. eventually I'd like to
+	 * do one big conversion (maybe 512 chars at a time) and cache it for
+	 * later decoding, but eh
+	 *
+	 * This seems to work right, but only for windows-1252; shift-jis and
+	 * other var-width charsets haven't been tested. */
+	for (i = 1; i < (decoder->size - decoder->offset); i++) {
+		/* this is royally stupid */
+		j = 0;
+		do {
+			j++;
+			r = MultiByteToWideChar(CP_ACP, 0, decoder->in + decoder->offset, i, wc, j);
+		} while (j < 8 && r == 0 && GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+
+		if (r != 0)
+			break;
+	}
+
+	/* :) */
+	decoder->offset += i;
+
+	if (r == 0) {
+		decoder->state = DECODER_STATE_ILL_FORMED;
+		decoder->codepoint = 0;
+		return;
+	}
+
+	wcd.in = (const unsigned char *)wc;
+	wcd.offset = 0;
+	wcd.size = (r * sizeof(wchar_t));
+
+	/* convert wchar to utf-8 */
+	wchar_to_ucs4(&wcd);
+
+	decoder->state = wcd.state;
+	decoder->codepoint = wcd.codepoint;
+}
+
+static int ucs4_to_ansi(uint32_t ch, disko_t *out)
+{
+	uint16_t out_b[2];
+	size_t len = 0;
+	char *buf;
+	int buflen;
+
+	switch (GetACP()) {
+	case 437:
+		return ucs4_to_cp437(ch, out);
+	}
+
+	if (win32_ntver_atleast(5, 0, 0)) {
+		/* copied from ucs4_to_utf16LE */
+		if (ch < 0x10000) {
+			out_b[len++] = bswapLE16(ch);
+		} else if (ch < 0x110000) {
+			uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10);
+			uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF);
+
+			out_b[len++] = bswapLE16(w1);
+			out_b[len++] = bswapLE16(w2);
+		} else return CHARSET_ENCODE_ERROR;	
+	} else {
+		/* wchar_t is UCS-2 */
+		out_b[len++] = bswapLE16(ch);
+	}
+
+	/* WC_ERR_INVALID_CHARS would be nice here, but it's not supported
+	 * for anything other than UTF-8. Thus we get sporadic failures when
+	 * converting to/from ACP. This is less of a problem for old systems,
+	 * where everything is going to be in ACP anyway. */
+	buflen = WideCharToMultiByte(CP_ACP, 0, out_b, len, NULL, 0, NULL, NULL);
+	if (buflen <= 0)
+		return CHARSET_ENCODE_ERROR;
+
+	buf = malloc(buflen);
+	if (!buf)
+		return CHARSET_ENCODE_ERROR; /* NOMEM ? */
+
+	buflen = WideCharToMultiByte(CP_ACP, 0, out_b, len, buf, buflen, NULL, NULL);
+	if (buflen <= 0) {
+		free(buf);
+		return CHARSET_ENCODE_ERROR;
+	}
+
+	disko_write(out, buf, buflen);
+
+	free(buf);
+
+	return CHARSET_ENCODE_SUCCESS;
+}
 #endif
 
 /* ----------------------------------------------------------------------- */
@@ -952,6 +1064,7 @@ static const charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 
 	[CHARSET_CHAR] = utf8_to_ucs4,
 #ifdef SCHISM_WIN32
+	[CHARSET_ANSI] = ansi_to_ucs4,
 	[CHARSET_WCHAR_T] = wchar_to_ucs4,
 #elif defined(SCHISM_XBOX)
 	[CHARSET_WCHAR_T] = utf16LE_to_ucs4,
@@ -976,6 +1089,7 @@ static const charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 
 	[CHARSET_CHAR] = ucs4_to_utf8,
 #ifdef SCHISM_WIN32
+	[CHARSET_ANSI] = ucs4_to_ansi,
 	[CHARSET_WCHAR_T] = ucs4_to_wchar,
 #elif defined(SCHISM_XBOX)
 	[CHARSET_WCHAR_T] = ucs4_to_utf16LE,
@@ -1135,9 +1249,7 @@ static size_t charset_nulterm_string_size(const void *in, charset_t inset)
 
 /* ----------------------------------------------------------------------- */
 
-#ifdef SCHISM_WIN32
-# include <windows.h> // MultiByteToWideChar
-#elif defined(SCHISM_XBOX)
+#if defined(SCHISM_XBOX)
 # include <xboxkrnl/xboxkrnl.h>
 #elif defined(SCHISM_MACOS)
 # include <TextEncodingConverter.h>
@@ -1297,33 +1409,6 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 		return CHARSET_ERROR_INPUTISOUTPUT;
 
 	switch (inset) {
-#ifdef SCHISM_WIN32
-	case CHARSET_ANSI: {
-		UINT cp = GetACP();
-
-		if (cp == 1252) {
-			insetfake = inset = CHARSET_WINDOWS1252;
-		} else if (cp == 437) {
-			insetfake = inset = CHARSET_CP437;
-		} else {
-			// convert ANSI to Unicode so we can process it
-			int len = (insize == SIZE_MAX) ? -1 : MIN(insize, INT_MAX);
-
-			int needed = MultiByteToWideChar(CP_ACP, 0, in, len, NULL, 0);
-			if (!needed)
-				return CHARSET_ERROR_DECODE;
-
-			wchar_t *unicode_in = mem_alloc((needed + 1) * sizeof(wchar_t));
-			MultiByteToWideChar(CP_ACP, 0, in, len, unicode_in, needed);
-			unicode_in[needed] = 0;
-
-			infake = unicode_in;
-			insetfake = CHARSET_WCHAR_T;
-			insizefake = (needed + 1) * sizeof(wchar_t);
-		}
-		break;
-	}
-#endif
 #ifdef SCHISM_XBOX
 	case CHARSET_ANSI: {
 		size_t source_size = (insize != SIZE_MAX) ? insize : strlen(in);
@@ -1416,19 +1501,6 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	}
 
 	switch (outset) {
-#ifdef SCHISM_WIN32
-	case CHARSET_ANSI: {
-		UINT cp = GetACP();
-
-		if (cp == 437) {
-			outsetfake = outset = CHARSET_CP437;
-		} else {
-			// TODO built in Windows-1252 encoder?
-			outsetfake = CHARSET_WCHAR_T;
-		}
-		break;
-	}
-#endif
 #ifdef SCHISM_XBOX
 	case CHARSET_ANSI:
 		outsetfake = CHARSET_WCHAR_T;
@@ -1459,11 +1531,6 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	state = charset_iconv_impl_(infake, &outfake, insetfake, outsetfake, insizefake);
 
 	switch (inset) {
-#ifdef SCHISM_WIN32
-	case CHARSET_ANSI:
-		free((void *)infake);
-		break;
-#endif
 #ifdef SCHISM_XBOX
 	case CHARSET_ANSI: {
 		free((void *)infake);
@@ -1484,30 +1551,6 @@ charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charse
 	}
 
 	switch (outset) {
-#ifdef SCHISM_WIN32
-	case CHARSET_ANSI: {
-		// convert from unicode to ANSI
-		int needed = WideCharToMultiByte(CP_ACP, 0, (wchar_t *)outfake, -1, NULL, 0, NULL, NULL);
-		if (!needed) {
-			free(outfake);
-			state = CHARSET_ERROR_ENCODE;
-			break;
-		}
-
-		char *ansi_out = mem_alloc(needed + 1);
-
-		WideCharToMultiByte(CP_ACP, 0, (wchar_t *)outfake, -1, ansi_out, needed + 1, NULL, NULL);
-	
-		free(outfake);
-	
-		ansi_out[needed] = 0;
-
-		// copy the pointer
-		memcpy(out, &ansi_out, sizeof(void *));
-
-		break;
-	}
-#endif
 #ifdef SCHISM_XBOX
 	case CHARSET_ANSI: {
 		size_t source_size = wcslen(outfake) * sizeof(WCHAR);
