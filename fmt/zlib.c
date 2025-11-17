@@ -55,7 +55,6 @@ struct slurp_zlib {
 	gz_header gz;
 
 	unsigned char buf[4096];
-	unsigned char outbuf[4096];
 
 	/* error flag */
 	unsigned int err : 1;
@@ -76,8 +75,13 @@ static size_t slurp_zlib_read(void *opaque, disko_t *ds, size_t size)
 	if (zl->err || zl->done)
 		return 0; /* FUN! */
 
-	zl->zs.next_out = zl->outbuf;
-	zl->zs.avail_out = sizeof(zl->outbuf);
+	zl->zs.next_out = disko_memstart(ds, size);
+	zl->zs.avail_out = size;
+
+	if (!zl->zs.next_out) {
+		zl->err = 1;
+		return 0; /* memory error */
+	}
 
 	while (zl->zs.avail_out > 0) {
 		int res;
@@ -85,8 +89,10 @@ static size_t slurp_zlib_read(void *opaque, disko_t *ds, size_t size)
 		if (zl->zs.avail_in == 0) {
 			/* need more data, or we just started. */
 			size_t z = slurp_read(&zl->fp, zl->buf, sizeof(zl->buf));
-			if (!z)
-				return 0; /* EOF? */
+			if (!z) {
+				zl->err = 1;
+				goto ZL_end;
+			}
 
 			zl->zs.next_in = zl->buf;
 			zl->zs.avail_in = z;
@@ -104,12 +110,13 @@ static size_t slurp_zlib_read(void *opaque, disko_t *ds, size_t size)
 
 		/* something has gone totally wrong, OOPS! */
 		zl->err = 1;
-		return 0;
+		goto ZL_end;
 	}
 
-	disko_write(ds, zl->outbuf, sizeof(zl->outbuf) - zl->zs.avail_out);
+ZL_end:
+	disko_memend(ds, zl->zs.next_out, size - zl->zs.avail_out);
 
-	return sizeof(zl->outbuf) - zl->zs.avail_out;
+	return size - zl->zs.avail_out;
 }
 
 static void slurp_zlib_closure(void *opaque)
