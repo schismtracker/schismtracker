@@ -450,16 +450,6 @@ int disko_memclose(disko_t *ds, int keep_buffer)
 	}
 }
 
-/* Fake disko crap */
-struct disko_memfake {
-	int64_t pos;
-	size_t length;
-	/* NOTE: using uint64_t as the type here would force 64-bit
-	 * aligning, but on all platforms that matter this is already
-	 * either 8 or 16 bytes offset. */
-	unsigned char data[SCHISM_FAM_SIZE];
-};
-
 /* Returns the block of memory, starting from the current position,
  * that can be written to by the caller. For optimization purposes,
  * the memory block returned by this function will write to the
@@ -468,40 +458,45 @@ struct disko_memfake {
 void *disko_memstart(disko_t *ds, size_t size)
 {
 	if (ds->data) {
+		/* Save this beforehand; _dw_bufcheck overwrites it,
+		 * but that's not what we want. */
+		size_t sv = ds->length;
+
 		/* This is a memory disko, so we can do this fast. */
 		if (!_dw_bufcheck(ds, size))
 			return NULL;
 
+		ds->length = sv;
+
 		return ds->data + ds->pos;
 	} else {
-		struct disko_memfake *x = malloc(sizeof(struct disko_memfake) + size);
-
-		if (!x)
-			return NULL;
-
-		x->pos = disko_tell(ds);
-		x->length = size;
-
-		return x->data;
+		return malloc(size);
 	}
 }
 
-void disko_memend(disko_t *ds, void *mem)
+/* Finalizes a direct memory access through disko_memstart().
+ * Note that this has a couple caveats:
+ * - 'size' can be smaller than the size passed into
+ *   disko_memstart(). This is specifically to ease in buffer
+ *   filling, so for e.g. decompression there is less memory
+ *   overhead from allocating a separate buffer. There are
+ *   some safeties for when 'size' is greater than the original,
+ *   but it is not guaranteed to actually work everywhere.
+ * - There is no check for whether 'size' is less than the
+ *   size passed to disko_memstart(). This should never
+ *   happen anyway, and the caller may want to assert()
+ *   for it. */
+void disko_memend(disko_t *ds, void *mem, size_t size)
 {
 	if (ds->data) {
-		/* Nothing to do ;) */
+		/* Update length */
+		ds->length = MAX(ds->pos + size, ds->length);
+		ds->pos += size;
 	} else {
-		/* dirty ass ugly hack */
-		struct disko_memfake *x = (struct disko_memfake *)((char *)mem - offsetof(struct disko_memfake, data));
+		/* write it all */
+		disko_write(ds, mem, size);
 
-		int64_t pos = disko_tell(ds);
-
-		/* seek back to this pos, and write into it, then seek back. */
-		disko_seek(ds, x->pos, SEEK_SET);
-		disko_write(ds, x->data, x->length);
-		disko_seek(ds, pos, SEEK_SET);
-
-		free(x);
+		free(mem);
 	}
 }
 

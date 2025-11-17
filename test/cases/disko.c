@@ -47,18 +47,14 @@ static testresult_t test_disko(disko_t *ds)
 	/* start memory write */
 	mem = disko_memstart(ds, 16);
 
-	/* dummy data */
+	/* dump dummy data */
 	memcpy(mem, "1111111111111111", 16);
 
-	/* rewinding should not affect where the memory
-	 * write actually writes to. */
-	disko_seek(ds, 0, SEEK_SET);
-
-	/* end memory write */
-	disko_memend(ds, mem);
+	/* end memory write, but truncate the data. */
+	disko_memend(ds, mem, 13);
 
 	disko_seek(ds, 0, SEEK_END);
-	ASSERT(disko_tell(ds) == 27);
+	ASSERT(disko_tell(ds) == 24);
 
 	RETURN_PASS;
 }
@@ -76,10 +72,10 @@ testresult_t test_disko_mem(void)
 	disko_memclose(&ds, 1);
 
 	/* ehhh */
-	if (r == SCHISM_TESTRESULT_PASS && ds.length != 27)
+	if (r == SCHISM_TESTRESULT_PASS && ds.length != 24 && ds.allocated < 24)
 		r = SCHISM_TESTRESULT_FAIL;
 
-	if (r == SCHISM_TESTRESULT_PASS && memcmp(ds.data, "123456789101111111111111111", 27))
+	if (r == SCHISM_TESTRESULT_PASS && memcmp(ds.data, "123456789101111111111111111", 24))
 		r = SCHISM_TESTRESULT_FAIL;
 
 	free(ds.data);

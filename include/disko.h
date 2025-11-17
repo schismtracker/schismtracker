@@ -143,8 +143,13 @@ void disko_align(disko_t *ds, uint32_t bytes);
  * that can be written to by the caller. For optimization purposes,
  * the memory block returned by this function will write to the
  * memory stream directly if this is a memory buffer. Note that
- * this is NOT the case for other buffers. */
+ * this is NOT the case for other buffers.
+ *
+ * Doing any other operation between memstart() and memend() is
+ * strictly undefined and WILL cause different effects under
+ * different backends. These functions can be useful when used
+ * right, but very harmful if used wrong. Be careful. */
 void *disko_memstart(disko_t *ds, size_t size);
-void disko_memend(disko_t *ds, void *mem);
+void disko_memend(disko_t *ds, void *mem, size_t size);
 
 #endif /* SCHISM_DISKO_H_ */
