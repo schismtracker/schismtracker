@@ -320,7 +320,7 @@ static int sdl12_video_startup(void)
 		center_enabled = 1;
 	}
 
-	video.desktop.yuvformat = VIDEO_YUV_NONE;
+	video.desktop.yuvformat = VIDEO_YUV_UYVY;
 
 	if (*cfg_video_format) {
 		if (!strcmp(cfg_video_format, "RGB888") || !strcmp(cfg_video_format, "ARGB8888")) {
@@ -337,6 +337,12 @@ static int sdl12_video_startup(void)
 			video.desktop.yuvformat = VIDEO_YUV_IYUV;
 		} else if (!strcmp(cfg_video_format, "YV12")) {
 			video.desktop.yuvformat = VIDEO_YUV_YV12;
+		} else if (!strcmp(cfg_video_format, "UYVY")) {
+			video.desktop.yuvformat = VIDEO_YUV_UYVY;
+		} else if (!strcmp(cfg_video_format, "YVYU")) {
+			video.desktop.yuvformat = VIDEO_YUV_YVYU;
+		} else if (!strcmp(cfg_video_format, "YUY2")) {
+			video.desktop.yuvformat = VIDEO_YUV_YUY2;
 		}
 	}
 
@@ -588,9 +594,27 @@ static void sdl12_video_resize(uint32_t width, uint32_t height)
 					 NATIVE_SCREEN_HEIGHT,
 					 SDL_IYUV_OVERLAY, video.surface);
 				break;
+			case VIDEO_YUV_UYVY:
+				video.overlay = sdl12_CreateYUVOverlay
+					(2 * NATIVE_SCREEN_WIDTH,
+					 NATIVE_SCREEN_HEIGHT,
+					 SDL_UYVY_OVERLAY, video.surface);
+				break;
+			case VIDEO_YUV_YVYU:
+				video.overlay = sdl12_CreateYUVOverlay
+					(2 * NATIVE_SCREEN_WIDTH,
+					 NATIVE_SCREEN_HEIGHT,
+					 SDL_YVYU_OVERLAY, video.surface);
+				break;
+			case VIDEO_YUV_YUY2:
+				video.overlay = sdl12_CreateYUVOverlay
+					(2 * NATIVE_SCREEN_WIDTH,
+					 NATIVE_SCREEN_HEIGHT,
+					 SDL_YUY2_OVERLAY, video.surface);
+				break;
 			}
 
-			if (video.overlay && video.overlay->planes == 3 &&
+			if (video.overlay && (video.overlay->planes == 3 || video.overlay->planes == 1) &&
 				 ((video.desktop.yuvformat != VIDEO_YUV_NONE) || video.overlay->hw_overlay)) {
 				video.type = VIDEO_YUV;
 				video_yuv_setformat(yuvfmt);

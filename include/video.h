@@ -214,11 +214,11 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 #define VIDEO_YUV_NV12          0x4E563132
 #define VIDEO_YUV_NV21          0x4E563231
 /* TODO NV12 tv format ??? */
-#if 0
 #define VIDEO_YUV_YVYU          0x55595659
 #define VIDEO_YUV_UYVY          0x59565955
 #define VIDEO_YUV_YUY2          0x32595559
 
+#if 0
 /* RGB formats (???) */
 #define VIDEO_YUV_RGBA          0x41424752
 #define VIDEO_YUV_RGBT          0x54424752

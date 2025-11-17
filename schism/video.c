@@ -992,6 +992,31 @@ void video_yuv_pal(unsigned int i, unsigned char rgb[3])
 		video.yuv.pal_u[i] = (v << 8) | u;
 #endif
 		break;
+	/* packed modes */
+	case VIDEO_YUV_YVYU:
+		/* y0 v0 y1 u0 */
+#ifdef WORDS_BIGENDIAN
+		video.yuv.pal_y[i] = u | (y << 8) | (v << 16) | (y << 24);
+#else
+		video.yuv.pal_y[i] = y | (v << 8) | (y << 16) | (u << 24);
+#endif
+		break;
+	case VIDEO_YUV_UYVY:
+		/* u0 y0 v0 y1 */
+#ifdef WORDS_BIGENDIAN
+		video.yuv.pal_y[i] = y | (v << 8) | (y << 16) | (u << 24);
+#else
+		video.yuv.pal_y[i] = u | (y << 8) | (v << 16) | (y << 24);
+#endif
+		break;
+	case VIDEO_YUV_YUY2:
+		/* y0 u0 y1 v0 */
+#ifdef WORDS_BIGENDIAN
+		video.yuv.pal_y[i] = v | (y << 8) | (u << 16) | (y << 24);
+#else
+		video.yuv.pal_y[i] = y | (u << 8) | (y << 16) | (v << 24);
+#endif
+		break;
 	default:
 		break; // err
 	}
@@ -1024,6 +1049,11 @@ void video_yuv_blit(unsigned char *plane0, unsigned char *plane1, unsigned char 
 		video_blitYY(plane0, pitch0, video.yuv.pal_y);
 		video_blit11(2, plane1, pitch1, video.yuv.pal_u);
 		break;
+	case VIDEO_YUV_YVYU:
+	case VIDEO_YUV_UYVY:
+	case VIDEO_YUV_YUY2:
+		video_blit11(4, plane0, pitch0, video.yuv.pal_y);
+		break;
 	}
 }
 
@@ -1049,6 +1079,11 @@ void video_yuv_blit_sequenced(unsigned char *pixels, uint32_t pitch)
 	case VIDEO_YUV_NV21:
 		video_yuv_blit(pixels, pixels + ((NATIVE_SCREEN_HEIGHT * pitch) << 1), NULL, pitch, pitch, 0);
 		break;
+	case VIDEO_YUV_YVYU:
+	case VIDEO_YUV_UYVY:
+	case VIDEO_YUV_YUY2:
+		video_yuv_blit(pixels, NULL, NULL, pitch, 0, 0);
+		break;
 	}
 }
 
@@ -1064,6 +1099,9 @@ void video_yuv_report(void)
 		{VIDEO_YUV_IYUV_TV, "IYUV", "planar+tv"},
 		{VIDEO_YUV_NV21, "NV21", "planar"},
 		{VIDEO_YUV_NV12, "NV12", "planar"},
+		{VIDEO_YUV_YVYU, "YVYU", "packed"},
+		{VIDEO_YUV_UYVY, "UYVY", "packed"},
+		{VIDEO_YUV_YUY2, "YUY2", "packed"},
 		{0, NULL, NULL},
 	}, *layout = yuv_layouts;
 
