@@ -169,4 +169,6 @@ TEST_FUNC(test_song_get_pattern_offset_past_end_of_song)
 
 TEST_FUNC(test_mem_xor)
 
+TEST_FUNC(test_disko_mem)
+
 #undef TEST_FUNC

@@ -139,4 +139,12 @@ void disko_seterror(disko_t *ds, int err);
 /* Call this to seek to an aligned byte boundary */
 void disko_align(disko_t *ds, uint32_t bytes);
 
+/* Returns the block of memory, starting from the current position,
+ * that can be written to by the caller. For optimization purposes,
+ * the memory block returned by this function will write to the
+ * memory stream directly if this is a memory buffer. Note that
+ * this is NOT the case for other buffers. */
+void *disko_memstart(disko_t *ds, size_t size);
+void disko_memend(disko_t *ds, void *mem);
+
 #endif /* SCHISM_DISKO_H_ */

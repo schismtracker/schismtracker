@@ -450,6 +450,61 @@ int disko_memclose(disko_t *ds, int keep_buffer)
 	}
 }
 
+/* Fake disko crap */
+struct disko_memfake {
+	int64_t pos;
+	size_t length;
+	/* NOTE: using uint64_t as the type here would force 64-bit
+	 * aligning, but on all platforms that matter this is already
+	 * either 8 or 16 bytes offset. */
+	unsigned char data[SCHISM_FAM_SIZE];
+};
+
+/* Returns the block of memory, starting from the current position,
+ * that can be written to by the caller. For optimization purposes,
+ * the memory block returned by this function will write to the
+ * memory stream directly if this is a memory buffer. Note that
+ * this is NOT the case for other buffers. */
+void *disko_memstart(disko_t *ds, size_t size)
+{
+	if (ds->data) {
+		/* This is a memory disko, so we can do this fast. */
+		if (!_dw_bufcheck(ds, size))
+			return NULL;
+
+		return ds->data + ds->pos;
+	} else {
+		struct disko_memfake *x = malloc(sizeof(struct disko_memfake) + size);
+
+		if (!x)
+			return NULL;
+
+		x->pos = disko_tell(ds);
+		x->length = size;
+
+		return x->data;
+	}
+}
+
+void disko_memend(disko_t *ds, void *mem)
+{
+	if (ds->data) {
+		/* Nothing to do ;) */
+	} else {
+		/* dirty ass ugly hack */
+		struct disko_memfake *x = (struct disko_memfake *)((char *)mem - offsetof(struct disko_memfake, data));
+
+		int64_t pos = disko_tell(ds);
+
+		/* seek back to this pos, and write into it, then seek back. */
+		disko_seek(ds, x->pos, SEEK_SET);
+		disko_write(ds, x->data, x->length);
+		disko_seek(ds, pos, SEEK_SET);
+
+		free(x);
+	}
+}
+
 // ---------------------------------------------------------------------------
 
 static void _export_setup(song_t *dwsong, int *bps)
