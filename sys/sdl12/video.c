@@ -330,7 +330,7 @@ static int sdl12_video_startup(void)
 			video.desktop.bpp = 24; /* ehhh */
 		} else if (!strcmp(cfg_video_format, "RGB565")) {
 			video.desktop.bpp = 16;
-		} else if (!strcmp(cfg_video_format, "RGB555") || !strcmp(cfg_video_format, "ARGB8888")) {
+		} else if (!strcmp(cfg_video_format, "RGB555") || !strcmp(cfg_video_format, "ARGB1555")) {
 			video.desktop.bpp = 15;
 		} else if (!strcmp(cfg_video_format, "RGB332")) {
 			video.desktop.bpp = 8;
