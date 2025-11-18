@@ -320,7 +320,8 @@ static int sdl12_video_startup(void)
 		center_enabled = 1;
 	}
 
-	video.desktop.yuvformat = VIDEO_YUV_UYVY;
+	video.desktop.bpp = 0;
+	video.desktop.yuvformat = VIDEO_YUV_NONE;
 
 	if (*cfg_video_format) {
 		if (!strcmp(cfg_video_format, "RGB888") || !strcmp(cfg_video_format, "ARGB8888")) {
@@ -361,7 +362,7 @@ static int sdl12_video_startup(void)
 		y = info->current_h;
 
 		/* Grab current bpp without extra hassle */
-		if (info->vfmt)
+		if (info->vfmt && !video.desktop.bpp)
 			video.desktop.bpp = info->vfmt->BitsPerPixel;
 	}
 
@@ -559,7 +560,7 @@ static void sdl12_video_resize(uint32_t width, uint32_t height)
 		video.type = VIDEO_OPENGL;
 		return;
 		/* We get a nasty little black flicker here, ugh */
-	} else if ((cfg_video_hardware && cfg_video_interpolation == VIDEO_INTERPOLATION_NEAREST) || video.desktop.yuvformat != VIDEO_YUV_NONE) {
+	} else if ((cfg_video_hardware && (cfg_video_interpolation == VIDEO_INTERPOLATION_NEAREST)) || video.desktop.yuvformat != VIDEO_YUV_NONE) {
 		if (video.overlay) {
 			sdl12_FreeYUVOverlay(video.overlay);
 			video.overlay = NULL;
