@@ -394,11 +394,14 @@ jobs:
           { host: macos-15, compiler: '16.2' },
           { host: macos-15, compiler: '16.1' },
           { host: macos-15, compiler: '16.0' },
+          { host: macos-15-intel, compiler: '26.0' },
+          { host: macos-15-intel, compiler: '16.4' },
+          { host: macos-15-intel, compiler: '16.3' },
+          { host: macos-15-intel, compiler: '16.2' },
+          { host: macos-15-intel, compiler: '16.1' },
+          { host: macos-15-intel, compiler: '16.0' },
           { host: macos-14, compiler: '15.4' },
           { host: macos-14, compiler: '15.3' },
-          { host: macos-13, compiler: '15.2' },
-          { host: macos-13, compiler: '14.2' },
-          { host: macos-13, compiler: '14.1' },
         ]
     concurrency:
       group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.host}}-${{matrix.sys.compiler}}${{matrix.threads.name}}
