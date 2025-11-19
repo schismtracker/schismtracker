@@ -323,23 +323,13 @@ void schism_crash(void (*log_cb)(FILE *, void *), void *userdata);
 /* page_waterfall.c */
 
 void vis_init(void);
-void vis_work_32s(const int32_t *in, int inlen);
-void vis_work_32m(const int32_t *in, int inlen);
-void vis_work_16s(const int16_t *in, int inlen);
-void vis_work_16m(const int16_t *in, int inlen);
-void vis_work_8s(const int8_t *in, int inlen);
-void vis_work_8m(const int8_t *in, int inlen);
-
-/* more stupid visual stuff:
- * I've reverted these to the values that they were at before the "Visuals"
- * patch from JosepMa, since the newer ones seem to cause weird holes within
- * the graph. Maybe this should be investigated further ;) */
-#define FFT_BUFFER_SIZE_LOG     10
-#define FFT_BUFFER_SIZE         (1 << FFT_BUFFER_SIZE_LOG)
-#define FFT_OUTPUT_SIZE         (FFT_BUFFER_SIZE / 2)
-#define FFT_BANDS_SIZE          1024 // this is enough to fill the screen and more
-
-SCHISM_STATIC_ASSERT(FFT_BUFFER_SIZE_LOG < 32, "FFT buffer code uses 32-bit integers");
+void vis_set_size(uint32_t size);
+void vis_work_32s(const int32_t *in, size_t inlen);
+void vis_work_32m(const int32_t *in, size_t inlen);
+void vis_work_16s(const int16_t *in, size_t inlen);
+void vis_work_16m(const int16_t *in, size_t inlen);
+void vis_work_8s(const int8_t *in, size_t inlen);
+void vis_work_8m(const int8_t *in, size_t inlen);
 
 // "unsigned char out[width]" ...
 void fft_get_columns(uint32_t width, unsigned char *out, uint32_t chan);

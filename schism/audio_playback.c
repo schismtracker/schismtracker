@@ -184,6 +184,8 @@ uint32_t s32_to_s24(void *ptr, const int32_t *buffer, uint32_t samples)
 
 static void audio_reallocate_buffer(uint32_t samples)
 {
+	if (samples != audio_buffer_samples)
+		vis_set_size(samples);
 	audio_buffer_samples = samples;
 	if (samples > audio_buffer_samples_allocated) {
 		free(audio_buffer);

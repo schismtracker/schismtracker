@@ -409,4 +409,59 @@ int barray_isset_impl(uint32_t *barray, int bit)
 #define BITARRAY_ISSET(name, bit) \
 	(barray_isset_impl(name, bit))
 
+/* ------------------------------------------------------------------------ */
+
+/* Gets the nearest power of 2 from a 32-bit integer
+ * Can easily be used for 8, 16, or 64 bit as well
+ * by adding or removing shifts */
+static inline SCHISM_ALWAYS_INLINE
+uint32_t bnextpow2(uint32_t x)
+{
+	x--;
+	x |= (x >> 1);
+	x |= (x >> 2);
+	x |= (x >> 4);
+	x |= (x >> 8);
+	x |= (x >> 16);
+	x++;
+	return x;
+}
+
+/* ------------------------------------------------------------------------ */
+/* fast 32-bit log2. */
+
+static inline SCHISM_ALWAYS_INLINE
+uint32_t blog2(uint32_t x)
+{
+#if SCHISM_GNUC_HAS_BUILTIN(__builtin_clz, 3, 4, 6)
+	/* On x86, this optimizes to the bsr instruction, even as
+	 * far back as gcc 3.4.6, which also happens to be the earliest
+	 * compiler available on Compiler Explorer ;) */
+	return 31 - __builtin_clz(x);
+#else
+	/* Uh oh, slow! */
+	uint32_t n;
+
+	for (n = 31; n > 0; n--)
+		if (x & (UINT32_C(1) << n))
+			return n;
+
+	return 0;
+#endif
+}
+
+/* ------------------------------------------------------------------------ */
+/* reverses the bits in x, fast */
+
+static inline SCHISM_ALWAYS_INLINE
+uint32_t breverse32(uint32_t x)
+{
+	x = (x & 0xFFFF0000) >> 16 | (x & 0x0000FFFF) << 16;
+	x = (x & 0xFF00FF00) >> 8  | (x & 0x00FF00FF) << 8;
+	x = (x & 0xF0F0F0F0) >> 4  | (x & 0x0F0F0F0F) << 4;
+	x = (x & 0xCCCCCCCC) >> 2  | (x & 0x33333333) << 2;
+	x = (x & 0xAAAAAAAA) >> 1  | (x & 0x55555555) << 1;
+	return x;
+}
+
 #endif /* SCHISM_BITS_H_ */

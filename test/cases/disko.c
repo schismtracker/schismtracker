@@ -69,8 +69,6 @@ testresult_t test_disko_mem(void)
 
 	r = test_disko(&ds);
 
-	disko_memclose(&ds, 1);
-
 	/* ehhh */
 	if (r == SCHISM_TESTRESULT_PASS && ds.length != 24 && ds.allocated < 24)
 		r = SCHISM_TESTRESULT_FAIL;
@@ -78,7 +76,7 @@ testresult_t test_disko_mem(void)
 	if (r == SCHISM_TESTRESULT_PASS && memcmp(ds.data, "123456789101111111111111111", 24))
 		r = SCHISM_TESTRESULT_FAIL;
 
-	free(ds.data);
+	disko_memclose(&ds, 0);
 
 	return r;
 }

@@ -28,18 +28,28 @@
 #include "song.h"
 #include "widget.h"
 #include "vgamem.h"
+#include "mem.h"
+
+/* #define for using one malloc call for all tables */
+#define FFT_USE_ONE_MALLOC 1
 
 #define NATIVE_SCREEN_WIDTH     640
 #define NATIVE_SCREEN_HEIGHT    400
 #define SCOPE_ROWS      32
 
-/* This value is used internally to scale the power output of the FFT to decibels. */
-static const float fft_inv_bufsize = 1.0f/(FFT_BUFFER_SIZE>>2);
-/* Scaling for FFT. Input is expected to be int16_t. */
-static const float inv_s_range = 1.f/32768.f;
+#define FFT_BANDS_SIZE          1024
 
-static int16_t current_fft_data[2][FFT_OUTPUT_SIZE];
-/*Table to change the scale from linear to log.*/
+/* current FFT size. this should always be a power of 2. */
+static uint32_t fft_size;
+static uint32_t fft_bufsize; /* fft_size * 2 */
+static uint32_t fft_sizelog2; /* log2(fft_bufsize) */
+
+/* This value is used internally to scale the power output of the FFT to decibels. */
+static float fft_inv_bufsize;
+/* Scaling for FFT. Input is expected to be int16_t. */
+static const float inv_s_range = 1.0f/32768.0f;
+
+/* Table to change the scale from linear to log. */
 static uint32_t fftlog[FFT_BANDS_SIZE];
 
 /* variables :) */
@@ -51,105 +61,163 @@ static int noisefloor=72;
 /* get the _whole_ display */
 static struct vgamem_overlay ovl = { 0, 0, 79, 49, NULL, 0, 0, 0 };
 
-/* tables */
-static uint32_t bit_reverse[FFT_BUFFER_SIZE];
-static float window[FFT_BUFFER_SIZE];
-static float precos[FFT_OUTPUT_SIZE];
-static float presin[FFT_OUTPUT_SIZE];
+#define FFT_VAR(type, name, size) \
+	static type *name;
+#include "fft-vars.h"
 
-/* fft state */
-static float state_real[FFT_BUFFER_SIZE];
-static float state_imag[FFT_BUFFER_SIZE];
+#ifdef FFT_USE_ONE_MALLOC
+/* THE big fft allocation ;) */
+static void *fft_allocation;
+#endif
 
-
-static inline SCHISM_ALWAYS_INLINE uint32_t _reverse_bits(uint32_t in)
+static inline SCHISM_ALWAYS_INLINE
+uint32_t _reverse_bits(uint32_t in, uint32_t bufsizelog)
 {
-	uint32_t r = 0, n;
-	for (n = 0; n < FFT_BUFFER_SIZE_LOG; n++) {
-		r <<= 1;
-		r |= (in & 1);
-		in >>= 1;
-	}
-	return r;
+	/* This outputs less instructions than the old plain C algorithm,
+	 * because breverse32 uses a divide-and-conquer algorithm rather
+	 * than one-at-a-time. Whether it really performs better is anyone's
+	 * guess ;) */
+	return breverse32(in) >> (32 - bufsizelog);
 }
 
-void vis_init(void)
+/* Ok, some explanation:
+ * ALL of our FFT buffers (state, etc) are reliant on one size, and all need
+ * to be allocated at once.
+ * So,  */
+static void vis_realloc(uint32_t size)
 {
-	unsigned int n;
+	uint32_t bufsize;
+	char *ptr;
 
-	for (n = 0; n < FFT_BUFFER_SIZE; n++) {
-		bit_reverse[n] = _reverse_bits(n);
+	/* this could be <= as well */
+	if (size == fft_size)
+		return; /* No need to do anything */
+
+	/* size MUST be a power of 2 here */
+	SCHISM_RUNTIME_ASSERT(!(size & (size - 1)), "FFT size must be a power of 2");
+
+	bufsize = size * 2;
+
+#ifdef FFT_USE_ONE_MALLOC
+	free(fft_allocation);
+	fft_allocation = mem_alloc(
+#define FFT_VAR(type, name, size) \
+	((size) * sizeof(type)) +
+#include "fft-vars.h"
+		/* no-op for size */
+		0
+	);
+
+	/* This pointer will be used to iterate the fft allocation */
+	ptr = fft_allocation;
+#define FFT_VAR(type, name, size) \
+	do { \
+		name = (type *)(ptr); \
+		ptr += (size) * sizeof(type); \
+	} while (0);
+#include "fft-vars.h"
+#else
+# define FFT_VAR(type, name, size) \
+	free(name); \
+	name = mem_alloc((size) * sizeof(type));
+# include "fft-vars.h"
+#endif
+
+	/* store these for later... */
+	fft_size = size;
+	fft_bufsize = bufsize;
+	fft_sizelog2 = blog2(bufsize);
+
+#if 0
+	/* this makes weird bugs easier to spot */
+	memset(incomingl, 0, fft_bufsize * 2);
+	memset(incomingr, 0, fft_bufsize * 2);
+#endif
+}
+
+/* must be called any time the sample buffer size changes */
+void vis_set_size(uint32_t size)
+{
+	uint32_t n;
+
+	vis_realloc(bnextpow2(size));
+
+	for (n = 0; n < fft_bufsize; n++) {
+		bit_reverse[n] = _reverse_bits(n, fft_sizelog2);
 #if 0
 		/*Rectangular/none*/
 		window[n] = 1;
 		/*Cosine/sine window*/
-		window[n] = sin(M_PI * n/ FFT_BUFFER_SIZE -1);
+		window[n] = sin(M_PI * n/ fft_bufsize -1);
 		/*Hann Window*/
-		window[n] = 0.50f - 0.50f * cos(2.0*M_PI * n / (FFT_BUFFER_SIZE - 1));
+		window[n] = 0.50f - 0.50f * cos(2.0*M_PI * n / (fft_bufsize - 1));
 		/*Hamming Window*/
-		window[n] = 0.54f - 0.46f * cos(2.0*M_PI * n / (FFT_BUFFER_SIZE - 1));
+		window[n] = 0.54f - 0.46f * cos(2.0*M_PI * n / (fft_bufsize - 1));
 		/*Gaussian*/
-		window[n] = powf(M_E,-0.5f *pow((n-(FFT_BUFFER_SIZE-1)/2.f)/(0.4*(FFT_BUFFER_SIZE-1)/2.f),2.f));
+		window[n] = powf(M_E,-0.5f *pow((n-(fft_bufsize-1)/2.f)/(0.4*(fft_bufsize-1)/2.f),2.f));
 		/*Blackmann*/
-		window[n] = 0.42659 - 0.49656 * cos(2.0*M_PI * n/ (FFT_BUFFER_SIZE-1)) + 0.076849 * cos(4.0*M_PI * n /(FFT_BUFFER_SIZE-1));
+		window[n] = 0.42659 - 0.49656 * cos(2.0*M_PI * n/ (fft_bufsize-1)) + 0.076849 * cos(4.0*M_PI * n /(fft_bufsize-1));
 		/*Blackman-Harris*/
-		window[n] = 0.35875 - 0.48829 * cos(2.0*M_PI * n/ (FFT_BUFFER_SIZE-1)) + 0.14128 * cos(4.0*M_PI * n /(FFT_BUFFER_SIZE-1)) - 0.01168 * cos(6.0*M_PI * n /(FFT_BUFFER_SIZE-1));
+		window[n] = 0.35875 - 0.48829 * cos(2.0*M_PI * n/ (fft_bufsize-1)) + 0.14128 * cos(4.0*M_PI * n /(fft_bufsize-1)) - 0.01168 * cos(6.0*M_PI * n /(fft_bufsize-1));
 #endif
 		/*Hann Window*/
-		window[n] = 0.50f - 0.50f * cos(2.0*M_PI * n / (FFT_BUFFER_SIZE - 1));
+		window[n] = 0.50f - 0.50f * cos(2.0 * M_PI * n / (fft_bufsize - 1));
 	}
-	for (n = 0; n < FFT_OUTPUT_SIZE; n++) {
-		float j = (2.0*M_PI) * n / FFT_BUFFER_SIZE;
+
+	for (n = 0; n < fft_size; n++) {
+		float j = (2.0f * (float)M_PI) * n / fft_bufsize;
 		precos[n] = cos(j);
 		presin[n] = sin(j);
 	}
+
+	/* ?? */
+	fft_inv_bufsize = 1.0f/(fft_bufsize >> 2);
+
 #if 0
 	/* linear */
-	const double factor = (float)FFT_OUTPUT_SIZE / FFT_BANDS_SIZE;
+	const double factor = (float)fft_size / FFT_BANDS_SIZE;
 	for (n = 0; n < FFT_BANDS_SIZE; n++)
 		fftlog[n] = n * factor;
 #elif 1
 	/* exponential */
-	const double factor = (float)FFT_OUTPUT_SIZE / FFT_BANDS_SIZE / FFT_BANDS_SIZE;
+	const double factor = (float)fft_size / FFT_BANDS_SIZE / FFT_BANDS_SIZE;
 	for (n = 0; n < FFT_BANDS_SIZE; n++)
 		fftlog[n] = n * n * factor;
 #else
 	/* constant note scale */
-	const float factor = 8.0f / (float)FFT_BANDS_SIZE;
-	const float factor2 = (float)FFT_OUTPUT_SIZE / 256.0f;
+	static const float factor = 8.0f / (float)FFT_BANDS_SIZE;
+	const float factor2 = (float)fft_size / 256.0f;
 
 	for (n = 0; n < FFT_BANDS_SIZE; n++)
 		fftlog[n] = factor2 * (powf(2.0f, n * factor) - 1.0f);
 #endif
 }
 
-/*
-* Understanding In and Out:
-* input is the samples (so, it is amplitude). The scale is expected to be signed 16bits.
-*    The window function calculated in "window" will automatically be applied.
-* output is a value between 0 and 128 representing 0 = noisefloor variable
-*    and 128 = 0dBFS (deciBell, FullScale) for each band.
-*/
-static void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input[FFT_BUFFER_SIZE])
+void vis_init(void)
+{
+	/* nop... */
+}
+
+static void _vis_data_work(int16_t *output, int16_t *input)
 {
 	uint32_t n, k, y;
-	uint32_t ex = 1, ff = FFT_OUTPUT_SIZE;
+	uint32_t ex = 1, ff = fft_size;
 	uint32_t yp;
 	float fr, fi;
 	float tr, ti;
 	float out;
 
-	for (n = 0; n < FFT_BUFFER_SIZE; n++) {
+	for (n = 0; n < fft_bufsize; n++) {
 		uint32_t nr = bit_reverse[n];
 		state_real[n] = (float)input[nr] * inv_s_range * window[nr];
 		state_imag[n] = 0;
 	}
 
-	for (n = FFT_BUFFER_SIZE_LOG; n != 0; n--) {
+	for (n = fft_sizelog2; n != 0; n--) {
 		for (k = 0; k != ex; k++) {
 			fr = precos[k * ff];
 			fi = presin[k * ff];
-			for (y = k; y < FFT_BUFFER_SIZE; y += ex << 1) {
+			for (y = k; y < fft_bufsize; y += ex << 1) {
 				yp = y + ex;
 				tr = fr * state_real[yp] - fi * state_imag[yp];
 				ti = fr * state_imag[yp] + fi * state_real[yp];
@@ -167,7 +235,7 @@ static void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input[FFT_BU
 	/* XXX I changed the behavior here since the states were getting overflowed (originally
 	 * was 'n + 1' changed to just 'n'. Hopefully nothing breaks... */
 	const float fft_dbinv_bufsize = dB(fft_inv_bufsize);
-	for (n = 0; n < FFT_OUTPUT_SIZE; n++) {
+	for (n = 0; n < fft_size; n++) {
 		/* "out" is the total power for each band.
 		 * To get amplitude from "output", use sqrt(out[N])/(sizeBuf>>2)
 		 * To get dB from "output", use powerdB(out[N])+db(1/(sizeBuf>>2)).
@@ -179,16 +247,17 @@ static void _vis_data_work(int16_t output[FFT_OUTPUT_SIZE], int16_t input[FFT_BU
 	}
 }
 
-// "chan" is either zero for all, or nonzero for a specific output channel
-static inline SCHISM_ALWAYS_INLINE int16_t _fft_get_value(uint32_t chan, uint32_t offset)
+/* "chan" is either zero for all, or nonzero for a specific output channel */
+static inline SCHISM_ALWAYS_INLINE
+int16_t _fft_get_value(uint32_t chan, uint32_t offset)
 {
 	switch (chan) {
-	case 1: case 2: return current_fft_data[chan - 1][offset];
+	case 1: return current_fft_datal[offset];
+	case 2: return current_fft_datar[offset];
 	default: break;
 	}
 
-	const uint32_t x1 = current_fft_data[0][offset], x2 = current_fft_data[1][offset];
-	return (x1 >> 1) + (x2 >> 1) + (x1 & x2 & 1);
+	return bavgu32(current_fft_datal[offset], current_fft_datar[offset]);
 }
 
 /* convert the fft bands to columns of screen
@@ -199,12 +268,12 @@ void fft_get_columns(uint32_t width, unsigned char *out, uint32_t chan)
 {
 	uint32_t i, a;
 
-	for (i = 0, a = 0; i < width && a < FFT_OUTPUT_SIZE; i++) {
+	for (i = 0, a = 0; i < width && a < fft_size; i++) {
 		const uint32_t fftlog_i = (i * FFT_BANDS_SIZE / width);
 		int j;
 
 		uint32_t ax = fftlog[fftlog_i];
-		if (ax >= FFT_OUTPUT_SIZE)
+		if (ax >= fft_size)
 			break; // NOW JUST WHO SAY THEY AINT GOT MANY BLOOD?
 
 		/* mmm... this got ugly */
@@ -286,35 +355,34 @@ static void _vis_process(void)
 }
 
 #define VIS_WORK_EX(SUFFIX, BITS, INLOOP) \
-	void vis_work_##BITS##SUFFIX(const int##BITS##_t *in, int inlen) \
+	void vis_work_##BITS##SUFFIX(const int##BITS##_t *in, size_t samples) \
 	{ \
-		int16_t dl[FFT_BUFFER_SIZE], dr[FFT_BUFFER_SIZE]; \
-		int i, j, k; \
+		size_t i, j, k; \
 	\
-		if (!inlen) { \
-			memset(current_fft_data[0], 0, FFT_OUTPUT_SIZE*2); \
-			memset(current_fft_data[1], 0, FFT_OUTPUT_SIZE*2); \
+		if (!samples) { \
+			memset(current_fft_datal, 0, fft_size * sizeof(*current_fft_datal)); \
+			memset(current_fft_datar, 0, fft_size * sizeof(*current_fft_datar)); \
 		} else { \
-			for (i = 0; i < FFT_BUFFER_SIZE;) { \
-				for (k = j = 0; k < inlen && i < FFT_BUFFER_SIZE; k++, i++) { \
+			for (i = 0; i < fft_size;) { \
+				for (k = j = 0; k < samples && i < fft_size; k++, i++) { \
 					INLOOP \
 				} \
 			} \
 	\
-			_vis_data_work(current_fft_data[0], dl); \
-			_vis_data_work(current_fft_data[1], dr); \
+			_vis_data_work(current_fft_datal, incomingl); \
+			_vis_data_work(current_fft_datar, incomingr); \
 		} \
 		if (status.current_page == PAGE_WATERFALL) _vis_process(); \
 	}
 
 #define VIS_WORK(BITS) \
 	VIS_WORK_EX(s, BITS, { \
-		dl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
-		dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+		incomingl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+		incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
 	}) \
 	\
 	VIS_WORK_EX(m, BITS, { \
-		dl[i] = dr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+		incomingl[i] = incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
 	})
 
 VIS_WORK(32)
