@@ -82,6 +82,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 			/* When this function is available we can use it
 			 * to avoid an extra chdir() at the end */
 			posix_spawn_file_actions_t actions;
+			int r;
 
 			if (posix_spawn_file_actions_init(&actions) != 0)
 				goto fail;
@@ -89,10 +90,9 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 			if (posix_spawn_file_actions_addchdir(&actions, dir) != 0)
 				goto fail;
 
-			if (posix_spawn(&pid, name, &actions, NULL, argv, environ) != 0)
-				goto fail;
-
-			if (posix_spawn_file_actions_destroy(&actions) != 0)
+			r = posix_spawn(&pid, name, &actions, NULL, argv, environ);
+			posix_spawn_file_actions_destroy(&actions);
+			if (r != 0)
 				goto fail;
 #else
 			char *owd = dmoz_get_current_directory();
