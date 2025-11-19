@@ -120,6 +120,7 @@ noinst_HEADERS = \
 	include/fonts.h         \
 	include/fmt-types.h		\
 	include/fmt.h			\
+	include/fft-vars.h		\
 	include/headers.h		\
 	include/ieee-float.h    \
 	include/it.h			\
@@ -168,6 +169,7 @@ noinst_HEADERS = \
 	sys/wii/su_tmd_bin.h        \
 	sys/sdl12/init.h \
 	sys/sdl2/init.h \
+	sys/sdl3/init.h \
 	sys/x11/init.h \
 	sys/win32/win32-vista.h \
 	sys/asio/audio-asio.h
