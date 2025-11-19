@@ -61,6 +61,9 @@ static int sdl12_audio_init_driver(const char *name)
 	x = sdl12_InitSubSystem(SDL_INIT_AUDIO);
 
 	if (x >= 0) {
+		/* valgrind: Conditional jump or move depends on uninitialised value(s) */
+		memset(buf, 0, sizeof(buf));
+
 		/* verify that our driver is the one we want */
 		sdl12_AudioDriverName(buf, sizeof(buf));
 
