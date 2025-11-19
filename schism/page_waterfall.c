@@ -37,7 +37,8 @@
 #define NATIVE_SCREEN_HEIGHT    400
 #define SCOPE_ROWS      32
 
-#define FFT_BANDS_SIZE          1024
+/* 1920 = least common multiple of 120, 640, and 320 */
+#define FFT_BANDS_SIZE          (1920)
 
 /* current FFT size. this should always be a power of 2. */
 static uint32_t fft_size;
@@ -198,7 +199,7 @@ void vis_init(void)
 	/* nop... */
 }
 
-static void _vis_data_work(int16_t *output, int16_t *input)
+static void _vis_data_work(uint8_t *output, int16_t *input)
 {
 	uint32_t n, k, y;
 	uint32_t ex = 1, ff = fft_size;
@@ -249,7 +250,7 @@ static void _vis_data_work(int16_t *output, int16_t *input)
 
 /* "chan" is either zero for all, or nonzero for a specific output channel */
 static inline SCHISM_ALWAYS_INLINE
-int16_t _fft_get_value(uint32_t chan, uint32_t offset)
+uint8_t _fft_get_value(uint32_t chan, uint32_t offset)
 {
 	switch (chan) {
 	case 1: return current_fft_datal[offset];
@@ -270,11 +271,11 @@ void fft_get_columns(uint32_t width, unsigned char *out, uint32_t chan)
 
 	for (i = 0, a = 0; i < width && a < fft_size; i++) {
 		const uint32_t fftlog_i = (i * FFT_BANDS_SIZE / width);
-		int j;
+		uint8_t j;
 
 		uint32_t ax = fftlog[fftlog_i];
 		if (ax >= fft_size)
-			break; // NOW JUST WHO SAY THEY AINT GOT MANY BLOOD?
+			break;
 
 		/* mmm... this got ugly */
 		if ((fftlog_i + 1 >= FFT_BANDS_SIZE) || (ax + 1 > fftlog[fftlog_i + 1])) {
@@ -284,12 +285,11 @@ void fft_get_columns(uint32_t width, unsigned char *out, uint32_t chan)
 			j = _fft_get_value(chan, a);
 			while (a <= ax) {
 				a++;
-				int x = _fft_get_value(chan, a);
+				uint8_t x = _fft_get_value(chan, a);
 				j = MAX(j, x);
 			}
 		}
 
-		/* FIXME if the FTT data is 16-bits, why are we cutting off the top bits */
 		out[i] = j;
 	}
 }

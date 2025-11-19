@@ -32,9 +32,10 @@ FFT_VAR(float, presin, size)
 FFT_VAR(float, precos, size)
 FFT_VAR(float, state_real, bufsize)
 FFT_VAR(float, state_imag, bufsize)
-FFT_VAR(int16_t, current_fft_datal, size)
-FFT_VAR(int16_t, current_fft_datar, size)
 FFT_VAR(int16_t, incomingl, bufsize)
 FFT_VAR(int16_t, incomingr, bufsize)
+/* fft data is in range 0..128 */
+FFT_VAR(uint8_t, current_fft_datal, size)
+FFT_VAR(uint8_t, current_fft_datar, size)
 
 #undef FFT_VAR
