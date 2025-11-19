@@ -166,11 +166,19 @@ int slurp_gzip(slurp_t *src)
 	 * if it was set twice, our whole lives are different than
 	 * we would've been otherwise. */
 	if (zl->err) {
-		/* roll it back */
-		memcpy(src, &zl->fp, sizeof(slurp_t));
+		/* TODO please find a better way to do this.
+		 * this prevents memleaks, but is utterly deranged */
+		slurp_t tmp;
 
-		ZLIB_inflateEnd(&zl->zs);
-		free(zl);
+		memcpy(&tmp, &zl->fp, sizeof(slurp_t));
+
+		/* prevent original fp from actually being closed */
+		zl->fp.closure = NULL;
+		unslurp(src);
+
+		/* roll it back */
+		memcpy(src, &tmp, sizeof(slurp_t));
+
 		return -1;
 	}
 
