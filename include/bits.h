@@ -440,9 +440,9 @@ uint32_t blog2(uint32_t x)
 	return 31 - __builtin_clz(x);
 #else
 	/* Uh oh, slow! */
-	uint32_t n;
+	int n;
 
-	for (n = 31; n > 0; n--)
+	for (n = 31; n >= 0; n--)
 		if (x & (UINT32_C(1) << n))
 			return n;
 
