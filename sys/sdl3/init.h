@@ -57,7 +57,7 @@ int sdl3_load_sym(const char *fn, void *addr);
 // video.c
 void sdl3_display_scale_changed_cb(void);
 void sdl3_video_fullscreen_cb(void);
-
 int sdl3_video_text_input_active(void);
+void sdl3_event_coords_to_render(SDL_Event *event);
 
 #endif /* SCHISM_SYS_SDL3_INIT_H_ */

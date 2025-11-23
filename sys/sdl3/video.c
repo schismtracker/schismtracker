@@ -131,6 +131,8 @@ static bool (SDLCALL *sdl3_SetNumberProperty)(SDL_PropertiesID props, const char
 static SDL_PropertiesID (SDLCALL *sdl3_CreateProperties)(void);
 static void (SDLCALL *sdl3_DestroyProperties)(SDL_PropertiesID props);
 
+static bool (SDLCALL *sdl3_ConvertEventToRenderCoordinates)(SDL_Renderer *renderer, SDL_Event *event);
+
 static void sdl3_video_setup(int quality);
 
 struct rect {
@@ -566,6 +568,13 @@ void sdl3_display_scale_changed_cb(void)
 	sdl3_SetWindowSize(video.window, video.width, video.height);
 }
 
+void sdl3_event_coords_to_render(SDL_Event *event)
+{
+	if (video.type == VIDEO_TYPE_RENDERER) {
+		sdl3_ConvertEventToRenderCoordinates(video.u.r.renderer, event);
+	}
+}
+
 static void sdl3_video_fullscreen(int new_fs_flag)
 {
 	const int have_menu = video_have_menu();
@@ -995,6 +1004,8 @@ static int sdl3_video_load_syms(void)
 	SCHISM_SDL3_SYM(SetBooleanProperty);
 	SCHISM_SDL3_SYM(CreateProperties);
 	SCHISM_SDL3_SYM(DestroyProperties);
+
+	SCHISM_SDL3_SYM(ConvertEventToRenderCoordinates);
 
 	return 0;
 }

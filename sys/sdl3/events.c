@@ -202,6 +202,8 @@ static void sdl3_pump_events(void)
 	while (sdl3_PeepEvents(&e, 1, SDL_GETEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST) == 1) {
 		schism_event_t schism_event;
 
+		sdl3_event_coords_to_render(&e);
+
 #ifdef SCHISM_CONTROLLER
 		if (!sdl3_controller_sdlevent(&e))
 			continue;
