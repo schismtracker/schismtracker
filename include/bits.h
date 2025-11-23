@@ -464,4 +464,18 @@ uint32_t breverse32(uint32_t x)
 	return x;
 }
 
+/* ------------------------------------------------------------------------ */
+/* fast-ish greatest common factor implementation */
+
+static inline SCHISM_ALWAYS_INLINE
+uint32_t bgcd32(uint32_t a, uint32_t b)
+{
+	while (b != 0) {
+		uint32_t tmp = b;
+		b = a % tmp;
+		a = tmp;
+	}
+	return a;
+}
+
 #endif /* SCHISM_BITS_H_ */

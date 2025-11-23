@@ -182,19 +182,19 @@ void cfg_load(void)
 		cfg_video_interpolation = (x ? VIDEO_INTERPOLATION_LINEAR : VIDEO_INTERPOLATION_NEAREST);
 	}
 
-#ifdef SCHISM_XBOX
+#if 0
 /* This should be adapted to other consoles :) */
 # define WIDTH_DEFAULT 640
 # define HEIGHT_DEFAULT 480
 # define WANT_FIXED_DEFAULT 1
-# define WANT_FIXED_WIDTH_DEFAULT 640
-# define WANT_FIXED_HEIGHT_DEFAULT 400
+# define WANT_FIXED_WIDTH_DEFAULT 1
+# define WANT_FIXED_HEIGHT_DEFAULT 1
 #else
 # define WIDTH_DEFAULT 640
 # define HEIGHT_DEFAULT 400
 # define WANT_FIXED_DEFAULT 0
-# define WANT_FIXED_WIDTH_DEFAULT (640 * 5)
-# define WANT_FIXED_HEIGHT_DEFAULT (400 * 6)
+# define WANT_FIXED_WIDTH_DEFAULT 5
+# define WANT_FIXED_HEIGHT_DEFAULT 6
 #endif
 
 	cfg_get_string(&cfg, "Video", "format", cfg_video_format, ARRAY_SIZE(cfg_video_format), "");
@@ -208,6 +208,15 @@ void cfg_load(void)
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
 	cfg_video_hardware = cfg_get_number(&cfg, "Video", "hardware", 1);
 	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
+
+	{
+		/* width and height are now essentially treated as a ratio. */
+		uint32_t den = bgcd32(cfg_video_want_fixed_width, cfg_video_want_fixed_height);
+		cfg_video_want_fixed_width /= den;
+		cfg_video_want_fixed_width *= 640;
+		cfg_video_want_fixed_height /= den;
+		cfg_video_want_fixed_height *= 400;
+	}
 
 	tmp = dmoz_get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules), tmp);
