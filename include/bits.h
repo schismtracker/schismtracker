@@ -465,17 +465,18 @@ uint32_t breverse32(uint32_t x)
 }
 
 /* ------------------------------------------------------------------------ */
-/* fast-ish greatest common factor implementation */
+/* fast greatest common divisor/factor implementation */
 
 static inline SCHISM_ALWAYS_INLINE
 uint32_t bgcd32(uint32_t a, uint32_t b)
 {
-	while (b != 0) {
-		uint32_t tmp = b;
-		b = a % tmp;
-		a = tmp;
+	while (a != 0) {
+		uint32_t tmp = a;
+		a = b % tmp;
+		b = tmp;
 	}
-	return a;
+
+	return b;
 }
 
 #endif /* SCHISM_BITS_H_ */
