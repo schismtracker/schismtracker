@@ -900,7 +900,8 @@ int csf_first_blank_instrument(song_t *csf, int start);
 
 int csf_get_highest_used_channel(song_t *csf);
 
-
+void csf_set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrument_t *penv,
+	song_sample_t *pins);
 
 int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t channels);
 

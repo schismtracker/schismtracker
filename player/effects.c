@@ -243,7 +243,7 @@ static void set_instrument_panning_ex(song_t *csf, song_voice_t *chan, int32_t p
 }
 
 /* penv can be NULL here, but pins cannot */
-static void set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrument_t *penv,
+void csf_set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrument_t *penv,
 	song_sample_t *pins)
 {
 	if (penv && (penv->flags & ENV_SETPANNING)) {
@@ -252,6 +252,9 @@ static void set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrum
 		set_instrument_panning_ex(csf, chan, pins->panning);
 	}
 }
+
+/* I'm lazy */
+#define set_instrument_panning csf_set_instrument_panning
 
 static void fx_fine_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {

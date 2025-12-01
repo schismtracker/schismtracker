@@ -1017,28 +1017,55 @@ void song_get_vu_meter(int *left, int *right)
 	*right = dB_s(40, current_song->vu_right/256.f, 0.f);
 }
 
+/* Can all this crap just be in the player? It really doesn't belong here
+ * and it's embarrassing the amount of coupling all within schism... */
 void song_update_playing_instrument(int i_changed)
 {
 	song_voice_t *channel;
 	song_instrument_t *inst;
+	int n;
 
 	song_lock_audio();
-	int n = MIN(current_song->num_voices, current_song->max_voices);
-	while (n--) {
+
+	/* Does this instrument even exist? (logic bug) */
+	if (!current_song->instruments[i_changed]) {
+		song_unlock_audio();
+		return;
+	}
+
+	n = MIN(current_song->num_voices, current_song->max_voices);
+	while (--n >= 0) {
 		channel = current_song->voices + current_song->voice_mix[n];
-		if (channel->ptr_instrument && channel->ptr_instrument == current_song->instruments[i_changed]) {
-			csf_instrument_change(current_song, channel, i_changed, 1, 0);
+		/* Already verified i_changed is an instrument above. No need to check
+		 * for NULL here. */
+		if (channel->ptr_instrument == current_song->instruments[i_changed]) {
+			song_sample_t *psmp;
+
 			inst = channel->ptr_instrument;
 			if (!inst) continue;
 
-			/* special cases;
-				mpt doesn't do this if porta-enabled, */
+			/* We shouldn't change anything regarding samples here.
+			 * Really the only things we *should* deal with are envelopes
+			 * and some basic variables. */
+			channel->flags &= ~(CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
+			if (inst->flags & ENV_VOLUME)  channel->flags |= CHN_VOLENV;
+			if (inst->flags & ENV_PANNING) channel->flags |= CHN_PANENV;
+			if (inst->flags & ENV_PITCH)   channel->flags |= CHN_PITCHENV;
+
+			psmp = channel->ptr_sample;
+			if (psmp) { /* X to doubt this is always filled in */
+				channel->instrument_volume = psmp->global_volume * inst->global_volume;
+				csf_set_instrument_panning(current_song, channel, inst, psmp);
+			}
+
+			/* This seems to work fine, but yet again this SHOULD NOT BE HERE. */
 			if (inst->ifr & 0x80) {
 				channel->resonance = inst->ifr & 0x7F;
 			} else {
 				channel->resonance = 0;
 				channel->flags &= (~CHN_FILTER);
 			}
+
 			if (inst->ifc & 0x80) {
 				channel->cutoff = inst->ifc & 0x7F;
 				setup_channel_filter(channel, 0, 256, current_song->mix_frequency);
@@ -1048,9 +1075,6 @@ void song_update_playing_instrument(int i_changed)
 					setup_channel_filter(channel, 0, 256, current_song->mix_frequency);
 				}
 			}
-
-			/* flip direction */
-			channel->flags &= (~CHN_PINGPONGFLAG);
 		}
 	}
 	song_unlock_audio();
