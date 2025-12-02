@@ -826,45 +826,46 @@ DRAW_SAMPLE_DATA_VARIANT(32, 64)
 /* --------------------------------------------------------------------- */
 /* these functions assume the screen is locked! */
 
-/* loop drawing */
-static void _draw_sample_loop(struct vgamem_overlay *r, song_sample_t * sample)
+static void _draw_loop_ex(struct vgamem_overlay *r,
+	uint32_t start, uint32_t end, uint32_t length, uint32_t colorbits,
+	uint32_t flags, uint32_t loopflag)
 {
-	int loopstart, loopend, y;
-	int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
+	uint32_t loopstart, loopend;
+	int32_t y;
+	int c;
 
-	if (!(sample->flags & CHN_LOOP))
+	if (!(flags & loopflag))
 		return;
 
-	loopstart = sample->loop_start * (r->width - 1) / sample->length;
-	loopend = sample->loop_end * (r->width - 1) / sample->length;
+	c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
+
+	loopstart = start * (r->width - 1) / length;
+	loopend = end * (r->width - 1) / length;
 
 	y = 0;
 	do {
-		vgamem_ovl_drawpixel(r, loopstart, y, 0); vgamem_ovl_drawpixel(r, loopend, y, 0); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, c); vgamem_ovl_drawpixel(r, loopend, y, c); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, c); vgamem_ovl_drawpixel(r, loopend, y, c); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, 0); vgamem_ovl_drawpixel(r, loopend, y, 0); y++;
+#define COLOR(x) ((colorbits & (1 << (x))) ? c : 0)
+		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(0)); vgamem_ovl_drawpixel(r, loopend, y, COLOR(0)); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(1)); vgamem_ovl_drawpixel(r, loopend, y, COLOR(1)); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(2)); vgamem_ovl_drawpixel(r, loopend, y, COLOR(2)); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(3)); vgamem_ovl_drawpixel(r, loopend, y, COLOR(3)); y++;
+#undef COLOR
 	} while (y < r->height);
 }
 
-static void _draw_sample_susloop(struct vgamem_overlay *r, song_sample_t * sample)
+/* loop drawing. we always just inline these since they just forward anyway. */
+static inline SCHISM_ALWAYS_INLINE
+void _draw_sample_loop(struct vgamem_overlay *r, song_sample_t * sample)
 {
-	int loopstart, loopend, y;
-	int c = ((status.flags & CLASSIC_MODE) ? SAMPLE_DATA_COLOR : SAMPLE_LOOP_COLOR);
+	/* 0 c c 0 */
+	_draw_loop_ex(r, sample->loop_start, sample->loop_end, sample->length, 0x02 | 0x04, sample->flags, CHN_LOOP);
+}
 
-	if (!(sample->flags & CHN_SUSTAINLOOP))
-		return;
-
-	loopstart = sample->sustain_start * (r->width - 1) / sample->length;
-	loopend = sample->sustain_end * (r->width - 1) / sample->length;
-
-	y = 0;
-	do {
-		vgamem_ovl_drawpixel(r, loopstart, y, c); vgamem_ovl_drawpixel(r, loopend, y, c); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, 0); vgamem_ovl_drawpixel(r, loopend, y, 0); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, c); vgamem_ovl_drawpixel(r, loopend, y, c); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, 0); vgamem_ovl_drawpixel(r, loopend, y, 0); y++;
-	} while (y < r->height);
+static inline SCHISM_ALWAYS_INLINE
+void _draw_sample_susloop(struct vgamem_overlay *r, song_sample_t * sample)
+{
+	/* c 0 c 0 */
+	_draw_loop_ex(r, sample->sustain_start, sample->sustain_end, sample->length, 0x01 | 0x04, sample->flags, CHN_SUSTAINLOOP);
 }
 
 /* this does the lines for playing samples */
