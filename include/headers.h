@@ -46,7 +46,9 @@
  *
  * upstream bug: https://sourceforge.net/p/mingw-w64/bugs/1014/ */
 # include <_mingw.h>
-# include <_mingw_off_t.h>
+# ifdef __MINGW64_VERSION_MAJOR
+#  include <_mingw_off_t.h>
+# endif
 /* Mingw-w64 */
 # undef NO_OLDNAMES
 # define NO_OLDNAMES
