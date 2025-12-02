@@ -26,44 +26,75 @@
 #include "headers.h"
 #include "bits.h"
 #include "ieee-float.h"
+#include "log.h"
 
 /* These are used for hardware encoding/decoding of floating point numbers.
  * Note that even if these types are available and conform to IEEE 754,
  * this doesn't mean that these operations are done in hardware. */
 #if (SIZEOF_FLOAT == 4)
 typedef float float32;
-# define HAVE_FLOAT32
+# define F32_C(x) x ## f
 #elif (SIZEOF_DOUBLE == 4)
 typedef double float32;
-# define HAVE_FLOAT32
+# define F32_C(x) x
 #elif (SIZEOF_LONG_DOUBLE == 4)
 typedef long double float32;
-# define HAVE_FLOAT32
+# define F32_C() x ## l
 #endif
 
 #if (SIZEOF_FLOAT == 8)
 typedef float float64;
-# define HAVE_FLOAT64
+# define F64_C(x) x ## f
 #elif (SIZEOF_DOUBLE == 8)
 typedef double float64;
-# define HAVE_FLOAT64
+# define F64_C(x) x
 #elif (SIZEOF_LONG_DOUBLE == 8)
 typedef long double float64;
-# define HAVE_FLOAT64
+# define F64_C() x ## l
 #endif
 
-// FIXME: Intel has 80-bit precision, but many compilers
-// define long double as 128-bit and simply don't use the
-// other 48 bits.
-#if (SIZEOF_FLOAT == 10)
-typedef float float80;
-# define HAVE_FLOAT80
-#elif (SIZEOF_DOUBLE == 10)
-typedef double float80;
-# define HAVE_FLOAT80
-#elif (SIZEOF_LONG_DOUBLE == 10)
-typedef long double float80;
-# define HAVE_FLOAT80
+#if (SIZEOF_FLOAT == 16)
+typedef float float128;
+# define F128_C(x) x ## f
+#elif (SIZEOF_DOUBLE == 16)
+typedef double float128;
+# define F128_C(x) x
+#elif (SIZEOF_LONG_DOUBLE == 16)
+typedef long double float128;
+# define F128_C(x) x ## l
+#endif
+
+#ifdef F32_C
+# define HAVE_FLOAT32
+#endif
+#ifdef F64_C
+# define HAVE_FLOAT64
+#endif
+#ifdef F128_C
+# define HAVE_FLOAT128
+#endif
+
+#ifdef HAVE_FLOAT32
+enum {
+	F32_UNKNOWN = 0,
+	F32_MOTOROLA = 1,
+	F32_INTEL = 2,
+} f32_format;
+#endif
+
+#ifdef HAVE_FLOAT64
+enum {
+	F64_UNKNOWN = 0,
+	F64_MOTOROLA = 1,
+	F64_INTEL = 2,
+} f64_format;
+#endif
+
+#ifdef HAVE_FLOAT128
+enum {
+	F128_UNKNOWN = 0,
+	F128_INTEL80 = 1, /* 80-bit Intel padded to 128-bit */
+} f128_format;
 #endif
 
 /* --------------------------------------------------------------------- */
@@ -119,18 +150,27 @@ typedef long double float80;
 
 double float_decode_ieee_32(const unsigned char bytes[4])
 {
-#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT32)
-	union {
-		uint32_t u;
-		float32 f;
-	} x;
-	memcpy(&x, bytes, 4);
-	x.u = bswapBE32(x.u);
-	return (double)x.f;
-#else
 	double f;
 	uint32_t mantissa, expon;
 	uint32_t bits;
+
+#ifdef HAVE_FLOAT32
+	switch (f32_format) {
+	case F32_INTEL: {
+		union { float32 f; uint32_t u; } x;
+		memcpy(&x, bytes, 4);
+		x.u = bswap_32(x.u);
+		return x.f;
+	}
+	case F32_MOTOROLA: {
+		float32 f;
+		memcpy(&f, bytes, 4);
+		return f;
+	}
+	}
+
+	/* Fallback to generic implementation */
+#endif
 
 	bits =	((uint32_t)(bytes[0] & 0xFF) << 24)
 		|	((uint32_t)(bytes[1] & 0xFF) << 16)
@@ -159,7 +199,6 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 	}
 
 	return (bits & 0x80000000) ? -f : f;
-#endif
 }
 
 
@@ -168,17 +207,29 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 
 void float_encode_ieee_32(double num, unsigned char bytes[4])
 {
-#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT32)
-	union {
-		uint32_t u;
-		float32 f;
-	} x;
-	x.f = num;
-	x.u = bswapBE32(x.u);
-	memcpy(bytes, &x, 4);
-#else
 	uint32_t sign;
 	register uint32_t bits;
+
+#ifdef HAVE_FLOAT32
+	switch (f32_format) {
+	case F32_INTEL: {
+		union { uint32_t u; float32 f; } x;
+
+		x.f = num;
+		x.u = bswap_32(x.u);
+
+		memcpy(bytes, &x, 4);
+		return;
+	}
+	case F32_MOTOROLA: {
+		float32 f = num;
+		memcpy(bytes, &f, 4);
+		return;
+	}
+	}
+
+	/* Fallback to generic implementation */
+#endif
 
 	if (num < 0) {	/* Can't distinguish a negative zero */
 		sign = 0x80000000;
@@ -221,7 +272,6 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 	bytes[1] = bits >> 16;
 	bytes[2] = bits >> 8;
 	bytes[3] = bits;
-#endif
 }
 
 
@@ -236,24 +286,35 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 
 double float_decode_ieee_64(const unsigned char bytes[8])
 {
-#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT64)
-	union {
-		float64 f;
-		uint64_t u;
-	} x;
-	memcpy(&x, bytes, 8);
-	x.u = bswapBE64(x.u);
-	return (double)x.f;
-#else
 	double f;
 	uint32_t mantissa, expon;
 	uint32_t first, second;
+
+#ifdef HAVE_FLOAT64
+	switch (f64_format) {
+	case F64_INTEL: {
+		union { float64 f; uint64_t u; } x;
+
+		memcpy(&x.u, bytes, 8);
+		x.u = bswap_64(x.u);
+
+		return x.f;
+	}
+	case F64_MOTOROLA: {
+		float64 f;
+		memcpy(&f, bytes, 8);
+		return f;
+	}
+	}
+
+	/* Fallback to generic implementation */
+#endif
 
 	first = ((uint32_t)(bytes[0] & 0xFF) << 24)
 		|	((uint32_t)(bytes[1] & 0xFF) << 16)
 		|	((uint32_t)(bytes[2] & 0xFF) << 8)
 		|	 (uint32_t)(bytes[3] & 0xFF);
-	second= ((uint32_t)(bytes[4] & 0xFF) << 24)
+	second =((uint32_t)(bytes[4] & 0xFF) << 24)
 		|	((uint32_t)(bytes[5] & 0xFF) << 16)
 		|	((uint32_t)(bytes[6] & 0xFF) << 8)
 		|	 (uint32_t)(bytes[7] & 0xFF);
@@ -280,7 +341,6 @@ double float_decode_ieee_64(const unsigned char bytes[8])
 	}
 
 	return (first & 0x80000000) ? -f : f;
-#endif
 }
 
 
@@ -289,17 +349,29 @@ double float_decode_ieee_64(const unsigned char bytes[8])
 
 void float_encode_ieee_64(double num, unsigned char bytes[8])
 {
-#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT64)
-	union {
-		uint64_t u;
-		float64 f;
-	} x;
-	x.f = num;
-	x.u = bswapBE64(x.u);
-	memcpy(bytes, &x, 8);
-#else
 	uint32_t sign;
 	uint32_t first, second;
+
+#ifdef HAVE_FLOAT64
+	switch (f64_format) {
+	case F64_INTEL: {
+		union { uint64_t u; float64 f; } x;
+
+		x.f = num;
+		x.u = bswap_64(x.u);
+
+		memcpy(bytes, &x.f, 8);
+		return;
+	}
+	case F64_MOTOROLA: {
+		float64 f = num;
+		memcpy(bytes, &f, 8);
+		return;
+	}
+	}
+
+	/* Fallback to generic implementation */
+#endif
 
 	if (num < 0) {	/* Can't distinguish a negative zero */
 		sign = 0x80000000;
@@ -361,33 +433,46 @@ void float_encode_ieee_64(double num, unsigned char bytes[8])
 	bytes[5] = second >> 16;
 	bytes[6] = second >> 8;
 	bytes[7] = second;
-#endif
 }
 
 /* ------------------------------------------------------------------------  */
 
-double float_decode_ieee_80(const unsigned char bytes[10])
+/* Used primarily for Intel 80-bit format */
+static void swap_u80(unsigned char u[10])
 {
-#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT80)
-	union {
-		unsigned char b[10];
-		float80 f;
-	} x;
-	memcpy(&x, bytes, 10);
-# ifndef WORDS_BIGENDIAN
-#  define SWAP(y, z) do { unsigned char u = x.b[y]; x.b[y] = x.b[z]; x.b[y] = u; } while (0)
+	unsigned char tmp;
+
+#define SWAP(x,y) do { tmp = u[x]; u[x] = u[y]; u[y] = tmp; } while (0)
 	SWAP(0, 9);
 	SWAP(1, 8);
 	SWAP(2, 7);
 	SWAP(3, 6);
 	SWAP(4, 5);
-#  undef SWAP
-# endif
-	return x.f;
-#else
+#undef SWAP
+}
+
+double float_decode_ieee_80(const unsigned char bytes[10])
+{
 	double f;
 	int expon;
 	uint32_t hiMant, loMant;
+
+#ifdef HAVE_FLOAT128
+	switch (f128_format) {
+	case F128_INTEL80: {
+		float128 f16;
+
+		memcpy(&f16, bytes, 10);
+		memset(&f16 + 10, 0, 6);
+
+		swap_u80((unsigned char *)&f16);
+
+		return f16;
+	}
+	}
+
+	/* Fallback to generic implementation */
+#endif
 
 	expon = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
 	hiMant = ((uint32_t) (bytes[2] & 0xFF) << 24)
@@ -414,32 +499,31 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 		return -f;
 	else
 		return f;
-#endif
 }
 
 void float_encode_ieee_80(double num, unsigned char bytes[10])
 {
-#if defined(__STDC_IEC_559__) && defined(HAVE_FLOAT80)
-	union {
-		unsigned char b[10];
-		float80 f;
-	} x;
-	x.f = num;
-# ifndef WORDS_BIGENDIAN
-#  define SWAP(y, z) do { unsigned char u = x.b[y]; x.b[y] = x.b[z]; x.b[y] = u; } while (0)
-	SWAP(0, 9);
-	SWAP(1, 8);
-	SWAP(2, 7);
-	SWAP(3, 6);
-	SWAP(4, 5);
-#  undef SWAP
-# endif
-	memcpy(bytes, &x, 10);
-#else
 	double fMant, fsMant;
 	int expon;
 	int32_t sign;
 	uint32_t hiMant, loMant;
+
+#ifdef HAVE_FLOAT128
+	switch (f128_format) {
+	case F128_INTEL80: {
+		float128 f16 = num;
+
+		/* First 10 bytes are Intel 80-bit float format */
+		memcpy(bytes, &f16, 10);
+		/* Swap to motorola byte order */
+		swap_u80(bytes);
+
+		return;
+	}
+	}
+
+	/* Fallback to generic implementation that works everywhere */
+#endif
 
 	if (num < 0) {
 		sign = 0x8000;
@@ -487,5 +571,105 @@ void float_encode_ieee_80(double num, unsigned char bytes[10])
 	bytes[7] = loMant >> 16;
 	bytes[8] = loMant >> 8;
 	bytes[9] = loMant;
+}
+
+/* ------------------------------------------------------------------------ */
+/* initializer :) */
+
+int float_init(void)
+{
+	union {
+#ifdef HAVE_FLOAT32
+		uint32_t u4;
+		float32 f4;
 #endif
+#ifdef HAVE_FLOAT64
+		uint64_t u8;
+		float64 f8;
+#endif
+#ifdef HAVE_FLOAT80
+		unsigned char u10[10];
+		float80 f10;
+#endif
+#ifdef HAVE_FLOAT128
+		unsigned char u16[16];
+		float128 f16;
+#endif
+		/* dummy member to prevent build fail */
+		unsigned char dummy;
+	} x;
+
+#ifdef HAVE_FLOAT32
+	/* Probably should choose a more radical value for this */
+	x.f4 = F32_C(1.0);
+	/* Interpret as a big endian byte sequence (Important!) */
+	x.u4 = bswapBE32(x.u4);
+	switch (x.u4) {
+	case UINT32_C(0x0000803f):
+		/* Intel byte order IEEE float format */
+		f32_format = F32_INTEL;
+		break;
+	case UINT32_C(0x3f800000):
+		/* Motorola byte order IEEE float format */
+		f32_format = F32_MOTOROLA;
+		break;
+	default:
+		/*
+		log_appendf(1, "unknown 32-bit floating point format: 1.0 = 0x%08" PRIx32, x.u4);
+		*/
+		f32_format = F32_UNKNOWN;
+		break;
+	}
+#endif
+
+#ifdef HAVE_FLOAT64
+	/* Probably should choose a more radical value for this */
+	x.f8 = F64_C(1.0);
+	/* Interpret as a big endian byte sequence (Important!) */
+	x.u8 = bswapBE64(x.u8);
+	switch (x.u8) {
+	case UINT64_C(0x000000000000f03f):
+		/* Intel byte order IEEE float format */
+		f64_format = F64_INTEL;
+		break;
+	case UINT64_C(0x3ff0000000000000):
+		/* Motorola byte order IEEE float format */
+		f64_format = F64_MOTOROLA;
+		break;
+	default:
+		/*
+		log_appendf(1, "unknown 64-bit floating point format: 1.0 = 0x%016" PRIx64, x.u8);
+		*/
+		f64_format = F64_UNKNOWN;
+		break;
+	}
+#endif
+
+#ifdef HAVE_FLOAT80
+	/* I don't know any compilers that actually use this */
+#endif
+
+#ifdef HAVE_FLOAT128
+	/* Probably should choose a more radical value for this */
+	x.f16 = F128_C(1.0);
+
+	if (!memcmp(x.u16, "\x00\x00\x00\x00\x00\x00\x00\x80\xff\x3f\x00\x00\x00\x00\x00\x00", 16)) {
+		f128_format = F128_INTEL80;
+	} else {
+		/* This is kind of a weird type.
+		 * On Intel machines it's literally just padded 80-bit IEEE, but it's not that
+		 * everywhere. PowerPC systems use a "double-double" proper 128-bit format.
+		 * No idea what it is for ARM. */
+
+		/*
+		log_appendf(1, "unknown 128-bit floating point format:");
+		log_appendf(1, "   1.0 = 0x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+			x.u16[0], x.u16[1], x.u16[2], x.u16[3], x.u16[4], x.u16[5], x.u16[6], x.u16[7],
+			x.u16[8], x.u16[9], x.u16[10], x.u16[11], x.u16[12], x.u16[13], x.u16[14], x.u16[15]);
+		*/
+		f128_format = F128_UNKNOWN;
+	}
+#endif
+
+	return 0;
 }

@@ -37,4 +37,6 @@ void float_encode_ieee_64(double num, unsigned char bytes[8]);
 SCHISM_PURE double float_decode_ieee_80(const unsigned char bytes[10]);
 void float_encode_ieee_80(double num, unsigned char bytes[10]);
 
+int float_init(void);
+
 #endif /* SCHISM_IEEE_FLOAT_H_ */

@@ -55,6 +55,7 @@
 #include "mem.h"
 #include "cpu.h"
 #include "atomic.h"
+#include "ieee-float.h"
 
 #include "osdefs.h"
 
@@ -1120,6 +1121,8 @@ int schism_main(int argc, char** argv)
 	BITARRAY_SET(startup_flags, SF_NETWORK);
 
 	os_sysinit(&argc, &argv);
+
+	float_init();
 
 	cpu_init();
 
