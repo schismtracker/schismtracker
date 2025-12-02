@@ -365,7 +365,7 @@ DEFINE_MIX_INTERFACE_CHANNELS(16)
 // Resampling
 
 #define BEGIN_RESAMPLE_INTERFACE(FUNC, SAMPLETYPE, NUMCHANNELS) \
-	SCHISM_SIMD void FUNC(SAMPLETYPE *oldbuf, SAMPLETYPE *newbuf, uint32_t oldlen, uint32_t newlen) \
+	void FUNC(SAMPLETYPE *oldbuf, SAMPLETYPE *newbuf, uint32_t oldlen, uint32_t newlen) \
 	{ \
 		struct song_smp_pos position = csf_smp_pos(0,0); \
 		const SAMPLETYPE *p = oldbuf; \

@@ -38,10 +38,10 @@ void initialize_eq(int32_t, float);
 void set_eq_gains(const uint32_t *, uint32_t, const uint32_t *, int32_t, int32_t);
 
 // mixer.c
-void ResampleMono8BitFirFilter(signed char *oldbuf, signed char *newbuf, uint32_t oldlen, uint32_t newlen);
-void ResampleMono16BitFirFilter(signed short *oldbuf, signed short *newbuf, uint32_t oldlen, uint32_t newlen);
-void ResampleStereo8BitFirFilter(signed char *oldbuf, signed char *newbuf, uint32_t oldlen, uint32_t newlen);
-void ResampleStereo16BitFirFilter(signed short *oldbuf, signed short *newbuf, uint32_t oldlen, uint32_t newlen);
+void ResampleMono8BitFirFilter(int8_t *oldbuf, int8_t *newbuf, uint32_t oldlen, uint32_t newlen);
+void ResampleMono16BitFirFilter(int16_t *oldbuf, int16_t *newbuf, uint32_t oldlen, uint32_t newlen);
+void ResampleStereo8BitFirFilter(int8_t *oldbuf, int8_t *newbuf, uint32_t oldlen, uint32_t newlen);
+void ResampleStereo16BitFirFilter(int16_t *oldbuf, int16_t *newbuf, uint32_t oldlen, uint32_t newlen);
 
 #endif /* SCHISM_PLAYER_CMIXER_H_ */
 
