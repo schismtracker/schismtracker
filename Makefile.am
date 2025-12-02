@@ -606,6 +606,8 @@ schismtracker_SOURCES = \
 	player/snd_gm.c			\
 	player/sndmix.c			\
 	player/tables.c			\
+	schism/auto/schismico_hires.c \
+	schism/auto/schismico.c \
 	schism/atomic.c			\
 	schism/audio_loadsave.c		\
 	schism/audio_playback.c		\
