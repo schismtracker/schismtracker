@@ -30,21 +30,29 @@
 #ifndef SCHISM_HEADERS_H_
 #define SCHISM_HEADERS_H_
 
-#ifndef _GNU_SOURCE
+#undef _GNU_SOURCE
 #define _GNU_SOURCE /* need this for some stupid gnu crap */
-#endif
-
-#ifndef NO_OLDNAMES
-/* Mingw-w64 */
-# define NO_OLDNAMES
-#endif
-#ifndef _NO_OLDNAMES
-/* Mingw.org */
-# define _NO_OLDNAMES
-#endif
 
 #ifdef HAVE_CONFIG_H
 # include <build-config.h>
+#endif
+
+#if defined(SCHISM_WIN32) && defined(__MINGW32__)
+# undef NO_OLDNAMES
+/* need to #include this without NO_OLDNAMES defined to work
+ * around a mingw-w64 bug introduced in nov 2025.
+ * this isn't really guaranteed to work everywhere, but it
+ * at least should work for now, until the bug is fixed.
+ *
+ * upstream bug: https://sourceforge.net/p/mingw-w64/bugs/1014/ */
+# include <_mingw.h>
+# include <_mingw_off_t.h>
+/* Mingw-w64 */
+# undef NO_OLDNAMES
+# define NO_OLDNAMES
+/* Mingw.org */
+# undef _NO_OLDNAMES
+# define _NO_OLDNAMES
 #endif
 
 /* ------------------------------------------------------------------------ */
