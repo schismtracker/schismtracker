@@ -983,14 +983,14 @@ static void win32_exception_log_cb(FILE *log, void *userdata)
 
 	DBGHELP_SymInitialize(process, NULL, TRUE);
 
-	addr = DBGHELP_SymGetModuleBase64(process, (DWORD64)p->ExceptionRecord->ExceptionAddress);
-	PSAPI_GetModuleBaseNameA(process, (HMODULE)addr, module_name, sizeof(module_name));
+	addr = DBGHELP_SymGetModuleBase64(process, (DWORD64)(uintptr_t)p->ExceptionRecord->ExceptionAddress);
+	PSAPI_GetModuleBaseNameA(process, (HMODULE)(uintptr_t)addr, module_name, sizeof(module_name));
 
 	fprintf(log, "Exception code: 0x%08X\n",
 		(uint32_t)p->ExceptionRecord->ExceptionCode);
 	fprintf(log, "Exception address: 0x%p (%s+0x%llX)\n\n",
 		p->ExceptionRecord->ExceptionAddress, module_name,
-		(uint64_t)p->ExceptionRecord->ExceptionAddress - addr);
+		(uint64_t)(uintptr_t)p->ExceptionRecord->ExceptionAddress - addr);
 
 	fprintf(log, "General purpose and control registers:\n");
 #if defined(__i386__) || defined(_M_IX86)
@@ -1075,7 +1075,7 @@ static void win32_exception_log_cb(FILE *log, void *userdata)
 
 		/* stack trace wgat it is */
 		addr = DBGHELP_SymGetModuleBase64(process, stack.AddrPC.Offset);
-		PSAPI_GetModuleBaseNameA(process, (HMODULE)addr, module_name, sizeof(module_name));
+		PSAPI_GetModuleBaseNameA(process, (HMODULE)(uintptr_t)addr, module_name, sizeof(module_name));
 
 		DBGHELP_SymFromAddr(process, stack.AddrPC.Offset, NULL, symbol);
 
