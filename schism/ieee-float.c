@@ -53,6 +53,17 @@ typedef long double float64;
 # define F64_C() x ## l
 #endif
 
+#if (SIZEOF_FLOAT == 12)
+typedef float float96;
+# define F96_C(x) x ## f
+#elif (SIZEOF_DOUBLE == 12)
+typedef double float96;
+# define F96_C(x) x
+#elif (SIZEOF_LONG_DOUBLE == 12)
+typedef long double float96;
+# define F96_C(x) x ## l
+#endif
+
 #if (SIZEOF_FLOAT == 16)
 typedef float float128;
 # define F128_C(x) x ## f
@@ -69,6 +80,9 @@ typedef long double float128;
 #endif
 #ifdef F64_C
 # define HAVE_FLOAT64
+#endif
+#ifdef F96_C
+# define HAVE_FLOAT96
 #endif
 #ifdef F128_C
 # define HAVE_FLOAT128
@@ -88,6 +102,13 @@ enum {
 	F64_MOTOROLA = 1,
 	F64_INTEL = 2,
 } f64_format;
+#endif
+
+#ifdef HAVE_FLOAT96
+enum {
+	F96_UNKNOWN = 0,
+	F96_INTEL80 = 1, /* 80-bit Intel padded to 96-bit (12 byte) */
+} f96_format;
 #endif
 
 #ifdef HAVE_FLOAT128
@@ -474,6 +495,21 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 	/* Fallback to generic implementation */
 #endif
 
+#ifdef HAVE_FLOAT96
+	switch (f96_format) {
+	case F96_INTEL80: {
+		float96 f12;
+
+		memcpy(&f12, bytes, 10);
+		memset(&f12 + 10, 0, 2);
+
+		swap_u80((unsigned char *)&f12);
+
+		return f12;
+	}
+	}
+#endif
+
 	expon = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
 	hiMant = ((uint32_t) (bytes[2] & 0xFF) << 24)
 		| ((uint32_t) (bytes[3] & 0xFF) << 16)
@@ -523,6 +559,21 @@ void float_encode_ieee_80(double num, unsigned char bytes[10])
 	}
 
 	/* Fallback to generic implementation that works everywhere */
+#endif
+
+#ifdef HAVE_FLOAT96
+	switch (f96_format) {
+	case F96_INTEL80: {
+		float96 f12 = num;
+
+		/* First 10 bytes are Intel 80-bit float format */
+		memcpy(bytes, &f12, 10);
+		/* Swap to motorola byte order */
+		swap_u80(bytes);
+
+		return;
+	}
+	}
 #endif
 
 	if (num < 0) {
@@ -591,6 +642,10 @@ int float_init(void)
 		unsigned char u10[10];
 		float80 f10;
 #endif
+#ifdef HAVE_FLOAT96
+		unsigned char u12[12];
+		float96 f12;
+#endif
 #ifdef HAVE_FLOAT128
 		unsigned char u16[16];
 		float128 f16;
@@ -647,6 +702,17 @@ int float_init(void)
 
 #ifdef HAVE_FLOAT80
 	/* I don't know any compilers that actually use this */
+#endif
+
+#ifdef HAVE_FLOAT96
+	x.f12 = F96_C(1.0);
+
+	if (!memcmp(x.u12, "\x00\x00\x00\x00\x00\x00\x00\x80\xff\x3f\x00\x00", 12)) {
+		f96_format = F96_INTEL80;
+	} else {
+		/* ehhhh */
+		f96_format = F96_UNKNOWN;
+	}
 #endif
 
 #ifdef HAVE_FLOAT128
