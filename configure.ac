@@ -402,6 +402,14 @@ AC_CHECK_SIZEOF([float])
 AC_CHECK_SIZEOF([double])
 AC_CHECK_SIZEOF([long double])
 
+dnl Added with C23
+AC_CHECK_SIZEOF([_Float32])
+AC_CHECK_SIZEOF([_Float64])
+AC_CHECK_SIZEOF([_Float64x])
+
+dnl GNU-C specific floating point extensions
+AC_CHECK_SIZEOF([__float80])
+
 dnl -----------------------------------------------------------------------
 
 dnl Platform-specific behavior

@@ -30,8 +30,15 @@
 
 /* These are used for hardware encoding/decoding of floating point numbers.
  * Note that even if these types are available and conform to IEEE 754,
- * this doesn't mean that these operations are done in hardware. */
-#if (SIZEOF_FLOAT == 4)
+ * this doesn't mean that these operations are done in hardware.
+ *
+ * TODO float and double could be the same type, and double and long double
+ * can be as well. They can be the same size but one could be IEEE and the
+ * other could not! But this is exceptionally rare. */
+#if (SIZEOF__FLOAT32 == 4)
+typedef _Float32 float32;
+# define F32_C(x) x ## f32
+#elif (SIZEOF_FLOAT == 4)
 typedef float float32;
 # define F32_C(x) x ## f
 #elif (SIZEOF_DOUBLE == 4)
@@ -42,7 +49,10 @@ typedef long double float32;
 # define F32_C() x ## l
 #endif
 
-#if (SIZEOF_FLOAT == 8)
+#if (SIZEOF__FLOAT64 == 8)
+typedef _Float64 float64;
+# define F64_C(x) x ## f64
+#elif (SIZEOF_FLOAT == 8)
 typedef float float64;
 # define F64_C(x) x ## f
 #elif (SIZEOF_DOUBLE == 8)
@@ -53,7 +63,13 @@ typedef long double float64;
 # define F64_C() x ## l
 #endif
 
-#if (SIZEOF_FLOAT == 12)
+#if (SIZEOF___FLOAT80 == 12)
+typedef __float80 float96;
+# define F96_C(x) x ## w
+#elif (SIZEOF__FLOAT64X == 12)
+typedef _Float64x float96;
+# define F96_C(x) x ## f64x
+#elif (SIZEOF_FLOAT == 12)
 typedef float float96;
 # define F96_C(x) x ## f
 #elif (SIZEOF_DOUBLE == 12)
@@ -64,7 +80,13 @@ typedef long double float96;
 # define F96_C(x) x ## l
 #endif
 
-#if (SIZEOF_FLOAT == 16)
+#if (SIZEOF___FLOAT80 == 16)
+typedef __float80 float128;
+# define F128_C(x) x ## w
+#elif (SIZEOF__FLOAT64X == 16)
+typedef _Float64x float128;
+# define F128_C(x) x ## f64x
+#elif (SIZEOF_FLOAT == 16)
 typedef float float128;
 # define F128_C(x) x ## f
 #elif (SIZEOF_DOUBLE == 16)
