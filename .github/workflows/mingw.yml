@@ -12,8 +12,8 @@ jobs:
     env:
       # NOTE: the SDL2 and SDL 1.2 hashes are for the *compiled binaries*, NOT
       # for the tarball.
-      SDL_VERSION: 2.32.8
-      SDL_SHA256: 4df1e3da741e44fa02812d8db3c60cf63a5a9a387e13809a7f7a6b57122cab1d
+      SDL_VERSION: 2.32.10
+      SDL_SHA256: d72b0728a315ab25ad43123b89baa2ab6fd7c335a43f737213685d29fd2aa4fe
       SDL12_VERSION: 1.2.15
       SDL12_SHA256: a28bbe38714ef7817b1c1e8082a48f391f15e4043402444b783952fca939edc1
       FLAC_VERSION: 1.5.0
@@ -239,9 +239,9 @@ jobs:
           - { sys: mingw32, target: aarch64, stdlib: ucrt, cflags: '-O2', ldflags: '' }
     name: ${{ matrix.sys }}-${{ matrix.target }}
     env:
-      LLVM_MINGW_VERSION: 20250613
-      SDL_VERSION: 2.32.8
-      SDL_SHA256: 0ca83e9c9b31e18288c7ec811108e58bac1f1bb5ec6577ad386830eac51c787e
+      LLVM_MINGW_VERSION: 20251118
+      SDL_VERSION: 2.32.10
+      SDL_SHA256: 5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165
       SDL12_VERSION: 1.2.15
       SDL12_SHA256: d6d316a793e5e348155f0dd93b979798933fb98aa1edebcc108829d6474aad00
       FLAC_VERSION: 1.5.0
@@ -283,6 +283,7 @@ jobs:
       - name: 'Grab llvm-mingw'
         if: steps.cache-llvm-mingw.outputs.cache-hit != 'true'
         run: |
+          # FIXME need sha256 hash
           curl -L "https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VERSION/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-22.04-x86_64.tar.xz" | tar xJvf - -C "$HOME"
           mv "$HOME/llvm-mingw-$LLVM_MINGW_VERSION-$STDLIB-ubuntu-22.04-x86_64" "$HOME/llvm-mingw"
 
