@@ -33,6 +33,7 @@
 #include "ieee-float.h"
 #include "fmt.h" // for it_decompress8 / it_decompress16
 #include "mem.h"
+#include "player/cmixer.h"
 
 
 static void _csf_reset(song_t *csf)
@@ -2033,5 +2034,110 @@ void csf_calculate_vu_meters(song_t *csf, float vus[MAX_CHANNELS])
 		if (vus[c] > 1.0f)
 			vus[c] = 1.0f; /* cap */
 		/* by definition vus[c] cannot be negative */
+	}
+}
+
+/* ------------------------------------------------------------------------ */
+/* update playing sample/instrument */
+
+void csf_update_playing_instrument(song_t *csf, int i_changed)
+{
+	song_voice_t *channel;
+	song_instrument_t *inst;
+	int n;
+
+	/* Does this instrument even exist? (logic bug) */
+	if (!csf->instruments[i_changed])
+		return;
+
+	n = MIN(csf->num_voices, csf->max_voices);
+	while (--n >= 0) {
+		channel = csf->voices + csf->voice_mix[n];
+		/* Already verified i_changed is an instrument above. No need to check
+		 * for NULL here. */
+		if (channel->ptr_instrument == csf->instruments[i_changed]) {
+			song_sample_t *psmp;
+
+			inst = channel->ptr_instrument;
+			if (!inst) continue;
+
+			/* We shouldn't change anything regarding samples here.
+			 * Really the only things we *should* deal with are envelopes
+			 * and some basic variables. */
+			channel->flags &= ~(CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
+			if (inst->flags & ENV_VOLUME)  channel->flags |= CHN_VOLENV;
+			if (inst->flags & ENV_PANNING) channel->flags |= CHN_PANENV;
+			if (inst->flags & ENV_PITCH)   channel->flags |= CHN_PITCHENV;
+
+			psmp = channel->ptr_sample;
+			if (psmp) { /* X to doubt this is always filled in */
+				channel->instrument_volume = psmp->global_volume * inst->global_volume;
+				csf_set_instrument_panning(csf, channel, inst, psmp);
+			}
+
+			/* This seems to work fine, but yet again this SHOULD NOT BE HERE. */
+			if (inst->ifr & 0x80) {
+				channel->resonance = inst->ifr & 0x7F;
+			} else {
+				channel->resonance = 0;
+				channel->flags &= (~CHN_FILTER);
+			}
+
+			if (inst->ifc & 0x80) {
+				channel->cutoff = inst->ifc & 0x7F;
+				setup_channel_filter(channel, 0, 256, csf->mix_frequency);
+			} else {
+				channel->cutoff = 0x7F;
+				if (inst->ifr & 0x80) {
+					setup_channel_filter(channel, 0, 256, csf->mix_frequency);
+				}
+			}
+		}
+	}
+}
+
+void csf_update_playing_sample(song_t *csf, int s_changed)
+{
+	song_voice_t *channel;
+	song_sample_t *inst;
+
+	int n = MIN(csf->num_voices, csf->max_voices);
+	while (n--) {
+		channel = csf->voices + csf->voice_mix[n];
+		if (channel->ptr_sample && channel->current_sample_data) {
+			int s = channel->ptr_sample - csf->samples;
+			if (s != s_changed) continue;
+
+			inst = channel->ptr_sample;
+			if (inst->flags & (CHN_PINGPONGSUSTAIN|CHN_SUSTAINLOOP)) {
+				channel->loop_start = inst->sustain_start;
+				channel->loop_end = inst->sustain_end;
+			} else if (inst->flags & (CHN_PINGPONGFLAG|CHN_PINGPONGLOOP|CHN_LOOP)) {
+				channel->loop_start = inst->loop_start;
+				channel->loop_end = inst->loop_end;
+			}
+			if (inst->flags & (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP
+						| CHN_PINGPONGFLAG | CHN_PINGPONGLOOP|CHN_LOOP)) {
+				if (channel->length != channel->loop_end) {
+					channel->length = channel->loop_end;
+				}
+			}
+			if (channel->length > inst->length) {
+				channel->current_sample_data = inst->data;
+				channel->length = inst->length;
+			}
+
+			channel->flags &= ~(CHN_PINGPONGSUSTAIN
+					| CHN_PINGPONGLOOP
+					| CHN_PINGPONGFLAG
+					| CHN_SUSTAINLOOP
+					| CHN_LOOP);
+			channel->flags |= inst->flags & (CHN_PINGPONGSUSTAIN
+					| CHN_PINGPONGLOOP
+					| CHN_PINGPONGFLAG
+					| CHN_SUSTAINLOOP
+					| CHN_LOOP);
+			channel->instrument_volume = inst->global_volume;
+		}
 	}
 }

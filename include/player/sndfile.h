@@ -968,6 +968,9 @@ void adlib_patch_apply(song_sample_t *smp, int32_t patchnum);
 /* calculate VU meters */
 void csf_calculate_vu_meters(song_t *csf, float vus[MAX_CHANNELS]);
 
+void csf_update_playing_instrument(song_t *csf, int i_changed);
+void csf_update_playing_sample(song_t *csf, int s_changed);
+
 /* ------------------------------------------------------------------------ */
 
 // Return (a*b)/c - no divide error

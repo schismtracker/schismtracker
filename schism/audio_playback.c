@@ -159,6 +159,17 @@ uint32_t s32_to_f32(void *ptr, const int32_t *buffer, uint32_t samples)
 static inline SCHISM_ALWAYS_INLINE
 uint32_t s32_to_f64(void *ptr, const int32_t *buffer, uint32_t samples)
 {
+	/* TODO there's a clever trick I came up with to do lossless fast
+	 * s32 to f64 conversion. Basically it just involves setting up
+	 * the mantissa, adding itself, and subtracting 2.0, which all adds
+	 * up to a fast conversion with no multiplication or division.
+	 *
+	 * This is only relevant for very old systems though. Modern CPUs
+	 * have crazy fast FPUs that make the difference negligible.
+	 *
+	 * Also TODO: We may have the C23 _FloatN types available. Those
+	 * are guaranteed to be IEEE floating point, but every system on
+	 * the planet already uses IEEE anyway so it really doesn't matter. */
 	double *p = (double *)ptr;
 	uint32_t i;
 
@@ -462,6 +473,8 @@ int song_is_multichannel_mode(void)
 	return multichannel_mode;
 }
 
+/* this code is terrible and needs to be more integrated with what's ALREADY in effects.c */
+
 /* Channel corresponding to each note played.
 That is, keyjazz_note_to_chan[66] will indicate in which channel F-5 was played most recently.
 This will break if the same note was keydown'd twice without a keyup, but I think that's a
@@ -622,7 +635,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		if (i)
 			c->instrument_volume = (c->instrument_volume * i->global_volume) >> 7;
 		c->global_volume = 64;
-		// use the sample's panning if it's set, or use the default
+
 		c->channel_panning = (int16_t)(c->panning + 1);
 		if (c->flags & CHN_SURROUND)
 			c->channel_panning |= 0x8000;
@@ -1021,110 +1034,15 @@ void song_get_vu_meter(int *left, int *right)
  * and it's embarrassing the amount of coupling all within schism... */
 void song_update_playing_instrument(int i_changed)
 {
-	song_voice_t *channel;
-	song_instrument_t *inst;
-	int n;
-
 	song_lock_audio();
-
-	/* Does this instrument even exist? (logic bug) */
-	if (!current_song->instruments[i_changed]) {
-		song_unlock_audio();
-		return;
-	}
-
-	n = MIN(current_song->num_voices, current_song->max_voices);
-	while (--n >= 0) {
-		channel = current_song->voices + current_song->voice_mix[n];
-		/* Already verified i_changed is an instrument above. No need to check
-		 * for NULL here. */
-		if (channel->ptr_instrument == current_song->instruments[i_changed]) {
-			song_sample_t *psmp;
-
-			inst = channel->ptr_instrument;
-			if (!inst) continue;
-
-			/* We shouldn't change anything regarding samples here.
-			 * Really the only things we *should* deal with are envelopes
-			 * and some basic variables. */
-			channel->flags &= ~(CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
-			if (inst->flags & ENV_VOLUME)  channel->flags |= CHN_VOLENV;
-			if (inst->flags & ENV_PANNING) channel->flags |= CHN_PANENV;
-			if (inst->flags & ENV_PITCH)   channel->flags |= CHN_PITCHENV;
-
-			psmp = channel->ptr_sample;
-			if (psmp) { /* X to doubt this is always filled in */
-				channel->instrument_volume = psmp->global_volume * inst->global_volume;
-				csf_set_instrument_panning(current_song, channel, inst, psmp);
-			}
-
-			/* This seems to work fine, but yet again this SHOULD NOT BE HERE. */
-			if (inst->ifr & 0x80) {
-				channel->resonance = inst->ifr & 0x7F;
-			} else {
-				channel->resonance = 0;
-				channel->flags &= (~CHN_FILTER);
-			}
-
-			if (inst->ifc & 0x80) {
-				channel->cutoff = inst->ifc & 0x7F;
-				setup_channel_filter(channel, 0, 256, current_song->mix_frequency);
-			} else {
-				channel->cutoff = 0x7F;
-				if (inst->ifr & 0x80) {
-					setup_channel_filter(channel, 0, 256, current_song->mix_frequency);
-				}
-			}
-		}
-	}
+	csf_update_playing_instrument(current_song, i_changed);
 	song_unlock_audio();
 }
 
 void song_update_playing_sample(int s_changed)
 {
-	song_voice_t *channel;
-	song_sample_t *inst;
-
 	song_lock_audio();
-	int n = MIN(current_song->num_voices, current_song->max_voices);
-	while (n--) {
-		channel = current_song->voices + current_song->voice_mix[n];
-		if (channel->ptr_sample && channel->current_sample_data) {
-			int s = channel->ptr_sample - current_song->samples;
-			if (s != s_changed) continue;
-
-			inst = channel->ptr_sample;
-			if (inst->flags & (CHN_PINGPONGSUSTAIN|CHN_SUSTAINLOOP)) {
-				channel->loop_start = inst->sustain_start;
-				channel->loop_end = inst->sustain_end;
-			} else if (inst->flags & (CHN_PINGPONGFLAG|CHN_PINGPONGLOOP|CHN_LOOP)) {
-				channel->loop_start = inst->loop_start;
-				channel->loop_end = inst->loop_end;
-			}
-			if (inst->flags & (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP
-						| CHN_PINGPONGFLAG | CHN_PINGPONGLOOP|CHN_LOOP)) {
-				if (channel->length != channel->loop_end) {
-					channel->length = channel->loop_end;
-				}
-			}
-			if (channel->length > inst->length) {
-				channel->current_sample_data = inst->data;
-				channel->length = inst->length;
-			}
-
-			channel->flags &= ~(CHN_PINGPONGSUSTAIN
-					| CHN_PINGPONGLOOP
-					| CHN_PINGPONGFLAG
-					| CHN_SUSTAINLOOP
-					| CHN_LOOP);
-			channel->flags |= inst->flags & (CHN_PINGPONGSUSTAIN
-					| CHN_PINGPONGLOOP
-					| CHN_PINGPONGFLAG
-					| CHN_SUSTAINLOOP
-					| CHN_LOOP);
-			channel->instrument_volume = inst->global_volume;
-		}
-	}
+	csf_update_playing_sample(current_song, s_changed);
 	song_unlock_audio();
 }
 
@@ -1386,6 +1304,7 @@ static void _schism_midi_out_raw(song_t *csf, const unsigned char *data, uint32_
 
 // ------------------------------------------------------------------------------------------------------------
 
+// for threaded backends
 void song_lock_audio(void)
 {
 	if (backend) backend->lock_device(current_audio_device);
@@ -1394,6 +1313,10 @@ void song_unlock_audio(void)
 {
 	if (backend) backend->unlock_device(current_audio_device);
 }
+
+// makes the backend simply fill the buffer with silence.
+// this can be more efficient than a memset, if the buffer is
+// already zeroed.
 void song_start_audio(void)
 {
 	if (backend) backend->pause_device(current_audio_device, 0);
@@ -1404,7 +1327,8 @@ void song_stop_audio(void)
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
-/* This is completely horrible! :) */
+/* This is completely horrible! :)
+ * And it just keeps getting worse... */
 
 static int audio_was_init = 0;
 
@@ -1458,6 +1382,10 @@ static void _cleanup_audio_device(void)
 
 static int _audio_open_device(uint32_t device, int verbose)
 {
+	uint32_t size_pow2;
+	schism_audio_spec_t desired;
+	schism_audio_spec_t obtained;
+
 	_cleanup_audio_device();
 
 	if (!backend)
@@ -1465,11 +1393,10 @@ static int _audio_open_device(uint32_t device, int verbose)
 
 	/* if the buffer size isn't a power of two, the dsp driver will punt since it's not nice enough to fix
 	 * it for us. (contrast alsa, which is TOO nice and fixes it even when we don't want it to) */
-	int size_pow2 = 2;
-	while (size_pow2 < audio_settings.buffer_size)
-		size_pow2 <<= 1;
+	size_pow2 = bnextpow2(audio_settings.buffer_size);
 
-	/* round to the nearest (kept for compatibility) */
+	/* round to the nearest (kept for compatibility)
+	 * this code is stinky and not very obvious. (should be moved to bits.h ideally) */
 	if (size_pow2 != audio_settings.buffer_size
 		&& (size_pow2 - audio_settings.buffer_size) > (audio_settings.buffer_size - (size_pow2 >> 1)))
 		size_pow2 >>= 1;
@@ -1490,14 +1417,14 @@ static int _audio_open_device(uint32_t device, int verbose)
 //			put_env_var("AUDIODEV", "hw");
 //	}
 
-	schism_audio_spec_t desired = {0};
+	memset(&desired, 0, sizeof(desired));
 	desired.freq = audio_settings.sample_rate;
 	desired.bits = audio_settings.bits;
 	desired.channels = audio_settings.channels;
 	desired.samples = size_pow2;
 	desired.callback = audio_callback;
 
-	schism_audio_spec_t obtained = {0};
+	memset(&obtained, 0, sizeof(obtained));
 
 	if (device != AUDIO_BACKEND_DEFAULT) {
 		if ((current_audio_device = backend->open_device(device, &desired, &obtained))) {
