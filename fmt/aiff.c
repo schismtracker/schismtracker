@@ -802,7 +802,7 @@ int fmt_aiff_export_tail(disko_t *fp)
 
 	/* write the other lengths */
 	disko_seek(fp, awd->comm_frames, SEEK_SET);
-	ul = bswapBE32(awd->numbytes / awd->bps);
+	ul = bswapBE32(awd->numbytes / awd->bpf);
 	disko_write(fp, &ul, 4);
 	disko_seek(fp, awd->ssnd_size, SEEK_SET);
 	ul = bswapBE32(awd->numbytes + 8);
