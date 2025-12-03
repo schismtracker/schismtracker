@@ -104,6 +104,7 @@ noinst_HEADERS = \
 	include/auto/logoit.h		\
 	include/auto/logoschism.h	\
 	include/auto/schismico_hires.h	\
+	include/auto/schismico.h \
 	include/test.h     \
 	include/atomic.h	\
 	include/bits.h     \
