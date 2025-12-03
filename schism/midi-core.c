@@ -475,7 +475,7 @@ void midi_engine_worker(void)
 static int midi_engine_worker_thread_func(SCHISM_UNUSED void *z)
 {
 	while (!midi_worker_thread_cancel) {
-		midi_engine_worker();
+		midi_engine_worker_impl();
 		/* sleep as to not hog the CPU */
 		timer_msleep(1);
 	}
