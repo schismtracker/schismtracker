@@ -57,6 +57,61 @@ int fmt_s3m_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+/* converts 0..15 value to IT-like 0..64 value.
+ *
+ * 0 -> 2
+ * 1 -> 6
+ * ...
+ * 14 -> 58
+ * 15 -> 62 */
+static int s3m_pan_to_it(int p)
+{
+	return ((p & 15) * 4) + 2;
+}
+
+/* converts 0..64 value to S3M-like 0..15 value.
+ *
+ * basically the inverse of the above function
+ * with some other things too */
+static int it_pan_to_s3m(int p)
+{
+    /* this is necessary so we don't do out of range */
+    p = MAX(p, 2);
+
+    /* We don't subtract two here, like we do in the
+     * s3m pan to it function. In fact this is simply
+     * a clever trick to get round-to-nearest for free.
+     * If we were to subtract two and wanted to round,
+     * it would effectively be a no-op. */
+    p /= 4;
+
+    p = MIN(p, 15);
+
+    return p;
+}
+
+/* IMPORTANT NOTE:
+ * Whenever changing the above two helper functions, be ABSOLUTELY sure
+ * that they are actually inverses of each other.
+ * You can verify this by plopping them into their own C file and running
+ * this program:
+
+int main(void)
+{
+    int i;
+
+    for (i = 0; i <= 15; i++) {
+        assert(it_pan_to_s3m(s3m_pan_to_it(i)) == i);
+    }
+
+    return 0;
+}
+
+ * Of course, converting IT to S3M panning is usually a lossy process
+ * anyway, but we don't want values to randomly shift when importing
+ * and saving modules.
+*/
+
 enum {
 	S3I_TYPE_NONE = 0,
 	S3I_TYPE_PCM = 1,
@@ -246,7 +301,7 @@ int fmt_s3m_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		for (n = 0; n < 32; n++) {
 			int pan = slurp_getc(fp);
 			if ((pan & 0x20) && (!(adlib & (1 << n)) || trkvers > 0x1320))
-				song->channels[n].panning = ((pan & 0xf) * 64) / 15;
+				song->channels[n].panning = s3m_pan_to_it(pan);
 		}
 	}
 
@@ -1130,7 +1185,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 
 		//mphack: channel panning range
 		b = ((chantypes[n] & 0x7f) < 0x20)
-			? (0x20 | ((ch->panning * 15) / 256))
+			? (0x20 | it_pan_to_s3m(ch->panning / 4))
 			: 0;
 		disko_putc(fp, b);
 	}
