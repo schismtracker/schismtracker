@@ -672,6 +672,7 @@ static int write_s3m_header(const struct s3m_header *hdr, disko_t *fp)
 	WRITE_VALUE(reserved);
 	WRITE_VALUE(reserved2);
 	WRITE_VALUE(reserved3);
+	/* junk values */
 	disko_seek(fp, 2, SEEK_CUR);
 
 #undef WRITE_VALUE
@@ -1129,7 +1130,7 @@ int fmt_s3m_save_song(disko_t *fp, song_t *song)
 
 		//mphack: channel panning range
 		b = ((chantypes[n] & 0x7f) < 0x20)
-			? ((ch->panning * 15) / 64)
+			? (0x20 | ((ch->panning * 15) / 256))
 			: 0;
 		disko_putc(fp, b);
 	}
