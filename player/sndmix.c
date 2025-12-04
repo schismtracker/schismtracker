@@ -1187,7 +1187,8 @@ int32_t csf_read_note(song_t *csf)
 			if (chan->n_command == FX_ARPEGGIO)
 				frequency = rn_arpeggio(csf, chan, frequency);
 
-			rn_process_midi_macro(csf, chan);
+			if (cn < MAX_CHANNELS) /* don't do this for NNA voices */
+				rn_process_midi_macro(csf, chan);
 
 			// Pitch/Filter Envelope
 			int32_t envpitch = 0;
