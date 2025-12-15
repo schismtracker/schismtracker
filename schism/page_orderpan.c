@@ -98,7 +98,7 @@ void prev_order_pattern(void)
 			&& last_pattern == current_song->orderlist[new_order]
 			&& current_song->orderlist[new_order] == ORDER_SKIP);
 
-	if (current_song->orderlist[new_order] < 200) {
+	if (current_song->orderlist[new_order] < MAX_PATTERNS) {
 		current_order = new_order;
 		orderlist_reposition();
 		set_current_pattern(current_song->orderlist[new_order]);
@@ -119,7 +119,7 @@ void next_order_pattern(void)
 			&& last_pattern == current_song->orderlist[new_order]
 			&&  current_song->orderlist[new_order] == ORDER_SKIP);
 
-	if (current_song->orderlist[new_order] < 200) {
+	if (current_song->orderlist[new_order] < MAX_PATTERNS) {
 		current_order = new_order;
 		orderlist_reposition();
 		set_current_pattern(current_song->orderlist[new_order]);
@@ -138,7 +138,7 @@ static void orderlist_cheater(void)
 	}
 	cp = get_current_pattern();
 	best = first = -1;
-	for (i = 0; i < 199; i++) {
+	for (i = 0; i < MAX_PATTERNS - 1; i++) {
 		if (csf_pattern_is_empty(current_song, i)) {
 			if (first == -1) first = i;
 			if (best == -1) best = i;
@@ -242,11 +242,11 @@ static void orderlist_insert_next(void)
 {
 	int next_pattern;
 
-	if (current_order == 0 || current_song->orderlist[current_order - 1] > 199)
+	if (current_order == 0 || current_song->orderlist[current_order - 1] > MAX_PATTERNS - 1)
 		return;
 	next_pattern = current_song->orderlist[current_order - 1] + 1;
-	if (next_pattern > 199)
-		next_pattern = 199;
+	if (next_pattern > MAX_PATTERNS - 1)
+		next_pattern = MAX_PATTERNS - 1;
 	current_song->orderlist[current_order] = next_pattern;
 	if (current_order < 255)
 		current_order++;
@@ -262,10 +262,10 @@ static void orderlist_add_unused_patterns(void)
 	 * p = pattern iterator
 	 * np = number of patterns */
 	int n0, n, p, np = csf_get_num_patterns(current_song);
-	uint8_t used[200] = {0};                /* could be a bitset... */
+	uint8_t used[MAX_PATTERNS] = {0};                /* could be a bitset... */
 
 	for (n = 0; n < 255; n++)
-		if (current_song->orderlist[n] < 200)
+		if (current_song->orderlist[n] < MAX_PATTERNS)
 			used[current_song->orderlist[n]] = 1;
 
 	/* after the loop, n == 255 */
@@ -327,7 +327,7 @@ static void orderlist_reorder(void)
 		/* replace orderlist entry */
 		current_song->orderlist[i] = mapol[ current_song->orderlist[i] ];
 	}
-	for (i = 0; i < 200; i++) {
+	for (i = 0; i < MAX_PATTERNS; i++) {
 		if (!np[i]) {
 			song_pattern_install(i, NULL, 64);
 		} else {
@@ -370,7 +370,7 @@ static int orderlist_handle_char(char sym)
 
 		status.flags |= SONG_NEEDS_SAVE;
 		cur_pattern = current_song->orderlist[current_order];
-		if (cur_pattern < 200) {
+		if (cur_pattern < MAX_PATTERNS) {
 			n[0] = cur_pattern / 100;
 			n[1] = cur_pattern / 10 % 10;
 			n[2] = cur_pattern % 10;
@@ -378,7 +378,7 @@ static int orderlist_handle_char(char sym)
 
 		n[orderlist_cursor_pos] = c;
 		cur_pattern = n[0] * 100 + n[1] * 10 + n[2];
-		cur_pattern = CLAMP(cur_pattern, 0, 199);
+		cur_pattern = CLAMP(cur_pattern, 0, MAX_PATTERNS - 1);
 		song_get_pattern(cur_pattern, &tmp); /* make sure it exists */
 		current_song->orderlist[current_order] = cur_pattern;
 		break;
@@ -468,9 +468,9 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		if (k->state == KEY_PRESS)
 			return 1;
 		n = current_song->orderlist[new_order];
-		while (n >= 200 && new_order > 0)
+		while (n >= MAX_PATTERNS && new_order > 0)
 			n = current_song->orderlist[--new_order];
-		if (n < 200) {
+		if (n < MAX_PATTERNS) {
 			set_current_pattern(n);
 			set_page(PAGE_PATTERN_EDITOR);
 		}
