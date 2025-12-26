@@ -32,7 +32,7 @@
 #include "vgamem.h"
 #include "keyboard.h"
 
-#define NUM_PALETTES 15
+#define NUM_PALETTES 16
 
 /* --------------------------------------------------------------------- */
 
@@ -55,7 +55,7 @@ static void palette_draw_const(void)
 {
 	int n;
 
-	draw_text("Predefined Palettes", 56, 24, 0, 2);
+	draw_text("Predefined Palettes", 56, 23, 0, 2);
 
 	for (n = 0; n < 7; n++) {
 		draw_box(2, 13 + (5 * n), 8, 17 + (5 * n), BOX_THICK | BOX_INNER | BOX_INSET);
@@ -70,7 +70,7 @@ static void palette_draw_const(void)
 	draw_box(63, 13, 73, 17, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(56, 18, 62, 22, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_box(63, 18, 73, 22, BOX_THICK | BOX_INNER | BOX_INSET);
-	draw_box(54, 25, 77, 41, BOX_THICK | BOX_INNER | BOX_INSET);
+	draw_box(54, 24, 77, 41, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_fill_chars(57, 14, 61, 16, DEFAULT_FG, 14);
 	draw_fill_chars(57, 19, 61, 21, DEFAULT_FG, 15);
 }
@@ -297,9 +297,9 @@ void palette_load_page(struct page *page)
 		palette_list_focus_offsets_right_,
 		47, 49);
 	widgets_palette[48].x = 55;
-	widgets_palette[48].y = 26;
+	widgets_palette[48].y = 25;
 	widgets_palette[48].width = 22;
-	widgets_palette[48].height = 15;
+	widgets_palette[48].height = NUM_PALETTES;
 
 	for (n = 6; n < 18; n++)
 		widgets_palette[n].next.backtab = 48;
