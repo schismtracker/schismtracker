@@ -630,23 +630,53 @@ void widget_draw_widget(struct widget *w, int selected)
 		if (w->d.listbox.top >= size)
 			break; /* wat */
 
+#define GET_FG_BG(o) \
+	do { \
+		if ((o) == w->d.listbox.focus) { \
+			if (w == &ACTIVE_WIDGET) { \
+				fg = 0; \
+				bg = 3; \
+			} else { \
+				fg = 6; \
+				bg = 14; \
+			} \
+		} else { \
+			fg = 6; \
+			bg = 0; \
+		} \
+	} while (0)
+
 		for (o = w->d.listbox.top, i = 0; o < size && i < w->height; i++, o++) {
-			if (o == w->d.listbox.focus) {
-				if (w == &ACTIVE_WIDGET) {
-					fg = 0;
-					bg = 3;
-				} else {
-					fg = 6;
-					bg = 14;
-				}
-			} else {
-				fg = 6;
-				bg = 0;
-			}
+			GET_FG_BG(o);
 
 			draw_text_utf8_len(w->d.listbox.toggled(o) ? "*" : " ", 1, w->x, w->y + i, fg, bg);
 			draw_text_utf8_len(w->d.listbox.name(o), w->width - 1, w->x + 1, w->y + i, fg, bg);
 		}
+
+		if (w->height >= 2) {
+			/* this should always be true; otherwise it's terrible */
+
+			if (w->d.listbox.top > 0) {
+				GET_FG_BG(w->d.listbox.top);
+
+				/* Draw up arrow in the top right.
+				 * this is similar to what Motif does to notate that
+				 * it can be scrolled.
+				 *
+				 * TODO should allow clicking onto it to scroll. */
+				draw_char_bios(30, w->x + w->width - 1, w->y, fg, bg);
+			}
+
+			if (w->d.listbox.top + w->height < size) {
+				GET_FG_BG(w->d.listbox.top + w->height - 1);
+
+				/* Draw down arrow in the bottom right. */
+				draw_char_bios(31, w->x + w->width - 1, w->y + w->height - 1, fg, bg);
+			}
+		}
+
+#undef GET_FG_BG
+
 		break;
 	}
 	case WIDGET_OTHER:
