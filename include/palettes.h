@@ -33,6 +33,7 @@ void palette_apply(void);
 void palette_load_preset(int palette_index);
 void palette_to_string(int which, char *str_out);
 int set_palette_from_string(const char *str_in);
+uint32_t palettes_size(void);
 
 extern struct it_palette palettes[];
 extern uint8_t current_palette[16][3];

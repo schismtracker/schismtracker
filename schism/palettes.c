@@ -305,6 +305,24 @@ struct it_palette palettes[] = {
 		/* 14 */ {10, 16, 27},
 		/* 15 */ { 8, 11, 19},
 	}},
+	{"Acid Gas", { /* courtesy of Jabber */
+		/*  0 */ { 2, 13,  2},
+		/*  1 */ {33, 33,  0},
+		/*  2 */ { 0, 63,  0},
+		/*  3 */ {63, 63,  0},
+		/*  4 */ {44, 53,  2},
+		/*  5 */ {63, 63, 21},
+		/*  6 */ {17, 38, 18},
+		/*  7 */ {10, 33,  6},
+		/*  8 */ { 8, 21,  0},
+		/*  9 */ { 6, 29, 11},
+		/* 10 */ {16, 33, 18},
+		/* 11 */ { 2,  0,  1},
+		/* 12 */ {23, 29, 27},
+		/* 13 */ {26, 26,  0},
+		/* 14 */ {63, 63,  1},
+		/* 15 */ {13, 12, 11},
+	}},
 	{"", {{0}}}
 };
 
@@ -417,4 +435,10 @@ int set_palette_from_string(const char *str_in) {
 
 	memcpy(USER_PALETTE, colors, sizeof(colors));
 	return 1;
+}
+
+/* need this for page_palette.c */
+uint32_t palettes_size(void)
+{
+	return NUM_PALETTES;
 }

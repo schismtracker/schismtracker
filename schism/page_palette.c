@@ -32,8 +32,6 @@
 #include "vgamem.h"
 #include "keyboard.h"
 
-#define NUM_PALETTES 15
-
 /* --------------------------------------------------------------------- */
 
 static struct widget widgets_palette[51];
@@ -146,7 +144,7 @@ static const int palette_list_focus_offsets_right_[] = {
 static uint32_t palette_list_size_(void)
 {
 	/* ok */
-	return NUM_PALETTES;
+	return palettes_size();
 }
 
 static const char *palette_list_name_(uint32_t i)
