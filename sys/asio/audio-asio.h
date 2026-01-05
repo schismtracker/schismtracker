@@ -2,7 +2,7 @@
  * Incomplete ASIO interface definitions -- reverse-engineered from existing
  * binaries and various public sources.
  * 
- * Copyright (C) 2025 Paper
+ * Copyright (C) 2025-2026 Paper
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
