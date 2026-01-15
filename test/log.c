@@ -74,8 +74,14 @@ void test_log_printf(const char *fmt, ...)
 
 void test_log_dump(void)
 {
+	const char *fmt;
+
 	if (!ds.length)
 		return;
 
-	printf("\nTEST LOG: %.*s\n\n", (int)ds.length, ds.data);
+	fmt = (memchr(ds.data, '\n', ds.length))
+		? "\nTEST LOG:\n%.*s\n\n"
+		: "\nTEST LOG: %.*s\n\n";
+
+	printf(fmt, (int)ds.length, ds.data);
 }
