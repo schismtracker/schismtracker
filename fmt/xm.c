@@ -123,6 +123,16 @@ static uint8_t autovib_import[8] = {
 	VIB_SINE, VIB_SINE, VIB_SINE,
 };
 
+static inline unsigned char xm_getc(slurp_t *fp, unsigned char def)
+{
+	int x;
+
+	x = slurp_getc(fp);
+	if (x == EOF)
+		x = def;
+
+	return x;
+}
 
 
 static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *fp)
@@ -678,11 +688,11 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			}
 		}
 
-		vtype = autovib_import[slurp_getc(fp) & 0x7];
-		vsweep = slurp_getc(fp);
-		vdepth = slurp_getc(fp);
+		vtype = autovib_import[xm_getc(fp, 0) & 0x7];
+		vsweep = xm_getc(fp, 0);
+		vdepth = xm_getc(fp, 0);
 		vdepth = MIN(vdepth, 32);
-		vrate = slurp_getc(fp);
+		vrate = xm_getc(fp, 0);
 		vrate = MIN(vrate, 64);
 
 		/* translate the sweep value */
