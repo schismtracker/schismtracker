@@ -742,6 +742,7 @@ schismtrackertest_SOURCES = \
 	test/cases/config-parser.c  \
 	test/cases/disko.c			\
 	test/cases/mplink.c         \
+	test/cases/sanity.c			\
 	test/cases/slurp.c          \
 	test/cases/str.c			\
 	test/cases/util.c

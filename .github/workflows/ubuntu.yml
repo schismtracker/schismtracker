@@ -12,18 +12,6 @@ jobs:
     #   - maybe others as well; possibly we can force-disable
     #     stuff like avx2 to be able to test MOAR variants
 
-    # ALSO for the test suite, we need to have a public API
-    # that tests whether each given backend works as it
-    # should (as long as it initializes fine). we should also
-    # have a test that does a sanity check for the C time
-    # library, e.g. time() -> localtime() -> mktime() should
-    # ALWAYS return the same value as was returned by time().
-
-    # ALSO ALSO, we need to test video blitters; in the case
-    # of asan it would also be nice to do a full render of
-    # a song (or multiple songs) to make sure we don't
-    # overstep any memory boundaries
-
     strategy:
       fail-fast: false
       matrix:
