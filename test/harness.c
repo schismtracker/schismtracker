@@ -98,6 +98,7 @@ int schism_test_main(int argc, char **argv)
 	/* oke */
 	mt_init();
 	SCHISM_RUNTIME_ASSERT(timer_init(), "need timers");
+	SCHISM_RUNTIME_ASSERT(localtime_r_init(), "need localtime_r");
 
 	if (argc > 1) {
 		char *test_case_name = argv[1];
@@ -174,9 +175,11 @@ int schism_test_main(int argc, char **argv)
 
 	free(filter_expression);
 
-	// weird, these cause a hang on macosx  --paper
-	//timer_quit();
-	//mt_quit();
+	/* weird, these cause a hang on macosx  --paper
+	 * Seems to work fine now (???) */
+	timer_quit();
+	mt_quit();
+	localtime_r_quit();
 
 	return exit_code;
 }
