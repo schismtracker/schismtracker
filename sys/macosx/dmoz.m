@@ -32,8 +32,24 @@
 #import <Cocoa/Cocoa.h>
 #import <Foundation/Foundation.h>
 
-// FIXME we need to also get the Application Support directory through
-// NSSearchPathForDirectoriesInDomains() 
+/* XXX this should be a "get config dir" function pointer
+ * within the dmoz structs; this would remove all the super
+ * ugly windows shit from main dmoz.c and put the focus on
+ * things that really matter */
+char *macosx_get_application_support_dir(void)
+{
+	NSArray *strings = NSSearchPathForDirectoriesInDomains(
+		NSApplicationSupportDirectory, NSUserDomainMask, true);
+	if ([strings count] < 1)
+		return NULL;
+
+	NSString *path = [strings objectAtIndex: 0];
+	if (!path)
+		return NULL;
+
+	return str_dup([path UTF8String]);
+}
+
 static char *macosx_dmoz_get_exe_path(void)
 {
 	NSBundle *bundle = [NSBundle mainBundle];

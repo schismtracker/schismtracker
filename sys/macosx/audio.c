@@ -88,21 +88,18 @@ struct schism_audio_device {
 /* ---------------------------------------------------------- */
 /* drivers */
 
-static const char *drivers[] = {
-	"coreaudio",
-};
-
 static int macosx_audio_driver_count(void)
 {
-	return ARRAY_SIZE(drivers);
+	return 1;
 }
 
 static const char *macosx_audio_driver_name(int i)
 {
-	if (i >= ARRAY_SIZE(drivers) || i < 0)
-		return NULL;
+	switch (i) {
+	case 0: return "coreaudio";
+	}
 
-	return drivers[i];
+	return NULL;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -115,7 +112,7 @@ static struct {
 } *devices = NULL;
 static uint32_t devices_size = 0;
 
-static void _macosx_audio_free_devices(void)
+static void macosx_audio_free_devices_(void)
 {
 	if (devices) {
 		for (uint32_t i = 0; i < devices_size; i++)
@@ -127,13 +124,17 @@ static void _macosx_audio_free_devices(void)
 	}
 }
 
-static char *_macosx_cfstring_to_utf8(CFStringRef cfstr)
+static char *macosx_cfstring_to_utf8_(CFStringRef cfstr)
 {
 	size_t len;
 	char *buf;
 
+	if (CFGetTypeID(cfstr) != CFStringGetTypeID()) {
+		return NULL;
+	}
+
 	/* paranoia: */
-	SCHISM_RUNTIME_ASSERT(CFGetTypeID(cfstr) == CFStringGetTypeID(), "_macosx_cfstring_to_utf8 received a pointer that isn't a CFString!");
+	SCHISM_RUNTIME_ASSERT(CFGetTypeID(cfstr) == CFStringGetTypeID(), "macosx_cfstring_to_utf8_ received a pointer that isn't a CFString!");
 
 	len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfstr), kCFStringEncodingUTF8);
 	buf = mem_alloc(len + 1);
@@ -166,7 +167,7 @@ static uint32_t macosx_audio_device_count(uint32_t flags)
 	if (flags & AUDIO_BACKEND_CAPTURE)
 		return 0;
 
-	_macosx_audio_free_devices();
+	macosx_audio_free_devices_();
 
 #ifdef USE_AUDIODEVICE_APIS
 	result = AudioHardwareGetPropertyInfo(kAudioHardwarePropertyDevices, &size, NULL);
@@ -246,7 +247,7 @@ static uint32_t macosx_audio_device_count(uint32_t flags)
 			result = AudioObjectGetPropertyData(device_ids[i], &addr, 0, NULL, &size, &cfstr);
 #endif
 			if (result == kAudioHardwareNoError) {
-				ptr = _macosx_cfstring_to_utf8(cfstr);
+				ptr = macosx_cfstring_to_utf8_(cfstr);
 				CFRelease(cfstr);
 			}
 #ifdef USE_AUDIODEVICE_APIS
@@ -304,14 +305,7 @@ static const char *macosx_audio_device_name(uint32_t i)
 
 static int macosx_audio_init_driver(const char *driver)
 {
-	int fnd = 0;
-	for (int i = 0; i < ARRAY_SIZE(drivers); i++) {
-		if (!strcmp(drivers[i], driver)) {
-			fnd = 1;
-			break;
-		}
-	}
-	if (!fnd)
+	if (strcmp(driver, "coreaudio"))
 		return -1;
 
 	(void)macosx_audio_device_count(0);
@@ -320,7 +314,7 @@ static int macosx_audio_init_driver(const char *driver)
 
 static void macosx_audio_quit_driver(void)
 {
-	_macosx_audio_free_devices();
+	macosx_audio_free_devices_();
 }
 
 /* -------------------------------------------------------- */
