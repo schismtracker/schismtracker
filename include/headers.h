@@ -586,6 +586,14 @@ int mkstemp(char *template);
 struct tm *localtime_r(const time_t *timep, struct tm *result);
 void localtime_r_quit(void);
 int localtime_r_init(void);
+#else
+# ifdef HAVE_TZSET
+/* For portable code tzset(3) should be called before localtime_r(). */
+#  define localtime_r_init() (tzset(), 1)
+# else
+#  define localtime_r_init() (1)
+# endif
+# define localtime_r_quit()
 #endif
 #ifndef HAVE_SETENV
 int setenv(const char *name, const char *value, int overwrite);

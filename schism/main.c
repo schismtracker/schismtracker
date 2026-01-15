@@ -1089,9 +1089,7 @@ void schism_exit(int x)
 	audio_quit();
 	clippy_quit();
 	events_quit();
-#ifndef HAVE_LOCALTIME_R
 	localtime_r_quit();
-#endif
 	timer_quit();
 	atm_quit();
 	mt_quit();
@@ -1130,9 +1128,6 @@ int schism_main(int argc, char** argv)
 
 	ver_init();
 
-#if defined(HAVE_TZSET) && !defined(SCHISM_WIN32) /* ok */
-	tzset(); // localtime_r wants this
-#endif
 	srand(time(NULL));
 	parse_options(argc, argv); /* shouldn't this be like, first? */
 
@@ -1165,10 +1160,7 @@ int schism_main(int argc, char** argv)
 	SCHISM_RUNTIME_ASSERT(!util_initumask(), "Failed to initialize umask mutex");
 	SCHISM_RUNTIME_ASSERT(!atm_init(), "Failed to initialize atomics!");
 	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
-
-#ifndef HAVE_LOCALTIME_R
 	SCHISM_RUNTIME_ASSERT(localtime_r_init(), "Failed to initialize localtime_r replacement!");
-#endif
 
 	song_initialise();
 	cfg_load();
