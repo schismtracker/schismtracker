@@ -29,24 +29,9 @@
 #include "osdefs.h"
 #include "mem.h"
 
-static int slurp_stdio_open_(slurp_t *t, const char *filename, uint64_t size);
-static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence);
-static int64_t slurp_stdio_tell_(slurp_t *t);
-static uint64_t slurp_stdio_length_(slurp_t *t);
-static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count);
-static int slurp_stdio_eof_(slurp_t *t);
-static void slurp_stdio_closure_(slurp_t *t);
-
-static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence);
-static int64_t slurp_memory_tell_(slurp_t *t);
-static uint64_t slurp_memory_length_(slurp_t *t);
-static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count);
-static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata);
-static void slurp_memory_closure_free_(slurp_t *t);
-
-static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count);
-
 /* --------------------------------------------------------------------- */
+
+static int slurp_stdio_open_(slurp_t *t, const char *filename, uint64_t size);
 
 int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 {
@@ -131,51 +116,6 @@ finished: ; /* this semicolon is important because C */
 	return 0;
 }
 
-/* Initializes a slurp structure on an existing memory stream.
- * Does NOT free the input. */
-int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
-{
-	memset(t, 0, sizeof(*t));
-
-	t->seek = slurp_memory_seek_;
-	t->tell = slurp_memory_tell_;
-	t->peek = slurp_memory_peek_;
-	t->receive = slurp_memory_receive_;
-	t->length = slurp_memory_length_;
-
-	t->internal.memory.length = memsize;
-	t->internal.memory.data = mem;
-	t->closure = NULL; // haha
-
-	return 0;
-}
-
-int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize)
-{
-	slurp_memstream(t, mem, memsize);
-
-	t->closure = slurp_memory_closure_free_;
-
-	return 0;
-}
-
-int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize)
-{
-	memset(t, 0, sizeof(*t));
-
-	t->seek = slurp_memory_seek_;
-	t->tell = slurp_memory_tell_;
-	t->peek = slurp_2mem_peek_;
-	t->length = slurp_memory_length_;
-
-	t->internal.memory.length = memsize * 2;
-	t->internal.memory.data = mem1;
-	t->internal.memory.data2 = mem2;
-	t->closure = NULL;
-
-	return 0;
-}
-
 void unslurp(slurp_t * t)
 {
 	if (!t)
@@ -188,7 +128,8 @@ void unslurp(slurp_t * t)
 /* --------------------------------------------------------------------- */
 /* stdio implementation */
 
-/* nonseek implementation for stdio streams ... */
+/* -- nonseek */
+
 static size_t slurp_stdio_nonseek_read_(void *opaque, disko_t *ds, size_t z)
 {
 	size_t rr = 0;
@@ -215,7 +156,41 @@ static void slurp_stdio_nonseek_closure_(void *opaque)
 	fclose(opaque);
 }
 
-/* this function does NOT automatically close the file */
+/* -- seek */
+
+static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
+{
+	// XXX can we use _fseeki64 on Windows?
+	return fseek(t->internal.stdio.fp, offset, whence);
+}
+
+static int64_t slurp_stdio_tell_(slurp_t *t)
+{
+	return ftell(t->internal.stdio.fp);
+}
+
+static uint64_t slurp_stdio_length_(slurp_t *t)
+{
+	return t->internal.stdio.length;
+}
+
+static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count)
+{
+	return fread(ptr, 1, count, t->internal.stdio.fp);
+}
+
+static int slurp_stdio_eof_(slurp_t *t)
+{
+	return feof(t->internal.stdio.fp);
+}
+
+static void slurp_stdio_closure_(slurp_t *t)
+{
+	fclose(t->internal.stdio.fp);
+}
+
+/* -- public function */
+
 int slurp_stdio(slurp_t *t, FILE *fp)
 {
 	/* stdio streams have a chance of being nonseekable. if that's true,
@@ -250,6 +225,7 @@ int slurp_stdio(slurp_t *t, FILE *fp)
 	return SLURP_OPEN_SUCCESS;
 }
 
+/* helper function for slurp() */
 static int slurp_stdio_open_(slurp_t *t, const char *filename, SCHISM_UNUSED uint64_t size)
 {
 	FILE *fp;
@@ -268,38 +244,8 @@ static int slurp_stdio_open_(slurp_t *t, const char *filename, SCHISM_UNUSED uin
 	return SLURP_OPEN_SUCCESS;
 }
 
-static int slurp_stdio_seek_(slurp_t *t, int64_t offset, int whence)
-{
-	// XXX can we use _fseeki64 on Windows?
-	return fseek(t->internal.stdio.fp, offset, whence);
-}
-
-static int64_t slurp_stdio_tell_(slurp_t *t)
-{
-	return ftell(t->internal.stdio.fp);
-}
-
-static uint64_t slurp_stdio_length_(slurp_t *t)
-{
-	return t->internal.stdio.length;
-}
-
-static size_t slurp_stdio_read_(slurp_t *t, void *ptr, size_t count)
-{
-	return fread(ptr, 1, count, t->internal.stdio.fp);
-}
-
-static int slurp_stdio_eof_(slurp_t *t)
-{
-	return feof(t->internal.stdio.fp);
-}
-
-static void slurp_stdio_closure_(slurp_t *t)
-{
-	fclose(t->internal.stdio.fp);
-}
-
 /* --------------------------------------------------------------------- */
+/* impl for memory streams */
 
 static int slurp_memory_seek_(slurp_t *t, int64_t offset, int whence)
 {
@@ -364,6 +310,34 @@ static void slurp_memory_closure_free_(slurp_t *t)
 	free(t->internal.memory.data);
 }
 
+/* Initializes a slurp structure on an existing memory stream.
+ * Does NOT free the input. */
+int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
+{
+	memset(t, 0, sizeof(*t));
+
+	t->seek = slurp_memory_seek_;
+	t->tell = slurp_memory_tell_;
+	t->peek = slurp_memory_peek_;
+	t->receive = slurp_memory_receive_;
+	t->length = slurp_memory_length_;
+
+	t->internal.memory.length = memsize;
+	t->internal.memory.data = mem;
+	t->closure = NULL; // haha
+
+	return 0;
+}
+
+int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize)
+{
+	slurp_memstream(t, mem, memsize);
+
+	t->closure = slurp_memory_closure_free_;
+
+	return 0;
+}
+
 /* --------------------------------------------------------------------- */
 
 /* 2mem puts two separate memory streams next to each other, and
@@ -412,6 +386,23 @@ static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count)
 	}
 
 	return count;
+}
+
+int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize)
+{
+	memset(t, 0, sizeof(*t));
+
+	t->seek = slurp_memory_seek_;
+	t->tell = slurp_memory_tell_;
+	t->peek = slurp_2mem_peek_;
+	t->length = slurp_memory_length_;
+
+	t->internal.memory.length = memsize * 2;
+	t->internal.memory.data = mem1;
+	t->internal.memory.data2 = mem2;
+	t->closure = NULL;
+
+	return 0;
 }
 
 /* --------------------------------------------------------------------- */
@@ -635,6 +626,7 @@ int slurp_init_nonseek(slurp_t *fp,
 }
 
 /* --------------------------------------------------------------------- */
+/* and now, the slurp interface */
 
 int slurp_seek(slurp_t *t, int64_t offset, int whence)
 {
