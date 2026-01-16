@@ -90,6 +90,7 @@ static void slurp_zlib_end(void *opaque)
 	struct slurp_zlib *zl = opaque;
 
 	ZLIB_inflateEnd(&zl->zs);
+	free(zl);
 }
 
 static size_t slurp_zlib_output(void *opaque, void *buf, size_t len)
