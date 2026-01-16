@@ -882,6 +882,8 @@ static size_t slurp_decompress_read(void *opaque, disko_t *ds, size_t size)
 	zl->vtbl.output(zl->opaque, buf, size);
 
 	while (zl->vtbl.output(zl->opaque, NULL, 0) > 0) {
+		int res;
+
 		if (zl->vtbl.input(zl->opaque, NULL, 0) == 0) {
 			size_t z = slurp_read(&zl->fp, zl->buf, sizeof(zl->buf));
 			if (!z) {
@@ -892,16 +894,17 @@ static size_t slurp_decompress_read(void *opaque, disko_t *ds, size_t size)
 			zl->vtbl.input(zl->opaque, zl->buf, z);
 		}
 
-		switch (zl->vtbl.inflate(zl->opaque)) {
-		case SLURP_DEC_OK:
+		res = zl->vtbl.inflate(zl->opaque);
+		if (res == SLURP_DEC_OK)
 			continue;
-		case SLURP_DEC_DONE:
+
+		if (res == SLURP_DEC_DONE) {
 			zl->done = 1;
 			break;
-		default:
-			zl->err = 1;
-			goto ZL_end;
 		}
+
+		zl->err = 1;
+		goto ZL_end;
 	}
 
 ZL_end:
