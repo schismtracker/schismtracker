@@ -846,6 +846,126 @@ void slurp_unlimit_seek(slurp_t *t)
 }
 
 /* ------------------------------------------------------------------------ */
+/* slurp support for decompression */
+
+#define CHUNK_SIZE (4096)
+
+struct slurp_decompress {
+	/* the original file as passed into slurp_decompress */
+	slurp_t fp;
+
+	struct slurp_decompress_vtable vtbl;
+
+	unsigned char buf[CHUNK_SIZE];
+
+	/* error flag */
+	unsigned int err : 1;
+	unsigned int done : 1;
+
+	void *opaque;
+};
+
+static size_t slurp_decompress_read(void *opaque, disko_t *ds, size_t size)
+{
+	struct slurp_decompress *zl = opaque;
+	size_t i;
+	void *buf;
+
+	if (zl->err || zl->done)
+		return 0; /* Uh oh */
+
+	buf = disko_memstart(ds, size);
+	if (!buf) {
+		zl->err = 1;
+		return 0;
+	}
+	zl->vtbl.output(zl->opaque, buf, size);
+
+	while (zl->vtbl.output(zl->opaque, NULL, 0) > 0) {
+		if (zl->vtbl.input(zl->opaque, NULL, 0) == 0) {
+			size_t z = slurp_read(&zl->fp, zl->buf, sizeof(zl->buf));
+			if (!z) {
+				zl->err = 1;
+				goto ZL_end;
+			}
+
+			zl->vtbl.input(zl->opaque, zl->buf, z);
+		}
+
+		switch (zl->vtbl.inflate(zl->opaque)) {
+		case SLURP_DEC_OK:
+			continue;
+		case SLURP_DEC_DONE:
+			zl->done = 1;
+			break;
+		default:
+			zl->err = 1;
+			goto ZL_end;
+		}
+	}
+
+ZL_end:
+	size -= zl->vtbl.output(zl->opaque, NULL, 0);
+	disko_memend(ds, buf, size);
+	return size;
+}
+
+static void slurp_decompress_closure(void *opaque)
+{
+	struct slurp_decompress *zl = opaque;
+
+	zl->vtbl.end(zl->opaque);
+	unslurp(&zl->fp);
+	free(zl);
+}
+
+int slurp_decompress(slurp_t *fp, const struct slurp_decompress_vtable *vtbl)
+{
+	struct slurp_decompress *zl;
+
+	zl = mem_calloc(1, sizeof(*zl));
+
+	memcpy(&zl->vtbl, vtbl, sizeof(struct slurp_decompress_vtable));
+
+	zl->opaque = zl->vtbl.start();
+	if (!zl->opaque) {
+		free(zl);
+		return -1;
+	}
+
+	memcpy(&zl->fp, fp, sizeof(slurp_t));
+
+	slurp_init_nonseek(fp, slurp_decompress_read, slurp_decompress_closure, zl);
+
+	/* read a bit to ensure we've actually got the right thing.
+	 * zlib won't complain if our file Isn't Correct, so we have
+	 * to do it ourselves. */
+	slurp_available(fp, 8096, SEEK_SET);
+
+	/* check the error flag. if it's set, we're toast.
+	 * if it was set twice, our whole lives are different than
+	 * we would've been otherwise. */
+	if (zl->err) {
+		/* TODO please find a better way to do this.
+		 * this prevents memleaks, but is utterly deranged */
+		slurp_t tmp;
+
+		memcpy(&tmp, &zl->fp, sizeof(slurp_t));
+
+		/* prevent original fp from actually being closed */
+		zl->fp.closure = NULL;
+		unslurp(fp);
+
+		/* roll it back */
+		memcpy(fp, &tmp, sizeof(slurp_t));
+
+		return -1;
+	}
+
+	return 0;
+}
+
+/* ------------------------------------------------------------------------ */
 
 /* strcspn equivalent.
  * if this function returns -1, then it's hit EOF. */

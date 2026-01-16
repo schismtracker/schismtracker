@@ -208,4 +208,29 @@ int slurp_gzip(slurp_t *src);
 
 int slurp_available(slurp_t *fp, size_t x, int whence);
 
+/* ------------------------------------------------------------------------ */
+
+#define SLURP_DEC_OK (0)
+#define SLURP_DEC_DONE (1)
+
+struct slurp_decompress_vtable {
+	/* returns an opaque pointer that represents the inflate */
+	void * (*start)(void);
+	/* negative return value = error */
+	int (*inflate)(void *opaque);
+	/* kills the opaque pointer off */
+	void (*end)(void *opaque);
+	/* These actually serve two purposes.
+	 * If buf is NULL, then it should return the currently
+	 * available buffer length, and `len` is ignored.
+	 * Otherwise, it sets the current buffers for input
+	 * **without copying them**, i.e. the pointers should
+	 * remain valid until the last call to inflate before
+	 * calling these functions again. */
+	size_t (*output)(void *opaque, void *buf, size_t len);
+	size_t (*input)(void *opaque, void *buf, size_t len);
+};
+
+int slurp_decompress(slurp_t *fp, const struct slurp_decompress_vtable *vtbl);
+
 #endif /* SCHISM_SLURP_H */
