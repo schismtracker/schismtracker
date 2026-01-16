@@ -175,11 +175,11 @@ int schism_test_main(int argc, char **argv)
 
 	free(filter_expression);
 
+	localtime_r_quit();
 	/* weird, these cause a hang on macosx  --paper
 	 * Seems to work fine now (???) */
 	timer_quit();
 	mt_quit();
-	localtime_r_quit();
 
 	return exit_code;
 }
