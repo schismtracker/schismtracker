@@ -152,9 +152,9 @@ void video_toggle_screensaver(int enabled);
 typedef uint32_t (*schism_map_rgb_spec)(void *data, uint8_t r, uint8_t g, uint8_t b);
 
 /* YUV blitters */
-SCHISM_HOT void video_blitYY(unsigned char *pixels, uint32_t pitch, uint32_t tpal[256]);
-SCHISM_HOT void video_blitUV(unsigned char *pixels, uint32_t pitch, uint32_t tpal[256]);
-SCHISM_HOT void video_blitTV(unsigned char *pixels, uint32_t pitch, uint32_t tpal[256]);
+SCHISM_HOT void video_blitYY(unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256]);
+SCHISM_HOT void video_blitUV(unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256]);
+SCHISM_HOT void video_blitTV(unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256]);
 
 /* RGB blitters:
  *
@@ -162,12 +162,12 @@ SCHISM_HOT void video_blitTV(unsigned char *pixels, uint32_t pitch, uint32_t tpa
  * a callback function to convert RGB values into a proper format.
  *
  * NOTE: `bpp` here is BYTES per pixel, not bits per pixel. */
-SCHISM_HOT void video_blit11(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t tpal[256]);
-SCHISM_HOT void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t tpal[256], uint32_t width, uint32_t height);
+SCHISM_HOT void video_blit11(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256]);
+SCHISM_HOT void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256], uint32_t width, uint32_t height);
 SCHISM_HOT void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, uint32_t width, uint32_t height);
 
 /* scaled blit, according to user settings (lots of params here) */
-SCHISM_HOT void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h);
+SCHISM_HOT void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 
 /* ------------------------------------------------------------------------ */
 /* helper function to convert RGB values to YUV */

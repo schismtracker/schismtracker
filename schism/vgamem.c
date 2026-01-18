@@ -325,8 +325,8 @@ static const uint8_t uFFFD[] = {
  * caches and slower memory accesses.  or that's the theory,
  * anyway. I have yet to put it to the test :) */
 #define VGAMEM_SCANNER_VARIANT(BITS) \
-	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, uint32_t tc[16],\
-		uint32_t mouseline[80], uint32_t mouseline_mask[80]) \
+	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, const uint32_t tc[16],\
+		const uint32_t mouseline[80], const uint32_t mouseline_mask[80]) \
 	{ \
 		/* constants */ \
 		const uint_fast32_t y = (ry >> 3), yl = (ry & 7); \

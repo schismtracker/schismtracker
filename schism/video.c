@@ -428,7 +428,7 @@ void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_ma
 }
 
 /* Fast nearest neighbor blitter */
-void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t tpal[256], uint32_t width, uint32_t height)
+void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256], uint32_t width, uint32_t height)
 {
 	// at most 32-bits...
 	union {
@@ -504,7 +504,7 @@ void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t 
 	}
 }
 
-void video_blitYY(unsigned char *pixels, uint32_t pitch, uint32_t tpal[256])
+void video_blitYY(unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256])
 {
 	// this is here because pixels is write only on SDL2
 	uint16_t pixels_r[NATIVE_SCREEN_WIDTH];
@@ -524,12 +524,12 @@ void video_blitYY(unsigned char *pixels, uint32_t pitch, uint32_t tpal[256])
 	}
 }
 
-void video_blitUV(unsigned char *pixels, uint32_t pitch, uint32_t tpal[256])
+void video_blitUV(unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256])
 {
 	video_blit11(1, pixels, pitch, tpal);
 }
 
-void video_blitTV(unsigned char *pixels, uint32_t pitch, uint32_t tpal[256])
+void video_blitTV(unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256])
 {
 	unsigned char cv8backing[NATIVE_SCREEN_WIDTH];
 	uint32_t mouseline[80];
@@ -547,7 +547,7 @@ void video_blitTV(unsigned char *pixels, uint32_t pitch, uint32_t tpal[256])
 	}
 }
 
-void video_blit11(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t tpal[256])
+void video_blit11(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256])
 {
 	uint32_t cv32backing[NATIVE_SCREEN_WIDTH];
 	uint32_t y, x;
@@ -590,7 +590,7 @@ void video_blit11(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t 
 }
 
 /* scaled blit, according to user settings (lots of params here) */
-void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
 	pixels += y * pitch;
 	pixels += x * bpp;

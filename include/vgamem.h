@@ -38,9 +38,9 @@ void vgamem_clear(void);
 void vgamem_flip(void);
 
 /* scan to pixel data */
-SCHISM_SIMD SCHISM_HOT void vgamem_scan8 (uint32_t y, uint8_t  *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]);
-SCHISM_SIMD SCHISM_HOT void vgamem_scan16(uint32_t y, uint16_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]);
-SCHISM_SIMD SCHISM_HOT void vgamem_scan32(uint32_t y, uint32_t *out, uint32_t tc[16], uint32_t mouseline[80], uint32_t mouseline_mask[80]);
+SCHISM_SIMD SCHISM_HOT void vgamem_scan8 (uint32_t y, uint8_t  *out, const uint32_t tc[16], const uint32_t mouseline[80], const uint32_t mouseline_mask[80]);
+SCHISM_SIMD SCHISM_HOT void vgamem_scan16(uint32_t y, uint16_t *out, const uint32_t tc[16], const uint32_t mouseline[80], const uint32_t mouseline_mask[80]);
+SCHISM_SIMD SCHISM_HOT void vgamem_scan32(uint32_t y, uint32_t *out, const uint32_t tc[16], const uint32_t mouseline[80], const uint32_t mouseline_mask[80]);
 
 /* ---------------------------------------------------------------------------
  * drawing overlays; can draw practically anything given the length
