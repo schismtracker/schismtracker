@@ -50,6 +50,12 @@ typedef struct {
 	void (*cond_signal)(mt_cond_t *cond);
 	void (*cond_wait)(mt_cond_t *cond, mt_mutex_t *mutex);
 	void (*cond_wait_timeout)(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout);
+
+	mt_sem_t *(*sem_create)(void);
+	void (*sem_delete)(mt_sem_t *sem);
+	void (*sem_post)(mt_sem_t *sem);
+	void (*sem_wait)(mt_sem_t *sem);
+	void (*sem_wait_timeout)(mt_sem_t *sem, uint32_t timeout_ms);
 } schism_mt_backend_t;
 
 #if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)

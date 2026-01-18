@@ -187,6 +187,61 @@ void mt_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 
 // ---------------------------------------------------------------------------
 
+mt_sem_t *mt_sem_create(void)
+{
+#ifdef USE_THREADS
+	if (mt_backend)
+		return mt_backend->sem_create();
+
+	return NULL;
+#else
+	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
+		"it works is incompatible with non-threaded models");
+#endif
+}
+
+void mt_sem_delete(mt_sem_t *sem)
+{
+#ifdef USE_THREADS
+	if (mt_backend) mt_backend->sem_delete(sem);
+#else
+	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
+		"it works is incompatible with non-threaded models");
+#endif
+}
+
+void mt_sem_post(mt_sem_t *sem)
+{
+#ifdef USE_THREADS
+	if (mt_backend) mt_backend->sem_post(sem);
+#else
+	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
+		"it works is incompatible with non-threaded models");
+#endif
+}
+
+void mt_sem_wait(mt_sem_t *sem)
+{
+#ifdef USE_THREADS
+	if (mt_backend) mt_backend->sem_wait(sem);
+#else
+	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
+		"it works is incompatible with non-threaded models");
+#endif
+}
+
+void mt_sem_wait_timeout(mt_sem_t *sem, uint32_t timeout_ms)
+{
+#ifdef USE_THREADS
+	if (mt_backend) mt_backend->sem_wait_timeout(sem, timeout_ms);
+#else
+	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
+		"it works is incompatible with non-threaded models");
+#endif
+}
+
+// ---------------------------------------------------------------------------
+
 static int mt_test_thread_(void *xyzzy)
 {
 	return xyzzy != MT_DUMMY_ADDR;

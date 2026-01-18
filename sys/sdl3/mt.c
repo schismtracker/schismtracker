@@ -175,6 +175,52 @@ static void sdl3_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t 
 
 //////////////////////////////////////////////////////////////////////////////
 
+static SDL_Semaphore *(SDLCALL *sdl3_CreateSemaphore)(void) = NULL;
+static void (SDLCALL *sdl3_DestroySemaphore)(SDL_Semaphore *sem) = NULL;
+static void (SDLCALL *sdl3_SignalSemaphore)(SDL_Semaphore *sem) = NULL;
+static void (SDLCALL *sdl3_WaitSemaphore)(SDL_Semaphore *sem) = NULL;
+static bool (SDLCALL *sdl3_WaitSemaphoreTimeout)(SDL_Semaphore *sem, Sint32 timeout) = NULL;
+
+struct mt_sem {
+	SDL_Semaphore *sem;
+};
+
+static mt_sem_t *sdl3_sem_create(void)
+{
+	mt_sem_t *sem = mem_alloc(sizeof(*sem));
+
+	sem->sem = sdl3_CreateSemaphore();
+	if (!sem->sem) {
+		free(sem);
+		return NULL;
+	}
+
+	return sem;
+}
+
+static void sdl3_sem_delete(mt_sem_t *sem)
+{
+	sdl3_DestroySemaphore(sem->sem);
+	free(sem);
+}
+
+static void sdl3_sem_post(mt_sem_t *sem)
+{
+	sdl3_SignalSemaphore(sem->sem);
+}
+
+static void sdl3_sem_wait(mt_sem_t *sem)
+{
+	sdl3_WaitSemaphore(sem->sem);
+}
+
+static void sdl3_sem_wait_timeout(mt_sem_t *sem, uint32_t timeout)
+{
+	sdl3_WaitSemaphoreTimeout(sem->sem, timeout);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 static int sdl3_threads_load_syms(void)
 {
 	SCHISM_SDL3_SYM(CreateThreadRuntime);
@@ -192,6 +238,12 @@ static int sdl3_threads_load_syms(void)
 	SCHISM_SDL3_SYM(SignalCondition);
 	SCHISM_SDL3_SYM(WaitCondition);
 	SCHISM_SDL3_SYM(WaitConditionTimeout);
+
+	SCHISM_SDL3_SYM(CreateSemaphore);
+	SCHISM_SDL3_SYM(DestroySemaphore);
+	SCHISM_SDL3_SYM(SignalSemaphore);
+	SCHISM_SDL3_SYM(WaitSemaphore);
+	SCHISM_SDL3_SYM(WaitSemaphoreTimeout);
 
 	return 0;
 }
@@ -233,4 +285,10 @@ const schism_mt_backend_t schism_mt_backend_sdl3 = {
 	.cond_signal = sdl3_cond_signal,
 	.cond_wait = sdl3_cond_wait,
 	.cond_wait_timeout = sdl3_cond_wait_timeout,
+
+	.sem_create = sdl3_sem_create,
+	.sem_delete = sdl3_sem_delete,
+	.sem_post = sdl3_sem_post,
+	.sem_wait = sdl3_sem_wait,
+	.sem_wait_timeout = sdl3_sem_wait_timeout,
 };

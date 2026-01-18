@@ -39,6 +39,7 @@ typedef uint64_t mt_thread_id_t;
 typedef struct mt_thread mt_thread_t;
 typedef struct mt_mutex mt_mutex_t;
 typedef struct mt_cond mt_cond_t;
+typedef struct mt_sem mt_sem_t;
 
 typedef int (*schism_thread_function_t)(void *userdata);
 
@@ -64,6 +65,12 @@ void mt_cond_delete(mt_cond_t *cond);
 void mt_cond_signal(mt_cond_t *cond);
 void mt_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex);
 void mt_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout);
+
+mt_sem_t *mt_sem_create(void);
+void mt_sem_delete(mt_sem_t *sem);
+void mt_sem_post(mt_sem_t *sem);
+void mt_sem_wait(mt_sem_t *sem);
+void mt_sem_wait_timeout(mt_sem_t *sem, uint32_t timeout_ms);
 
 int mt_init(void);
 void mt_quit(void);

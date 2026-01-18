@@ -189,6 +189,52 @@ static void sdl2_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t 
 
 //////////////////////////////////////////////////////////////////////////////
 
+static SDL_sem *(SDLCALL *sdl2_CreateSemaphore)(void) = NULL;
+static void (SDLCALL *sdl2_DestroySemaphore)(SDL_sem *sem) = NULL;
+static void (SDLCALL *sdl2_SemPost)(SDL_sem *sem) = NULL;
+static void (SDLCALL *sdl2_SemWait)(SDL_sem *sem) = NULL;
+static bool (SDLCALL *sdl2_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
+
+struct mt_sem {
+	SDL_sem *sem;
+};
+
+static mt_sem_t *sdl2_sem_create(void)
+{
+	mt_sem_t *sem = mem_alloc(sizeof(*sem));
+
+	sem->sem = sdl2_CreateSemaphore();
+	if (!sem->sem) {
+		free(sem);
+		return NULL;
+	}
+
+	return sem;
+}
+
+static void sdl2_sem_delete(mt_sem_t *sem)
+{
+	sdl2_DestroySemaphore(sem->sem);
+	free(sem);
+}
+
+static void sdl2_sem_post(mt_sem_t *sem)
+{
+	sdl2_SemPost(sem->sem);
+}
+
+static void sdl2_sem_wait(mt_sem_t *sem)
+{
+	sdl2_SemWait(sem->sem);
+}
+
+static void sdl2_sem_wait_timeout(mt_sem_t *sem, uint32_t timeout)
+{
+	sdl2_SemWaitTimeout(sem->sem, timeout);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 static int sdl2_threads_load_syms(void)
 {
 	SCHISM_SDL2_SYM(CreateThread);
@@ -206,6 +252,12 @@ static int sdl2_threads_load_syms(void)
 	SCHISM_SDL2_SYM(CondSignal);
 	SCHISM_SDL2_SYM(CondWait);
 	SCHISM_SDL2_SYM(CondWaitTimeout);
+
+	SCHISM_SDL2_SYM(CreateSemaphore);
+	SCHISM_SDL2_SYM(DestroySemaphore);
+	SCHISM_SDL2_SYM(SemPost);
+	SCHISM_SDL2_SYM(SemWait);
+	SCHISM_SDL2_SYM(SemWaitTimeout);
 
 	return 0;
 }
@@ -247,4 +299,10 @@ const schism_mt_backend_t schism_mt_backend_sdl2 = {
 	.cond_signal = sdl2_cond_signal,
 	.cond_wait = sdl2_cond_wait,
 	.cond_wait_timeout = sdl2_cond_wait_timeout,
+
+	.sem_create = sdl2_sem_create,
+	.sem_delete = sdl2_sem_delete,
+	.sem_post = sdl2_sem_post,
+	.sem_wait = sdl2_sem_wait,
+	.sem_wait_timeout = sdl2_sem_wait_timeout,
 };

@@ -556,6 +556,45 @@ void win32_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeou
 
 //////////////////////////////////////////////////////////////////////////////
 
+struct mt_sem {
+	HANDLE sem;
+};
+
+static mt_sem_t *win32_sem_create(void)
+{
+	mt_sem_t *sem = mem_alloc(sizeof(*sem));
+
+	sem->sem = CreateSemaphoreA(NULL, 0, LONG_MAX, NULL);
+	if (!sem->sem)
+		return NULL;
+
+	return sem;
+}
+
+static void win32_sem_delete(mt_sem_t *sem)
+{
+	if (!sem || !sem->sem) return;
+
+	CloseHandle(sem->sem);
+}
+
+static void win32_sem_post(mt_sem_t *sem)
+{
+	ReleaseSemaphore(sem->sem, 1, NULL);
+}
+
+static void win32_sem_wait(mt_sem_t *sem)
+{
+	WaitForSingleObject(sem->sem, INFINITE);
+}
+
+static void win32_sem_wait_timeout(mt_sem_t *sem, uint32_t timeout_ms)
+{
+	WaitForSingleObject(sem->sem, timeout_ms);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 static void *lib_kernel32 = NULL;
 static void *lib_kernelbase = NULL;
 
@@ -688,4 +727,10 @@ const schism_mt_backend_t schism_mt_backend_win32 = {
 	.cond_signal = win32_cond_signal,
 	.cond_wait = win32_cond_wait,
 	.cond_wait_timeout = win32_cond_wait_timeout,
+
+	.sem_create = win32_sem_create,
+	.sem_delete = win32_sem_delete,
+	.sem_post = win32_sem_post,
+	.sem_wait = win32_sem_wait,
+	.sem_wait_timeout = win32_sem_wait_timeout,
 };
