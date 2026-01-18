@@ -408,13 +408,13 @@ void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_ma
 			case 3:
 				// convert 32-bit to 24-bit
 #ifdef WORDS_BIGENDIAN
-				*pixels++ = ((char *)&c)[1];
-				*pixels++ = ((char *)&c)[2];
-				*pixels++ = ((char *)&c)[3];
+				pixels[0] = ((char *)&c)[1];
+				pixels[1] = ((char *)&c)[2];
+				pixels[2] = ((char *)&c)[3];
 #else
-				*pixels++ = ((char *)&c)[0];
-				*pixels++ = ((char *)&c)[1];
-				*pixels++ = ((char *)&c)[2];
+				pixels[0] = ((char *)&c)[0];
+				pixels[1] = ((char *)&c)[1];
+				pixels[2] = ((char *)&c)[2];
 #endif
 				break;
 			case 4: *(uint32_t*)pixels = c; break;
@@ -482,13 +482,13 @@ void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uin
 			case 3:
 				// convert 32-bit to 24-bit
 #ifdef WORDS_BIGENDIAN
-				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 1];
-				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 2];
-				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 3];
+				pixels[0] = pixels_u.uc[(scaled_x) * 4 + 1];
+				pixels[1] = pixels_u.uc[(scaled_x) * 4 + 2];
+				pixels[2] = pixels_u.uc[(scaled_x) * 4 + 3];
 #else
-				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 0];
-				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 1];
-				*pixels++ = pixels_u.uc[(scaled_x) * 4 + 2];
+				pixels[0] = pixels_u.uc[(scaled_x) * 4 + 0];
+				pixels[1] = pixels_u.uc[(scaled_x) * 4 + 1];
+				pixels[2] = pixels_u.uc[(scaled_x) * 4 + 2];
 #endif
 				break;
 			case 4:  *(uint32_t *)pixels = pixels_u.ui[scaled_x]; break;
