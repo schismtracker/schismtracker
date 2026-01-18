@@ -94,80 +94,13 @@ static struct atm timer_oneshot_thread_cancelled = { 0 };
 /* this protects the oneshot PENDING list, not the actual
  * list itself (important!) */
 static mt_mutex_t *timer_oneshot_mutex = NULL;
-static mt_cond_t *timer_oneshot_cond = NULL;
-
-static int timer_oneshot_thread_func(SCHISM_UNUSED void *userdata)
-{
-	mt_mutex_lock(timer_oneshot_mutex);
-
-	mt_thread_set_priority(MT_THREAD_PRIORITY_HIGH);
-
-	while (!atm_load(&timer_oneshot_thread_cancelled)) {
-		// Add any pending timers waiting to get added to the list.
-		if (oneshot_data_pending) {
-			if (oneshot_data_list) {
-				struct timer_oneshot_data_ *tail = oneshot_data_list;
-				while (tail->next)
-					tail = tail->next;
-				tail->next = oneshot_data_pending;
-			} else {
-				oneshot_data_list = oneshot_data_pending;
-			}
-
-			oneshot_data_pending = NULL;
-		}
-
-		mt_mutex_unlock(timer_oneshot_mutex);
-
-		timer_ticks_t wait = UINT64_MAX;
-
-		if (oneshot_data_list) {
-			struct timer_oneshot_data_ *data = oneshot_data_list, *prev = NULL;
-			timer_ticks_t now = timer_ticks_us();
-
-			while (data) {
-				if (timer_ticks_passed(now, data->trigger)) {
-					data->callback(data->param);
-
-					now = timer_ticks_us();
-
-					// Remove the timer from the list
-					if (prev) {
-						prev->next = data->next;
-					} else {
-						oneshot_data_list = data->next;
-					}
-
-					// free the data
-					void *old = data;
-					data = data->next;
-					free(old);
-				} else {
-					wait = MIN(wait, data->trigger - now);
-
-					prev = data;
-					data = data->next;
-				}
-			}
-		}
-
-		wait /= 1000; //usec to msec
-
-		mt_mutex_lock(timer_oneshot_mutex);
-
-		mt_cond_wait_timeout(timer_oneshot_cond, timer_oneshot_mutex, wait);
-	}
-
-	return 0;
-}
+static mt_sem_t *timer_oneshot_sem = NULL;
 #endif
 
-int timer_oneshot_worker(void)
+/* This function should ONLY be called with the mutex LOCKED */
+static timer_ticks_t timer_oneshot_work_(void)
 {
 #ifdef USE_THREADS
-	if (timer_oneshot_thread || backend->oneshot)
-		return 0; // do nothing
-
 	mt_mutex_lock(timer_oneshot_mutex);
 #endif
 
@@ -188,6 +121,8 @@ int timer_oneshot_worker(void)
 #ifdef USE_THREADS
 	mt_mutex_unlock(timer_oneshot_mutex);
 #endif
+
+	timer_ticks_t wait = UINT64_MAX;
 
 	if (oneshot_data_list) {
 		struct timer_oneshot_data_ *data = oneshot_data_list, *prev = NULL;
@@ -211,11 +146,41 @@ int timer_oneshot_worker(void)
 				data = data->next;
 				free(old);
 			} else {
+				wait = MIN(wait, data->trigger - now);
+
 				prev = data;
 				data = data->next;
 			}
 		}
 	}
+
+	return wait / 1000;
+}
+
+#ifdef USE_THREADS
+static int timer_oneshot_thread_func(SCHISM_UNUSED void *userdata)
+{
+	mt_mutex_lock(timer_oneshot_mutex);
+
+	mt_thread_set_priority(MT_THREAD_PRIORITY_HIGH);
+
+	while (!atm_load(&timer_oneshot_thread_cancelled)) {
+		timer_ticks_t wait = timer_oneshot_work_();
+		mt_sem_wait_timeout(timer_oneshot_sem, wait);
+	}
+
+	return 0;
+}
+#endif
+
+int timer_oneshot_worker(void)
+{
+#ifdef USE_THREADS
+	if (timer_oneshot_thread || backend->oneshot)
+		return 0; // do nothing
+#endif
+
+	timer_oneshot_work_();
 
 	return 0;
 }
@@ -256,7 +221,7 @@ void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
 	mt_mutex_unlock(timer_oneshot_mutex);
 
 	if (timer_oneshot_thread)
-		mt_cond_signal(timer_oneshot_cond);
+		mt_sem_post(timer_oneshot_sem);
 #endif
 }
 
@@ -298,7 +263,7 @@ int timer_init(void)
 
 #ifdef USE_THREADS
 		timer_oneshot_mutex = mt_mutex_create();
-		timer_oneshot_cond = mt_cond_create();
+		timer_oneshot_sem = mt_sem_create();
 
 		atm_store(&timer_oneshot_thread_cancelled, 0);
 		timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func,
@@ -313,14 +278,13 @@ void timer_quit(void)
 {
 #ifdef USE_THREADS
 	// Kill the oneshot stuff if needed.
-	//
-	// FIXME: When compiling with SDL3, this thread LEAKS,
-	// and I have no idea why.
 	if (timer_oneshot_thread) {
 		atm_store(&timer_oneshot_thread_cancelled, 1);
-		mt_cond_signal(timer_oneshot_cond);
+		mt_sem_post(timer_oneshot_sem);
 		mt_thread_wait(timer_oneshot_thread, NULL);
 		timer_oneshot_thread = NULL;
+		mt_sem_delete(timer_oneshot_sem);
+		timer_oneshot_sem = NULL;
 	}
 
 	if (timer_oneshot_mutex) {
