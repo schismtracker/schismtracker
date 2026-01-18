@@ -39,9 +39,11 @@
 # endif
 #elif defined(SCHISM_WIN32)
 # define VMEM_WIN32
+# include <windows.h>
 #endif
 
-#if defined(VMEM_MPROTECT) /* || something else? */
+#if defined(VMEM_MPROTECT) || defined(VMEM_WIN32)
+/* This is way more than enough for now */
 # define VMEM_TABLE_SIZE (4096)
 
 struct vmem_table_entry {
@@ -52,7 +54,6 @@ struct vmem_table_entry {
 	size_t sz;
 };
 
-/* This is enough for 4096 allocations. */
 static struct vmem_table_entry vmem_table[VMEM_TABLE_SIZE];
 
 static struct vmem_table_entry *vmem_get_entry(void *x)
@@ -134,7 +135,6 @@ void *vmem_alloc(size_t sz, uint32_t flags)
 void vmem_free(void *chunk)
 {
 	struct vmem_table_entry *r;
-	size_t sz;
 
 	if (!chunk) return;
 
@@ -142,6 +142,58 @@ void vmem_free(void *chunk)
 	if (!r) return; /* ? */
 
 	while (munmap(chunk, r->sz) != 0 && errno == EINTR);
+
+	vmem_kill_entry(r);
+}
+#elif defined(VMEM_WIN32)
+static DWORD vmem_convflags(uint32_t flags)
+{
+	return (flags & VMEM_WRITE) ? PAGE_READWRITE
+		: (flags & VMEM_READ) ? PAGE_READONLY
+		: PAGE_NOACCESS;
+}
+
+int vmem_protect(void *chunk, uint32_t flags)
+{
+	struct vmem_table_entry *r;
+	DWORD xyzzy;
+
+	if (!chunk) return -1; /* ok */
+
+	r = vmem_get_entry(chunk);
+	if (!r) return -1;
+
+	if (!VirtualProtect(chunk, r->sz, vmem_convflags(flags), &xyzzy))
+		return -1;
+
+	return 0;
+}
+
+void *vmem_alloc(size_t sz, uint32_t flags)
+{
+	LPVOID x;
+	struct vmem_table_entry *r;
+
+	x = VirtualAlloc(NULL, sz, MEM_COMMIT | MEM_RESERVE, vmem_convflags(flags));
+	if (!x)
+		return NULL;
+
+	if (vmem_add_entry(x, sz) < 0) {
+		VirtualFree(x, 0, MEM_RELEASE);
+		return NULL;
+	}
+
+	return x;
+}
+
+void vmem_free(void *chunk)
+{
+	struct vmem_table_entry *r;
+
+	r = vmem_get_entry(chunk);
+	if (!r) return;
+
+	VirtualFree(chunk, 0, MEM_RELEASE);
 
 	vmem_kill_entry(r);
 }
@@ -181,6 +233,15 @@ uintptr_t vmem_pagesize(void)
 		r = sysconf(_SC_PAGESIZE);
 		if (r >= 1)
 			return r;
+	}
+#endif
+
+#if defined(VMEM_WIN32)
+	{
+		SYSTEM_INFO sys;
+		GetSystemInfo(&sys);
+
+		return sys.dwPageSize;
 	}
 #endif
 
