@@ -175,7 +175,7 @@ static void sdl3_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t 
 
 //////////////////////////////////////////////////////////////////////////////
 
-static SDL_Semaphore *(SDLCALL *sdl3_CreateSemaphore)(void) = NULL;
+static SDL_Semaphore *(SDLCALL *sdl3_CreateSemaphore)(Uint32 initial_value) = NULL;
 static void (SDLCALL *sdl3_DestroySemaphore)(SDL_Semaphore *sem) = NULL;
 static void (SDLCALL *sdl3_SignalSemaphore)(SDL_Semaphore *sem) = NULL;
 static void (SDLCALL *sdl3_WaitSemaphore)(SDL_Semaphore *sem) = NULL;
@@ -189,7 +189,7 @@ static mt_sem_t *sdl3_sem_create(void)
 {
 	mt_sem_t *sem = mem_alloc(sizeof(*sem));
 
-	sem->sem = sdl3_CreateSemaphore();
+	sem->sem = sdl3_CreateSemaphore(0);
 	if (!sem->sem) {
 		free(sem);
 		return NULL;

@@ -211,9 +211,9 @@ static void sdl12_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t
 
 static SDL_sem *(SDLCALL *sdl12_CreateSemaphore)(Uint32 initial) = NULL;
 static void (SDLCALL *sdl12_DestroySemaphore)(SDL_sem *sem) = NULL;
-static void (SDLCALL *sdl12_SemPost)(SDL_sem *sem) = NULL;
-static void (SDLCALL *sdl12_SemWait)(SDL_sem *sem) = NULL;
-static bool (SDLCALL *sdl12_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
+static int (SDLCALL *sdl12_SemPost)(SDL_sem *sem) = NULL;
+static int (SDLCALL *sdl12_SemWait)(SDL_sem *sem) = NULL;
+static int (SDLCALL *sdl12_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
 
 struct mt_sem {
 	SDL_sem *sem;

@@ -189,11 +189,11 @@ static void sdl2_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t 
 
 //////////////////////////////////////////////////////////////////////////////
 
-static SDL_sem *(SDLCALL *sdl2_CreateSemaphore)(void) = NULL;
+static SDL_sem *(SDLCALL *sdl2_CreateSemaphore)(Uint32 initial_value) = NULL;
 static void (SDLCALL *sdl2_DestroySemaphore)(SDL_sem *sem) = NULL;
-static void (SDLCALL *sdl2_SemPost)(SDL_sem *sem) = NULL;
-static void (SDLCALL *sdl2_SemWait)(SDL_sem *sem) = NULL;
-static bool (SDLCALL *sdl2_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
+static int (SDLCALL *sdl2_SemPost)(SDL_sem *sem) = NULL;
+static int (SDLCALL *sdl2_SemWait)(SDL_sem *sem) = NULL;
+static int (SDLCALL *sdl2_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
 
 struct mt_sem {
 	SDL_sem *sem;
@@ -203,7 +203,7 @@ static mt_sem_t *sdl2_sem_create(void)
 {
 	mt_sem_t *sem = mem_alloc(sizeof(*sem));
 
-	sem->sem = sdl2_CreateSemaphore();
+	sem->sem = sdl2_CreateSemaphore(0);
 	if (!sem->sem) {
 		free(sem);
 		return NULL;
