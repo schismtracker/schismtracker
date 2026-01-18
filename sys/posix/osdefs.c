@@ -128,13 +128,18 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 	};
 #endif
 
-	/* wait for the child process to finish */
+	/* wait for the child process to finish
+	 *
+	 * Historical implementations would return -1 and set errno to ECHILD
+	 * if the process ended before the call to waitpid()/waitid(), so we
+	 * check for EINTR in errno explicitly. (we should have probably been
+	 * doing that in the first place) */
 #if defined(HAVE_WAITID)
 	{
 		siginfo_t info;
 
 		/* newer API; POSIX.1-2001 */
-		while (waitid(P_PID, pid, &info, WEXITED) == -1);
+		while (waitid(P_PID, pid, &info, WEXITED) == -1 && errno == EINTR);
 
 		/* if the child terminated abnormally, well, the exec call is still technically a success */
 		switch (info.si_code) {
@@ -155,11 +160,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 	{
 		int st;
 
-		/* older API; in virtually all POSIX versions
-		 *
-		 * NOTE: old mac os x returns ECHILD if the process
-		 * exits before we call waitpid(), hence we check
-		 * explicitly for EINTR. */
+		/* older API; in virtually all POSIX versions */
 		while (waitpid(pid, &st, 0) == -1 && errno == EINTR);
 
 		if (WIFEXITED(st)) {
