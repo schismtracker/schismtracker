@@ -173,4 +173,43 @@ TEST_FUNC(test_mem_xor)
 
 TEST_FUNC(test_disko_mem)
 
+#define TEST_FUNC_BLIT(x) \
+	TEST_FUNC(x) \
+	TEST_FUNC(x##_overflow)
+
+TEST_FUNC_BLIT(test_video_blit11_1bpp)
+TEST_FUNC_BLIT(test_video_blit11_2bpp)
+TEST_FUNC_BLIT(test_video_blit11_3bpp)
+TEST_FUNC_BLIT(test_video_blit11_4bpp)
+
+TEST_FUNC_BLIT(test_video_blitYY)
+TEST_FUNC_BLIT(test_video_blitUV)
+TEST_FUNC_BLIT(test_video_blitTV)
+
+#define TEST_FUNC_BLIT_SC_EX(NAME, WIDTH, HEIGHT) \
+	TEST_FUNC_BLIT(test_video_blit##NAME##_1bpp_##WIDTH##x##HEIGHT) \
+	TEST_FUNC_BLIT(test_video_blit##NAME##_2bpp_##WIDTH##x##HEIGHT) \
+	TEST_FUNC_BLIT(test_video_blit##NAME##_3bpp_##WIDTH##x##HEIGHT) \
+	TEST_FUNC_BLIT(test_video_blit##NAME##_4bpp_##WIDTH##x##HEIGHT)
+
+#define TEST_FUNC_BLIT_SC(WIDTH, HEIGHT) \
+	TEST_FUNC_BLIT_SC_EX(NN, WIDTH, HEIGHT) \
+	TEST_FUNC_BLIT_SC_EX(LN, WIDTH, HEIGHT)
+
+TEST_FUNC_BLIT_SC(720, 480)
+TEST_FUNC_BLIT_SC(1280, 720)
+TEST_FUNC_BLIT_SC(1280, 800)
+TEST_FUNC_BLIT_SC(1920, 1080)
+TEST_FUNC_BLIT_SC(1920, 1080)
+
+TEST_FUNC_BLIT_SC(1, 1000)
+TEST_FUNC_BLIT_SC(1000, 1)
+
+TEST_FUNC_BLIT_SC(70, 2)
+TEST_FUNC_BLIT_SC(5, 7)
+
+#undef TEST_FUNC_BLIT
+#undef TEST_FUNC_BLIT_SC_EX
+#undef TEST_FUNC_BLIT_SC
+
 #undef TEST_FUNC
