@@ -21,10 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* NOTE: this could be a lot smarter. some notes
- *  - there is no way to detect overflow currently; each allocation
- *    is expanded to a full page on basically every system imaginable. */
-
 #include "headers.h"
 
 #include "test.h"

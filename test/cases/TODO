@@ -1,6 +1,3 @@
-* Video blitters need to be tested (make sure they don't write
-  out of bounds). We should also be testing that they don't ever
-  read from the buffer.
 * Everything in modplug needs to be tested.
     * ALL of the format loaders need to be tested. in particular
       though, we have to make sure that we never ever crash if
