@@ -251,12 +251,11 @@ int mt_init(void)
 {
 #ifdef USE_THREADS
 	static const schism_mt_backend_t *backends[] = {
-		// ordered by preference
+		/* ordered by preference */
 #if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 		&schism_mt_backend_win32,
 #endif
 #ifdef SCHISM_SDL3
-		/* we get sporadic thread leaks under SDL3 */
 		&schism_mt_backend_sdl3,
 #endif
 #ifdef SCHISM_SDL2
