@@ -499,6 +499,15 @@ struct stat {
 # define SCHISM_FORCE_ALIGN_ARG_POINTER
 #endif
 
+/* Used for ignoring certain functions who, for some reason or
+ * another, have memory leaks outside of our control. */
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__no_sanitize_address__, 4, 8, 0)
+# define SCHISM_NO_SANITIZE_ADDRESS \
+	__attribute__((__no_sanitize_address__))
+#else
+# define SCHISM_NO_SANITIZE_ADDRESS
+#endif
+
 /* Used to mark a printf format parameter. Currently only MSVC really
  * has this, and GCC has the much more useful "format" attribute */
 #if SCHISM_MSVC_ATLEAST(8, 0, 0) && defined(HAVE_SAL_H)

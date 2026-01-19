@@ -29,6 +29,9 @@
 #include <SDL.h>
 
 int sdl12_init(void);
+
+/* SDL 1.2 has memory leaks outside of our control */
+SCHISM_NO_SANITIZE_ADDRESS
 void sdl12_quit(void);
 
 // eh?
