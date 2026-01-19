@@ -38,6 +38,12 @@ jobs:
           { host: 'ubuntu-22.04' },
           { host: 'ubuntu-24.04' },
         ]
+        exclude:
+          # Exclude runtime-loading of SDL 1.2 when running under asan.
+          # It only detects leak that happen at exit...
+          - asan: { flag: '-fsanitize=address', name: '-asan' }
+            backend: { name: 'sdl12', pkgs: 'libsdl1.2-dev', disable: 'sdl2' }
+            link: { name: 'loaded', flag: false }
     concurrency:
       group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.host}}${{matrix.threads.name}}${{matrix.asan.name}}-${{matrix.backend.name}}-${{matrix.link.name}}
       cancel-in-progress: true
