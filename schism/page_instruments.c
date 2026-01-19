@@ -278,7 +278,7 @@ void instrument_synchronize_to_sample(void)
 
 	/* 2. look through the instrument list for the first instrument
 	 * that uses the selected sample. */
-	for (n = 1; n < 100; n++) {
+	for (n = 1; n < MAX_INSTRUMENTS; n++) {
 		if (n == sample)
 			continue;
 		ins = song_get_instrument(n);
