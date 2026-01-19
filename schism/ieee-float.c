@@ -506,7 +506,7 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 		float128 f16;
 
 		memcpy(&f16, bytes, 10);
-		memset(&f16 + 10, 0, 6);
+		memset((char *)&f16 + 10, 0, 6);
 
 		swap_u80((unsigned char *)&f16);
 
@@ -523,7 +523,7 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 		float96 f12;
 
 		memcpy(&f12, bytes, 10);
-		memset(&f12 + 10, 0, 2);
+		memset((char *)&f12 + 10, 0, 2);
 
 		swap_u80((unsigned char *)&f12);
 
