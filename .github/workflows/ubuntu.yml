@@ -24,12 +24,22 @@ jobs:
           { flag: '', name: '' },
           { flag: '-fsanitize=address', name: '-asan' },
         ]
+        backend: [
+          { name: 'sdl12', pkgs: 'libsdl1.2-dev', disable: 'sdl2' },
+          { name: 'sdl2',  pkgs: 'libsdl2-dev', disable: 'sdl12' },
+        ]
+        # We want one build to link to the selected library...
+        link: [
+          { name: 'linked', flag: true },
+          { name: 'loaded', flag: false },
+        ]
         sys: [
           # TODO add more hosts
-          { host: ubuntu-22.04 },
+          { host: 'ubuntu-22.04' },
+          { host: 'ubuntu-24.04' },
         ]
     concurrency:
-      group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.host}}-${{matrix.sys.compiler}}${{matrix.threads.name}}${{matrix.asan.name}}
+      group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.host}}${{matrix.threads.name}}${{matrix.asan.name}}-${{matrix.backend.name}}-${{matrix.link.name}}
       cancel-in-progress: true
     runs-on: ${{matrix.sys.host}}
 
@@ -37,7 +47,7 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libsdl1.2-dev libasound2-dev libflac-dev git libtool zip wget
+          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev ${{matrix.backend.pkgs}} libasound2-dev libflac-dev git libtool zip wget
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -53,7 +63,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --with-flac --with-alsa --with-jack --enable-tests
+          ../configure --with-flac --with-alsa --with-jack --enable-tests --without-'${{ matrix.backend.disable }}' --with-'${{ matrix.backend.name }}' '${{ matrix.link.flag == true && format('--enable-{0}-linking', matrix.backend.name) || '' }}'
           make
           cd ..
 
