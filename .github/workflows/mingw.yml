@@ -415,10 +415,19 @@ jobs:
           { sys: mingw64, env: x86_64 },
           { sys: ucrt64,  env: ucrt-x86_64 },
         ]
+        backend: [
+          { name: 'sdl12', pkgsuf: 'SDL'  },
+          { name: 'sdl2',  pkgsuf: 'SDL2' },
+          { name: 'sdl3',  pkgsuf: 'sdl3' },
+        ]
+        link: [
+          { name: 'linked', flag: true },
+          { name: 'loaded', flag: false },
+        ]
         os: [ windows-2022, windows-2025 ]
     runs-on: ${{matrix.os}}
     concurrency:
-      group: ${{github.ref}}-${{github.workflow}}-${{matrix.os}}-${{matrix.sys.sys}}-${{matrix.sys.env}}${{matrix.threads.name}}
+      group: ${{github.ref}}-${{github.workflow}}-${{matrix.os}}-${{matrix.sys.sys}}-${{matrix.sys.env}}${{matrix.threads.name}}-${{matrix.backend.name}}-${{matrix.link.name}}
       cancel-in-progress: true
     #name: ${{matrix.sys.sys}}-${{matrix.sys.env}} # the default name will work just fine
     defaults:
@@ -433,7 +442,7 @@ jobs:
         with:
           msystem: ${{ matrix.sys.sys }}
           update: true
-          install: mingw-w64-${{ matrix.sys.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.sys.env }}-SDL2 mingw-w64-${{ matrix.sys.env }}-libutf8proc mingw-w64-${{ matrix.sys.env }}-zlib zip dos2unix
+          install: mingw-w64-${{ matrix.sys.env }}-toolchain libtool autoconf automake make mingw-w64-${{ matrix.sys.env }}-${{ matrix.backend.pkgsuf }} mingw-w64-${{ matrix.sys.env }}-libutf8proc mingw-w64-${{ matrix.sys.env }}-zlib zip dos2unix
 
       - name: 'Build package'
         env:
@@ -442,7 +451,7 @@ jobs:
           autoreconf -i
           mkdir build
           cd build
-          ../configure --enable-tests $CONFIGURE_FLAGS
+          ../configure --enable-tests $CONFIGURE_FLAGS --with-${{ matrix.backend.name }} '${{ matrix.link.flag && format('--enable-{0}-linking', matrix.backend.name) || '' }}'
           make
 
       - name: 'Run test suite'
