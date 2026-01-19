@@ -1589,6 +1589,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	if (!porta) {
 		if (penv) chan->nna = penv->nna;
 		env_reset(chan, 0);
+		chan->flags &= ~CHN_NOTEFADE;
 	}
 
 	/* OpenMPT test cases Off-Porta.it, Off-Porta-CompatGxx.it */
@@ -2246,7 +2247,6 @@ void csf_process_effects(song_t *csf, int firsttick)
 				if ((porta && csf->flags & SONG_COMPATGXX)
 					|| (!porta && csf->flags & SONG_ITOLDEFFECTS)) {
 					env_reset(chan, 1);
-					chan->fadeout_volume = 65536;
 				}
 			}
 
