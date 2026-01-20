@@ -97,14 +97,14 @@ static mt_mutex_t *timer_oneshot_mutex = NULL;
 static mt_sem_t *timer_oneshot_sem = NULL;
 #endif
 
-/* This function should ONLY be called with the mutex LOCKED */
+/* This function does all the heavy lifting (INCLUDING mutex crap) */
 static timer_ticks_t timer_oneshot_work_(void)
 {
 #ifdef USE_THREADS
 	mt_mutex_lock(timer_oneshot_mutex);
 #endif
 
-	// Add any pending timers waiting to get added to the list.
+	// Copy pending timers to the big list
 	if (oneshot_data_pending) {
 		if (oneshot_data_list) {
 			struct timer_oneshot_data_ *tail = oneshot_data_list;
@@ -122,6 +122,7 @@ static timer_ticks_t timer_oneshot_work_(void)
 	mt_mutex_unlock(timer_oneshot_mutex);
 #endif
 
+	// Now process any timers that have finished
 	timer_ticks_t wait = UINT64_MAX;
 
 	if (oneshot_data_list) {
@@ -160,8 +161,6 @@ static timer_ticks_t timer_oneshot_work_(void)
 #ifdef USE_THREADS
 static int timer_oneshot_thread_func(SCHISM_UNUSED void *userdata)
 {
-	mt_mutex_lock(timer_oneshot_mutex);
-
 	mt_thread_set_priority(MT_THREAD_PRIORITY_HIGH);
 
 	while (!atm_load(&timer_oneshot_thread_cancelled)) {
