@@ -32,3 +32,5 @@
 /schismtrackertest
 /stamp-h1
 configure~
+.DS_Store
+._*
