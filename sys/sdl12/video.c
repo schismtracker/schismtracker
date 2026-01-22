@@ -329,8 +329,6 @@ static int sdl12_video_startup(void)
 			xr = round(x + ((w - cfg_video_width)  / 2));
 			yr = round(y + ((h - cfg_video_height) / 2));
 
-			printf("%d, %d\n", xr, yr);
-
 			snprintf(windowpos, 1024, "SDL_VIDEO_WINDOW_POS=%d,%d", xr, yr);
 			sdl12_putenv(windowpos);
 		} else /* fallback */
