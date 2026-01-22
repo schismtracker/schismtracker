@@ -377,7 +377,10 @@ static inline int macosx_ver_init(void)
 		macosx_ver_major = 0;
 		macosx_ver_minor = 0;
 		macosx_ver_patch = 0;
+		return -1;
 	}
+
+	return 0;
 }
 
 int macosx_ver_atleast(int major, int minor, int patch)
@@ -545,7 +548,7 @@ int macosx_get_screen_rect(double *x, double *y, double *w, double *h)
 
 int macosx_get_window_rect(double *x, double *y, double *w, double *h)
 {
-	NSWindow *window = NSApp.mainWindow;
+	NSWindow *window = [NSApp mainWindow];
 	if (!window)
 		return -1;
 
@@ -558,16 +561,10 @@ int macosx_set_window_coordinates(double x, double y)
 	NSWindow *window;
 	NSRect r;
 
-	window = NSApp.mainWindow;
+	window = [NSApp mainWindow];
 	if (!window)
 		return -1;
 
-	r = NSMakeRect(x, y, NSWidth(window.frame), NSHeight(window.frame));
-
-	/* We don't want the window to animate
-	 * NOTE on newer OS X versions it automatically animates when
-	 * the resize is finished. this is butt ugly unfortunately but
-	 * we can't do anything about it unless we want to patch SDL */
-	[window setFrame: r display: NO animate: NO];
+	[window setFrameOrigin: NSMakePoint(x, y)];
 	return 0;
 }
