@@ -521,3 +521,19 @@ void macosx_show_message_box(const char *title, const char *text, int style)
 		CFRelease(cfs_title);
 	}
 }
+
+/* ------------------------------------------------------------------------ */
+
+int macosx_get_screen_rect(double *x, double *y, double *w, double *h)
+{
+	NSScreen *screen = [NSScreen mainScreen];
+	if (!screen)
+		return -1;
+
+	*x = NSMinX(screen.frame);
+	*y = NSMinY(screen.frame);
+	*w = NSWidth(screen.frame);
+	*h = NSHeight(screen.frame);
+
+	return 0;
+}

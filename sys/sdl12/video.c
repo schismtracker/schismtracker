@@ -316,7 +316,28 @@ static int sdl12_video_startup(void)
 	 * have the window pop up in the top left every time. */
 	center_enabled = 0;
 	if (!getenv("SDL_VIDEO_WINDOW_POS")) {
-		sdl12_putenv("SDL_VIDEO_WINDOW_POS=center");
+#ifdef SCHISM_MACOSX
+		/* SDL 1.2 doesn't support center on mac os x;
+		 * we have to do it ourselves */
+		static char windowpos[1024];
+		double x, y, w, h;
+
+		if (macosx_get_screen_rect(&x, &y, &w, &h) == 0) {
+			int xr, yr;
+
+			/* Calculate position within the screen */
+			xr = round(x + ((w - cfg_video_width)  / 2));
+			yr = round(y + ((h - cfg_video_height) / 2));
+
+			printf("%d, %d\n", xr, yr);
+
+			snprintf(windowpos, 1024, "SDL_VIDEO_WINDOW_POS=%d,%d", xr, yr);
+			sdl12_putenv(windowpos);
+		} else /* fallback */
+#endif
+		{
+			sdl12_putenv("SDL_VIDEO_WINDOW_POS=center");
+		}
 		center_enabled = 1;
 	}
 
