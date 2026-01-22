@@ -31,6 +31,10 @@
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 
+#ifndef FF_API_OLD_CHANNEL_LAYOUT
+# define FF_API_OLD_CHANNEL_LAYOUT   (LIBAVUTIL_VERSION_MAJOR < 59)
+#endif
+
 /* avio buffer size, in bytes */
 #define SCHISM_AVFORMAT_BUFFER_SIZE 65536
 
@@ -271,7 +275,13 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 	const AVCodec *codec;
 	AVCodecContext *cctx;
 
-	if (!sample_fmt_to_sfflags(fmtctx->streams[astr]->codecpar->format, fmtctx->streams[astr]->codecpar->ch_layout.nb_channels, &flags))
+	if (!sample_fmt_to_sfflags(fmtctx->streams[astr]->codecpar->format,
+#ifdef FF_API_OLD_CHANNEL_LAYOUT
+			fmtctx->streams[astr]->codecpar->channels,
+#else
+			fmtctx->streams[astr]->codecpar->ch_layout.nb_channels,
+#endif
+			&flags))
 		goto fail;
 
 	codec = schism_avcodec_find_decoder(fmtctx->streams[astr]->codecpar->codec_id);
@@ -310,7 +320,13 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 			switch (flags & SF_CHN_MASK) {
 			case SF_M:
 			case SF_SI: {
-				disko_memopen_estimate(&ds[0], bpc * cctx->ch_layout.nb_channels);
+				disko_memopen_estimate(&ds[0], bpc *
+#ifdef FF_API_OLD_CHANNEL_LAYOUT
+					cctx->channels
+#else
+					cctx->ch_layout.nb_channels
+#endif
+				);
 				break;
 			}
 			case SF_SS:
@@ -351,7 +367,13 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 				case SF_M:
 				case SF_SI:
 					/* all data is in frame->data[0] */
-					disko_write(&ds[0], frame->data[0], bps * frame->nb_samples * cctx->ch_layout.nb_channels);
+					disko_write(&ds[0], frame->data[0], bps * frame->nb_samples *
+#ifdef FF_API_OLD_CHANNEL_LAYOUT
+						cctx->channels
+#else
+						cctx->ch_layout.nb_channels
+#endif
+					);
 					break;
 				case SF_SS:
 					/* split across multiple buffers */
