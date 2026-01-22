@@ -229,6 +229,8 @@ char *macosx_get_application_support_dir(void);
 void macosx_show_message_box(const char *title, const char *text, int style);
 int macosx_ver_atleast(int major, int minor, int patch);
 int macosx_get_screen_rect(double *x, double *y, double *w, double *h);
+int macosx_get_window_rect(double *x, double *y, double *w, double *h);
+int macosx_set_window_coordinates(double x, double y);
 
 int macos_mkdir(const char *path, uint32_t mode);
 int macos_stat(const char *file, struct stat *st);

@@ -524,16 +524,50 @@ void macosx_show_message_box(const char *title, const char *text, int style)
 
 /* ------------------------------------------------------------------------ */
 
+static void rect_helper(NSRect r, double *x, double *y, double *w, double *h)
+{
+	if (x) *x = NSMinX(r);
+	if (y) *y = NSMinY(r);
+	if (w) *w = NSWidth(r);
+	if (h) *h = NSHeight(r);
+}
+
 int macosx_get_screen_rect(double *x, double *y, double *w, double *h)
 {
 	NSScreen *screen = [NSScreen mainScreen];
 	if (!screen)
 		return -1;
 
-	*x = NSMinX(screen.frame);
-	*y = NSMinY(screen.frame);
-	*w = NSWidth(screen.frame);
-	*h = NSHeight(screen.frame);
+	rect_helper(screen.frame, x, y, w, h);
 
+	return 0;
+}
+
+int macosx_get_window_rect(double *x, double *y, double *w, double *h)
+{
+	NSWindow *window = NSApp.mainWindow;
+	if (!window)
+		return -1;
+
+	rect_helper(window.frame, x, y, w, h);
+	return 0;
+}
+
+int macosx_set_window_coordinates(double x, double y)
+{
+	NSWindow *window;
+	NSRect r;
+
+	window = NSApp.mainWindow;
+	if (!window)
+		return -1;
+
+	r = NSMakeRect(x, y, NSWidth(window.frame), NSHeight(window.frame));
+
+	/* We don't want the window to animate
+	 * NOTE on newer OS X versions it automatically animates when
+	 * the resize is finished. this is butt ugly unfortunately but
+	 * we can't do anything about it unless we want to patch SDL */
+	[window setFrame: r display: NO animate: NO];
 	return 0;
 }

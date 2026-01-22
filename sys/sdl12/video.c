@@ -569,10 +569,23 @@ static int sdl12_video_opengl_setup_callback(uint32_t *x, uint32_t *y,
 
 static void sdl12_video_resize(uint32_t width, uint32_t height)
 {
+#ifdef SCHISM_MACOSX
+	double x, y;
+	int x_y_valid = 0;
+#endif
 	if (!width) width = cfg_video_width;
 	if (!height) height = cfg_video_height;
 	video.draw.width = width;
 	video.draw.height = height;
+
+#ifdef SCHISM_MACOSX
+	/* Get current window boundaries */
+	if (macosx_get_window_rect(&x, &y, NULL, NULL) == 0) {
+		/* We have a current window available and now have the
+		 * x, y coordinates. */
+		x_y_valid = 1;
+	}
+#endif
 
 	if (cfg_video_hardware
 		&& video_opengl_setup(width, height, sdl12_video_opengl_setup_callback)) {
@@ -645,6 +658,12 @@ static void sdl12_video_resize(uint32_t width, uint32_t height)
 
 	setup_surface_(width, height, 0);
 	video.type = VIDEO_SURFACE;
+#ifdef SCHISM_MACOSX
+	if (x_y_valid) {
+		/* Use previously saved coordinates */
+		macosx_set_window_coordinates(x, y);
+	}
+#endif
 }
 
 /* for indexed color */
