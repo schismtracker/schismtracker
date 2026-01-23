@@ -276,7 +276,7 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 	AVCodecContext *cctx;
 
 	if (!sample_fmt_to_sfflags(fmtctx->streams[astr]->codecpar->format,
-#ifdef FF_API_OLD_CHANNEL_LAYOUT
+#if FF_API_OLD_CHANNEL_LAYOUT
 			fmtctx->streams[astr]->codecpar->channels,
 #else
 			fmtctx->streams[astr]->codecpar->ch_layout.nb_channels,
@@ -321,7 +321,7 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 			case SF_M:
 			case SF_SI: {
 				disko_memopen_estimate(&ds[0], bpc *
-#ifdef FF_API_OLD_CHANNEL_LAYOUT
+#if FF_API_OLD_CHANNEL_LAYOUT
 					cctx->channels
 #else
 					cctx->ch_layout.nb_channels
@@ -368,7 +368,7 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 				case SF_SI:
 					/* all data is in frame->data[0] */
 					disko_write(&ds[0], frame->data[0], bps * frame->nb_samples *
-#ifdef FF_API_OLD_CHANNEL_LAYOUT
+#if FF_API_OLD_CHANNEL_LAYOUT
 						cctx->channels
 #else
 						cctx->ch_layout.nb_channels
