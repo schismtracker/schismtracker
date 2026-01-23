@@ -907,7 +907,84 @@ static void schism_assert_fail_log_cb(FILE *f, void *userdata)
 		"File: %s\n"
 		"Line: %d\n"
 		"\n"
-		"Expression: %s\n";
+		"Expression: %s\n"
+		"\n"
+		"Platform: "
+#if defined(SCHISM_WIN32)
+			"Windows"
+#elif defined(SCHISM_MACOS)
+			"Mac OS"
+#elif defined(SCHISM_MACOSX)
+			"Mac OS X"
+#elif defined(__linux__)
+			"Linux"
+#elif defined(SCHISM_OS2)
+			"OS/2"
+#elif defined(__WII__)
+			"Wii"
+#elif defined(__WIIU__)
+			"Wii U"
+#elif defined(__DragonFlyBSD__)
+			"DragonFlyBSD"
+#elif defined(__FreeBSD__)
+			"FreeBSD"
+#elif defined(__NetBSD__)
+			"NetBSD"
+#elif defined(__OpenBSD__)
+			"OpenBSD"
+#elif defined(__unix__) || defined(unix)
+			"Unknown *nix"
+#else
+			"Unknown"
+#endif
+		"\n"
+		"Architecture: "
+			/* This is probably enough */
+#if defined(__x86_64__) || defined(_M_X64)
+			"64-bit x86"
+#elif defined(_M_IX86) || defined(__i386__) || defined(i386) || defined(__i386)
+			"32-bit x86"
+#elif defined(__aarch64__) || defined(_M_ARM64)
+			"64-bit arm"
+#elif defined(_M_ARM64EC)
+			"ARM64EC" /* some stupid microsoft thing */
+#elif defined(__arm__)
+			"32-bit arm"
+#elif defined(__ppc64__) || defined(__PPC64__) || defined(_ARCH_PPC64)
+			"64-bit PowerPC"
+#elif defined(__ppc__) || defined(__powerpc__)
+			"32-bit PowerPC"
+#elif defined(__mips64)
+			"64-bit MIPS"
+#elif defined(mips) || defined(__mips) || defined(__mips__)
+			"32-bit MIPS"
+#elif defined(__m68k__)
+			"Motorola 68000"
+#elif defined(__sparc__) && defined(__arch64__)
+			"64-bit SPARC"
+#elif defined(__sparc__) || defined(__sparc)
+			"32-bit SPARC"
+#elif defined(__zarch__)
+			/* Yes, schism has actually run on this. */
+			"IBM z/Architecture"
+#elif defined(__s390x__)
+			"IBM s390x"
+#elif defined(__s390__)
+			"IBM s390"
+#elif defined(__riscv)
+# if defined(__riscv_xlen)
+#  define STRINGIFY_EX(x) #x
+#  define STRINGIFY(x) STRINGIFY_EX(x)
+			STRINGIFY(__riscv_xlen) "-bit RISC-V"
+#  undef STRINGIFY
+#  undef STRINGIFY_EX
+# else
+			"RISC-V"
+# endif
+#else
+			"Unknown"
+#endif
+		"\n";
 	
 	fprintf(f, format, x->msg, x->file, x->line, x->exp);
 }
@@ -1111,7 +1188,7 @@ static void schism_sighandler(SCHISM_UNUSED int x)
 }
 
 /* the real main function is called per-platform */
-int schism_main(int argc, char** argv)
+int schism_main(int argc, char **argv)
 {
 	/* defaults */
 	BITARRAY_ZERO(startup_flags);
