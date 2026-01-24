@@ -509,12 +509,14 @@ static void _export_setup(song_t *dwsong, int *bps)
 	/* install our own */
 	memcpy(dwsong, current_song, sizeof(song_t)); /* shadow it */
 
-	// !!! FIXME: We should not be messing with this stuff here!
-	dwsong->opl = NULL; // Prevent the current_song OPL being closed
-	GM_Reset(dwsong, 1);
-
-	// Reset the MIDI stuff to our own...
+	/* Reset the MIDI stuff to our own...
+	 * Note this HAS to be above GM_Reset as it sends MIDI events on
+	 * our behalf, which triggers the assertion in audio_playback.c */
 	csf_init_midi(dwsong, _disko_midi_out_raw);
+
+	/* !!! FIXME: We should not be messing with this stuff here! */
+	dwsong->opl = NULL; /* Prevent the current_song OPL being closed */
+	GM_Reset(dwsong, 1);
 
 	dwsong->multi_write = NULL; /* should be null already, but to be sure... */
 
@@ -523,14 +525,14 @@ static void _export_setup(song_t *dwsong, int *bps)
 
 	dwsong->mix_flags |= (SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS);
 
-	dwsong->repeat_count = -1; // FIXME do this right
+	dwsong->repeat_count = -1; /* FIXME do this right */
 	dwsong->buffer_count = 0;
 	dwsong->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
 	dwsong->stop_at_order = -1;
 	dwsong->stop_at_row = -1;
 
-	// diskwriter should always output with best available quality, which
-	// means using all available voices.
+	/* diskwriter should always output with best available quality, which
+	 * means using all available voices. */
 	dwsong->max_voices = MAX_VOICES;
 
 	*bps = dwsong->mix_channels * ((dwsong->mix_bits_per_sample + 7) / 8);
