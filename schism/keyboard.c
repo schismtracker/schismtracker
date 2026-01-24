@@ -188,6 +188,11 @@ void kbd_key_translate(struct key_event *k)
 
 		case '*': k->sym = SCHISM_KEYSYM_ASTERISK; break;
 
+		/* Spanish keyboards have these in the number row
+		 * for some reason */
+		case '/':  k->sym = SCHISM_KEYSYM_SLASH; break;
+		case '\\': k->sym = SCHISM_KEYSYM_BACKSLASH; break;
+
 		default: break;
 		}
 	}
