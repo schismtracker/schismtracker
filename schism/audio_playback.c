@@ -210,7 +210,7 @@ static void audio_callback(uint8_t *stream, int len)
 {
 	uint32_t wasrow = current_song->row;
 	uint32_t waspat = current_song->current_order;
-	int n;
+	uint32_t n;
 
 	/* len is output buffer size */
 	audio_reallocate_buffer(len / (audio_output_channels * (audio_output_bits_real / 8)));
@@ -230,9 +230,9 @@ static void audio_callback(uint8_t *stream, int len)
 	}
 
 	if (current_song->flags & SONG_ENDREACHED) {
-		n = 0;
+		n = audio_buffer_samples;
 		/* Fill it with silence */
-		memset(stream, (audio_output_bits == 8) ? 0x80 : 0, len);
+		memset(audio_buffer, (audio_output_bits == 8) ? 0x80 : 0, audio_buffer_samples * audio_sample_size);
 	} else {
 		n = csf_read(current_song, audio_buffer, audio_buffer_samples * audio_sample_size);
 		if (!n) {
@@ -1772,6 +1772,7 @@ static int simple_thread_func_(void *userdata)
 			return 0; /* what? */
 
 		if (atm_load(&dev->paused)) {
+			/* FIXME this is wrong for 8-bit audio */
 			memset(buf, 0, buflen);
 		} else {
 			mt_mutex_lock(dev->mutex);

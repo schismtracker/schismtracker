@@ -26,7 +26,6 @@
 #include "util.h"
 #include "backend/audio.h"
 #include "loadso.h"
-#include "mt.h"
 #include "charset.h"
 #include "str.h"
 #include "log.h"
@@ -34,6 +33,7 @@
 #include <Sound.h>
 #include <Gestalt.h>
 #include <Components.h>
+#include <DriverServices.h>
 
 /* SDL 1.2 doesn't have audio device selection.
  * For a while I thought the Sound Manager never supported it at all.
@@ -45,23 +45,40 @@
  * The same Apple doc provides an example for grabbing all the available
  * sound output components (thanks!) */
 
+/* Portions of this code were written by Ryan C. Gordon (icculus)
+ * for SDL 1.2, under the LGPL-2.1. */
+
+#pragma options align=power
+
+#define NUM_BUFFERS 2
+#if NUM_BUFFERS < 2
+# error invalid number of buffers
+#endif
+
+#define USE_ONE_BUF_ALLOCATION
+
 struct schism_audio_device {
 	SndChannelPtr chn;
-	int cancelled;
 
 	/* this is a stupid API */
-	SndDoubleBufferPtr buf[2];
+	CmpSoundHeader hdr;
 
-	mt_mutex_t *mutex;
+	volatile SInt32 locked;
+	volatile SInt32 to_mix;
+	volatile UInt32 running;
+	volatile UInt32 fill_me;
 
 	void (*callback)(uint8_t *stream, int len);
 
-	int paused;
+	/* buf[0] is the actual allocation */
+	UInt8 *buf[NUM_BUFFERS];
 
 	uint32_t samples;
 	uint32_t size;
 
 	uint8_t silence;
+
+	int paused;
 };
 
 static void sndmgr_free_devices(void);
@@ -201,38 +218,62 @@ static const char *sndmgr_audio_device_name(SCHISM_UNUSED uint32_t i)
 
 /* ------------------------------------------------------------------------ */
 
-static pascal void sndmgr_double_cb(SndChannelPtr chan,
-	SndDoubleBufferPtr newbuf)
+static void mix(schism_audio_device_t *dev, UInt8 *buffer)
 {
-	/* XXX The "screamer" build of QEMU seems to be finicky with this,
-	 * and it leaves the buffer in a weird broken state. Not sure why,
-	 * probably buggy emulation? */
-	schism_audio_device_t *dev;
-
-	dev = (schism_audio_device_t *)newbuf->dbUserInfo[0];
-	if (dev->cancelled)
-		return;
-	
-	newbuf->dbNumFrames = dev->samples;
 	if (dev->paused) {
-		memset(newbuf->dbSoundData, dev->silence, dev->size);
+		memset(buffer, dev->silence, dev->size);
 	} else {
-		mt_mutex_lock(dev->mutex);
-		dev->callback((uint8_t *)newbuf->dbSoundData, dev->size);
-		mt_mutex_unlock(dev->mutex);
+		dev->callback(buffer, dev->size);
 	}
 
-	newbuf->dbFlags |= dbBufferReady;
+	DecrementAtomic((SInt32 *)&dev->to_mix);
 }
 
-static schism_audio_device_t *sndmgr_audio_open_device(SCHISM_UNUSED uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static pascal void cbproc(SndChannel *chan, SndCommand *cmd_passed)
 {
-	SndDoubleBufferHeader2 dbh = {0};
-	SndDoubleBackUPP dbupp;
+	UInt32 play_me;
+	SndCommand cmd;
+	schism_audio_device_t *dev = (schism_audio_device_t *)chan->userInfo;
+
+	IncrementAtomic((SInt32 *)&dev->to_mix);
+
+	/* buffer that has just finished playing, so fill it */
+	dev->fill_me = cmd_passed->param2;
+	/* filled buffer to play _now_ */
+	play_me      = (dev->fill_me + 1) % NUM_BUFFERS;
+
+	/* queue previously mixed buffer for playback. */
+	dev->hdr.samplePtr = (Ptr)dev->buf[play_me];
+	cmd.cmd = bufferCmd;
+	cmd.param1 = 0; 
+	cmd.param2 = (long)&dev->hdr;
+	SndDoCommand(chan, &cmd, 0);
+
+	/*
+	 * if audio device isn't locked, mix the next buffer to be queued in
+	 *  the memory block that just finished playing.
+	 */
+	if (!BitAndAtomic(0xFFFFFFFF, (UInt32 *)&dev->locked))
+		mix(dev, dev->buf[dev->fill_me]);
+
+	/* set this callback to run again when current buffer drains. */
+	if (dev->running) {
+		cmd.cmd = callBackCmd;
+		cmd.param1 = 0;
+		cmd.param2 = play_me;
+
+		SndDoCommand(chan, &cmd, 0);
+	}
+}
+
+static void sndmgr_audio_close_device(schism_audio_device_t *dev);
+
+static schism_audio_device_t *sndmgr_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+{
+	SndCallBackUPP callback;
 	int i;
-	schism_audio_device_t *dev = NULL;
+	schism_audio_device_t *dev;
 	OSErr err;
-	long init_flags;
 
 	dev = mem_calloc(1, sizeof(*dev));
 	dev->callback = desired->callback;
@@ -241,40 +282,45 @@ static schism_audio_device_t *sndmgr_audio_open_device(SCHISM_UNUSED uint32_t id
 	dev->size = desired->samples * desired->channels * (desired->bits / 8);
 	dev->silence = AUDIO_SPEC_SILENCE(*desired);
 
-	dbupp = NewSndDoubleBackProc(sndmgr_double_cb);
+	log_appendf(4, "[sndmgr] size: %" PRIu32 ", samples: %" PRIu32, dev->size, dev->samples);
 
-	dbh.dbhNumChannels   = desired->channels;
-	dbh.dbhSampleSize    = (desired->bits > 8) ? 16 : 8;
-	dbh.dbhCompressionID = 0;
-	dbh.dbhPacketSize    = 0;
-	dbh.dbhSampleRate    = desired->freq << 16;
-	dbh.dbhDoubleBack    = dbupp;
-	dbh.dbhFormat        = 0;
+	callback = (SndCallBackUPP)NewSndCallBackUPP(cbproc);
 
-	for (i = 0; i < 2; i++) {
-		dev->buf[i] = mem_calloc(1, sizeof(SndDoubleBuffer) + dev->size);
-		dev->buf[i]->dbNumFrames   = desired->samples;
-		dev->buf[i]->dbFlags       = dbBufferReady;
-		dev->buf[i]->dbUserInfo[0] = (long)dev;
+	/* prepare bufferCmd header */
+	dev->hdr.numChannels = desired->channels;
+	dev->hdr.sampleSize  = (desired->bits > 8) ? 16 : 8;
+	dev->hdr.sampleRate  = desired->freq << 16;
+	dev->hdr.numFrames   = desired->samples;
+	dev->hdr.encode      = cmpSH;
 
-		dbh.dbhBufferPtr[i] = dev->buf[i];
+#ifdef USE_ONE_BUF_ALLOCATION
+	/* Buffer overflow somewhere... */
+	dev->buf[0] = mem_alloc(NUM_BUFFERS * dev->size);
+
+	for (i = 1; i < NUM_BUFFERS; i++) {
+		/* find this pointer from the last */
+		dev->buf[i] = dev->buf[i-1] + dev->size;
 	}
+#else
+	for (i = 0; i < NUM_BUFFERS; i++)
+		dev->buf[i] = mem_alloc(dev->size);
+#endif
 
-	dev->chn = mem_calloc(1, sizeof(*dev->chn));
+	dev->chn = mem_alloc(sizeof(*dev->chn));
 
-	/* SDL doesn't do this, but it's required according to the docs. */
-	dev->chn->qLength = stdQLength;
+	dev->chn->userInfo = (long)dev;
+	dev->chn->qLength = 128;
 
 	if (id == AUDIO_BACKEND_DEFAULT) {
 		err = SndNewChannel(&dev->chn, sampledSynth,
-			(desired->channels >= 2) ? initStereo : initMono, 0);
+			(desired->channels >= 2) ? initStereo : initMono, callback);
 		if (err != noErr) {
 			log_appendf(4, "SndNewChannel: %" PRId32, (int32_t)err);
 			goto err;
 		}
 	} else {
 		err = SndNewChannel(&dev->chn, kUseOptionalOutputDevice,
-			(long)devices[id].cpnt, 0);
+			(long)devices[id].cpnt, callback);
 		if (err != noErr) {
 			log_appendf(4, "SndNewChannel: %" PRId32 ", Component: %p", (int32_t)err, devices[id].cpnt);
 			goto err;
@@ -307,13 +353,15 @@ static schism_audio_device_t *sndmgr_audio_open_device(SCHISM_UNUSED uint32_t id
 		}
 	}
 
-	err = SndPlayDoubleBuffer(dev->chn, (SndDoubleBufferHeaderPtr)&dbh);
-	if (err != noErr) {
-		log_appendf(4, "SndPlayDoubleBuffer: %" PRId32, (int32_t)err);
-		goto err;
+	{
+		SndCommand cmd;
+		cmd.cmd = callBackCmd;
+		cmd.param2 = 0;
+		dev->running = 1;
+		SndDoCommand(dev->chn, &cmd, 0);
 	}
 
-	obtained->bits = dbh.dbhSampleSize;
+	obtained->bits = dev->hdr.sampleSize;
 	obtained->samples = desired->samples;
 	obtained->freq = desired->freq;
 	obtained->channels = desired->channels;
@@ -321,27 +369,33 @@ static schism_audio_device_t *sndmgr_audio_open_device(SCHISM_UNUSED uint32_t id
 	return dev;
 
 err:
-	for (i = 0; i < 2; i++)
-		free(dev->buf[i]);
-	free(dev->chn);
-	free(dev);
+	sndmgr_audio_close_device(dev);
 	return NULL;
 }
 
 static void sndmgr_audio_close_device(schism_audio_device_t *dev)
 {
-	int i;
-
 	if (!dev)
 		return;
 
-	dev->cancelled = 1;
+	dev->running = 0;
 
-	SndDisposeChannel(dev->chn, 1);
-	free(dev->chn);
+	if (dev->chn) {
+		SndDisposeChannel(dev->chn, 1);
+		free(dev->chn);
+	}
 
-	for (i = 0; i < 2; i++)
-		free(dev->buf[i]);
+#ifdef USE_ONE_BUF_ALLOCATION
+	/* allocation lives here */
+	free(dev->buf[0]);
+#else
+	{
+		int i;
+
+		for (i = 0; i < NUM_BUFFERS; i++)
+			free(dev->buf[i]);
+	}
+#endif
 
 	free(dev);
 }
@@ -350,28 +404,31 @@ static void sndmgr_audio_close_device(schism_audio_device_t *dev)
 
 static void sndmgr_audio_lock_device(schism_audio_device_t *dev)
 {
-	if (!dev)
-		return;
-
-	mt_mutex_lock(dev->mutex);
+	IncrementAtomic((SInt32 *)&dev->locked);
 }
 
 static void sndmgr_audio_unlock_device(schism_audio_device_t *dev)
 {
-	if (!dev)
+	SInt32 oldval;
+
+	oldval = DecrementAtomic((SInt32 *)&dev->locked);
+	if (oldval != 1) /* != 1 means audio is still locked. */
 		return;
 
-	mt_mutex_unlock(dev->mutex);
+	/* Did we miss the chance to mix in an interrupt? Do it now. */
+	if (BitAndAtomic(0xFFFFFFFF, (UInt32 *)&dev->to_mix)) {
+		/*
+		 * Note that this could be a problem if you missed an interrupt
+		 *  while the audio was locked, and get preempted by a second
+		 *  interrupt here, but that means you locked for way too long anyhow.
+		 */
+		mix(dev, dev->buf[dev->fill_me]);
+	}
 }
 
 static void sndmgr_audio_pause_device(schism_audio_device_t *dev, int paused)
 {
-	if (!dev)
-		return;
-
-	mt_mutex_lock(dev->mutex);
 	dev->paused = !!paused;
-	mt_mutex_unlock(dev->mutex);
 }
 
 /* ------------------------------------------------------------------------ */
