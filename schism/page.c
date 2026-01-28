@@ -1671,7 +1671,7 @@ void main_song_changed_cb(void)
 	/* perhaps this should be in page_patedit.c? */
 	set_current_order(0);
 	n = current_song->orderlist[0];
-	if (n > 199)
+	if (n > MAX_PATTERNS - 1)
 		n = 0;
 	set_current_pattern(n);
 	set_current_row(0);
@@ -1810,7 +1810,7 @@ static void _timejump_ok(void)
 	song_get_at_time(sec, &no, &nr);
 	set_current_order(no);
 	np = current_song->orderlist[no];
-	if (np < 200) {
+	if (np < MAX_PATTERNS) {
 		set_current_pattern(np);
 		set_current_row(nr);
 		set_page(PAGE_PATTERN_EDITOR);

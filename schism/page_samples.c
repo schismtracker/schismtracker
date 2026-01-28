@@ -82,7 +82,7 @@ static int _is_magic_sample(int no)
 	sample = song_get_sample(no);
 	if (sample && ((unsigned char) sample->name[23]) == 0xFF) {
 		pn = (sample->name[24]);
-		if (pn < 200) return 1;
+		if (pn < MAX_PATTERNS) return 1;
 	}
 	return 0;
 }
@@ -188,7 +188,7 @@ static void sample_list_draw_list(void)
 
 		// wow, this is entirely horrible
 		pn = ((unsigned char)sample->name[24]);
-		if (((unsigned char)sample->name[23]) == 0xFF && pn < 200) {
+		if (((unsigned char)sample->name[23]) == 0xFF && pn < MAX_PATTERNS) {
 			nl = 23;
 			draw_text(str_from_num(3, (int)pn, buf), 32, 13 + pos, 0, 2);
 			draw_char('P', 28, 13+pos, 3, 2);
