@@ -727,6 +727,19 @@ static int message_handle_key_editmode(struct key_event * k)
 			return 1;
 		}
 		return 0;
+	case SCHISM_KEYSYM_TAB:
+		if (NO_MODIFIER(k->mod)) {
+			if (k->state == KEY_RELEASE)
+				return 1;
+
+			if (clippy_owner(CLIPPY_SELECT) == widgets_message)
+				_delete_selection();
+
+			message_insert_char('\t');
+
+			return 1;
+		}
+		return 0;
 	default:
 		/* keybinds... */
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
@@ -750,13 +763,8 @@ static int message_handle_key_editmode(struct key_event * k)
 				return 1;
 			}
 		} else if (k->mouse == MOUSE_NONE) {
-			if (k->text) {
+			if (k->text)
 				return message_handle_text_input_editmode(k->text);
-			} else if (k->sym == SCHISM_KEYSYM_TAB) {
-				if (k->state == KEY_PRESS)
-					message_insert_char('\t');
-				return 1;
-			}
 
 			return 0;
 		}
