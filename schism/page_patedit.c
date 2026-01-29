@@ -2524,7 +2524,8 @@ static void advance_cursor(int next_row, int multichannel)
 				current_row += skip_value;
 				pattern_editor_reposition();
 			}
-		} else {
+		} else if (!(multichannel && channel_multi[current_channel-1])) {
+			/* IT ignores step == 0 when multichan is enabled for the channel  --paper */
 			if (current_channel < MAX_CHANNELS) {
 				current_channel++;
 			} else {
