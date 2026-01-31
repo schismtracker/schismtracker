@@ -347,6 +347,7 @@ static int macosx_ver_major, macosx_ver_minor, macosx_ver_patch;
 static inline int macosx_ver_init(void)
 {
 	SInt32 maj, min, pat;
+	SInt32 top, bottom; /* used for OLD gestalt */
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 101000 /* Mac OS X 10.10 */
 	if ([NSProcessInfo respondsToSelector:@selector(operatingSystemVersion)]) {
@@ -358,20 +359,27 @@ static inline int macosx_ver_init(void)
 	} else
 #endif
 	if (!Gestalt(gestaltSystemVersionMajor, &maj)
-		&& !Gestalt(gestaltSystemVersionMinor, &min)
-		&& !Gestalt(gestaltSystemVersionBugFix, &pat)) {
+			&& !Gestalt(gestaltSystemVersionMinor, &min)
+			&& !Gestalt(gestaltSystemVersionBugFix, &pat)) {
 		macosx_ver_major = maj;
 		macosx_ver_minor = min;
 		macosx_ver_patch = pat;
-	} else if (!Gestalt(gestaltSystemVersion, &maj)) {
-		/* Get the high bits, then convert the hex coding to
-		 * decimal */
-		macosx_ver_major = (maj >> 8);
-		if (macosx_ver_major >= 0x10)
-			macosx_ver_major -= (0x10 - 10);
-
-		macosx_ver_minor = (maj >> 4) & 0xF;
-		macosx_ver_patch = (maj) & 0xF;
+	} else if (!Gestalt(gestaltSystemVersion, &maj)
+			/* These numbers are encoded as decimal-like hex.
+			 * To convert we basically need to bitshift and do a sanity check.
+			 * Note that Apple docs say to ignore the high 16 bits entirely,
+			 * hence why we do no checks on them. */
+#define EXTRACT_AND_CHECK(x, shift) \
+	(((x) = ((maj >> (shift)) & 0xF)) <= 9)
+			&& EXTRACT_AND_CHECK(top, 12)
+			&& EXTRACT_AND_CHECK(bottom, 8)
+			&& EXTRACT_AND_CHECK(min, 4)
+			&& EXTRACT_AND_CHECK(pat, 0)
+#undef EXTRACT_AND_CHECK
+	) {
+		macosx_ver_major = (top * 10) + bottom;
+		macosx_ver_minor = min;
+		macosx_ver_patch = pat;
 	} else {
 		/* We're screwed */
 		macosx_ver_major = 0;
