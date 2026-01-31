@@ -129,6 +129,7 @@ static struct sdl12_audio_driver_info {
 	{"dart", 0},      // OS/2 Direct Audio RouTines 
 	{"epoc", 0},      // EPOC streaming audio
 	{"ums", 0},       // AIX UMS audio
+	{"ogc", 0},       // Wii/GameCube audio
 
 	// These two are pretty much guaranteed to exist
 	{"disk", 1},

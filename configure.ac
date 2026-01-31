@@ -232,6 +232,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MKDIR_P
 AC_PROG_FGREP
+AC_PROG_SED
 AC_CHECK_PROGS([SORT], [gsort sort], [false])
 AS_IF([! "$SORT" -V </dev/null >/dev/null], [AC_MSG_WARN([sort(1) that supports the -V option is required to find dynamic libraries])])
 
@@ -506,7 +507,7 @@ xbox*)
 	AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 	;;
 *)
-	AC_MSG_RESULT([nothing to do here])
+	AC_MSG_RESULT([need to do more checks])
 
 	dnl now check for other stuff
 	saved_LIBS="$LIBS"
@@ -528,9 +529,11 @@ xbox*)
 
 	if test "x$which" = "xwii"; then
 		WII_CPPFLAGS="-I${DEVKITPRO}/libogc/include -I${DEVKITPPC}/powerpc-eabi/include"
-		WII_LDFLAGS="-logc -L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
+		WII_LDFLAGS="-L${DEVKITPRO}/libogc/lib/wii -L${DEVKITPPC}/powerpc-eabi/lib"
+		WII_LIBS="-logc -lfat"
 		AC_SUBST([WII_CPPFLAGS])
 		AC_SUBST([WII_LDFLAGS])
+		AC_SUBST([WII_LIBS])
 
 		EXEEXT=.elf
 		AC_SUBST([EXEEXT])
@@ -791,7 +794,6 @@ if test "x$posix_fseek" = "xunknown"; then
 fi
 
 dnl --------------------------------------------------------------------------
-
 dnl configure flags, optional dependencies
 
 # SCHISM_PKGCONFIG_CHECK(USEVARAM, LINKVARAM, CHECKYESNO, LINKING, MODULE-NAMES,
@@ -803,8 +805,8 @@ AC_DEFUN([SCHISM_PKGCONFIG_CHECK], [
 
 	if test "x$3" = "xcheck" || test "x$3" = "xyes"; then
 		dnl use pkg-config, it'll deal with everything for us
-		PKG_CHECK_MODULES([$6], [$5], [libfound=yes], [libfound=no])
-		if test "x$libfound" = "xyes"; then
+		PKG_CHECK_MODULES([$6], [$5], [lib$6found=yes], [lib$6found=no])
+		if test "x$lib$6found" = "xyes"; then
 			AC_SUBST([$6_CFLAGS])
 			AC_DEFINE([$7], [1], [$9 support])
 			AM_CONDITIONAL([$1], true)
@@ -829,7 +831,17 @@ SCHISM_PKGCONFIG_CHECK([USE_AVFORMAT], [LINK_TO_AVFORMAT], [$with_avformat], [$A
 SCHISM_PKGCONFIG_CHECK([USE_ZLIB], [LINK_TO_ZLIB], [$with_zlib], [$ZLIB_LINKING], [zlib], [ZLIB], [USE_ZLIB], [ZLIB_DYNAMIC_LOAD], [zlib])
 SCHISM_PKGCONFIG_CHECK([USE_SDL3], [LINK_TO_SDL3], [$with_sdl3], [$SDL3_LINKING], [sdl3], [SDL3], [SCHISM_SDL3], [SDL3_DYNAMIC_LOAD], [SDL 3])
 SCHISM_PKGCONFIG_CHECK([USE_SDL2], [LINK_TO_SDL2], [$with_sdl2], [$SDL2_LINKING], [sdl2], [SDL2], [SCHISM_SDL2], [SDL2_DYNAMIC_LOAD], [SDL 2])
+
+dnl -- need to define this globally for wii hax
+libSDL12found=no
 SCHISM_PKGCONFIG_CHECK([USE_SDL12], [LINK_TO_SDL12], [$with_sdl12], [$SDL12_LINKING], [sdl], [SDL12], [SCHISM_SDL12], [SDL12_DYNAMIC_LOAD], [SDL 1.2])
+
+if test "x$use_wii" = "xyes" && test "x$libSDL12found" = "xyes"; then
+	dnl -- we don't want SDLmain, but pkgconfig gives it anyway.
+	dnl -- so we just remove it here. hacky yes i know
+	SDL12_LIBS="-lopengx $(printf "%s" "$SDL12_LIBS" | "$SED" 's/-lSDLmain//g')"
+	AC_SUBST([SDL12_LIBS])
+fi
 
 dnl -- this one is special
 AM_CONDITIONAL([USE_ALSA], false)

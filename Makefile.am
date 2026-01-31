@@ -366,7 +366,8 @@ if USE_WII
 files_wii=sys/wii/isfs.c sys/wii/osdefs.c
 cflags_wii=-mrvl -mcpu=750 -meabi -mhard-float
 cppflags_wii=-I$(srcdir)/sys/wii $(WII_CPPFLAGS)
-libs_wii=$(wii_machdep) $(WII_LDFLAGS)
+ldflags_wii=$(WII_LDFLAGS)
+libs_wii=$(wii_machdep) $(WII_LIBS)
 endif
 
 if USE_WIIU
@@ -721,7 +722,8 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
 	$(libs_os2) $(libs_xbox) $(libs_avformat) \
 	$(libs_asio) $(libs_zlib)
-schismtracker_LDFLAGS = $(ldflags_macosx)
+schismtracker_LDFLAGS = $(ldflags_macosx) \
+	$(ldflags_wii)
 
 # Automated testing -- some additional files get compiled, but
 # these are only linked into schismtrackertest.

@@ -189,6 +189,14 @@ void cfg_load(void)
 # define WANT_FIXED_DEFAULT 1
 # define WANT_FIXED_WIDTH_DEFAULT 8
 # define WANT_FIXED_HEIGHT_DEFAULT 5
+#elif defined(SCHISM_WII)
+/* This is really dumb
+ * NOTE: we should probably be letterboxing; scaling looks like crap */
+# define WIDTH_DEFAULT 0
+# define HEIGHT_DEFAULT 0
+# define WANT_FIXED_DEFAULT 1
+# define WANT_FIXED_WIDTH_DEFAULT 8
+# define WANT_FIXED_HEIGHT_DEFAULT 5
 #else
 # define WIDTH_DEFAULT 640
 # define HEIGHT_DEFAULT 400

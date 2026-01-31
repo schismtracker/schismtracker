@@ -46,8 +46,22 @@
 #include <fat.h>
 #define CACHE_PAGES 8
 
+/*
+Turn this on to bypass SDL weak-linking and allow OpenGL to be used.
+Currently this is disabled, because the implementation isn't very
+good and causes noticeable artifacting on the display. Plus it's
+SUPER slow compared to a direct blit, even in software.
+
+#define WII_USE_OPENGX 1
+*/
+
+#ifdef WII_USE_OPENGX
+# include <opengx.h>
+#endif
+
 // cargopasta'd from libogc git __di_check_ahbprot
-static u32 _check_ahbprot(void) {
+static u32 _check_ahbprot(void)
+{
 	s32 res;
 	u64 title_id;
 	u32 tmd_size;
@@ -83,10 +97,9 @@ static u32 _check_ahbprot(void) {
 	return 0;
 }
 
-#ifdef SCHISM_SDL2
+#if defined(SCHISM_SDL2)
 /* UGH */
-extern bool OGC_ResetRequested;
-extern bool OGC_PowerOffRequested;
+extern bool OGC_ResetRequested, OGC_PowerOffRequested;
 
 static void ShutdownCB(void)
 {
@@ -96,6 +109,44 @@ static void ShutdownCB(void)
 static void ResetCB(SCHISM_UNUSED u32 irq, SCHISM_UNUSED void *ctx)
 {
 	OGC_ResetRequested = true;
+}
+#elif defined(SCHISM_SDL12)
+extern void OGC_InitVideoSystem(void);
+
+/* need to reimplement this too */
+extern bool TerminateRequested, ShutdownRequested, ResetRequested;
+bool TerminateRequested, ShutdownRequested, ResetRequested;
+
+static void ShutdownCB(void)
+{
+	TerminateRequested = true;
+	ShutdownRequested = true;
+}
+
+static void ResetCB(SCHISM_UNUSED u32 irq, SCHISM_UNUSED void *ctx)
+{
+	TerminateRequested = true;
+	ResetRequested = true;
+}
+
+static void ShutdownWii(void)
+{
+	TerminateRequested = false;
+	//SDL_Quit();
+	SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+}
+
+static void RestartHomebrewChannel(void)
+{
+	TerminateRequested = false;
+	//SDL_Quit();
+	exit(1);
+}
+
+void Terminate(void)
+{
+	if (ShutdownRequested) ShutdownWii();
+	else if (ResetRequested) RestartHomebrewChannel();
 }
 #else
 static void ShutdownCB(void)
@@ -120,6 +171,13 @@ void wii_sysinit(int *pargc, char ***pargv)
 {
 	char *ptr = NULL;
 
+#ifdef WII_USE_OPENGX
+	/* dummy calls to get gcc to actually link with opengx */
+	ogx_initialize();
+	ogx_enable_double_buffering(1);
+#endif
+
+#if defined(SCHISM_SDL2) || defined(SCHISM_SDL12)
 	{
 		/* Even though this crap *should* be handled by SDL_Init, it is instead
 		 * handled by SDL_main, which breaks our stuff. Sigh. */
@@ -142,6 +200,13 @@ void wii_sysinit(int *pargc, char ***pargv)
 		SYS_SetPowerCallback(ShutdownCB);
 		SYS_SetResetCallback(ResetCB);
 
+#ifdef SCHISM_SDL12
+		/* this is specific to SDL 1.2 */
+		PAD_Init();
+		/* why is this not in SDL_InitSubSystem ??? */
+		OGC_InitVideoSystem();
+#endif
+
 		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
 		WPAD_SetVRes(WPAD_CHAN_ALL, 640, 480);
 
@@ -149,6 +214,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 		KEYBOARD_Init(NULL);
 		fatInitDefault();
 	}
+#endif
 
 	log_appendf(1, "[Wii] This is IOS%d v%X, and AHBPROT is %s",
 		IOS_GetVersion(), IOS_GetRevision(), _check_ahbprot() > 0 ? "enabled" : "disabled");
@@ -169,13 +235,14 @@ void wii_sysinit(int *pargc, char ***pargv)
 		ISFS_Mount();
 	fatInit(CACHE_PAGES, 0);
 
+
 	// Attempt to locate a suitable home directory.
 	if (!*pargc || !*pargv) {
 		// loader didn't bother setting these
 		*pargc = 1;
 		*pargv = mem_alloc(sizeof(char **) * 2);
-		*pargv[0] = str_dup("?");
-		*pargv[1] = NULL;
+		(*pargv)[0] = str_dup("?");
+		(*pargv)[1] = NULL;
 	} else if (strchr(*pargv[0], '/') != NULL) {
 		// presumably launched from hbc menu - put stuff in the boot dir
 		// (does get_parent_directory do what I want here?)
@@ -192,7 +259,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 			// Ok at least the sd card works, there's some other dysfunction
 			closedir(dir);
 			ptr = str_dup("sd:/");
-		} else {
+		} else { // 0x800bb784 0x800bb788 0x800bbafc 0x800bbb00
 			// Safe (but useless) default
 			ptr = str_dup("isfs:/");
 		}

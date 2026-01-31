@@ -64,6 +64,9 @@
 #ifdef SCHISM_MACOS
 # include <SDL_main.h>
 #endif
+#ifdef SCHISM_WII
+# include <ogc/conf.h>
+#endif
 
 #include "video.h"
 
@@ -108,11 +111,14 @@ static struct video_cf {
 
 		/* a buncha booleans */
 		unsigned int swsurface : 1; /* this is stupid and needs to go away */
-#ifdef HAVE_LINUX_FB_H
+#if defined(HAVE_LINUX_FB_H)
 		unsigned int fb_hacks : 1;
 #endif
 		unsigned int fullscreen : 1;
 		unsigned int doublebuf : 1;
+#if defined(SCHISM_WII)
+		unsigned int widescreen : 1;
+#endif
 
 		uint32_t yuvformat; /* VIDEO_YUV_* */
 	} desktop;
@@ -195,7 +201,7 @@ static void sdl12_video_report(void)
 	}
 
 	if (video.desktop.fullscreen
-#ifdef HAVE_LINUX_FB_H
+#if defined(HAVE_LINUX_FB_H)
 		|| video.desktop.fb_hacks
 #endif
 	) {
@@ -237,7 +243,7 @@ static void sdl12_video_shutdown(void)
 static void sdl12_video_fullscreen(int tri)
 {
 	if (tri == 0
-#ifdef HAVE_LINUX_FB_H
+#if defined(HAVE_LINUX_FB_H)
 		|| video.desktop.fb_hacks
 #endif
 	) {
@@ -275,11 +281,9 @@ static void sdl12_video_setup(int interpolation)
 
 /* defined lower in this file */
 static int sdl12_opengl_object_load(const char *path);
-static void sdl12_opengl_object_unload(void);
 static void *sdl12_opengl_function_load(const char *function);
 static int sdl12_opengl_set_attribute(int attr, int value);
 static void sdl12_opengl_swap_buffers(void);
-static int sdl12_opengl_setup_callback(void);
 
 static int sdl12_video_startup(void)
 {
@@ -366,6 +370,23 @@ static int sdl12_video_startup(void)
 		}
 	}
 
+#ifdef SCHISM_WII
+	video.desktop.widescreen = (CONF_GetAspectRatio() == CONF_ASPECT_16_9);
+	/* TWO bytes per pixel */
+	video.desktop.bpp = 16;
+
+	/* Set desktop width and height now */
+	x = video.desktop.widescreen ? 848 : 640;
+	y = 480;
+
+	/* Terrible hack; if we don't have a width/height set,
+	 * or they're invalid, set them to the desired video mode. */
+	if (!cfg_video_width && !cfg_video_height) {
+		cfg_video_width = x;
+		cfg_video_height = y;
+	}
+#endif
+
 	/* Do this before any call to SDL_SetVideoMode!!
 	 *
 	 * This effectively makes our fullscreen resolution the same as
@@ -375,8 +396,7 @@ static int sdl12_video_startup(void)
 	 *
 	 * If we can't, fine, we'll fall back to the old SDL_ListModes
 	 * crap, and just use 640x480 (lol ok) if all else fails. */
-	info = sdl12_GetVideoInfo();
-	if (info) {
+	if ((x < 0 || y < 0) && (info = sdl12_GetVideoInfo())) {
 		x = info->current_w;
 		y = info->current_h;
 
@@ -517,7 +537,7 @@ static SDL_Surface *setup_surface_(uint32_t w, uint32_t h, uint32_t sdlflags)
 		sdlflags |= SDL_RESIZABLE;
 	}
 
-#ifdef HAVE_LINUX_FB_H
+#if defined(HAVE_LINUX_FB_H)
 	if (video.desktop.fb_hacks && video.surface) {
 		/* the original one will be _just fine_ */
 	} else
@@ -538,8 +558,11 @@ static SDL_Surface *setup_surface_(uint32_t w, uint32_t h, uint32_t sdlflags)
 		video.surface = sdl12_SetVideoMode(w, h, video.desktop.bpp, sdlflags);
 	}
 
-	if (!video.surface)
+	if (!video.surface) {
 		fprintf(stderr, "SDL_SetVideoMode: %s\n", sdl12_get_error());
+		/* uh oh */
+		return NULL;
+	}
 
 	/* use the actual w/h of the surface.
 	 * this fixes weird hi-dpi issues under SDL2 and SDL3,
@@ -556,7 +579,7 @@ static int sdl12_video_opengl_setup_callback(uint32_t *x, uint32_t *y,
 	int r;
 
 	r = !!setup_surface_(*w, *h, SDL_OPENGL);
-	if (video.surface->format->BitsPerPixel < 15)
+	if (!r || video.surface->format->BitsPerPixel < 15)
 		return 0; /* automatic fail */
 
 	*x = video.clip.x;
@@ -761,7 +784,7 @@ SCHISM_HOT static void sdl12_video_blit(void)
 			while (sdl12_LockSurface(video.surface) < 0)
 				sdl12_Delay(10);
 
-#ifdef HAVE_LINUX_FB_H
+#if defined(HAVE_LINUX_FB_H)
 		if (video.desktop.fb_hacks) {
 			video_blit11(video.surface->format->BytesPerPixel,
 				video.surface->pixels,

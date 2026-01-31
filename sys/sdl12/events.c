@@ -37,6 +37,138 @@
 # include <Events.h>
 #endif
 
+#ifdef SCHISM_WII
+/* FIXME -- this is almost a direct copy of what is already in sys/sdl2/events.c */
+# include "it.h"
+# include "page.h"
+# include "song.h"
+
+static int lasthatsym = 0;
+
+static SDLKey hat_to_keysym(int value)
+{
+	// up/down take precedence over left/right
+	switch (value) {
+	case SDL_HAT_LEFTUP:
+	case SDL_HAT_UP:
+	case SDL_HAT_RIGHTUP:
+		return SDLK_UP;
+	case SDL_HAT_LEFTDOWN:
+	case SDL_HAT_DOWN:
+	case SDL_HAT_RIGHTDOWN:
+		return SDLK_DOWN;
+	case SDL_HAT_LEFT:
+		return SDLK_LEFT;
+	case SDL_HAT_RIGHT:
+		return SDLK_RIGHT;
+	default: // SDL_HAT_CENTERED
+		return 0;
+	}
+}
+
+// Huge event-rewriting hack to get at least a sort of useful interface with no keyboard.
+// It's obviously impossible to provide any sort of editing functions in this manner,
+// but it at least allows simple song playback.
+static int wii_sdlevent(SDL_Event *event)
+{
+	SDL_Event newev = {};
+	SDLKey sym;
+
+	switch (event->type) {
+	case SDL_KEYDOWN:
+	case SDL_KEYUP:
+		{ // argh
+			struct key_event k = {
+				.mod = event->key.keysym.mod,
+				.sym = event->key.keysym.sym,
+			};
+			event->key.keysym.unicode = kbd_get_alnum(&k);
+		}
+		return 1;
+
+	case SDL_JOYHATMOTION:
+		// TODO key repeat for these, somehow
+		sym = hat_to_keysym(event->jhat.value);
+		if (sym) {
+			newev.type = SDL_KEYDOWN;
+			newev.key.state = SDL_PRESSED;
+			lasthatsym = sym;
+		} else {
+			newev.type = SDL_KEYUP;
+			newev.key.state = SDL_RELEASED;
+			sym = lasthatsym;
+			lasthatsym = 0;
+		}
+		newev.key.which = event->jhat.which;
+		newev.key.keysym.sym = sym;
+		newev.key.type = newev.type; // is this a no-op?
+		*event = newev;
+		return 1;
+
+	case SDL_JOYBUTTONDOWN:
+	case SDL_JOYBUTTONUP:
+		switch (event->jbutton.button) {
+		case 0: // A
+		case 1: // B
+		default:
+			return 0;
+		case 2: // 1
+			if (song_get_mode() == MODE_STOPPED) {
+				// nothing playing? go to load screen
+				sym = SDLK_F9;
+			} else {
+				sym = SDLK_F8;
+			}
+			break;
+		case 3: // 2
+			if (status.current_page == PAGE_LOAD_MODULE) {
+				// if the cursor is on a song, load then play; otherwise handle as enter
+				// (hmm. ctrl-enter?)
+				sym = SDLK_RETURN;
+			} else {
+				// F5 key
+				sym = SDLK_F5;
+			}
+			break;
+		case 4: // -
+			// dialog escape, or jump back a pattern
+			if (status.dialog_type) {
+				sym = SDLK_ESCAPE;
+				break;
+			} else if (event->type == SDL_JOYBUTTONDOWN && song_get_mode() == MODE_PLAYING) {
+				song_set_current_order(song_get_current_order() - 1);
+			}
+			return 0;
+		case 5: // +
+			// dialog enter, or jump forward a pattern
+			if (status.dialog_type) {
+				sym = SDLK_RETURN;
+				break;
+			} else if (event->type == SDL_JOYBUTTONDOWN && song_get_mode() == MODE_PLAYING) {
+				song_set_current_order(song_get_current_order() + 1);
+			}
+			return 0;
+		case 6: // Home
+			event->type = SDL_QUIT;
+			return 1;
+		}
+		newev.key.which = event->jbutton.which;
+		newev.key.keysym.sym = sym;
+		if (event->type == SDL_JOYBUTTONDOWN) {
+			newev.type = SDL_KEYDOWN;
+			newev.key.state = SDL_PRESSED;
+		} else {
+			newev.type = SDL_KEYUP;
+			newev.key.state = SDL_RELEASED;
+		}
+		newev.key.type = newev.type; // no-op?
+		*event = newev;
+		return 1;
+	}
+	return 1;
+}
+#endif
+
 static schism_keymod_t sdl12_modkey_trans(uint16_t mod)
 {
 	schism_keymod_t res = 0;
@@ -162,8 +294,72 @@ static schism_keysym_t sdl12_keycode_trans(SDLKey key)
 	return SCHISM_KEYSYM_UNKNOWN;
 }
 
-static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
+static schism_scancode_t sdl12_scancode_trans(schism_keysym_t key, uint8_t sc)
 {
+#ifdef SCHISM_WII
+	if (key & SCHISM_KEYSYM_SCANCODE_MASK)
+		return key & ~(SCHISM_KEYSYM_SCANCODE_MASK);
+
+	/* otherwise need to look it up */
+	switch (key) {
+#define KEY_EX(k, s) case SCHISM_KEYSYM_##k: return SCHISM_SCANCODE_##s;
+#define KEY(k) KEY_EX(k, k)
+	KEY(RETURN)
+	KEY(ESCAPE)
+	KEY(BACKSPACE)
+	KEY(TAB)
+	KEY(SPACE)
+	KEY(COMMA)
+	KEY(MINUS)
+	KEY(PERIOD)
+	KEY(SLASH)
+	KEY(0)
+	KEY(1)
+	KEY(2)
+	KEY(3)
+	KEY(4)
+	KEY(5)
+	KEY(6)
+	KEY(7)
+	KEY(8)
+	KEY(9)
+	KEY(SEMICOLON)
+	KEY(EQUALS)
+	KEY(LEFTBRACKET)
+	KEY(BACKSLASH)
+	KEY(RIGHTBRACKET)
+	KEY_EX(BACKQUOTE, GRAVE)
+	KEY_EX(a, A)
+	KEY_EX(b, B)
+	KEY_EX(c, C)
+	KEY_EX(d, D)
+	KEY_EX(e, E)
+	KEY_EX(f, F)
+	KEY_EX(g, G)
+	KEY_EX(h, H)
+	KEY_EX(i, I)
+	KEY_EX(j, J)
+	KEY_EX(k, K)
+	KEY_EX(l, L)
+	KEY_EX(m, M)
+	KEY_EX(n, N)
+	KEY_EX(o, O)
+	KEY_EX(p, P)
+	KEY_EX(q, Q)
+	KEY_EX(r, R)
+	KEY_EX(s, S)
+	KEY_EX(t, T)
+	KEY_EX(u, U)
+	KEY_EX(v, V)
+	KEY_EX(w, W)
+	KEY_EX(x, X)
+	KEY_EX(y, Y)
+	KEY_EX(z, Z)
+#undef KEY
+	}
+
+	return SCHISM_SCANCODE_UNKNOWN;
+#else
 	switch (sc) {
 #ifdef SCHISM_WIN32
 	case (0x13 - 8): return SCHISM_SCANCODE_0;
@@ -459,6 +655,8 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 	case 0x7C: return SCHISM_SCANCODE_RIGHT;
 	case 0x52: return SCHISM_SCANCODE_KP_0;
 	case 0x41: return SCHISM_SCANCODE_KP_PERIOD;
+#elif defined(SCHISM_WII)
+	/* nothing, handled later */
 #else
 	/* Linux and friends ? */
 	case 0x13: return SCHISM_SCANCODE_0;
@@ -566,6 +764,7 @@ static schism_scancode_t sdl12_scancode_trans(uint8_t sc)
 #endif
 	default: return SCHISM_SCANCODE_UNKNOWN;
 	}
+#endif
 }
 
 /* ------------------------------------------------------------------------ */
@@ -673,6 +872,11 @@ static void sdl12_pump_events(void)
 
 		memset(&schism_event, 0, sizeof(schism_event));
 
+#ifdef SCHISM_WII
+		if (!wii_sdlevent(&e))
+			continue;
+#endif
+
 		switch (e.type) {
 		case SDL_QUIT:
 			schism_event.type = SCHISM_QUIT;
@@ -693,7 +897,7 @@ static void sdl12_pump_events(void)
 			schism_event.key.state = KEY_PRESS;
 
 			schism_event.key.sym = sdl12_keycode_trans(e.key.keysym.sym);
-			schism_event.key.scancode = sdl12_scancode_trans(e.key.keysym.scancode);
+			schism_event.key.scancode = sdl12_scancode_trans(schism_event.key.sym, e.key.keysym.scancode);
 			schism_event.key.mod = sdl12_modkey_trans(e.key.keysym.mod);
 			schism_event.key.repeat = 0;
 
@@ -726,7 +930,7 @@ static void sdl12_pump_events(void)
 			schism_event.type = SCHISM_KEYUP;
 			schism_event.key.state = KEY_RELEASE;
 			schism_event.key.sym = sdl12_keycode_trans(e.key.keysym.sym);
-			schism_event.key.scancode = sdl12_scancode_trans(e.key.keysym.scancode);
+			schism_event.key.scancode = sdl12_scancode_trans(schism_event.key.sym, e.key.keysym.scancode);
 			schism_event.key.mod = sdl12_modkey_trans(e.key.keysym.mod);
 
 			events_push_event(&schism_event);
