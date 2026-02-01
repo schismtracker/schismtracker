@@ -29,6 +29,34 @@
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
 
 /*
+The schism "version" is simply a count of the days elapsed since
+Oct 31, 2009. Note that there have been a few bugs that crept in,
+for example:
+
+Mar 3, 2025  -- added commit 0026465 which had versions off by
+                roughly a month
+Mar 5, 2025  -- version 20250305 is released, this version saved
+                files as "20250205"
+Mar 7, 2025  -- add commit d0ffb96 which fixed the bug introduced
+                by the commit on Mar 3, 2025
+Mar 13, 2025 -- version 20250313 is released
+
+So, any file with a version indicating a mythical "20250205" version
+is likely version 20250305 in disguise. However, it could also be
+a development build actually from the 5th of February.
+
+Another bug was introduced with the Mar 3 commit, in that any dates
+in January would have its year/day be incremented/decremented
+respectfully. One example of a module affected by this bug is
+	"v39.it" -- https://s3m.it/file/8419
+which was created in a development version 2026-01-31, but was saved
+with a version indicating 2027-01-30. Such files are likely rare to
+come across unless someone used a dev build from January 2026. This
+bug was fixed on Feb 1, 2026 with commit be04324.
+
+*/
+
+/*
 Information at our disposal:
 
 	VERSION
@@ -197,13 +225,18 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 	}
 }
 
-static inline SCHISM_ALWAYS_INLINE int lookup_short_month(char *name)
+/* ----------------------------------------------------------------- */
+/* parsers */
+
+static inline SCHISM_ALWAYS_INLINE
+int lookup_short_month(const char *name)
 {
-	static const char *month_names[] = {
+	static const char month_names[12][3] = {
 		"Jan",
 		"Feb",
 		"Mar",
 		"Apr",
+		"May",
 		"Jun",
 		"Jul",
 		"Aug",
@@ -212,80 +245,198 @@ static inline SCHISM_ALWAYS_INLINE int lookup_short_month(char *name)
 		"Nov",
 		"Dec",
 	};
+	size_t i;
 
-	for (size_t i = 0; i < ARRAY_SIZE(month_names); i++)
-		if (!strcmp(month_names[i], name))
+	if (strlen(name) < 3)
+		return -1;
+
+	for (i = 0; i < ARRAY_SIZE(month_names); i++)
+		if (!memcmp(month_names[i], name, 3))
+			return i + 1;
+
+	return -1;
+}
+
+/* The return value of this isn't really used anywhere,
+ * it's just to make sure timestamps strings are of the
+ * correct format. */
+static inline SCHISM_ALWAYS_INLINE
+int lookup_weekday(const char *name)
+{
+	static const char weekday_names[7][3] = {
+		"Sun",
+		"Mon",
+		"Tue",
+		"Wed",
+		"Thu",
+		"Fri",
+		"Sat",
+	};
+	size_t i;
+
+	if (strlen(name) < 3)
+		return -1;
+
+	for (i = 0; i < ARRAY_SIZE(weekday_names); i++)
+		if (!memcmp(weekday_names[i], name, 3))
 			return i;
 
 	return -1;
 }
 
+static int ver_parse_num(const char *x, size_t len, uint32_t *res)
+{
+	size_t i;
+
+	*res = 0;
+
+	for (i = 0; i < len; i++) {
+		if (!isdigit(x[i]))
+			return -1;
+
+		*res *= 10;
+		*res += (x[i] - '0');
+	}
+
+	return 0;
+}
+
+static int ver_parse_cday(const char x[2], uint32_t *res)
+{
+	uint32_t day;
+
+	if (!isdigit(x[1]))
+		return -1;
+
+	if (x[0] >= '1' && x[0] <= '3') {
+		day = (x[0] - '0') * 10;
+	} else if (x[0] != ' ') {
+		/* fail */
+		return -1;
+	} else {
+		day = 0;
+	}
+
+	day += (x[1] - '0');
+
+	*res = day;
+
+	return 0;
+}
+
+/* Parse a schism version "YYYYMMDD" */
+int ver_parse_schism_version(const char *ver, uint32_t *pyear, uint32_t *pmonth, uint32_t *pday)
+{
+	uint32_t year, month, day;
+
+	if (strlen(ver) != 8
+			|| ver_parse_num(ver, 4, &year) != 0
+			|| ver_parse_num(ver + 4, 2, &month) != 0
+			|| ver_parse_num(ver + 6, 2, &day) != 0)
+		return -1;
+
+	*pyear = year;
+	*pmonth = month;
+	*pday = day;
+	return 0;
+}
+
+int ver_parse_ctimestamp(const char *timestamp, uint32_t *pyear, uint32_t *pmonth, uint32_t *pday)
+{
+	uint32_t year, day;
+	int m;
+
+	if (strlen(timestamp) != 24)
+		return -1;
+
+	/* get these out of the way first */
+	if (!isdigit(timestamp[11]) || !isdigit(timestamp[12]) || timestamp[13] != ':'
+			|| !isdigit(timestamp[14]) || !isdigit(timestamp[15]) || timestamp[16] != ':'
+			|| !isdigit(timestamp[17]) || !isdigit(timestamp[18])
+			|| timestamp[3] != ' ' || timestamp[7] != ' ' || timestamp[19] != ' ')
+		return -1;
+
+	if (lookup_weekday(timestamp) == -1)
+		return -1;
+
+	m = lookup_short_month(timestamp + 4);
+	if (m == -1)
+		return -1;
+
+	if (ver_parse_cday(timestamp + 8, &day) == -1)
+		return -1;
+
+	if (ver_parse_num(timestamp + 20, 4, &year) == -1)
+		return -1;
+
+	*pyear = year;
+	*pmonth = m;
+	*pday = day;
+
+	return 0;
+}
+
+int ver_parse_cdate(const char *cdate, uint32_t *pyear, uint32_t *pmonth, uint32_t *pday)
+{
+	uint32_t year, day;
+	int m;
+
+	if (strlen(cdate) != 11)
+		return -1; /* this will break in the year 10000 */
+
+	/* lookup_short_month will only account for the first 3 characters
+	 * in the buffer, which allows us to avoid unnecessary copying */
+	m = lookup_short_month(cdate);
+	if (m == -1)
+		return -1;
+
+	if (cdate[3] != ' ')
+		return -1; /* invalid */
+
+	if (ver_parse_cday(cdate + 4, &day) == -1)
+		return -1;
+
+	if (cdate[6] != ' ')
+		return -1;
+
+	if (ver_parse_num(cdate + 7, 4, &year) != 0)
+		return -1;
+
+	*pyear = year;
+	*pmonth = m;
+	*pday = day;
+
+	return 0;
+}
+
 // Tries multiple methods to get a reasonable date to start with.
-static inline int get_version_date(int *pyear, int *pmonth, int *pday)
+static int get_version_date(uint32_t *pyear, uint32_t *pmonth, uint32_t *pday)
 {
 #if !defined(EMPTY_VERSION) && defined(VERSION)
-	{
-		int year, month, day;
-
-		// by the time we reach the year 10000 nobody will care that this breaks
-		if (sscanf(VERSION, "%04d%02d%02d", &year, &month, &day) == 3) {
-			*pyear = year;
-			*pmonth = month - 1;
-			*pday = day;
-			return 1;
-		}
-	}
+	if (ver_parse_schism_version(VERSION, pyear, pmonth, pday) == 0)
+		return 0;
 #endif
 
 #ifdef __TIMESTAMP__
-	/* The last time THIS source file was actually edited. */
-	{
-		char day_of_week[4], month[4];
-		int year, day, hour, minute, second;
-
-		// Account for extra padding on the left of the day when the value is less than 10.
-		if (sscanf(__TIMESTAMP__, "%3s %3s %d %d:%d:%d %d", day_of_week, month, &day, &hour, &minute, &second, &year) == 7
-			|| sscanf(__TIMESTAMP__, "%3s %3s  %d %d:%d:%d %d", day_of_week, month, &day, &hour, &minute, &second, &year) == 7) {
-			int m = lookup_short_month(month);
-			if (m != -1) {
-				*pyear = year;
-				*pmonth = m;
-				*pday = day;
-				return 1;
-			}
-		}
-	}
+	/* The last time THIS source file was actually edited */
+	if (ver_parse_ctimestamp(__TIMESTAMP__, pyear, pmonth, pday) == 0)
+		return 0;
 #endif
 
-	{
-		// __DATE__ should be defined everywhere.
-		char month[4];
-		int day, year;
-
-		// Account for extra padding on the left of the day when the value is less than 10.
-		if (sscanf(__DATE__, "%3s %d %d", month, &day, &year) == 3
-			|| sscanf(__DATE__, "%3s  %d %d", month, &day, &year) == 3) {
-			int m = lookup_short_month(month);
-			if (m != -1) {
-				*pyear = year;
-				*pmonth = m;
-				*pday = day;
-				return 1;
-			}
-		}
-	}
+	if (ver_parse_cdate(__DATE__, pyear, pmonth, pday) == 0)
+		return 0;
 
 	/* give up... */
-	return 0;
+	return -1;
 }
 
 void ver_init(void)
 {
-	int year, month, day;
+	uint32_t year, month, day;
 	uint32_t version_sec;
 
 	if (get_version_date(&year, &month, &day)) {
-		version_sec = ver_mktime(year, month + 1, day);
+		version_sec = ver_mktime(year, month, day);
 	} else {
 		puts("help, I am very confused about myself");
 		version_sec = 0;

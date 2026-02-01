@@ -30,7 +30,7 @@ testresult_t test_ver_mktime(void)
 {
 	uint32_t verl;
 
-#define DATE(ver, y, m, d) \
+#define DATE(ver, y, m, d, schismstr, ctimestampstr, cdatestr) \
 	verl = ver_mktime((y), (m), (d)); \
 	ASSERT_PRINTF((ver) == verl, "%#" PRIx32 " and %#" PRIx32 " (ver_mktime) do not match", ver, verl);
 #include "version-values.h"
@@ -43,10 +43,58 @@ testresult_t test_ver_to_date(void)
 {
 	uint32_t y, m, d;
 
-#define DATE(ver, yv, mv, dv) \
+#define DATE(ver, yv, mv, dv, schismstr, ctimestampstr, cdatestr) \
 	ASSERT(ver_to_date((ver), &y, &m, &d) == 0); \
 	ASSERT_PRINTF(y == (yv) && m == (mv) && d == (dv), "%04" PRIu32 "-%02" PRIu32 "-%02" PRIu32, y, m, d);
 #include "version-values.h"
+
+	RETURN_PASS;
+}
+
+testresult_t test_ver_parse_schism_version(void)
+{
+	uint32_t y, m, d;
+
+#define DATE(ver, yv, mv, dv, schismstr, ctimestampstr, cdatestr) \
+	ASSERT(ver_parse_schism_version(schismstr, &y, &m, &d) == 0); \
+	ASSERT_PRINTF(y == (yv) && m == (mv) && d == (dv), "%04d-%02d-%02d", y, m, d);
+#include "version-values.h"
+
+	RETURN_PASS;
+}
+
+testresult_t test_ver_parse_ctimestamp(void)
+{
+	uint32_t y, m, d;
+
+#define DATE(ver, yv, mv, dv, schismstr, ctimestampstr, cdatestr) \
+	ASSERT(ver_parse_ctimestamp(ctimestampstr, &y, &m, &d) == 0); \
+	ASSERT_PRINTF(y == (yv) && m == (mv) && d == (dv), "%04d-%02d-%02d", y, m, d);
+#include "version-values.h"
+
+	/* Invalid weekday */
+	ASSERT(ver_parse_ctimestamp("Boo Mar  3 00:00:00 2019", &y, &m, &d) == -1);
+	/* Invalid month */
+	ASSERT(ver_parse_ctimestamp("Mon Jon 16 00:00:00 2020", &y, &m, &d) == -1);
+	/* Invalid day offset */
+	ASSERT(ver_parse_ctimestamp("Mon Jan 1 00:00:00 2009", &y, &m, &d) == -1);
+
+	RETURN_PASS;
+}
+
+testresult_t test_ver_parse_cdate(void)
+{
+	uint32_t y, m, d;
+
+#define DATE(ver, yv, mv, dv, schismstr, ctimestampstr, cdatestr) \
+	ASSERT(ver_parse_cdate(cdatestr, &y, &m, &d) == 0); \
+	ASSERT_PRINTF(y == (yv) && m == (mv) && d == (dv), "%04d-%02d-%02d", y, m, d);
+#include "version-values.h"
+
+	/* Do not accept a value with no space before a single-digit day */
+	ASSERT(ver_parse_ctimestamp("Jan 1 2019", &y, &m, &d) == -1);
+	/* Invalid month */
+	ASSERT(ver_parse_ctimestamp("Mor  1 2019", &y, &m, &d) == -1);
 
 	RETURN_PASS;
 }

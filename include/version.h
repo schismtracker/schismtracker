@@ -44,5 +44,12 @@ SCHISM_CONST uint32_t ver_mktime(uint32_t year, uint32_t month, uint32_t day);
 
 int ver_to_date(uint32_t ver, uint32_t *py, uint32_t *pm, uint32_t *pd);
 
+/* "20090603" */
+int ver_parse_schism_version(const char *ver, uint32_t *pyear, uint32_t *pmonth, uint32_t *pday);
+/* "Wed Jun  3 23:39:19 2009" */
+int ver_parse_ctimestamp(const char *timestamp, uint32_t *pyear, uint32_t *pmonth, uint32_t *pday);
+/* "Jun  3 2009" */
+int ver_parse_cdate(const char *cdate, uint32_t *pyear, uint32_t *pmonth, uint32_t *pday);
+
 #endif /* SCHISM_VERSION_H_ */
 

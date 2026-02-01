@@ -214,5 +214,8 @@ TEST_FUNC_BLIT_SC(5, 7)
 
 TEST_FUNC(test_ver_mktime)
 TEST_FUNC(test_ver_to_date)
+TEST_FUNC(test_ver_parse_schism_version)
+TEST_FUNC(test_ver_parse_ctimestamp)
+TEST_FUNC(test_ver_parse_cdate)
 
 #undef TEST_FUNC
