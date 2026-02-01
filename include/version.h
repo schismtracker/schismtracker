@@ -42,5 +42,7 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11]);
 /* get a version number from a given date */
 SCHISM_CONST uint32_t ver_mktime(uint32_t year, uint32_t month, uint32_t day);
 
+int ver_to_date(uint32_t ver, uint32_t *py, uint32_t *pm, uint32_t *pd);
+
 #endif /* SCHISM_VERSION_H_ */
 

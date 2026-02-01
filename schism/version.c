@@ -69,7 +69,7 @@ Information at our disposal:
 #define LEAP_YEARS_BETWEEN(start, end) (LEAP_YEARS_BEFORE(end) - LEAP_YEARS_BEFORE(start + 1))
 
 #define EPOCH_YEAR 2009
-#define EPOCH_MONTH 9
+#define EPOCH_MONTH 10
 #define EPOCH_DAY 31
 
 /* -------------------------------------------------------------- */
@@ -77,7 +77,8 @@ Information at our disposal:
 // only used by ver_mktime, do not use directly
 // see https://alcor.concordia.ca/~gpkatch/gdate-algorithm.html
 // for a description of the algorithm used here
-static inline SCHISM_ALWAYS_INLINE SCHISM_CONST int64_t ver_date_encode(uint32_t y, uint32_t m, uint32_t d)
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
+int64_t ver_date_encode(uint32_t y, uint32_t m, uint32_t d)
 {
 	int64_t mm, yy;
 
@@ -87,21 +88,11 @@ static inline SCHISM_ALWAYS_INLINE SCHISM_CONST int64_t ver_date_encode(uint32_t
 	return (yy * 365LL) + (yy / 4LL) - (yy / 100LL) + (yy / 400LL) + ((mm * 306LL + 5LL) / 10LL) + (d - 1LL);
 }
 
-uint32_t ver_mktime(uint32_t y, uint32_t m, uint32_t d)
+static inline SCHISM_ALWAYS_INLINE
+void ver_date_decode(int64_t date, uint32_t *py, uint32_t *pm, uint32_t *pd)
 {
-	int64_t date, res;
+	int64_t y, ddd, mi;
 
-	date = ver_date_encode(y, m, d);
-	res = date - ver_date_encode(EPOCH_YEAR, EPOCH_MONTH, EPOCH_DAY);
-
-	return (uint32_t)CLAMP(res, 0U, UINT32_MAX);
-}
-
-static inline SCHISM_ALWAYS_INLINE void ver_date_decode(uint32_t ver, uint32_t *py, uint32_t *pm, uint32_t *pd)
-{
-	int64_t date, y, ddd, mi;
-
-	date = (int64_t)ver + ver_date_encode(EPOCH_YEAR, EPOCH_MONTH, EPOCH_DAY);
 	y = ((date * 10000LL) + 14780LL) / 3652425LL;
 	ddd = date - ((365LL * y) + (y / 4LL) - (y / 100LL) + (y / 400LL));
 	if (ddd < 0) {
@@ -113,6 +104,31 @@ static inline SCHISM_ALWAYS_INLINE void ver_date_decode(uint32_t ver, uint32_t *
 	*py = (y + ((mi + 2LL) / 12LL));
 	*pm = ((mi + 2LL) % 12LL) + 1LL;
 	*pd = ddd - ((mi * 306LL + 5LL) / 10LL) + 1LL;
+}
+
+/* TODO better name */
+uint32_t ver_mktime(uint32_t y, uint32_t m, uint32_t d)
+{
+	int64_t date, res, epoch;
+
+	epoch = ver_date_encode(EPOCH_YEAR, EPOCH_MONTH, EPOCH_DAY);
+
+	date = ver_date_encode(y, m, d);
+
+	if (date < epoch)
+		return 0;
+
+	res = date - epoch;
+
+	return (uint32_t)MIN(res, UINT32_MAX);
+}
+
+/* convert a version number to date */
+int ver_to_date(uint32_t ver, uint32_t *py, uint32_t *pm, uint32_t *pd)
+{
+	int64_t epoch = ver_date_encode(EPOCH_YEAR, EPOCH_MONTH, EPOCH_DAY);
+	ver_date_decode(epoch + ver, py, pm, pd);
+	return 0;
 }
 
 /* ----------------------------------------------------------------- */
@@ -159,12 +175,12 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 	if (cwtv > 0x050) {
 		uint32_t y, m, d;
 
-		ver_date_decode((cwtv < 0xFFF) ? ((uint32_t)cwtv - 0x050) : reserved, &y, &m, &d);
+		ver_to_date((cwtv < 0xFFF) ? ((uint32_t)cwtv - 0x050) : reserved, &y, &m, &d);
 
 		y = CLAMP(y, EPOCH_YEAR, 9999);
 		/* these two don't necessarily need to be clamped,
 		 * but we're doing it for good measure */
-		m = CLAMP(m, 0, 11) + 1;
+		m = CLAMP(m, 1, 12);
 		d = CLAMP(d, 1, 31);
 
 		/* make gcc shut up */
@@ -269,7 +285,7 @@ void ver_init(void)
 	uint32_t version_sec;
 
 	if (get_version_date(&year, &month, &day)) {
-		version_sec = ver_mktime(year, month, day);
+		version_sec = ver_mktime(year, month + 1, day);
 	} else {
 		puts("help, I am very confused about myself");
 		version_sec = 0;

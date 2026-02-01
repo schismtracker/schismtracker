@@ -547,7 +547,9 @@ void fmt_fill_schism_quirks(song_t *csf, uint32_t ver)
 		uint32_t verfixed;
 		int quirk;
 	} quirks[] = {
-		/* stupid open watcom needs these to be constants */
+		/* stupid open watcom needs these to be constants
+		 * FIXME -- need to make sure these are right. version
+		 * code was bugged */
 		{0x079a, CSF_QUIRK_PERIODS_ARE_HERTZ                 },  // https://github.com/schismtracker/schismtracker/commit/671b30311082a0e7df041fca25f989b5d2478f69
 		{0x0970, CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG            },  // https://github.com/schismtracker/schismtracker/commit/e7b1461fe751554309fd403713c2a1ef322105ca
 		{0x1087, CSF_QUIRK_IT_DO_NOT_OVERRIDE_CHANNEL_PAN    },  // https://github.com/schismtracker/schismtracker/commit/a34ec86dc819915debc9e06f4727b77bf2dd29ee
