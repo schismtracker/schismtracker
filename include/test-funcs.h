@@ -212,4 +212,7 @@ TEST_FUNC_BLIT_SC(5, 7)
 #undef TEST_FUNC_BLIT_SC_EX
 #undef TEST_FUNC_BLIT_SC
 
+TEST_FUNC(test_ver_mktime)
+TEST_FUNC(test_ver_to_date)
+
 #undef TEST_FUNC

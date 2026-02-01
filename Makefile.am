@@ -173,7 +173,8 @@ noinst_HEADERS = \
 	sys/sdl3/init.h \
 	sys/x11/init.h \
 	sys/win32/win32-vista.h \
-	sys/asio/audio-asio.h
+	sys/asio/audio-asio.h \
+	test/cases/version-values.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -749,7 +750,8 @@ schismtrackertest_SOURCES = \
 	test/cases/slurp.c          \
 	test/cases/str.c			\
 	test/cases/util.c			\
-	test/cases/video.c
+	test/cases/video.c			\
+	test/cases/version.c
 
 # err, this is flaky, but okay for now i guess
 mains =									\
