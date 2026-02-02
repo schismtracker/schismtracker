@@ -372,7 +372,7 @@ libs_wii=$(wii_machdep) $(WII_LIBS)
 endif
 
 if USE_WIIU
-files_wiiu=sys/wiiu/osdefs.c
+files_wiiu=sys/wiiu/devoptab.c sys/wiiu/osdefs.c
 cflags_wiiu=-mcpu=750 -meabi -mhard-float
 cppflags_wiiu=$(WIIU_CPPFLAGS)
 libs_wiiu=$(WIIU_LDFLAGS)

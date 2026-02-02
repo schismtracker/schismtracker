@@ -16,6 +16,8 @@
 /build/
 /buildx86/
 /buildx64/
+/build-wii/
+/build-wiiu/
 /compile
 /config.guess
 /config.h
