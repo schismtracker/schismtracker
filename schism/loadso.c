@@ -34,6 +34,8 @@
 # define INCL_DOS
 # include <os2.h>
 # include <meerror.h>
+#elif defined(SCHISM_WIIU)
+# include <coreinit/dynload.h>
 #elif defined(HAVE_LIBDL)
 # include <dlfcn.h>
 #endif
@@ -41,63 +43,80 @@
 void *loadso_object_load(const char *sofile)
 {
 #ifdef SCHISM_WIN32
-	HMODULE module = NULL;
+	{
+		HMODULE module;
+		DWORD em;
 
-	// Suppress "library failed to load" errors on Win9x and NT 4
-	DWORD em = SetErrorMode(0);
-	SetErrorMode(em | SEM_FAILCRITICALERRORS);
+		/* Suppress "library failed to load" errors on Win9x and NT 4 */
+		em = SetErrorMode(0);
+		SetErrorMode(em | SEM_FAILCRITICALERRORS);
 
-	SCHISM_ANSI_UNICODE({
-		// Windows 9x
-		char *ansi;
+		SCHISM_ANSI_UNICODE({
+			/* Windows 9x */
+			char *ansi;
 
-		if (!charset_iconv(sofile, &ansi, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-			module = LoadLibraryA(ansi);
-			free(ansi);
-		}
-	}, {
-		// Windows NT
-		wchar_t *unicode;
+			if (!charset_iconv(sofile, &ansi, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+				module = LoadLibraryA(ansi);
+				free(ansi);
+			}
+		}, {
+			/* Windows NT */
+			wchar_t *unicode;
 
-		if (!charset_iconv(sofile, &unicode, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-			module = LoadLibraryW(unicode);
-			free(unicode);
-		}
-	})
+			if (!charset_iconv(sofile, &unicode, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+				module = LoadLibraryW(unicode);
+				free(unicode);
+			}
+		})
 
-	if (!module)
-		module = LoadLibraryA(sofile);
+		/* maybe it was just ANSI all along */
+		if (!module)
+			module = LoadLibraryA(sofile);
 
-	SetErrorMode(em);
+		SetErrorMode(em);
 
-	if (module)
-		return module;
-#elif defined(SCHISM_OS2)
-	CHAR error_str[256];
-	HMODULE module;
-	ULONG rc;
-
-	// TODO add charset_iconv support for OS/2
-	rc = DosLoadModule(error_str, sizeof(error_str), sofile, &module);
-
-	if (rc != NO_ERROR && !strrchr(sofile, '\\') && !strrchr(sofile, '/')) {
-		/* strip .DLL extension and retry if there is no path
-		 * (this is what SDL does; I suppose it won't hurt here) */
-		size_t len = strlen(sofile);
-
-		if (len > 4 && charset_strcasecmp(&sofile[len - 4], CHARSET_UTF8, ".dll", CHARSET_UTF8)) {
-			char *sofile_strip = strn_dup(sofile, len - 4);
-			rc = DosLoadModule(error_str, sizeof(error_str), sofile, &module);
-			free(sofile_strip);
-		}
+		if (module)
+			return module;
 	}
+#elif defined(SCHISM_OS2)
+	{
+		CHAR error_str[256];
+		HMODULE module;
+		ULONG rc;
 
-	if (rc == NO_ERROR)
-		return (void *)module;
+		/* TODO add charset_iconv support for OS/2 */
+		rc = DosLoadModule(error_str, sizeof(error_str), sofile, &module);
+
+		if (rc != NO_ERROR && !strrchr(sofile, '\\') && !strrchr(sofile, '/')) {
+			/* strip .DLL extension and retry if there is no path
+			 * (this is what SDL does; I suppose it won't hurt here) */
+			size_t len = strlen(sofile);
+
+			if (len > 4 && charset_strcasecmp(&sofile[len - 4], CHARSET_UTF8, ".dll", CHARSET_UTF8)) {
+				char *sofile_strip = strn_dup(sofile, len - 4);
+				rc = DosLoadModule(error_str, sizeof(error_str), sofile, &module);
+				free(sofile_strip);
+			}
+		}
+
+		if (rc == NO_ERROR)
+			return (void *)module;
+	}
+#elif defined(SCHISM_WIIU)
+	{
+		OSDynLoad_Error rc;
+		OSDynLoad_Module module;
+
+		rc = OSDynLoad_Acquire(sofile, &module);
+		if (rc == OS_DYNLOAD_OK)
+			return (void *)module;
+	}
 #elif defined(HAVE_LIBDL)
-	void *object = dlopen(sofile, RTLD_NOW | RTLD_LOCAL);
-	if (object)
-		return object;
+	{
+		void *object = dlopen(sofile, RTLD_NOW | RTLD_LOCAL);
+		if (object)
+			return object;
+	}
 #endif
 
 	return NULL;
@@ -106,42 +125,59 @@ void *loadso_object_load(const char *sofile)
 void *loadso_function_load(void *handle, const char *name)
 {
 #ifdef SCHISM_WIN32
-	void *symbol;
+	{
+		void *symbol;
 
-	symbol = GetProcAddress(handle, name);
-	if (symbol)
-		return symbol;
+		symbol = GetProcAddress(handle, name);
+		if (symbol)
+			return symbol;
+	}
 #elif defined(SCHISM_OS2)
-	ULONG rc;
-	PFN pfn;
+	{
+		ULONG rc;
+		PFN pfn;
 
-	rc = DosQueryProcAddr((HMODULE)handle, 0, name, &pfn);
-	if (rc != NO_ERROR) {
+		rc = DosQueryProcAddr((HMODULE)handle, 0, name, &pfn);
+		if (rc != NO_ERROR) {
+			char *p;
+			if (asprintf(&p, "_%s", name) >= 0) {
+				rc = DosQueryProcAddr((HMODULE)handle, 0, p, &pfn);
+				free(p);
+			}
+		}
+
+		if (rc == NO_ERROR)
+			return (void *)pfn;
+	}
+#elif defined(SCHISM_WIIU)
+	{
+		OSDynLoad_Error rc;
+		void *ptr;
+
+		/* XXX does the export type actually matter at all?
+		 * the Wii U doesn't have different sizes for function pointers and data pointers. */
+		rc = OSDynLoad_FindExport((OSDynLoad_Module)handle, OS_DYNLOAD_EXPORT_FUNC, name, &ptr);
+		if (rc == OS_DYNLOAD_OK)
+			return ptr;
+	}
+#elif defined(HAVE_LIBDL)
+	{
+		void *symbol;
 		char *p;
+
+		symbol = dlsym(handle, name);
+		if (symbol)
+			return symbol;
+
+		/* some platforms require extra work. */
 		if (asprintf(&p, "_%s", name) >= 0) {
-			rc = DosQueryProcAddr((HMODULE)handle, 0, p, &pfn);
+			symbol = dlsym(handle, p);
 			free(p);
 		}
+
+		if (symbol)
+			return symbol;
 	}
-
-	if (rc == NO_ERROR)
-		return (void *)pfn;
-#elif defined(HAVE_LIBDL)
-	void *symbol;
-
-	symbol = dlsym(handle, name);
-	if (symbol)
-		return symbol;
-
-	// some platforms require extra work.
-	char *p;
-	if (asprintf(&p, "_%s", name) >= 0) {
-		symbol = dlsym(handle, p);
-		free(p);
-	}
-
-	if (symbol)
-		return symbol;
 #endif
 
 	// doh!
@@ -150,12 +186,17 @@ void *loadso_function_load(void *handle, const char *name)
 
 void loadso_object_unload(void *object)
 {
+	if (!object)
+		return;
+
 #ifdef SCHISM_WIN32
-	if (object)
-		FreeLibrary(object);
+	FreeLibrary(object);
+#elif defined(SCHISM_OS2)
+	DosFreeModule(object);
+#elif defined(SCHISM_WIIU)
+	OSDynLoad_Release(object);
 #elif defined(HAVE_LIBDL)
-	if (object)
-		dlclose(object);
+	dlclose(object);
 #endif
 }
 
@@ -175,6 +216,8 @@ static const char *loadso_libtool_fmts[] = {
 	"@executable_path/lib%s.%d.dylib",
 	"@executable_path/../Resources/lib%s.%d.dylib",
 	"lib%s.%d.dylib",
+#elif defined(SCHISM_WIIU)
+	/* none */
 #else
 	"lib%s.so.%d",
 #endif
@@ -224,8 +267,11 @@ static const char *loadso_lib_fmts[] = {
 	"%s.dll",
 #elif defined(SCHISM_MACOSX)
 	"lib%s.dylib",
+#elif defined(SCHISM_WIIU)
+	"%s.rpl",
 #else
-	//"lib%s.so",
+	/* NOTE: this is apparently required for Android; see issue #767
+	 * "lib%s.so", */
 #endif
 	NULL,
 };
