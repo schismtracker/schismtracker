@@ -101,7 +101,13 @@ static const char *wii_getdevname(size_t i)
 	}
 
 	dev = devoptab_list[i];
-	if (!dev || !dev->name || !strcmp(dev->name, "stdnull"))
+	if (!dev || !dev->name || !strcmp(dev->name, "stdnull")
+#ifdef SCHISM_WII
+		/* ETicket services -- contains nothing unless you do
+		 * manual path manipulation */
+		|| !strcmp(dev->name, "es")
+#endif
+	)
 		return NULL;
 
 	return dev->name;

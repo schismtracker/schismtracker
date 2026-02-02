@@ -44,7 +44,6 @@
 #include <dirent.h>
 #include "isfs.h"
 #include <fat.h>
-#define CACHE_PAGES 8
 
 /*
 Turn this on to bypass SDL weak-linking and allow OpenGL to be used.
@@ -140,7 +139,7 @@ static void RestartHomebrewChannel(void)
 {
 	TerminateRequested = false;
 	//SDL_Quit();
-	exit(1);
+	schism_exit(1);
 }
 
 void Terminate(void)
@@ -212,7 +211,6 @@ void wii_sysinit(int *pargc, char ***pargv)
 
 		MOUSE_Init();
 		KEYBOARD_Init(NULL);
-		fatInitDefault();
 	}
 #endif
 
@@ -233,8 +231,8 @@ void wii_sysinit(int *pargc, char ***pargv)
 	ISFS_SU();
 	if (ISFS_Initialize() == IPC_OK)
 		ISFS_Mount();
-	fatInit(CACHE_PAGES, 0);
-
+	/* no idea what the "default" device entails */
+	fatInitDefault();
 
 	// Attempt to locate a suitable home directory.
 	if (!*pargc || !*pargv) {
