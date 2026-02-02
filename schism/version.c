@@ -435,7 +435,7 @@ void ver_init(void)
 	uint32_t year, month, day;
 	uint32_t version_sec;
 
-	if (get_version_date(&year, &month, &day)) {
+	if (get_version_date(&year, &month, &day) == 0) {
 		version_sec = ver_mktime(year, month, day);
 	} else {
 		puts("help, I am very confused about myself");
