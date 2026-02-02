@@ -76,19 +76,36 @@
 # error Unknown platform. Add code for this platform, or make a wrapper for dirent.h.
 #endif
 
-#ifdef SCHISM_WII
-#include <sys/dir.h>
-// isfs is pretty much useless, but it might be interesting to browse it I guess
-static const char *devices[] = {
-	"sd:/",
-	"isfs:/",
-	NULL,
-};
-#elif defined(SCHISM_WIIU)
-static const char *devices[] = {
-	"fs:/vol/external01",
-	NULL,
-};
+#if defined(SCHISM_WII) || defined(SCHISM_WIIU)
+# include <sys/dir.h>
+# include <sys/iosupport.h> /* devoptab_list */
+
+/* NOTE: not all of these will return valid devices;
+ * most will be NULL, and will return NULL from wii_getdevname */
+static size_t wii_getnumdevs(void)
+{
+	/* this is the size of STD_MAX */
+	return STD_MAX;
+}
+
+static const char *wii_getdevname(size_t i)
+{
+	const devoptab_t *dev;
+
+	switch (i) {
+	case STD_IN:
+	case STD_OUT:
+	case STD_ERR:
+		/* don't care about std[in/out/err] */
+		return NULL;
+	}
+
+	dev = devoptab_list[i];
+	if (!dev || !dev->name || !strcmp(dev->name, "stdnull"))
+		return NULL;
+
+	return dev->name;
+}
 #endif
 
 #if defined(__amigaos4__)
@@ -1851,13 +1868,23 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 	em = SetErrorMode(em);
 # endif
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
-	int i;
-	for (i = 0; devices[i]; i++) {
-		DIR *dir = opendir(devices[i]);
-		if (!dir)
+	size_t num, i;
+	
+	num = wii_getnumdevs();
+
+	for (i = 0; i < num; i++) {
+		const char *name;
+		char *s;
+
+		name = wii_getdevname(i);
+		if (!name)
 			continue;
-		closedir(dir);
-		dmoz_add_file_or_dir(flist, dlist, str_dup(devices[i]), str_dup(devices[i]), NULL, -(1024 - i));
+
+		/* create folder path */
+		if (asprintf(&s, "%s:/", name) == -1)
+			continue;
+
+		dmoz_add_file_or_dir(flist, dlist, s, str_dup(s), NULL, -(1024 - i));
 	}
 #elif defined(SCHISM_MACOS)
 	for (ItemCount index = 1; ; index++) {
@@ -2137,7 +2164,9 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 	pathlen = strlen(path);
 
-#ifdef SCHISM_WII /* and Wii U maybe? */
+	/* This won't work anymore; if this really matters that much then we can do some
+	 * global cache hack for each device. */
+#if 0/*def SCHISM_WII */
 	/* awful hack: libfat's file reads bail if a device is given without a slash. */
 	if (strchr(path, ':') != NULL && strchr(path, '/') == NULL) {
 		int i;
