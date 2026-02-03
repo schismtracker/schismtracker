@@ -50,18 +50,18 @@ void wiiu_sysinit(int *pargc, char ***pargv)
 	}
 
 	if (!ptr)
-		ptr = str_dup("sd:/"); // Make a guess anyway
+		ptr = str_dup("fs:/vol/external01"); // Make a guess anyway
 
 	if (chdir(ptr) != 0) {
-		DIR* dir = opendir("sd:/");
+		DIR *dir = opendir("fs:/vol/external01");
 		free(ptr);
 		if (dir) {
 			// Ok at least the sd card works, there's some other dysfunction
 			closedir(dir);
-			ptr = str_dup("sd:/");
+			ptr = str_dup("fs:/vol/external01");
 		} else {
 			// What?
-			ptr = str_dup("sd:/");
+			ptr = str_dup("fs:/vol/external01");
 		}
 		chdir(ptr); // Hope that worked, otherwise we're hosed
 	}
