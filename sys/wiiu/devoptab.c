@@ -59,6 +59,7 @@ Changes from libwut source:
 #include <sys/types.h>
 #include <fcntl.h>
 #include <malloc.h> /* memalign */
+#include "log.h"
 
 // The Wii U OSTime epoch is at 2000, so we must map it to 1970 for gettime
 #define WIIU_OSTIME_EPOCH_YEAR         (2000)
@@ -1485,7 +1486,7 @@ int FSADOT_Init(void)
 	\
 		opd->clientHandle = FSAAddClient(NULL); \
 		if (opd->clientHandle) { \
-			if (FSAMount(opd->clientHandle, (path), "/", 0, NULL, 0) >= 0) { \
+			if ((rc = FSAMount(opd->clientHandle, (path), "/", 0, NULL, 0)) >= 0) { \
 				FSADeviceInfo devinfo; \
 	\
 				opd->cwd[0] = '/'; \
@@ -1507,9 +1508,12 @@ int FSADOT_Init(void)
 					FSADelClient(opd->clientHandle); \
 				} \
 			} else { \
+				log_appendf(4, "[WiiU] FSADOT/%s: FSAMount returned %d!\n", (name), rc); \
 				/* fail; should probably log this */ \
 				FSADelClient(opd->clientHandle); \
 			} \
+		} else { \
+			log_appendf(4, "[WiiU] FSADOT/%s: FSAAddClient failed!\n", (name)); \
 		} \
 	}
 #include "devoptab-devs.h"
