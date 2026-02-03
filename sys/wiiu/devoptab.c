@@ -1503,8 +1503,8 @@ int FSADOT_Init(void)
 				} \
 	\
 				if (AddDevice(op) >= 0) { \
-					strncpy(opd->mountPath, "/vol/schism_" #name, sizeof(opt->mountPath) - 1); \
-					opd->mountPath[opt->mountPath - 1] = 0; \
+					strncpy(opd->mountPath, "/vol/schism_" #name, sizeof(opd->mountPath) - 1); \
+					opd->mountPath[sizeof(opd->mountPath) - 1] = 0; \
 					strcpy(opd->cwd, opd->mountPath); \
 					r = 0; \
 				} else { \
