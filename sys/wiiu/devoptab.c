@@ -1490,7 +1490,7 @@ int FSADOT_Init(void)
 	\
 		opd->clientHandle = FSAAddClient(NULL); \
 		if (opd->clientHandle) { \
-			if ((rc = FSAMount(opd->clientHandle, (path), "/vol/schism_" #name, FSA_MOUNT_FLAG_LOCAL_MOUNT, NULL, 0)) >= 0) { \
+			if ((rc = FSAMount(opd->clientHandle, (path), "/vol/schism_" #name, FSA_MOUNT_FLAG_GLOBAL_MOUNT, NULL, 0)) >= 0) { \
 				FSADeviceInfo devinfo; \
 	\
 				if (FSAGetDeviceInfo(opd->clientHandle, "/vol/schism_" #name, &devinfo) >= 0) { \
