@@ -139,8 +139,10 @@ int events_have_event(void)
 
 void events_pump_events(void)
 {
+	mt_mutex_lock(queue_mutex);
 	// eh
 	if (events_backend) events_backend->pump_events();
+	mt_mutex_unlock(queue_mutex);
 }
 
 int events_poll_event(schism_event_t *event)
