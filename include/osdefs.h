@@ -43,6 +43,8 @@ os_event: preprocessing for events.
 This is used to hack in system-dependent input methods (e.g. F16 and other scancodes on OS X; Wiimote buttons;
 etc.) If defined, this function will be called after capturing an SDL event.
 A return value of 0 indicates that the event should NOT be processed by the main event handler.
+
+os_onframe: called every frame (or so)
 */
 #if defined(SCHISM_WII)
 # define os_sysinit wii_sysinit
@@ -50,6 +52,7 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #elif defined(SCHISM_WIIU)
 # define os_sysinit wiiu_sysinit
 # define os_sysexit wiiu_sysexit
+# define os_onframe wiiu_onframe
 #elif defined(SCHISM_WIN32)
 # define os_sysinit win32_sysinit
 # define os_sysexit win32_sysexit
@@ -108,6 +111,9 @@ A return value of 0 indicates that the event should NOT be processed by the main
 #endif
 #ifndef os_get_modkey
 #define os_get_modkey(m)
+#endif
+#ifndef os_onframe
+# define os_onframe()
 #endif
 #ifndef os_fopen
 # define os_fopen fopen
@@ -191,6 +197,7 @@ int macosx_ibook_fnswitch(int setting);
 
 void wiiu_sysinit(int *pargc, char ***pargv); // fixup HOME envvar
 void wiiu_sysexit(void);
+void wiiu_onframe(void);
 
 void wii_sysinit(int *pargc, char ***pargv); // set up filesystem
 void wii_sysexit(void); // close filesystem

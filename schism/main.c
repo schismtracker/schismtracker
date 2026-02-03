@@ -884,6 +884,8 @@ SCHISM_NORETURN static void event_loop(void)
 		/* sleep for a little bit to not hog CPU time */
 		if (!events_have_event())
 			timer_msleep(5);
+
+		os_onframe();
 	}
 
 	schism_exit(0);

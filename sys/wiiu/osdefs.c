@@ -29,13 +29,23 @@
 #include <whb/proc.h>
 #include <sysapp/launch.h>
 #include <dirent.h>
+#include <coreinit/foreground.h>
+#include <proc_ui/procui.h>
 #include "devoptab.h"
+#include "log.h"
+#include "it.h"
+
+static uint32_t savecallback(SCHISM_UNUSED void *xyzzy)
+{
+	OSSavesDone_ReadyToRelease();
+	return 0;
+}
 
 /* fixup HOME envvar */
 void wiiu_sysinit(int *pargc, char ***pargv)
 {
-	/* tell the wii u about us */
-	WHBProcInit();
+	/* Initialize ProcUI BEFORE anything else */
+	ProcUIInitEx(savecallback, NULL);
 
 	/* Initialize FSA devoptabs */
 	FSADOT_Init();
@@ -69,14 +79,70 @@ void wiiu_sysinit(int *pargc, char ***pargv)
 	free(ptr);
 }
 
+static int exitingProcUI;
+
 void wiiu_sysexit(void)
 {
 	FSADOT_Quit();
 
-	/* hmph */
-	WHBProcShutdown();
+	if (!exitingProcUI) {
+		int procui_running = 1;
 
-	/* if WHCProcShutdown didn't return us to the Homebrew Launcher
-	 * or similar, return to the system menu */
-	SYSLaunchMenu();
+		SYSLaunchMenu();
+		while (procui_running) {
+			switch (ProcUIProcessMessages(TRUE)) {
+			case PROCUI_STATUS_RELEASE_FOREGROUND:
+				ProcUIDrawDoneRelease();
+				break;
+			case PROCUI_STATUS_EXITING:
+				procui_running = 0;
+				break;
+			}
+		}
+	}
+
+	ProcUIShutdown();
+}
+
+void wiiu_onframe(void)
+{
+	static int enteringBackground, inBackground;
+	schism_event_t event;
+
+	/* Need to handle ProcUI */
+	if (ProcUIIsRunning()) {
+		log_appendf(1, "ProcUI");
+		if (enteringBackground) {
+			/* previously received PROCUI_STATUS_RELEASE_FOREGROUND */
+			enteringBackground = 0;
+			inBackground = 1;
+			ProcUIDrawDoneRelease();
+		}
+
+		switch (ProcUIProcessMessages(TRUE)) {
+		case PROCUI_STATUS_IN_FOREGROUND:
+			if (inBackground) {
+				memset(&event, 0, sizeof(event));
+				event.type = SCHISM_WINDOWEVENT_SHOWN;
+				events_push_event(&event);
+				inBackground = 0;
+			}
+			break;
+		case PROCUI_STATUS_IN_BACKGROUND:
+			break;
+		case PROCUI_STATUS_RELEASE_FOREGROUND:
+			/* This results in fewer draws to the screen */
+			memset(&event, 0, sizeof(event));
+			event.type = SCHISM_WINDOWEVENT_HIDDEN;
+			events_push_event(&event);
+
+			enteringBackground = 1;
+
+			break;
+		case PROCUI_STATUS_EXITING:
+			exitingProcUI = 1;
+			schism_exit(0);
+			break;
+		}
+	}
 }
