@@ -111,7 +111,6 @@ void wiiu_onframe(void)
 
 	/* Need to handle ProcUI */
 	if (ProcUIIsRunning()) {
-		log_appendf(1, "ProcUI");
 		if (enteringBackground) {
 			/* previously received PROCUI_STATUS_RELEASE_FOREGROUND */
 			enteringBackground = 0;
