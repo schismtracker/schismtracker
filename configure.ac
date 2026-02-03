@@ -504,7 +504,6 @@ xbox*)
 	dnl posix_fseek=yes
 	use_controller=yes
 	AC_DEFINE([SCHISM_XBOX], [1], [Original Xbox])
-	AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 	;;
 *)
 	AC_MSG_RESULT([need to do more checks])
@@ -541,7 +540,6 @@ xbox*)
 		use_wii=yes
 		use_controller=yes
 		AC_DEFINE([SCHISM_WII], [1], [Wii])
-		AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 		posix_fseek=yes
 	elif test "x$which" = "xwiiu"; then
 		WIIU_CPPFLAGS="-I${DEVKITPRO}/wut/include -I${DEVKITPPC}/powerpc-eabi/include"
@@ -568,7 +566,6 @@ xbox*)
 		use_wiiu=yes
 		use_controller=yes
 		AC_DEFINE([SCHISM_WIIU], [1], [Wii U])
-		AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
 		posix_fseek=yes
 	fi
 
@@ -663,6 +660,10 @@ AM_CONDITIONAL([am__fastdepOBJC], [test "x$use_macosx" = "xyes"])
 AM_CONDITIONAL([USE_NETWORK], [test "x$use_network" = "xyes"])
 AM_CONDITIONAL([USE_XBOX], [test "x$use_xbox" = "xyes"])
 AM_CONDITIONAL([USE_ASIO], [test "x$use_asio" = "xyes"])
+
+if test "x$use_controller" = "xyes"; then
+	AC_DEFINE([SCHISM_CONTROLLER], [1], [Enable game controller support])
+fi
 
 if test "x$THREADS" = "xyes"; then
 	if test "x$use_os2" = "xyes"; then
