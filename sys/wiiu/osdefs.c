@@ -38,7 +38,7 @@ void wiiu_sysinit(int *pargc, char ***pargv)
 	WHBProcInit();
 
 	/* Initialize FSA devoptabs */
-	//FSADOT_Init();
+	FSADOT_Init();
 
 	char *ptr = NULL;
 
