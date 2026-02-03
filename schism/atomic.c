@@ -23,7 +23,50 @@
 
 #include "atomic.h"
 
-#if (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_ATOMICS__)
+/* FIXME this is way too primitive to do much of anything actually useful.
+ * The most important thing we're missing is compare-and-swap. Virtually
+ * any operation can be implemented with just that.
+ *
+ * ALSO: We should implement everything as explicitly 32-bit or 64-bit.
+ * Then, the "pointer" version can simply forward to the 32-bit or 64-bit
+ * versions depending on the architecture.
+ *
+ * We can do this by first implementing the bare functions taking volatile
+ * pointers, and changing the definition of the pointer structure to have
+ * a volatile union of pointer and int[32/64]_t. Then we can implement
+ * everything else simply as calls to that function. :) */
+
+#ifdef SCHISM_WIIU
+/* There is a critical bug in the WiiU processor, where atomics
+ * do not work correctly. This is fixed on the OS side. */
+
+#include <coreinit/atomic.h>
+
+int atm_init(void) { return 0; }
+void atm_quit(void) { }
+
+int32_t atm_load(struct atm *atm)
+{
+	return OSOrAtomic(&atm->x, 0);
+}
+
+void atm_store(struct atm *atm, int32_t x)
+{
+	OSSwapAtomic(&atm->x, x);
+}
+
+/* wii u is 32-bit */
+void *atm_ptr_load(struct atm_ptr *atm)
+{
+	return (void *)atm_load((struct atm *)atm);
+}
+
+void atm_ptr_store(struct atm_ptr *atm, void *x)
+{
+	return atm_store((struct atm *)atm, (int32_t)x);
+}
+
+#elif (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_ATOMICS__)
 
 #include <stdatomic.h>
 
