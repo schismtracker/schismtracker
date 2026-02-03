@@ -90,6 +90,7 @@ static void (SDLCALL *sdl2_FreeSurface)(SDL_Surface * surface);
 static SDL_bool (SDLCALL *sdl2_SetHint)(const char *name, const char *value);
 static int (SDLCALL *sdl2_RenderSetLogicalSize)(SDL_Renderer * renderer, int w, int h);
 static SDL_bool (SDLCALL *sdl2_GetWindowGrab)(SDL_Window * window);
+static void (SDLCALL *sdl2_StartTextInput)(void);
 
 static int (SDLCALL *sdl2_LockSurface)(SDL_Surface * surface);
 static void (SDLCALL *sdl2_UnlockSurface)(SDL_Surface * surface);
@@ -542,6 +543,7 @@ static int sdl2_video_startup(void)
 	}
 
 	/* okay, i think we're ready */
+	sdl2_StartTextInput();
 	sdl2_ShowCursor(SDL_DISABLE);
 	set_icon();
 
@@ -923,6 +925,7 @@ static int sdl2_video_load_syms(void)
 	SCHISM_SDL2_SYM(UpdateWindowSurface);
 	SCHISM_SDL2_SYM(LockSurface);
 	SCHISM_SDL2_SYM(UnlockSurface);
+	SCHISM_SDL2_SYM(StartTextInput);
 
 	return 0;
 }
@@ -965,6 +968,8 @@ static int sdl2_video_init(void)
 	sdl2_SetHint("SDL_WINDOWS_NO_CLOSE_ON_ALT_F4", "1"); /* dunno if the hint is defined for old SDL, optional anyway */
 	sdl2_SetHint("SDL_WINDOWS_DPI_SCALING", "1");
 	sdl2_SetHint("SDL_WINDOWS_DPI_AWARENESS", "permonitorv2");
+	sdl2_SetHint("SDL_ENABLE_SCREEN_KEYBOARD", "0");
+	sdl2_SetHint("SDL_GRAB_KEYBOARD", "1");
 
 	if (sdl2_InitSubSystem(SDL_INIT_VIDEO) < 0) {
 		sdl2_quit();
@@ -976,9 +981,6 @@ static int sdl2_video_init(void)
 		sdl2_quit();
 		return 0;
 	}
-
-	// also grab the keyboard as well
-	sdl2_SetHint("SDL_GRAB_KEYBOARD", "1");
 
 	return 1;
 }
