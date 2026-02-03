@@ -552,6 +552,10 @@ char *dmoz_path_get_parent_directory(const char *dirname)
 		return NULL;
 	root++;
 
+	/* case: separator is the final character of the string */
+	if (!*root)
+		return NULL;
+
 	/* okay, now we need to find the final token */
 	const char* pos = root + strlen(root) - 1;
 	if (IS_DIR_SEPARATOR(*pos)) /* strip off an excess separator, if any */
