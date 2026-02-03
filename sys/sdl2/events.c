@@ -182,46 +182,69 @@ static int sdl2_controller_quit(void)
 
 static int sdl2_controller_sdlevent(SDL_Event *event)
 {
-	SDL_Event newev = {0};
+	SDL_Event newev;
 	SDL_Keycode sym = SDLK_UNKNOWN;
+
+	memset(&newev, 0, sizeof(newev));
 
 	switch (event->type) {
 	case SDL_CONTROLLERAXISMOTION:
 		if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX
 			|| event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
 			// Left axis simply acts as a D-pad
-
-			static SDL_Keycode lastaxissym = SDLK_UNKNOWN;
+			SDL_Keycode *lastaxissymptr = NULL;
 
 			switch (event->caxis.axis) {
-			case SDL_CONTROLLER_AXIS_LEFTX:
+			case SDL_CONTROLLER_AXIS_LEFTX: {
+				static SDL_Keycode lastaxissym = SDLK_UNKNOWN;
+
 				if (event->caxis.value > CONTROLLER_LEFT_AXIS_SENSITIVITY) {
 					sym = SDLK_RIGHT;
 				} else if (event->caxis.value < -CONTROLLER_LEFT_AXIS_SENSITIVITY) {
 					sym = SDLK_LEFT;
+				} else {
+					sym = SDLK_UNKNOWN;
 				}
+
+				lastaxissymptr = &lastaxissym;
+
 				break;
-			case SDL_CONTROLLER_AXIS_LEFTY:
+			}
+			case SDL_CONTROLLER_AXIS_LEFTY: {
+				static SDL_Keycode lastaxissym = SDLK_UNKNOWN;
+
 				if (event->caxis.value > CONTROLLER_LEFT_AXIS_SENSITIVITY) {
 					sym = SDLK_DOWN;
 				} else if (event->caxis.value < -CONTROLLER_LEFT_AXIS_SENSITIVITY) {
 					sym = SDLK_UP;
+				} else {
+					sym = SDLK_UNKNOWN;
 				}
+
+				lastaxissymptr = &lastaxissym;
+
 				break;
 			}
+			default: {
+				static SDL_Keycode what = SDLK_UNKNOWN;
+				lastaxissymptr = &what;
+				break;
+			}
+			}
 
-			if (sym == lastaxissym)
+			if (*lastaxissymptr == sym)
 				return 0;
 
 			if (sym != SDLK_UNKNOWN) {
+				/* TODO key repeat for this */
 				newev.type = SDL_KEYDOWN;
 				newev.key.state = SDL_PRESSED;
-				lastaxissym = sym;
+				*lastaxissymptr = sym;
 			} else {
 				newev.type = SDL_KEYUP;
 				newev.key.state = SDL_RELEASED;
-				sym = lastaxissym;
-				lastaxissym = SDLK_UNKNOWN;
+				sym = *lastaxissymptr;
+				*lastaxissymptr = SDLK_UNKNOWN;
 			}
 
 			newev.key.keysym.sym = sym;
@@ -249,6 +272,8 @@ static int sdl2_controller_sdlevent(SDL_Event *event)
 		case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
 			sym = SDLK_RIGHT;
 			break;
+		/* For some reason SDL is convinced that the "A" button
+		 * on my Xbox controller is the "B" button and vice versa. */
 		case SDL_CONTROLLER_BUTTON_A:
 			/* "Load Module" if the song is stopped, else stop the song */
 			sym = (song_get_mode() == MODE_STOPPED) ? SDLK_F9 : SDLK_F8;
