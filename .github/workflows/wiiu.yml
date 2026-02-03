@@ -33,12 +33,32 @@ jobs:
           echo "date=$(git log -n 1 --date=short --format=format:%cd | sed 's/\(....\)-\(..\)-\(..\).*/\1\2\3/')" >> $GITHUB_OUTPUT
           cd ..
 
+        # checkout latest git of devkitPro SDL 2.28
+      - name: 'Checkout SDL2'
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          repository: 'devkitPro/SDL'
+          ref: 'wiiu-sdl2-2.28'
+          path: SDL
+
+      # this has to be after so it can check the current commit from my branch
       - name: 'Cache dependencies'
         id: cache-dependencies
         uses: actions/cache@v4
         with:
           path: '/github/home/wiiuprefix'
-          key: wiiu-dependencies-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+          key: wiiu-dependencies-SDL_${{ steps.checkout.outputs.commit }}-UTF8PROC_${{ env.UTF8PROC_VERSION }}
+
+      - name: 'Build SDL2'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: |
+          cd SDL
+          export PATH="${DEVKITPRO}/portlibs/wiiu/bin:${DEVKITPPC}/bin:$PATH"
+          powerpc-eabi-cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX="$HOME/wiiuprefix"
+          cmake --build build --verbose
+          cmake --install build
+          cd ..
 
       - name: 'Download utf8proc'
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
