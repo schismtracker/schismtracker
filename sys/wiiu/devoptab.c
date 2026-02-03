@@ -88,6 +88,7 @@ struct FSADOTDeviceData {
 	bool mounted;
 #endif
 	bool isSDCard; /* should be renamed to "supportsStatVFS" */
+	char mountPath[255]; /* probably enough */
 	char cwd[FS_MAX_PATH + 1];
 	FSAClientHandle clientHandle;
 	uint64_t deviceSizeInSectors;
@@ -220,16 +221,18 @@ static uint32_t FSADOT_hashstring(const char *str)
 
 static char *FSADOT_fixpath(struct _reent *r, const char *path)
 {
-	char *p;
-	char *fixedPath;
+	char *p, *fixedPath;
+	struct FSADOTDeviceData *deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
 	if (!path) {
 		r->_errno = EINVAL;
 		return NULL;
 	}
 
-	p = strchr(path, ':') + 1;
-	if (!strchr(path, ':')) {
+	p = strchr(path, ':');
+	if (p) {
+		p++;
+	} else {
 		p = (char *)path;
 	}
 
@@ -249,17 +252,18 @@ static char *FSADOT_fixpath(struct _reent *r, const char *path)
 
 	// Convert to an absolute path
 	if (p[0] != '\0' && p[0] != '\\' && p[0] != '/') {
-		struct FSADOTDeviceData *deviceData = (struct FSADOTDeviceData *)r->deviceData;
 		if (snprintf(fixedPath, maxPathLength, "%s/%s", deviceData->cwd, p) >= maxPathLength) {
 			WUT_DEBUG_REPORT("FSADOT_fixpath: fixedPath snprintf result (absolute) was truncated\n");
 		}
 	} else {
-		if (snprintf(fixedPath, maxPathLength, "%s", p) >= maxPathLength) {
+		if (snprintf(fixedPath, maxPathLength, "%s/%s", deviceData->mountPath, p) >= maxPathLength) {
 			WUT_DEBUG_REPORT("FSADOT_fixpath: fixedPath snprintf result (relative) was truncated\n");
 		}
 	}
 
 	// Normalize path (resolve any ".", "..", or "//")
+	// FIXME a user can break this by putting a bunch of .. but currently
+	// it doesn't really matter
 	char *normalizedPath = strdup(fixedPath);
 	if (!normalizedPath) {
 		WUT_DEBUG_REPORT("FSADOT_fixpath: failed to allocate memory for normalizedPath\n");
@@ -1486,13 +1490,10 @@ int FSADOT_Init(void)
 	\
 		opd->clientHandle = FSAAddClient(NULL); \
 		if (opd->clientHandle) { \
-			if ((rc = FSAMount(opd->clientHandle, (path), "/", 0, NULL, 0)) >= 0) { \
+			if ((rc = FSAMount(opd->clientHandle, (path), "/vol/schism_" #name, FSA_MOUNT_FLAG_LOCAL_MOUNT, NULL, 0)) >= 0) { \
 				FSADeviceInfo devinfo; \
 	\
-				opd->cwd[0] = '/'; \
-				opd->cwd[1] = '\0'; \
-	\
-				if (FSAGetDeviceInfo(opd->clientHandle, "/", &devinfo) >= 0) { \
+				if (FSAGetDeviceInfo(opd->clientHandle, "/vol/schism_" #name, &devinfo) >= 0) { \
 					opd->deviceSizeInSectors = devinfo.deviceSizeInSectors; \
 					opd->deviceSectorSize    = devinfo.deviceSectorSize; \
 				} else { \
@@ -1502,9 +1503,12 @@ int FSADOT_Init(void)
 				} \
 	\
 				if (AddDevice(op) >= 0) { \
+					strncpy(opd->mountPath, "/vol/schism_" #name, sizeof(opt->mountPath) - 1); \
+					opd->mountPath[opt->mountPath - 1] = 0; \
+					strcpy(opd->cwd, opd->mountPath); \
 					r = 0; \
 				} else { \
-					FSAUnmount(opd->clientHandle, "/", FSA_UNMOUNT_FLAG_BIND_MOUNT); \
+					FSAUnmount(opd->clientHandle, "/vol/schism_" #name, FSA_UNMOUNT_FLAG_BIND_MOUNT); \
 					FSADelClient(opd->clientHandle); \
 				} \
 			} else { \
@@ -1535,7 +1539,7 @@ int FSADOT_Quit(void)
 				RemoveDevice(name); \
 	\
 				/* Now kill off everything */ \
-				FSAUnmount(dot->clientHandle, "/", FSA_UNMOUNT_FLAG_BIND_MOUNT); \
+				FSAUnmount(dot->clientHandle, dot->mountPath, FSA_UNMOUNT_FLAG_BIND_MOUNT); \
 	\
 				FSADelClient(dot->clientHandle); \
 			} \
