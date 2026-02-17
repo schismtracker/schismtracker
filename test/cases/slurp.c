@@ -28,17 +28,21 @@
 #include "slurp.h"
 #include "fmt.h"
 
+#define EXPECTEDRESULTP1 "abc def ghi 123 456 789\nI liv"
+#define EXPECTEDRESULTP2 "e in a giant bucket.\nbleugh.\n"
+#define EXPECTEDRESULTPADDING "\0\0\0\0\0\0\0"
+
+SCHISM_STATIC_ASSERT(sizeof(EXPECTEDRESULTP1) == sizeof(EXPECTEDRESULTP2), "a");
+
 static const char expected_result[] =
-	"abc def ghi 123 456 789\n"
-	"I live in a giant bucket.\n"
-	"bleugh.\n";
-SCHISM_STATIC_ASSERT((ARRAY_SIZE(expected_result) - 1) % 2 == 0,
-	"need the size to be a multiple of two for slurp_2memstream");
+	EXPECTEDRESULTP1 EXPECTEDRESULTP2;
+static const char expected_result_padded[] =
+	EXPECTEDRESULTP1 EXPECTEDRESULTPADDING EXPECTEDRESULTP2;
 
 /* the padding between memory segments; used in 2mem and sf2 tests
  * 7 is a completely arbitrary value. */
-#define TEST_SLURP_PADDING (7)
-#define TEST_SLURP_2SIZE ((ARRAY_SIZE(expected_result) - 1) / 2)
+#define TEST_SLURP_PADDING (sizeof(EXPECTEDRESULTPADDING) - 1)
+#define TEST_SLURP_2SIZE (sizeof(EXPECTEDRESULTP1) - 1)
 
 static testresult_t test_slurp_common(slurp_t *fp)
 {
@@ -73,7 +77,9 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	 * do it many times to make sure that extra reads have no effect on EOF. */
 
 	for (i = 0; i < 5; i++) {
-		ASSERT(slurp_read(fp, buf, sizeof(buf)) == 0);
+		size_t x;
+		x = slurp_read(fp, buf, sizeof(buf));
+		ASSERT_PRINTF(x == 0, "%" PRIuSZ, x);
 		ASSERT(slurp_tell(fp) == sizeof(buf));
 		ASSERT(slurp_eof(fp));
 	}
@@ -169,13 +175,10 @@ static testresult_t test_slurp_common(slurp_t *fp)
 testresult_t test_slurp_memstream(void)
 {
 	slurp_t fp;
-	uint8_t buf[ARRAY_SIZE(expected_result) - 1];
 	testresult_t r;
 
-	memcpy(buf, expected_result, sizeof(buf));
-
 	/* should never happen */
-	ASSERT(slurp_memstream(&fp, (uint8_t *)buf, sizeof(buf)) >= 0);
+	ASSERT(slurp_memstream(&fp, expected_result, sizeof(expected_result) - 1) >= 0);
 
 	r = test_slurp_common(&fp);
 
@@ -185,28 +188,14 @@ testresult_t test_slurp_memstream(void)
 	return r;
 }
 
-static void test_slurp_setup_padded_buf(const void *src, void *dst, size_t sz, size_t padding)
-{
-	/* copy the first half of the expected result */
-	memcpy(dst, src, sz);
-	/* set the next padding bytes to 0 */
-	memset((char *)dst + sz, 0, padding);
-	/* then, copy the second half of the expected result.
-	 * this hopefully makes sure that if there's any buffer overrun within
-	 * 2memstream, it can be detected easily. */
-	memcpy((char *)dst + sz + padding, (char *)src + sz, sz);
-}
-
 testresult_t test_slurp_2memstream(void)
 {
 	slurp_t fp;
-	uint8_t buf[(TEST_SLURP_2SIZE * 2) + TEST_SLURP_PADDING];
 	testresult_t r;
 
-	test_slurp_setup_padded_buf(expected_result, buf, TEST_SLURP_2SIZE, TEST_SLURP_PADDING);
-
 	/* should never happen */
-	ASSERT(slurp_2memstream(&fp, (uint8_t *)buf, (uint8_t *)buf + TEST_SLURP_2SIZE + TEST_SLURP_PADDING, TEST_SLURP_2SIZE) >= 0);
+	ASSERT(slurp_2memstream(&fp, (const uint8_t *)expected_result_padded,
+			(const uint8_t *)expected_result_padded + TEST_SLURP_2SIZE + TEST_SLURP_PADDING, TEST_SLURP_2SIZE) >= 0);
 
 	r = test_slurp_common(&fp);
 
@@ -220,13 +209,10 @@ testresult_t test_slurp_sf2(void)
 {
 	slurp_t memfp;
 	slurp_t sf2fp;
-	uint8_t buf[(TEST_SLURP_2SIZE * 2) + TEST_SLURP_PADDING];
 	testresult_t r;
 
 	/* this 97 year old NYC diner still serves Coke the old fashioned way */
-	test_slurp_setup_padded_buf(expected_result, buf, TEST_SLURP_2SIZE, TEST_SLURP_PADDING);
-
-	ASSERT(slurp_memstream(&memfp, (uint8_t *)buf, sizeof(buf)) >= 0);
+	ASSERT(slurp_memstream(&memfp, (const uint8_t *)expected_result_padded, sizeof(expected_result_padded)) >= 0);
 
 	slurp_sf2(&sf2fp, &memfp, 0, TEST_SLURP_2SIZE, TEST_SLURP_2SIZE + TEST_SLURP_PADDING, TEST_SLURP_2SIZE);
 
