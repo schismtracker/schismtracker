@@ -51,7 +51,7 @@
  * This is turned off here because they cause weird dislocation in the
  * audio buffer when moving/resizing/changing the window at all. */
 
-#define COMPILE_POSITION_NOTIFY
+/* #define COMPILE_POSITION_NOTIFY */
 
 static HRESULT (WINAPI *DSOUND_DirectSoundCreate)(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN pUnkOuter) = NULL;
 
@@ -272,64 +272,61 @@ static void *_dsound_audio_get_buffer(schism_audio_device_t *dev,
 
 static int _dsound_audio_play(schism_audio_device_t *dev)
 {
-	if (dev->buf) {
-		IDirectSoundBuffer_Unlock(dev->lpbuffer, dev->buf, dev->buflen, NULL, 0);
-		dev->buf = NULL;
-		dev->buflen = 0;
-		return 0;
-	}
+	if (!dev->buf)
+		return -1;
 
-	return -1;
+	IDirectSoundBuffer_Unlock(dev->lpbuffer, dev->buf, dev->buflen, NULL, 0);
+	dev->buf = NULL;
+	dev->buflen = 0;
+
+	return 0;
 }
 
-static int _dsound_audio_wait_dx5(schism_audio_device_t *dev)
+static int64_t _dsound_audio_ustowait_dx5(schism_audio_device_t *dev)
 {
 	DWORD status;
 	DWORD cursor, xyzzy;
 	HRESULT res;
 
-	while (!atm_load(&dev->simple.cancelled)) { /* :/ */
+	IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
+	if (status & DSBSTATUS_BUFFERLOST) {
+		IDirectSoundBuffer_Restore(dev->lpbuffer);
 		IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
-		if (status & DSBSTATUS_BUFFERLOST) {
-			IDirectSoundBuffer_Restore(dev->lpbuffer);
-			IDirectSoundBuffer_GetStatus(dev->lpbuffer, &status);
-			if (status & DSBSTATUS_BUFFERLOST)
-				return -1;
-		}
-
-		if (!(status & DSBSTATUS_PLAYING)) {
-			if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
-				/* This should never happen */
-				return -1;
-		} else {
-			res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
-			if (res == DSERR_BUFFERLOST) {
-				IDirectSoundBuffer_Restore(dev->lpbuffer);
-				res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
-			}
-			if (res != DS_OK)
-				continue; /* what? */
-
-			if ((cursor / dev->size) != dev->last_chunk)
-				return -1;
-
-			cursor -= (dev->last_chunk * dev->size);
-
-			uint64_t us = (cursor / dev->bps / dev->channels) * 1000000ULL / dev->rate;
-			us = MAX(1000, us);
-
-			timer_usleep(us);
-		}
+		if (status & DSBSTATUS_BUFFERLOST)
+			return -1;
 	}
 
-	return 0;
+	if (!(status & DSBSTATUS_PLAYING)) {
+		if (IDirectSoundBuffer_Play(dev->lpbuffer, 0, 0, DSBPLAY_LOOPING) != DS_OK)
+			/* This should never happen */
+			return -1;
+		return 0;
+	}
+
+	res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
+	if (res == DSERR_BUFFERLOST) {
+		IDirectSoundBuffer_Restore(dev->lpbuffer);
+		res = IDirectSoundBuffer_GetCurrentPosition(dev->lpbuffer, &xyzzy, &cursor);
+	}
+	if (res != DS_OK)
+		return -1; /* what? */
+
+	if ((cursor / dev->size) != dev->last_chunk)
+		return -1;
+
+	cursor -= (dev->last_chunk * dev->size);
+
+	uint64_t us = (cursor / dev->bps / dev->channels) * 1000000ULL / dev->rate;
+	/* ... */
+	return CLAMP(us, 1000, INT64_MAX);
 }
 
 static const struct schism_audio_device_simple_vtable dsound_dx5_vtbl = {
 	_dsound_audio_get_buffer,
 	_dsound_audio_play,
-	_dsound_audio_wait_dx5,
-	NULL
+	NULL,
+	NULL,
+	_dsound_audio_ustowait_dx5,
 };
 
 #ifdef COMPILE_POSITION_NOTIFY
@@ -364,7 +361,8 @@ static const struct schism_audio_device_simple_vtable dsound_dx6_vtbl = {
 	_dsound_audio_get_buffer,
 	_dsound_audio_play,
 	_dsound_audio_wait_dx6,
-	_dsound_audio_aftercancel_dx6
+	_dsound_audio_aftercancel_dx6,
+	_dsound_audio_ustowait_dx5,
 };
 #endif
 
@@ -532,7 +530,7 @@ DS_badformat:
 			((dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) && !_dsound_dx6_init_notify_position(dev))
 				? &dsound_dx6_vtbl :
 #endif
-				&dsound_dx5_vtbl, desired->callback))
+				&dsound_dx5_vtbl, desired->callback, AUDIO_SPEC_SILENCE(*desired)))
 		goto fail;
 
 	return dev;
@@ -681,6 +679,8 @@ const schism_audio_backend_t schism_audio_backend_dsound = {
 	.lock_device = audio_simple_device_lock,
 	.unlock_device = audio_simple_device_unlock,
 	.pause_device = audio_simple_device_pause,
+
+	.worker = audio_simple_device_worker,
 };
 
 /* -------------------------------------------------------------------- */

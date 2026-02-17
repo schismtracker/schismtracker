@@ -881,6 +881,9 @@ SCHISM_NORETURN static void event_loop(void)
 		if (!events_have_event())
 			timer_oneshot_worker();
 
+		/* Important! */
+		audio_worker();
+
 		/* sleep for a little bit to not hog CPU time */
 		if (!events_have_event())
 			timer_msleep(5);

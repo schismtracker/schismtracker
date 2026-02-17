@@ -50,6 +50,10 @@
 	void atm##NAME##_store(struct atm##NAME *atm, TYPE x) \
 	{ \
 		OSSwapAtomic##NAME(&atm->x, x); \
+	} \
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return OSAddAtomic##NAME(&atm->x, x); \
 	}
 # ifndef ATM_DEFINED
 COREATM(/* none */, int32_t)
@@ -75,6 +79,10 @@ COREATM(64, int64_t)
 	void atm##NAME##_store(struct atm##NAME *atm, TYPE x) \
 	{ \
 		atomic_store((_Atomic volatile TYPE *)&atm->x, x); \
+	} \
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return atomic_fetch_add((_Atomic volatile TYPE *)&atm->x, x); \
 	}
 # ifndef ATM_DEFINED
 C11ATM(/* none */, int32_t)
@@ -99,6 +107,10 @@ C11ATM(64, int64_t)
 	void atm##NAME##_store(struct atm##NAME *atm, TYPE x) \
 	{ \
 		__atomic_store(&atm->x, &x, __ATOMIC_SEQ_CST); \
+	} \
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return __atomic_fetch_add(&atm->x, x, __ATOMIC_SEQ_CST); \
 	}
 # ifndef ATM_DEFINED
 GNUCATM(/* none */, int32_t)
@@ -125,13 +137,17 @@ GNUCATM(64, int64_t)
 	{ \
 		atm->x = x; \
 		__sync_synchronize(); \
+	} \
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return __sync_fetch_and_add(&atm->x, x); \
 	}
 
 # ifndef ATM_DEFINED
 GNUCATM(/* none */, int32_t)
 #  define ATM_DEFINED
 # endif
-# ifndef ATM64_DEFINED
+# if !defined(ATM64_DEFINED) && !defined(__powerpc__)
 GNUCATM(64, int64_t)
 #  define ATM64_DEFINED
 # endif
@@ -155,6 +171,11 @@ void atm_store(struct atm *atm, int32_t x)
 {
 	InterlockedExchange((volatile LONG *)&atm->x, x);
 }
+
+int64_t atm_add(struct atm *atm, int32_t x)
+{
+	return InterlockedExchangeAdd((volatile LONG *)&atm->x, x);
+}
 # define ATM_DEFINED
 #endif
 
@@ -167,6 +188,11 @@ int64_t atm64_load(struct atm64 *atm)
 void atm64_store(struct atm64 *atm, int64_t x)
 {
 	InterlockedExchange64((volatile LONG64 *)&atm->x, x);
+}
+
+int64_t atm64_add(struct atm64 *atm, int64_t x)
+{
+	return InterlockedExchangeAdd64((volatile LONG64 *)&atm->x, x);
 }
 # define ATM64_DEFINED
 #endif
@@ -201,6 +227,11 @@ void atm_store(struct atm *atm, int32_t x)
 {
 	_watcom_xchg(&atm->x, x);
 }
+
+int32_t atm_add(struct atm *atm, int32_t x)
+{
+	return _watcom_xadd(&atm->x, x);
+}
 # define ATM_DEFINED
 #endif
 
@@ -218,6 +249,11 @@ void atm_store(struct atm *atm, int32_t x)
 {
 	atm->x = x;
 }
+
+int32_t atm_add(struct atm *atm, int32_t x)
+{
+	return (atm->x += x);
+}
 #define ATM_DEFINED
 #endif
 
@@ -230,6 +266,11 @@ int64_t atm64_load(struct atm64 *atm)
 void atm64_store(struct atm64 *atm, int64_t x)
 {
 	atm->x = x;
+}
+
+int64_t atm64_add(struct atm64 *atm, int64_t x)
+{
+	return (atm->x += x);
 }
 #define ATM64_DEFINED
 #endif
@@ -316,6 +357,18 @@ mt_mutex_t *atm_get_mutex_impl(void *x, size_t align)
 		mt_mutex_lock(m); \
 		atm->x = x; \
 		mt_mutex_unlock(m); \
+	} \
+	\
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		TYPE r; \
+		mt_mutex_t *m = atm_get_mutex(struct atm##NAME, atm); \
+	\
+		mt_mutex_lock(m); \
+		r = (atm->x += x); \
+		mt_mutex_unlock(m); \
+	\
+		return r; \
 	}
 
 #endif
@@ -326,6 +379,9 @@ ATM_IMPL(/* none */, int32_t)
 #if !defined(ATM64_DEFINED)
 ATM_IMPL(64, int64_t)
 #endif
+
+int32_t atm_sub(struct atm *atm, int32_t x) { return atm_add(atm, -x); }
+int64_t atm64_sub(struct atm64 *atm, int64_t x) { return atm64_add(atm, -x); }
 
 /* pointer ---- */
 
