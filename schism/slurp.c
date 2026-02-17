@@ -321,12 +321,13 @@ static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_
 
 static void slurp_memory_closure_free_(slurp_t *t)
 {
-	free(t->internal.memory.data);
+	/* data ptr is const but it was malloc'd */
+	free((void *)t->internal.memory.data);
 }
 
 /* Initializes a slurp structure on an existing memory stream.
  * Does NOT free the input. */
-int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize)
+int slurp_memstream(slurp_t *t, const uint8_t *mem, size_t memsize)
 {
 	memset(t, 0, sizeof(*t));
 
@@ -383,7 +384,7 @@ static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count)
 	pos = t->internal.memory.pos % leneach;
 
 	if (pos + count <= leneach) {
-		unsigned char *data = (which == 0) ? t->internal.memory.data : t->internal.memory.data2;
+		const unsigned char *data = (which == 0) ? t->internal.memory.data : t->internal.memory.data2;
 
 		memcpy(ptr, data + pos, count);
 	} else {
@@ -402,7 +403,7 @@ static size_t slurp_2mem_peek_(slurp_t *t, void *ptr, size_t count)
 	return count;
 }
 
-int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize)
+int slurp_2memstream(slurp_t *t, const uint8_t *mem1, const uint8_t *mem2, size_t memsize)
 {
 	memset(t, 0, sizeof(*t));
 

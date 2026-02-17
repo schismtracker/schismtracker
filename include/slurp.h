@@ -77,8 +77,8 @@ struct slurp_struct_ {
 
 	union {
 		struct {
-			unsigned char *data;
-			unsigned char *data2; /* for 2mem (this allows us to share tell,seek,length impl) */
+			const unsigned char *data;
+			const unsigned char *data2; /* for 2mem (this allows us to share tell,seek,length impl) */
 			size_t length;
 			size_t pos;
 
@@ -141,12 +141,12 @@ int slurp(slurp_t *t, const char *filename, struct stat *buf, uint64_t size);
 int slurp_stdio(slurp_t *t, FILE *fp);
 
 /* initializes a slurp_t over an existing memory stream */
-int slurp_memstream(slurp_t *t, uint8_t *mem, size_t memsize);
+int slurp_memstream(slurp_t *t, const uint8_t *mem, size_t memsize);
 int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize);
 
 /* Binds two memory streams together.
  * Both streams must be of the exact same size. */
-int slurp_2memstream(slurp_t *t, uint8_t *mem1, uint8_t *mem2, size_t memsize);
+int slurp_2memstream(slurp_t *t, const uint8_t *mem1, const uint8_t *mem2, size_t memsize);
 
 /* Binds two separate parts of an existing stream together.
  * unslurp() should be called here. */
