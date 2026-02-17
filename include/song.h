@@ -262,6 +262,8 @@ int audio_init(const char *driver, const char *device);
  * device ID `device` (see audio_device_list) */
 int audio_reinit(uint32_t *device);
 
+void audio_worker(void);
+
 void audio_quit(void);
 
 int audio_has_control_panel(void);

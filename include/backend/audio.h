@@ -69,9 +69,12 @@ typedef struct {
 
 	/* Specific to ASIO */
 	void (*control_panel)(schism_audio_device_t *device);
+
+	/* For non-threaded shenanigans */
+	void (*worker)(schism_audio_device_t *device);
 } schism_audio_backend_t;
 
-#if defined(SCHISM_WIN32) && defined(USE_THREADS)
+#if defined(SCHISM_WIN32)
 extern const schism_audio_backend_t schism_audio_backend_dsound;
 extern const schism_audio_backend_t schism_audio_backend_waveout;
 #endif
@@ -111,28 +114,47 @@ struct schism_audio_device_simple_vtable {
 	int (*wait)(schism_audio_device_t *dev);
 	// prevent deadlocks when cancelling the waiting thread
 	void (*aftercancel)(schism_audio_device_t *dev);
+	/* returns microseconds until we should fill the
+	 * next buffer. If you can, implement this instead of
+	 * wait() as it will work better when USE_THREADS is
+	 * enabled. */
+	int64_t (*ustowait)(schism_audio_device_t *dev);
 };
 
 struct schism_audio_device_simple {
 	const struct schism_audio_device_simple_vtable *vtbl;
 
-	// -------------------------------------------------
-	// protected members (dont touch these)
+	/* -------------------------------------------------
+	 * protected members (dont touch these) */
 
+#ifdef USE_THREADS
 	mt_thread_t *thread;
 	struct atm cancelled;
 
 	mt_mutex_t *mutex;
+#else
+	/* Atomicity may not be necessary here */
+	struct atm locked;
+	struct atm to_mix;
+
+	timer_ticks_t nextbufferfill;
+#endif
 
 	struct atm paused;
+	/* Has this been played at least once? */
+	struct atm played;
+
+	uint8_t silence;
 
 	void (*callback)(uint8_t *stream, uint32_t len);
 };
 
 int audio_simple_init(schism_audio_device_t *dev_,
 	const struct schism_audio_device_simple_vtable *vtbl,
-	void (*callback)(uint8_t *stream, uint32_t len));
+	void (*callback)(uint8_t *stream, uint32_t len),
+	uint8_t silence);
 void audio_simple_close(struct schism_audio_device_simple *dev);
+int audio_simple_worker(struct schism_audio_device_simple *dev);
 
 /* --- default lock implementation. */
 void audio_simple_lock(struct schism_audio_device_simple *dev);
@@ -145,5 +167,6 @@ void audio_simple_pause(struct schism_audio_device_simple *dev, int paused);
 void audio_simple_device_lock(schism_audio_device_t *dev);
 void audio_simple_device_unlock(schism_audio_device_t *dev);
 void audio_simple_device_pause(schism_audio_device_t *dev, int paused);
+void audio_simple_device_worker(schism_audio_device_t *dev);
 
 #endif /* SCHISM_BACKEND_AUDIO_H_ */

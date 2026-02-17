@@ -51,9 +51,21 @@ void atm_quit(void);
 
 int32_t atm_load(struct atm *atm);
 void atm_store(struct atm *atm, int32_t x);
+/* Adds 'x' to the atomic 'atm' and returns the original value
+ * held by 'atm' before the addition. */
+int32_t atm_add(struct atm *atm, int32_t x);
+/* Subtracts 'x' from the atomic 'atm' and returns the original value
+ * held by 'atm' before the subtraction. */
+int32_t atm_sub(struct atm *atm, int32_t x);
 
 int64_t atm64_load(struct atm64 *atm);
 void atm64_store(struct atm64 *atm, int64_t x);
+/* Adds 'x' to the atomic 'atm' and returns the original value
+ * held by 'atm' before the addition. */
+int64_t atm64_add(struct atm64 *atm, int64_t x);
+/* Subtracts 'x' from the atomic 'atm' and returns the original value
+ * held by 'atm' before the subtraction. */
+int64_t atm64_sub(struct atm64 *atm, int64_t x);
 
 void *atm_ptr_load(struct atm_ptr *atm);
 void atm_ptr_store(struct atm_ptr *atm, void *x);
