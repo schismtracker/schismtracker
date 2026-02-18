@@ -432,6 +432,8 @@ static inline uint64_t sf2_slurp_length(slurp_t *s)
 	int i;
 	uint64_t len;
 
+	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
+
 	len = 0;
 	for (i = 0; i < s->internal.sf2.num; i++)
 		len += s->internal.sf2.data[i].len;
@@ -444,7 +446,10 @@ static inline int64_t sf2_slurp_tell(slurp_t *s)
 	int64_t len;
 	int i;
 
-	for (i = 0, len = 0; i < s->internal.sf2.current; i++)
+	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
+
+	len = 0;
+	for (i = 0; i < s->internal.sf2.current; i++)
 		len += s->internal.sf2.data[i].len;
 
 	return len + slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
@@ -490,8 +495,12 @@ static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 
 static size_t sf2_slurp_cap(slurp_t *s, size_t count)
 {
-	int64_t off_current = slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
-	int64_t left = s->internal.sf2.data[s->internal.sf2.current].len - off_current;
+	int64_t off_current, left;
+
+	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
+
+	off_current = slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
+	left = s->internal.sf2.data[s->internal.sf2.current].len - off_current;
 
 	if (left <= 0)
 		return 0; /* ??? */
@@ -506,8 +515,12 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 {
 	size_t read = 0;
 
-	while (s->internal.sf2.current < s->internal.sf2.num) {
+	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
+
+	for (;;) {
 		size_t l = sf2_slurp_cap(s, count);		
+		if (!l)
+			break;
 
 		size_t tread = slurp_read(s->internal.sf2.src, (char *)data + read, l);
 
@@ -520,11 +533,11 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 
 		/* do we want to read? */
 		if (tread != (size_t)l)
-			return read;
+			break;
 
 		/* EOF? */
-		if (s->internal.sf2.current >= s->internal.sf2.num)
-			return read;
+		if ((s->internal.sf2.current + 1) >= s->internal.sf2.num)
+			break;
 
 		/* start over at the new offset */
 		slurp_seek(s->internal.sf2.src, s->internal.sf2.data[++s->internal.sf2.current].off, SEEK_SET);
@@ -551,6 +564,7 @@ int slurp_sf2v2(slurp_t *s, slurp_t *in, size_t num, int64_t off1, int64_t len1,
 
 	s->internal.sf2.src = in;
 	s->internal.sf2.num = num;
+	s->internal.sf2.current = 0;
 	s->internal.sf2.data[0].off = off1;
 	s->internal.sf2.data[0].len = len1;
 	va_start(ap, len1);
