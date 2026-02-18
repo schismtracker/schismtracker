@@ -424,11 +424,19 @@ int slurp_2memstream(slurp_t *t, const uint8_t *mem1, const uint8_t *mem2, size_
 /* implementation specialized for sf2 stuff
  * it allows reading from two different places in a file as if they
  * were sequential, since sf2 allows for stereo samples to not be
- * in the split stereo format schism likes to have. */
+ * in the split stereo format schism likes to have.
+ * FIXME: */
 
 static inline uint64_t sf2_slurp_length(slurp_t *s)
 {
-	return s->internal.sf2.data[0].len + s->internal.sf2.data[1].len;
+	int i;
+	uint64_t len;
+
+	len = 0;
+	for (i = 0; i < s->internal.sf2.num; i++)
+		len += s->internal.sf2.data[i].len;
+
+	return len;
 }
 
 static inline int64_t sf2_slurp_tell(slurp_t *s)
@@ -463,7 +471,7 @@ static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 	if (off < 0 || (size_t)off > len)
 		return -1;
 
-	for (i = 0; i < ARRAY_SIZE(s->internal.sf2.data); i++) {
+	for (i = 0; i < s->internal.sf2.num; i++) {
 		if (off < (int64_t)s->internal.sf2.data[i].len) {
 			s->internal.sf2.current = i;
 			return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[i].off + off, SEEK_SET);
@@ -473,7 +481,7 @@ static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 	}
 
 	/* likely EOF */
-	s->internal.sf2.current = ARRAY_SIZE(s->internal.sf2.data) - 1;
+	s->internal.sf2.current = s->internal.sf2.num - 1;
 	/* fix this up */
 	off += s->internal.sf2.data[s->internal.sf2.current].len;
 	/* seek */
@@ -498,7 +506,7 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 {
 	size_t read = 0;
 
-	while (s->internal.sf2.current < ARRAY_SIZE(s->internal.sf2.data)) {
+	while (s->internal.sf2.current < s->internal.sf2.num) {
 		size_t l = sf2_slurp_cap(s, count);		
 
 		size_t tread = slurp_read(s->internal.sf2.src, (char *)data + read, l);
@@ -515,7 +523,7 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 			return read;
 
 		/* EOF? */
-		if (s->internal.sf2.current >= ARRAY_SIZE(s->internal.sf2.data))
+		if (s->internal.sf2.current >= s->internal.sf2.num)
 			return read;
 
 		/* start over at the new offset */
@@ -530,17 +538,27 @@ static void sf2_slurp_closure(slurp_t *s)
 	slurp_seek(s->internal.sf2.src, s->internal.sf2.origpos, SEEK_SET);
 }
 
-void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
-	int64_t off2, size_t len2)
+/* usage: slurp_sf2v2(&sf2, in, 2, off1, len1, off2, len2, off3, len3 ...) */
+int slurp_sf2v2(slurp_t *s, slurp_t *in, size_t num, int64_t off1, int64_t len1, ...)
 {
+	size_t i;
+	va_list ap;
+
+	if (!num || (num > ARRAY_SIZE(s->internal.sf2.data)))
+		return -1;
+
 	memset(s, 0, sizeof(slurp_t));
 
 	s->internal.sf2.src = in;
+	s->internal.sf2.num = num;
 	s->internal.sf2.data[0].off = off1;
 	s->internal.sf2.data[0].len = len1;
-	s->internal.sf2.data[1].off = off2;
-	s->internal.sf2.data[1].len = len2;
-	s->internal.sf2.origpos = slurp_tell(in);
+	va_start(ap, len1);
+	for (i = 1; i < num; i++) {
+		s->internal.sf2.data[i].off = va_arg(ap, int64_t);
+		s->internal.sf2.data[i].len = va_arg(ap, int64_t);
+	}
+	va_end(ap);
 
 	/* now, fill in the functions :) */
 	s->length = sf2_slurp_length;
@@ -550,6 +568,14 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 	s->closure = sf2_slurp_closure;
 
 	slurp_rewind(s);
+
+	return 0;
+}
+
+void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
+	int64_t off2, size_t len2)
+{
+	slurp_sf2v2(s, in, 2, off1, len1, off2, len2);
 }
 
 /* --------------------------------------------------------------------- */
