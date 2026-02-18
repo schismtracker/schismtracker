@@ -66,10 +66,9 @@ COREATM(64, int64_t)
 # undef COREATM
 #endif
 
-/* Retro68 has the functions declared, but they are not actually exported
- * anywhere, which causes a link error. */
-#if (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_ATOMICS__) && !defined(SCHISM_MACOS)
+#if defined(HAVE_C11_32_ATOMICS) || defined(HAVE_C11_64_ATOMICS)
 # include <stdatomic.h>
+
 # define C11ATM(NAME, TYPE) \
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
 	{ \
@@ -84,18 +83,20 @@ COREATM(64, int64_t)
 	{ \
 		return atomic_fetch_add((_Atomic volatile TYPE *)&atm->x, x); \
 	}
-# ifndef ATM_DEFINED
+
+# if !defined(ATM_DEFINED) && defined(HAVE_C11_32_ATOMICS)
 C11ATM(/* none */, int32_t)
 #  define ATM_DEFINED
 # endif
-# ifndef ATM64_DEFINED
+# if !defined(ATM64_DEFINED) && defined(HAVE_C11_64_ATOMICS)
 C11ATM(64, int64_t)
 #  define ATM64_DEFINED
 # endif
+
 # undef C11ATM
 #endif
 
-#if SCHISM_GNUC_HAS_BUILTIN(__atomic_load, 4, 7, 0) && !defined(SCHISM_MACOS)
+#if defined(HAVE_GCC47_32_ATOMICS) || defined(HAVE_GCC47_64_ATOMICS)
 # define GNUCATM(NAME, TYPE) \
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
 	{ \
@@ -112,18 +113,19 @@ C11ATM(64, int64_t)
 	{ \
 		return __atomic_fetch_add(&atm->x, x, __ATOMIC_SEQ_CST); \
 	}
-# ifndef ATM_DEFINED
+
+# if !defined(ATM_DEFINED) && defined(HAVE_GCC47_32_ATOMICS)
 GNUCATM(/* none */, int32_t)
 #  define ATM_DEFINED
 # endif
-# ifndef ATM64_DEFINED
+# if !defined(ATM64_DEFINED) && defined(HAVE_GCC47_64_ATOMICS)
 GNUCATM(64, int64_t)
 #  define ATM64_DEFINED
 # endif
 # undef GNUCATM
 #endif
 
-#if SCHISM_GNUC_HAS_BUILTIN(__sync_synchronize, 4, 1, 0)
+#if defined(HAVE_GCC41_32_ATOMICS) || defined(HAVE_GCC41_64_ATOMICS)
 /* I hope this is right */
 
 #define GNUCATM(NAME, TYPE) \
@@ -143,11 +145,11 @@ GNUCATM(64, int64_t)
 		return __sync_fetch_and_add(&atm->x, x); \
 	}
 
-# ifndef ATM_DEFINED
+# if !defined(ATM_DEFINED) && defined(HAVE_GCC41_32_ATOMICS)
 GNUCATM(/* none */, int32_t)
 #  define ATM_DEFINED
 # endif
-# if !defined(ATM64_DEFINED) && !defined(__powerpc__)
+# if !defined(ATM64_DEFINED) && defined(HAVE_GCC41_64_ATOMICS)
 GNUCATM(64, int64_t)
 #  define ATM64_DEFINED
 # endif
@@ -200,9 +202,6 @@ int64_t atm64_add(struct atm64 *atm, int64_t x)
 #endif
 
 #if defined(__WATCOMC__) && defined(__386__)
-SCHISM_STATIC_ASSERT(sizeof(void *) == sizeof(int32_t),
-	"atomic code assumes that pointer is 32-bit");
-
 static int32_t _watcom_xchg(volatile int32_t *a, int32_t v);
 #pragma aux _watcom_xchg = \
 	"lock xchg [ecx], eax" \
@@ -217,7 +216,7 @@ static int32_t _watcom_xadd(volatile int32_t *a, int32_t v);
 	value [eax] \
 	modify exact [eax];
 
-#ifndef ATM_DEFINED
+#ifdef ATM_DEFINED
 int32_t atm_load(struct atm *atm)
 {
 	return _watcom_xadd(&atm->x, 0);
