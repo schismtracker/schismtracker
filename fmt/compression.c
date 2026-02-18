@@ -257,7 +257,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 // ------------------------------------------------------------------------------------------------------------
 // MDL sample decompression
 
-static inline uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp, int8_t n)
+static uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp, int8_t n)
 {
 	uint16_t v = (uint16_t)((*bitbuf) & ((1 << n) - 1) );
 	(*bitbuf) >>= n;
@@ -311,7 +311,7 @@ uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
 		data[j] = dlt;
 	}
 
-	slurp_seek(fp, startpos + v, SEEK_SET);
+	slurp_seek(fp, startpos + v + 4, SEEK_SET);
 
 	return v;
 }
@@ -334,13 +334,15 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
 	slurp_read(fp, &bitbuf, sizeof(bitbuf));
 	bitbuf = bswapLE32(bitbuf);
 
-	uint8_t *data = dest;
+	uint16_t *data = dest;
 
 	for (uint32_t j=0; j<len; j++) {
 		uint8_t hibyte;
 		uint8_t sign;
+
 		lowbyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 8);
 		sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 1);
+
 		if (mdl_read_bits(&bitbuf, &bitnum, fp, 1)) {
 			hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 3);
 		} else {
@@ -350,16 +352,11 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
 		}
 		if (sign) hibyte = ~hibyte;
 		dlt += hibyte;
-#ifdef WORDS_BIGENDIAN
-		data[j<<1] = dlt;
-		data[(j<<1)+1] = lowbyte;
-#else
-		data[j<<1] = lowbyte;
-		data[(j<<1)+1] = dlt;
-#endif
+
+		data[j] = ((uint16_t)dlt << 8) | lowbyte;
 	}
 
-	slurp_seek(fp, startpos + v, SEEK_SET);
+	slurp_seek(fp, startpos + v + 4, SEEK_SET);
 
 	return v;
 }
