@@ -117,6 +117,7 @@ struct slurp_struct_ {
 				uint64_t len;
 			} data[2];
 			int current; /* which data is currently being used */
+			int num;
 
 			/* original position from before we mutilated it */
 			int64_t origpos;
@@ -147,6 +148,9 @@ int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize);
 /* Binds two memory streams together.
  * Both streams must be of the exact same size. */
 int slurp_2memstream(slurp_t *t, const uint8_t *mem1, const uint8_t *mem2, size_t memsize);
+
+/* Binds parts of an existing stream together. */
+int slurp_sf2v2(slurp_t *s, slurp_t *in, size_t num, int64_t off1, int64_t len1, ...);
 
 /* Binds two separate parts of an existing stream together.
  * unslurp() should be called here. */
