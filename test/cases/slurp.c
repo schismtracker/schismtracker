@@ -78,9 +78,11 @@ static testresult_t test_slurp_common(slurp_t *fp)
 
 	for (i = 0; i < 5; i++) {
 		size_t x;
+		int64_t y;
 		x = slurp_read(fp, buf, sizeof(buf));
 		ASSERT_PRINTF(x == 0, "%" PRIuSZ, x);
-		ASSERT(slurp_tell(fp) == sizeof(buf));
+		y = slurp_tell(fp);
+		ASSERT_PRINTF(y == sizeof(buf), "%" PRId64, y);
 		ASSERT(slurp_eof(fp));
 	}
 
