@@ -563,25 +563,17 @@ static struct mdlpat *mdl_read_patterns_v0(song_t *song, slurp_t *fp)
 	return pat_head.next;
 }
 
-struct receive_userdata {
-	song_note_t *track;
-	int *lostfx;
-};
-
-static int mdl_receive_track(const void *data, size_t len, void *userdata)
+static void mdl_read_track(slurp_t *fp, song_note_t *track, int *lostfx, int *truncated)
 {
-	struct receive_userdata *rec_userdata = userdata;
 	int row = 0;
-	uint8_t b, x, y;
+	uint8_t x, y;
+	int b;
 	uint8_t vol, e1, e2, p1, p2;
-	song_note_t *track = rec_userdata->track;
-	int *lostfx = rec_userdata->lostfx;
 
-	slurp_t fake_fp = {0};
-	slurp_memstream(&fake_fp, (uint8_t *)data, len);
-
-	while (row < 256 && !slurp_eof(&fake_fp)) {
-		b = slurp_getc(&fake_fp);
+	while (row < 256 && !slurp_eof(fp)) {
+		b = slurp_getc(fp);
+		if (b == EOF)
+			break; /* this is ok */
 		x = b >> 2;
 		y = b & 3;
 		switch (y) {
@@ -601,36 +593,29 @@ static int mdl_receive_track(const void *data, size_t len, void *userdata)
 			row++;
 			break;
 		case 3: // New note data
-			if (x & MDLNOTE_NOTE) {
-				b = slurp_getc(&fake_fp);
-				// convenient! :)
-				// (I don't know what DT does for out of range notes, might be worth
-				// checking some time)
-				track[row].note = (b > 120) ? NOTE_OFF : b;
-			}
-			if (x & MDLNOTE_SAMPLE) {
-				b = slurp_getc(&fake_fp);
-				if (b >= MAX_INSTRUMENTS)
-					b = 0;
-				track[row].instrument = b;
-			}
-			vol = (x & MDLNOTE_VOLUME) ? slurp_getc(&fake_fp) : 0;
-			if (x & MDLNOTE_EFFECTS) {
-				b = slurp_getc(&fake_fp);
+			/* rat019.mdl is somehow corrupted, or we're just doing this wrong */
+#define NAB(X) ((x & (X)) && !((*truncated) |= ((b = slurp_getc(fp)) == EOF)))
+			// convenient! :)
+			// (I don't know what DT does for out of range notes, might be worth
+			// checking some time)
+			track[row].note = NAB(MDLNOTE_NOTE) ? ((b > 120) ? NOTE_OFF : b) : 0;
+			track[row].instrument = NAB(MDLNOTE_SAMPLE) ? ((b >= MAX_INSTRUMENTS) ? 0 : b) : 0;
+
+			vol = NAB(MDLNOTE_VOLUME) ? b : 0;
+			if (NAB(MDLNOTE_EFFECTS)) {
 				e1 = b & 0xf;
 				e2 = b >> 4;
 			} else {
 				e1 = e2 = 0;
 			}
-			p1 = (x & MDLNOTE_PARAM1) ? slurp_getc(&fake_fp) : 0;
-			p2 = (x & MDLNOTE_PARAM2) ? slurp_getc(&fake_fp) : 0;
+			p1 = NAB(MDLNOTE_PARAM1) ? b : 0;
+			p2 = NAB(MDLNOTE_PARAM2) ? b : 0;
+#undef NAB
 			*lostfx += cram_mdl_effects(&track[row], vol, e1, e2, p1, p2);
 			row++;
 			break;
 		}
 	}
-
-	return slurp_tell(&fake_fp);
 }
 
 static int mdl_read_tracks(slurp_t *fp, song_note_t *tracks[65536])
@@ -638,33 +623,42 @@ static int mdl_read_tracks(slurp_t *fp, song_note_t *tracks[65536])
 	/* why are we allocating so many of these ? */
 	uint16_t ntrks, trk;
 	int lostfx = 0;
+	int truncated = 0;
 
 	slurp_read(fp, &ntrks, 2);
 	ntrks = bswapLE16(ntrks);
 
 	// track 0 is always blank
 	for (trk = 1; trk <= ntrks; trk++) {
-		int64_t startpos = slurp_tell(fp);
+		int64_t startpos = slurp_tell(fp), endpos;
 		if (startpos < 0)
 			return 0; /* what ? */
 
 		uint16_t bytesleft;
 		slurp_read(fp, &bytesleft, sizeof(bytesleft));
 		bytesleft = bswapLE16(bytesleft);
+		if (!bytesleft)
+			continue; /* ??? */
 
 		tracks[trk] = mem_calloc(256, sizeof(song_note_t));
 
-		struct receive_userdata data = {0};
+		slurp_t sub;
+		/* hm, sf2 isn't intended to be used like this...
+		 * but I'm gonna use it like this anyway :)
+		 * TODO sf2 should be able to have a runtime
+		 * limit so this can be less terrible */
+		slurp_sf2v2(&sub, fp, 1, slurp_tell(fp), bytesleft);
 
-		data.track = tracks[trk];
-		data.lostfx = &lostfx;
+		mdl_read_track(&sub, tracks[trk], &lostfx, &truncated);
 
-		int c = slurp_receive(fp, mdl_receive_track, bytesleft, &data);
-
-		slurp_seek(fp, startpos + c + 2, SEEK_SET);
+		/* Sometimes we get less data than anticipated, and have to
+		 * seek manually */
+		slurp_seek(fp, startpos + 2 + bytesleft, SEEK_SET);
 	}
 	if (lostfx)
 		log_appendf(4, " Warning: %d effect%s dropped", lostfx, lostfx == 1 ? "" : "s");
+	if (truncated)
+		log_appendf(4, " Warning: expected more track data than found (file truncated?)");
 
 	return 1;
 }
@@ -784,7 +778,7 @@ static void mdl_read_instruments(song_t *song, slurp_t *fp)
 	}
 }
 
-static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
+static void mdl_read_sampleinfo_h(song_t *song, slurp_t *fp, uint8_t *packtype, int volhack)
 {
 	struct mdl_sampleinfo sinfo;
 	song_sample_t *smp;
@@ -793,7 +787,6 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 	nsmp = slurp_getc(fp);
 	while (nsmp--) {
 #define READ_VALUE(name) slurp_read(fp, &sinfo.name, sizeof(sinfo.name))
-
 		READ_VALUE(smpnum);
 		READ_VALUE(name);
 		READ_VALUE(filename);
@@ -803,7 +796,6 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 		READ_VALUE(looplen);
 		READ_VALUE(volume);
 		READ_VALUE(flags);
-
 #undef READ_VALUE
 
 		if (sinfo.smpnum == 0 || sinfo.smpnum > MAX_SAMPLES) {
@@ -822,6 +814,7 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 		smp->length = bswapLE32(sinfo.length);
 		smp->loop_start = bswapLE32(sinfo.loopstart);
 		smp->loop_end = bswapLE32(sinfo.looplen);
+		smp->volume = (volhack) ? sinfo.volume : 256;
 		if (smp->loop_end) {
 			smp->loop_end += smp->loop_start;
 			smp->flags |= CHN_LOOP;
@@ -840,60 +833,15 @@ static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
 	}
 }
 
+static void mdl_read_sampleinfo(song_t *song, slurp_t *fp, uint8_t *packtype)
+{
+	mdl_read_sampleinfo_h(song, fp, packtype, 1);
+}
+
 // (ughh)
 static void mdl_read_sampleinfo_v0(song_t *song, slurp_t *fp, uint8_t *packtype)
 {
-	struct mdl_sampleinfo sinfo;
-	song_sample_t *smp;
-	int nsmp;
-
-	nsmp = slurp_getc(fp);
-	while (nsmp--) {
-#define READ_VALUE(name) slurp_read(fp, &sinfo.name, sizeof(sinfo.name))
-
-		READ_VALUE(smpnum);
-		READ_VALUE(name);
-		READ_VALUE(filename);
-		READ_VALUE(c4speed);
-		READ_VALUE(length);
-		READ_VALUE(loopstart);
-		READ_VALUE(looplen);
-		READ_VALUE(volume);
-		READ_VALUE(flags);
-
-#undef READ_VALUE
-
-		if (sinfo.smpnum == 0 || sinfo.smpnum > MAX_SAMPLES) {
-			continue;
-		}
-
-		smp = song->samples + sinfo.smpnum;
-		strncpy(smp->name, sinfo.name, 25);
-		smp->name[25] = '\0';
-		strncpy(smp->filename, sinfo.filename, 8);
-		smp->filename[8] = '\0';
-
-		smp->c5speed = bswapLE16(sinfo.c4speed) * 2;
-		smp->length = bswapLE32(sinfo.length);
-		smp->loop_start = bswapLE32(sinfo.loopstart);
-		smp->loop_end = bswapLE32(sinfo.looplen);
-		smp->volume = sinfo.volume; //mphack (range 0-255, I think?)
-		if (smp->loop_end) {
-			smp->loop_end += smp->loop_start;
-			smp->flags |= CHN_LOOP;
-		}
-		if (sinfo.flags & 1) {
-			smp->flags |= CHN_16BIT;
-			smp->length >>= 1;
-			smp->loop_start >>= 1;
-			smp->loop_end >>= 1;
-		}
-		if (sinfo.flags & 2)
-			smp->flags |= CHN_PINGPONGLOOP;
-		packtype[sinfo.smpnum] = ((sinfo.flags >> 2) & 3);
-
-		smp->global_volume = 64;
-	}
+	mdl_read_sampleinfo_h(song, fp, packtype, 0);
 }
 
 static void mdl_read_envelopes(slurp_t *fp, struct mdlenv **envs, uint32_t flags)
@@ -973,7 +921,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 	struct mdlenv *volenvs[64] = {0}, *panenvs[64] = {0}, *freqenvs[64] = {0};
 	uint8_t packtype[MAX_SAMPLES] = {0};
 	song_note_t *tracks[65536] = {0};
-	long datapos = 0; // where to seek for the sample data
+	int64_t datapos = -1; // where to seek for the sample data
 	int restartpos = -1;
 	int trk, n;
 	uint32_t readflags = 0;
@@ -991,8 +939,16 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 		uint32_t blklen; // length of this block
 		size_t nextpos; // ... and start of next one
 
-		slurp_read(fp, tag, 2);
-		slurp_read(fp, &blklen, 4);
+		nextpos = slurp_read(fp, tag, 2);
+		if (nextpos != 2) {
+			if (nextpos != 0)
+				log_appendf(4, " Block tag incomplete (file truncated?)");
+			break;
+		}
+		if (slurp_read(fp, &blklen, 4) != 4) {
+			log_appendf(4, " Block length incomplete (file truncated?)");
+			break;
+		}
 		blklen = bswapLE32(blklen);
 		nextpos = slurp_tell(fp) + blklen;
 
@@ -1093,7 +1049,7 @@ int fmt_mdl_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 		// Sample headers loaded!
 		// if the sample data was encountered, load it now
 		// otherwise, clear out the sample lengths so Bad Things don't happen later
-		if (datapos) {
+		if (datapos != -1) {
 			slurp_seek(fp, datapos, SEEK_SET);
 			for (n = 1; n < MAX_SAMPLES; n++) {
 				if (!packtype[n] && !song->samples[n].length)
