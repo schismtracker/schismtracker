@@ -1051,6 +1051,9 @@ AC_DEFUN([SCHISM_CHECK_COMPILE_FLAG], [
 	fi
 ])
 
+dnl shut up clang
+SCHISM_CHECK_COMPILE_FLAG([-Wno-unknown-warning-option])
+
 dnl Unlike a grand -Werror, this one could be rather important:
 dnl functions returning random values are no good under any circumstances.
 SCHISM_CHECK_COMPILE_FLAG([-Werror=return-type])
@@ -1069,6 +1072,73 @@ SCHISM_CHECK_COMPILE_FLAG([-Werror=overlength-strings])
 
 dnl disable this for now, clang's implementation is incorrect  --paper
 dnl SCHISM_CHECK_COMPILE_FLAG([-Werror=cast-function-type])
+
+# SCHISM_CHECK_ATOMIC(NAME, PROGRAM, DEFINE, DEFINEDESC, USERFRIENDLYNAME)
+# ------------------------------------------------------------------------
+AC_DEFUN([SCHISM_CHECK_ATOMIC], [
+	AC_MSG_CHECKING([for $5 atomics])
+
+	AC_LINK_IFELSE([AC_LANG_SOURCE([[
+		#ifdef HAVE_STDINT_H
+		#include <stdint.h>
+		#endif
+
+		$2
+	]])], [haveit=yes], [haveit=no])
+	AC_MSG_RESULT([$haveit])
+
+	if test "x$haveit" = "xyes"; then
+		AC_DEFINE($3, 1, $4)
+	fi
+])
+
+# SCHISM_CHECK_C11_ATOMICS(SIZE)
+# ------------------------------
+AC_DEFUN([SCHISM_CHECK_C11_ATOMICS], [
+	SCHISM_CHECK_ATOMIC([C11_$1], [
+		#include <stdatomic.h>
+
+		int main(int argc, char **argv)
+		{
+			_Atomic volatile int$1_t x;
+			atomic_store(&x, 0);
+			return atomic_fetch_add(&x, argc);
+		}
+	], [HAVE_C11_$1_ATOMICS], [$1-bit C11 atomics support (atomic_fetch_add)], [C11 $1-bit])
+])
+
+SCHISM_CHECK_C11_ATOMICS([32])
+SCHISM_CHECK_C11_ATOMICS([64])
+
+# SCHISM_CHECK_GCC47_ATOMICS(SIZE)
+# --------------------------------
+AC_DEFUN([SCHISM_CHECK_GCC47_ATOMICS], [
+	SCHISM_CHECK_ATOMIC([GCC47_$1], [
+		int main(int argc, char **argv)
+		{
+			volatile int$1_t x = 0;
+			return __atomic_fetch_add(&x, argc, __ATOMIC_SEQ_CST);
+		}
+	], [HAVE_GCC47_$1_ATOMICS], [$1-bit GCC 4.7 atomics support (__atomic_fetch_add)], [GCC 4.7 $1-bit])
+])
+
+SCHISM_CHECK_GCC47_ATOMICS([32])
+SCHISM_CHECK_GCC47_ATOMICS([64])
+
+# SCHISM_CHECK_GCC41_ATOMICS(SIZE)
+# --------------------------------
+AC_DEFUN([SCHISM_CHECK_GCC41_ATOMICS], [
+	SCHISM_CHECK_ATOMIC([GCC41_$1], [
+		int main(int argc, char **argv)
+		{
+			volatile int$1_t x = 0;
+			return __sync_fetch_and_add(&x, argc);
+		}
+	], [HAVE_GCC41_$1_ATOMICS], [$1-bit GCC 4.1 atomics support (__sync_fetch_and_add)], [GCC 4.1 $1-bit])
+])
+
+SCHISM_CHECK_GCC41_ATOMICS([32])
+SCHISM_CHECK_GCC41_ATOMICS([64])
 
 dnl --------------------------------------------------------------------------
 dnl check for a target. TARGET is what to pass to the compiler, and NAME is
