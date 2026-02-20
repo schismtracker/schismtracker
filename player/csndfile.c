@@ -2138,3 +2138,10 @@ void csf_update_playing_sample(song_t *csf, int s_changed)
 		}
 	}
 }
+
+int32_t csf_toggle_waveform(song_t *csf, int32_t x)
+{
+	csf->waveform_enable += x;
+
+	return csf->waveform_enable;
+}

@@ -63,6 +63,11 @@ struct info_window_type {
 	uses -2.) confusing, almost to the point of being painful, but it works. (ok, i admit, it's not
 	the most brilliant idea i ever had ;) */
 	int channels;
+
+	/* called when the window is toggled; int parameter tells
+	 * 1 -- toggled on
+	 * 0 -- toggled off  */
+	void (*toggler)(int);
 };
 
 struct info_window {
@@ -733,6 +738,24 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 	}
 }
 
+static void info_draw_waveforms(int base, int height, int active, int first_channel)
+{
+	struct vgamem_overlay n;
+	song_voice_t *chan;
+
+	draw_box(2, base, 77, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
+
+	/* set up the overlay */
+	n.x1 = 3;
+	n.x2 = 76;
+	n.y1 = base + 1;
+	n.y2 = base + height - 2;
+	vgamem_ovl_alloc(&n);
+
+	chan = current_song->voices + first_channel - 1;
+	draw_sample_data_rect_8(&n, chan->waveform, WAVEFORM_SIZE, 1, 1);
+}
+
 /* --------------------------------------------------------------------- */
 /* click receivers */
 
@@ -795,11 +818,25 @@ static void click_chn_nil(SCHISM_UNUSED int x, SCHISM_UNUSED int y, SCHISM_UNUSE
 }
 
 /* --------------------------------------------------------------------- */
+/* togglers */
+
+static void toggler_nil(SCHISM_UNUSED int on)
+{
+	/* nothing */
+}
+
+static void toggler_waveforms(int on)
+{
+	/* might need to lock here but probably not */
+	csf_toggle_waveform(current_song, (on) ? 1 : -1);
+}
+
+/* --------------------------------------------------------------------- */
 /* declarations of the window types */
 
-#define TRACK_VIEW(n) {"track" # n, info_draw_track_##n, click_chn_is_x, 1, n}
+#define TRACK_VIEW(n) {"track" # n, info_draw_track_##n, click_chn_is_x, 1, n, toggler_nil}
 static const struct info_window_type window_types[] = {
-	{"samples", info_draw_samples, click_chn_is_y_nohead, 0, -2},
+	{"samples", info_draw_samples, click_chn_is_y_nohead, 0, -2, toggler_nil},
 	TRACK_VIEW(5),
 	TRACK_VIEW(8),
 	TRACK_VIEW(10),
@@ -808,13 +845,43 @@ static const struct info_window_type window_types[] = {
 	TRACK_VIEW(24),
 	TRACK_VIEW(36),
 	TRACK_VIEW(64),
-	{"global", info_draw_channels, click_chn_nil, 1, 0},
-	{"dots", info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
-	{"tech", info_draw_technical, click_chn_is_y, 1, -2},
+	{"global", info_draw_channels, click_chn_nil, 1, 0, toggler_nil},
+	{"dots", info_draw_note_dots, click_chn_is_y_nohead, 0, -2, toggler_nil},
+	{"tech", info_draw_technical, click_chn_is_y, 1, -2, toggler_nil},
+	{"waveforms", info_draw_waveforms, click_chn_nil, 0, 1, toggler_waveforms},
 };
 #undef TRACK_VIEW
 
 #define NUM_WINDOW_TYPES ((int)ARRAY_SIZE(window_types))
+
+/* --------------------------------------------------------------------- */
+
+static int window_set_type(int w, int type)
+{
+	if (type < 0 || type >= NUM_WINDOW_TYPES)
+		return -1;
+
+	window_types[windows[w].type].toggler(0);
+	window_types[type].toggler(1);
+	windows[w].type = type;
+	return 0;
+}
+
+/* this shifts the current window type by `shift`
+ * e.g. window_shift_type(w, 2) would incrmeent the type by 2 */
+static int window_shift_type(int w, int shift)
+{
+	if (!shift)
+		return 0; /* ok */
+
+	shift += windows[w].type;
+	shift %= NUM_WINDOW_TYPES;
+	/* make it a modulo */
+	if (shift < 0)
+		shift += NUM_WINDOW_TYPES;
+
+	return window_set_type(w, shift);
+}
 
 /* --------------------------------------------------------------------- */
 
@@ -949,6 +1016,7 @@ static void cfg_load_info_old(cfg_file_t *cfg)
 
 	for (i = 0; i < num_windows; i++) {
 		windows[i].first_channel = 1;
+		window_types[windows[i].type].toggler(1);
 	}
 
 	recalculate_windows();
@@ -999,6 +1067,9 @@ void cfg_load_info(cfg_file_t *cfg)
 		}
 		windows[num_windows++].height = n;
 	} while (num_windows < MAX_WINDOWS - 1);
+
+	for (n = 0; n < num_windows; n++)
+		window_types[windows[n].type].toggler(1);
 
 	recalculate_windows();
 	if (status.current_page == PAGE_INFO)
@@ -1282,18 +1353,14 @@ static int info_page_handle_key(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = windows[selected_window].type;
-		if (n == 0)
-			n = NUM_WINDOW_TYPES;
-		n--;
-		windows[selected_window].type = n;
+		window_shift_type(selected_window, -1);
 		break;
 	case SCHISM_KEYSYM_PAGEDOWN:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		windows[selected_window].type = (windows[selected_window].type + 1) % NUM_WINDOW_TYPES;
+		window_shift_type(selected_window, 1);
 		break;
 	case SCHISM_KEYSYM_TAB:
 		if (k->state == KEY_RELEASE)
@@ -1351,4 +1418,9 @@ void info_load_page(struct page *page)
 	page->help_index = HELP_INFO_PAGE;
 
 	widget_create_other(widgets_info + 0, 0, info_page_handle_key, NULL, info_page_redraw);
+
+	/* bump waveform toggle to -1; set_page and waveform widget both
+	 * bump it up one, so the waveform will only get rendered if they
+	 * are both on screen at once, reducing the amount of work */
+	csf_toggle_waveform(current_song, -1);
 }

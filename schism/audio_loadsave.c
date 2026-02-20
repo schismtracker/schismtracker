@@ -306,6 +306,7 @@ int song_load_unchecked(const char *file)
 	song_set_filename(file);
 
 	song_lock_audio();
+	newsong->waveform_enable = current_song->waveform_enable;
 	csf_free(current_song);
 	current_song = newsong;
 	current_song->repeat_count = 0;

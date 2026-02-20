@@ -1594,9 +1594,19 @@ void set_page(int new_page)
 {
 	int prev_page = status.current_page;
 
-
-	if (new_page != prev_page)
+	if (new_page != prev_page) {
 		status.previous_page = prev_page;
+
+		/* hax: only render out the waveform if we're on the info page
+		 * AND the waveform widget is enabled
+		 *
+		 * see page_info.c for moar info */
+		if (new_page == PAGE_INFO) {
+			csf_toggle_waveform(current_song, 1);
+		} else if (prev_page == PAGE_INFO) {
+			csf_toggle_waveform(current_song, -1);
+		}
+	}
 	status.current_page = new_page;
 
 	video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);

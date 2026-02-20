@@ -249,7 +249,8 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
 
-		vu_max[i] = (csf->voices[opl_v].vu_meter << 16) / OPL_VOLUME;
+		/* avoid divisions */
+		vu_max[i] = 0;
 	}
 
 	// IF we wanted to do the stereo mix in software, we could setup the voices always in mono
@@ -287,7 +288,8 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 		if (opl_v < 0 || opl_v >= MAX_VOICES /* this is a bug */)
 			continue;
 
-		csf->voices[opl_v].vu_meter = (vu_max[i] * OPL_VOLUME) >> 16;
+		vu_max[i] = (vu_max[i] * OPL_VOLUME) >> 16;
+		csf->voices[opl_v].vu_meter = MAX(csf->voices[opl_v].vu_meter, vu_max[i]);
 	}
 }
 

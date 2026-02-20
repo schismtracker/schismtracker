@@ -108,6 +108,8 @@
 	const int##bits##_t *p = (int##bits##_t *)chan->current_sample_data; \
 	int32_t *pvol = pbuffer; \
 	uint32_t max = chan->vu_meter; \
+	size_t wvcounter = chan->wvcounter; \
+	int8_t *const pwv = chan->waveform; \
 	do {
 
 
@@ -118,6 +120,7 @@
 		position = csf_smp_pos_add(position, chan->increment); \
 	} while (pvol < pbufmax); \
 	chan->vu_meter = max; \
+	chan->wvcounter = wvcounter; \
 	chan->position = position;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -239,6 +242,10 @@
 	uint32_t vol_avg = avg_u32(safe_abs_32(vol_lx), safe_abs_32(vol_rx)); \
 	if (max < vol_avg) max = vol_avg;
 
+#define SNDMIX_STOREWAVEFORM \
+	wvcounter = (wvcounter + 1) % WAVEFORM_SIZE; \
+	pwv[wvcounter] = rshift_signed(bavgs32(vol_lx, vol_rx), 17);
+
 // FIXME why are these backwards? what?
 #define SNDMIX_STOREMONOVOL \
 	int32_t vol_lx = vol * chan->right_volume; \
@@ -318,8 +325,8 @@ int32_t FlitClip(int32_t x)
 typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 
 /* this is the big one */
-#define DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, RAMP, RAMPUPPER, BEGINRAMP, ENDRAMP) \
-	static void FLTNAM##CHNS##BITS##Bit##RESAMPLING##RAMP##Mix(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
+#define DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, RAMP, RAMPUPPER, BEGINRAMP, ENDRAMP, WAVEFORM, WAVEFORMNAME) \
+	static void FLTNAM##CHNS##BITS##Bit##RESAMPLING##RAMP##Mix##WAVEFORMNAME(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
 	{ \
 		struct song_smp_pos position; \
 		BEGINRAMP \
@@ -330,15 +337,22 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 		FILTER \
 		SNDMIX_##RAMPUPPER##CHNSUPPER##VOL \
 		SNDMIX_STOREVUMETER \
+		WAVEFORM \
 		SNDMIX_ENDSAMPLELOOP \
 		ENDFILTER \
 		ENDRAMP \
 	}
 
+#define DEFINE_MIX_INTERFACE_WAVEFORM(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, RAMP, RAMPUPPER, BEGINRAMP, ENDRAMP) \
+	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
+		RAMP, RAMPUPPER, BEGINRAMP, ENDRAMP, /* none */, /* none */) \
+	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
+		RAMP, RAMPUPPER, BEGINRAMP, ENDRAMP, SNDMIX_STOREWAVEFORM, Waveform)
+
 #define DEFINE_MIX_INTERFACE_RAMP(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER) \
-	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
+	DEFINE_MIX_INTERFACE_WAVEFORM(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
 		/* nothing */, STORE, /* nothing */,  /* nothing */) \
-	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
+	DEFINE_MIX_INTERFACE_WAVEFORM(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
 		Ramp,          RAMP,  MIX_BEGIN_RAMP, MIX_END_RAMP)
 
 /* defines all resampling variations */
@@ -418,37 +432,39 @@ DEFINE_STEREO_RESAMPLE_INTERFACE(16)
 //
 // Mix function tables
 //
-//
-// Index is as follows:
-//      [b1-b0] format (8-bit-mono, 16-bit-mono, 8-bit-stereo, 16-bit-stereo)
-//      [b2]    ramp
-//      [b3]    filter
-//      [b5-b4] src type
 
+/* flags */
 #define MIXNDX_16BIT        0x01
 #define MIXNDX_STEREO       0x02
 #define MIXNDX_RAMP         0x04
 #define MIXNDX_FILTER       0x08
-#define MIXNDX_LINEARSRC    0x10
-#define MIXNDX_SPLINESRC    0x20
-#define MIXNDX_FIRSRC       0x30
+#define MIXNDX_WAVEFORM     0x10
 
-#define BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, ramp) \
-	filter##Mono8Bit##resampling##ramp##Mix, \
-	filter##Mono16Bit##resampling##ramp##Mix, \
-	filter##Stereo8Bit##resampling##ramp##Mix, \
-	filter##Stereo16Bit##resampling##ramp##Mix,
+/* just offsets into the table */
+#define MIXNDX_LINEARSRC    0x20
+#define MIXNDX_SPLINESRC    0x40
+#define MIXNDX_FIRSRC       0x60
 
-#define BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, filter) \
-	BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, /* none */) \
-	BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, Ramp)
+#define BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, ramp, waveform) \
+	filter##Mono8Bit##resampling##ramp##Mix##waveform, \
+	filter##Mono16Bit##resampling##ramp##Mix##waveform, \
+	filter##Stereo8Bit##resampling##ramp##Mix##waveform, \
+	filter##Stereo16Bit##resampling##ramp##Mix##waveform,
+
+#define BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, filter, waveform) \
+	BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, /* none */, waveform) \
+	BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, Ramp, waveform)
+
+#define BUILD_MIX_FUNCTION_TABLE_RESAMPLING(resampling, waveform) \
+	BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, /* none */, waveform) \
+	BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, Filter, waveform)
 
 #define BUILD_MIX_FUNCTION_TABLE(resampling) \
-	BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, /* none */) \
-	BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, Filter)
+	BUILD_MIX_FUNCTION_TABLE_RESAMPLING(resampling, /* none */) \
+	BUILD_MIX_FUNCTION_TABLE_RESAMPLING(resampling, Waveform)
 
 // mix_(bits)(m/s)[_filt]_(interp/spline/fir/whatever)[_ramp]
-static const mix_interface_t mix_functions[2 * 2 * 16] = {
+static const mix_interface_t mix_functions[2 * 2 * 32] = {
 	BUILD_MIX_FUNCTION_TABLE(/* none */)
 	BUILD_MIX_FUNCTION_TABLE(Linear)
 	BUILD_MIX_FUNCTION_TABLE(Spline)
@@ -673,6 +689,14 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 }
 
 
+static void channel_clear_waveform(song_voice_t *channel)
+{
+	if (!channel->wvhit) return;
+
+	memset(channel->waveform, 0, sizeof(channel->waveform));
+	channel->wvcounter = channel->wvhit = 0;
+}
+
 uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 {
 	int32_t* ofsl, *ofsr;
@@ -698,8 +722,10 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 		if ((!channel->current_sample_data || !channel->ptr_sample /* HAX */)
 			&& !channel->lofs
-			&& !channel->rofs)
+			&& !channel->rofs) {
+			channel_clear_waveform(channel);
 			continue;
+		}
 
 		ofsr = &csf->dry_rofs_vol;
 		ofsl = &csf->dry_lofs_vol;
@@ -713,6 +739,11 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 		if (channel->flags & CHN_FILTER)
 			flags |= MIXNDX_FILTER;
+
+		if (csf->waveform_enable > 0) {
+			flags |= MIXNDX_WAVEFORM;
+			channel->wvhit = 1;
+		}
 
 		if (!(channel->flags & CHN_NOIDO)) {
 			uint32_t srcflags[NUM_SRC_MODES] = {
@@ -774,6 +805,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				*ofsl += channel->lofs;
 				channel->rofs = channel->lofs = 0;
 				channel->flags &= ~CHN_PINGPONGFLAG;
+				channel_clear_waveform(channel);
 				break;
 			}
 
@@ -784,6 +816,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				channel->position = csf_smp_pos_add(channel->position, csf_smp_pos_mul_whole(channel->increment, smpcount));
 				channel->rofs = channel->lofs = 0;
 				pbuffer += smpcount * 2;
+				channel_clear_waveform(channel);
 			} else if (!(channel->flags & CHN_ADLIB)) {
 				// Mix the stream, unless we're in AdLib mode
 

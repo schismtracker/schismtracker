@@ -42,6 +42,11 @@
 #define MIX_MAX_CHANNELS		2 /* used for filters and stuff */
 #define MIXBUFFERSIZE           512
 
+/* size of the waveform cache for each channel.
+ * the waveform of each rendered channel is always
+ * signed 8-bit mono. */
+#define WAVEFORM_SIZE (1024)
+
 
 #define CHN_16BIT               0x01 // 16-bit sample
 #define CHN_LOOP                0x02 // looped sample
@@ -620,6 +625,13 @@ typedef struct song_voice {
 	uint32_t row_voleffect, row_volparam;
 	uint32_t row_effect, row_param;
 	uint32_t active_macro, last_instrument;
+
+	/* channel waveform and counter.
+	 * FIXME the waveform needs to be shared across
+	 * all of the master channels for NNAs */
+	int8_t waveform[WAVEFORM_SIZE];
+	size_t wvcounter;
+	unsigned int wvhit;
 } song_voice_t;
 
 typedef struct song_channel {
@@ -851,6 +863,9 @@ typedef struct song {
 	song_midi_out_raw_spec_t midi_out_raw;
 	// -----------------------------------------------------------------------
 
+	/* csf_toggle_waveform() count */
+	int32_t waveform_enable;
+
 	// noise reduction filter
 	int32_t left_nr, right_nr;
 
@@ -970,6 +985,8 @@ void csf_calculate_vu_meters(song_t *csf, float vus[MAX_CHANNELS]);
 
 void csf_update_playing_instrument(song_t *csf, int i_changed);
 void csf_update_playing_sample(song_t *csf, int s_changed);
+
+int32_t csf_toggle_waveform(song_t *csf, int32_t x);
 
 /* ------------------------------------------------------------------------ */
 
