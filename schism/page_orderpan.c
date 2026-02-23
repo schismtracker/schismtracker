@@ -683,12 +683,13 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		status.flags |= NEED_UPDATE;
 		return 1;
 	default:
-		if (k->mouse == MOUSE_NONE) {
-			if (!(k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) && k->text)
-				return orderlist_handle_text_input_on_list(k->text);
+		if (k->mouse != MOUSE_NONE)
+			break;
 
-			return 0;
-		}
+		if (!(k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) && k->text)
+			return orderlist_handle_text_input_on_list(k->text);
+
+		return 0;
 	}
 
 	if (new_cursor_pos < 0)
@@ -911,7 +912,7 @@ void orderpan_load_page(struct page *page)
 	/* 0 = order list */
 	widget_create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list,
 		orderlist_handle_text_input_on_list, orderlist_draw);
-	widgets_orderpan[0].accept_text = 1;
+	widgets_orderpan[0].accept_text = 0;
 	widgets_orderpan[0].x = 6;
 	widgets_orderpan[0].y = 15;
 	widgets_orderpan[0].width = 3;

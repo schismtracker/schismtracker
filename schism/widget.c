@@ -158,7 +158,7 @@ void widget_create_numentry(struct widget *w, int x, int y, int width, int next_
 		     int next_tab, void (*changed) (void), int32_t min, int32_t max, int *cursor_pos)
 {
 	w->type = WIDGET_NUMENTRY;
-	w->accept_text = 1;
+	w->accept_text = 0; /* changed this so that IME would stop showing up, might fuck things up --paper */
 	w->x = x;
 	w->y = y;
 	w->width = width;
