@@ -79,6 +79,15 @@ void status_text_flash_bios(const char *format, ...)
 	va_end(ap);
 }
 
+void status_text_clear(void)
+{
+	/* oke */
+	if (status_text) {
+		free(status_text);
+		status_text = NULL;
+	}
+}
+
 /* --------------------------------------------------------------------- */
 
 static inline int _loop_count(char *buf, int pos)

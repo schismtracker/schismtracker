@@ -975,7 +975,7 @@ static int _handle_ime(struct key_event *k)
 			/* do nothing */
 		} else if (!NO_MODIFIER((k->mod&~SCHISM_KEYMOD_SHIFT)) || (c=(k->text) ? ((uint8_t)*k->text) : k->sym) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
-				if (digraph_n > 0) status_text_flash(" ");
+				if (digraph_n > 0) status_text_clear();
 				digraph_n = -1;
 			}
 		} else if (digraph_n >= 2) {
@@ -1000,7 +1000,7 @@ static int _handle_ime(struct key_event *k)
 			}
 			return 1;
 		} else {
-			if (digraph_n > 0) status_text_flash(" ");
+			if (digraph_n > 0) status_text_clear();
 			digraph_n = 0;
 		}
 

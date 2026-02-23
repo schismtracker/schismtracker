@@ -59,5 +59,9 @@ void status_text_flash(const char *format, ...)
 	SCHISM_FORMAT_PRINTF(1, 2);
 void status_text_flash_bios(const char *format, ...)
 	SCHISM_FORMAT_PRINTF(1, 2);
+/* Clears any status text.
+ * This is better than doing status_text_flash(" "); as this
+ * doesn't override any playback data */
+void status_text_clear(void);
 
 #endif /* SCHISM_LOG_H_ */
