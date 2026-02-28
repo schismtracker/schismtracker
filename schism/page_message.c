@@ -394,16 +394,18 @@ static void message_delete_char(void)
 
 	if (cursor_pos == 0)
 		return;
-	memmove(current_song->message + cursor_pos - 1, current_song->message + cursor_pos,
-		len - cursor_pos + 1);
-	current_song->message[MAX_MESSAGE] = 0;
-	cursor_pos--;
+
 	if (cursor_char == 0) {
 		cursor_line--;
 		cursor_char = get_nth_line(current_song->message, cursor_line, &ptr);
 	} else {
 		cursor_char--;
 	}
+
+	memmove(current_song->message + cursor_pos - 1, current_song->message + cursor_pos,
+		len - cursor_pos + 1);
+	current_song->message[MAX_MESSAGE] = 0;
+	cursor_pos--;
 
 	message_reposition();
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
