@@ -515,7 +515,7 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 			return read;
 
 		/* EOF? */
-		if (s->internal.sf2.current >= ARRAY_SIZE(s->internal.sf2.data))
+		if ((s->internal.sf2.current + 1) >= ARRAY_SIZE(s->internal.sf2.data))
 			return read;
 
 		/* start over at the new offset */

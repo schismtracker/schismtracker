@@ -432,7 +432,9 @@ void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uin
 {
 	// at most 32-bits...
 	union {
-		uint8_t uc[NATIVE_SCREEN_WIDTH];
+		/* `uc` is also used as an intermediate buffer for 32-bit -> 24-bit conversion,
+		 * hence why the size is multiplied by four */
+		uint8_t uc[NATIVE_SCREEN_WIDTH * 4];
 		uint16_t us[NATIVE_SCREEN_WIDTH];
 		uint32_t ui[NATIVE_SCREEN_WIDTH];
 	} pixels_u;
