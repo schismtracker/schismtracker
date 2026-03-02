@@ -167,6 +167,7 @@ noinst_HEADERS = \
 	sys/wii/isfs.h			\
 	sys/wii/su_tik_bin.h		\
 	sys/macos/dirent/macos-dirent.h \
+	sys/macos/midi-oms-wrap.h \
 	sys/wii/su_tmd_bin.h        \
 	sys/sdl12/init.h \
 	sys/sdl2/init.h \
@@ -427,7 +428,8 @@ files_macos = \
 	sys/macos/dirent/macos-dirent.c \
 	sys/macos/dmoz.c \
 	sys/macos/clippy.c \
-	sys/macos/midi-midimgr.c \
+	sys/macos/midi-oms.c \
+	sys/macos/midi-oms-wrap.c \
 	sys/asio/audio-asio.c \
 	sys/asio/audio-asio-mac.c
 cflags_macos=-I$(top_srcdir)/sys/macos/dirent
@@ -442,7 +444,8 @@ libs_macos= \
 	-lContextualMenu \
 	-lDrawSprocketLib \
 	-lDialogsLib \
-	-lInterfaceLib
+	-lInterfaceLib \
+	-lDriverServicesLib
 
 # Specific to the Retro68 toolchain to create MacBinary files
 schismtracker.bin: schismtracker.pef $(top_srcdir)/sys/macos/resource.r

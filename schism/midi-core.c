@@ -268,7 +268,7 @@ static void _midi_engine_connect(void)
 	macosx_midi_setup();
 #endif
 #ifdef SCHISM_MACOS
-	midimgr_midi_setup();
+	oms_midi_setup();
 #endif
 }
 
