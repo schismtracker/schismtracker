@@ -33,6 +33,7 @@
 #include "midi.h" /* midi_event_length */
 #include "util.h" /* for clamp/min */
 #include "mem.h"
+#include "bits.h" /* [l/r]shift_signed */
 
 #include "it.h" // needed for status.flags (UGH)
 
@@ -588,9 +589,9 @@ static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
 		if (param) {
 			int vol = chan->volume;
 			if (retrig_table_1[param])
-				vol = (vol * retrig_table_1[param]) >> 4;
+				vol = rshift_signed(vol * retrig_table_1[param], 4);
 			else
-				vol += (retrig_table_2[param]) << 2;
+				vol += lshift_signed(retrig_table_2[param], 2);
 			chan->volume = CLAMP(vol, 0, 256);
 			chan->flags |= CHN_FASTVOLRAMP;
 		}
@@ -872,17 +873,10 @@ void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_
 			break;
 		}
 	} else if (!fake && csf->midi_out_raw) {
-		/* okay, this is kind of how it works.
-		we pass buffer_count as here because while
-			1000 * ((8((buffer_size/2) - buffer_count)) / sample_rate)
-		is the number of msec we need to delay by, libmodplug simply doesn't know
-		what the buffer size is at this point so buffer_count simply has no
-		frame of reference.
+		/* This was all wrong. */
+		double pos = csf_ticks_to_samples(csf_get_current_tick(csf), csf->mix_frequency, csf->current_tempo);
 
-		fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
-
-		*/
-		csf->midi_out_raw(csf, data, len, csf->buffer_count);
+		csf->midi_out_raw(csf, data, len, pos);
 	}
 }
 

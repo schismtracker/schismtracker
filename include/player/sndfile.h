@@ -995,5 +995,17 @@ uint32_t csf_calculate_tick_length(song_t *csf)
 		/ (csf->current_tempo << 8);
 }
 
+/* converts ticks to samples */
+#define csf_tick_length_in_samples(freq, tempo) ((double)(5 * (int32_t)(freq)) / (2 * (int32_t)(tempo)))
+
+#define csf_ticks_to_samples(ticks, freq, tempo) (int32_t)((int32_t)(ticks) * csf_tick_length_in_samples(freq, tempo))
+
+/* starts at 0 */
+SCHISM_CONST SCHISM_ALWAYS_INLINE static inline
+int32_t csf_get_current_tick(song_t *csf)
+{
+	return csf->current_speed - csf->tick_count;
+}
+
 #endif /* SCHISM_PLAYER_SNDFILE_H_ */
 

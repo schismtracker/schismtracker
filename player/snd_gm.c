@@ -688,10 +688,7 @@ void GM_IncrementSongCounter(song_t *csf, int32_t count)
 	 * where cmdT = last FX_TEMPO = current_tempo
 	 */
 
-	int32_t TickLengthInSamplesHi = 5 * current_song->mix_frequency;
-	int32_t TickLengthInSamplesLo = 2 * current_song->current_tempo;
-
-	double TickLengthInSamples = TickLengthInSamplesHi / (double) TickLengthInSamplesLo;
+	double TickLengthInSamples = csf_tick_length_in_samples(csf->mix_frequency, csf->current_tempo);
 
 	/* TODO: Use fraction arithmetics instead (note: cmdA, cmdT may change any time) */
 
