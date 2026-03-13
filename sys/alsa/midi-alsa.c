@@ -69,6 +69,7 @@ static void (*ALSA_snd_seq_queue_tempo_set_ppq)(snd_seq_queue_tempo_t *info, int
 static int (*ALSA_snd_seq_set_queue_tempo)(snd_seq_t *handle, int q, snd_seq_queue_tempo_t *tempo);
 static long (*ALSA_snd_midi_event_encode)(snd_midi_event_t *dev,const unsigned char *buf,long count,snd_seq_event_t *ev);
 static int (*ALSA_snd_seq_event_output)(snd_seq_t *handle, snd_seq_event_t *ev);
+static int (*ALSA_snd_seq_event_output_direct)(snd_seq_t *handle, snd_seq_event_t *ev);
 static int (*ALSA_snd_seq_alloc_queue)(snd_seq_t*h);
 static int (*ALSA_snd_seq_free_event)(snd_seq_event_t *ev);
 static int (*ALSA_snd_seq_connect_from)(snd_seq_t*seeq,int my_port,int src_client, int src_port);
@@ -185,6 +186,7 @@ static int load_alsa_syms(void) {
 	SCHISM_ALSA_SYM(snd_seq_set_queue_tempo);
 	SCHISM_ALSA_SYM(snd_midi_event_encode);
 	SCHISM_ALSA_SYM(snd_seq_event_output);
+	SCHISM_ALSA_SYM(snd_seq_event_output_direct);
 	SCHISM_ALSA_SYM(snd_seq_alloc_queue);
 	SCHISM_ALSA_SYM(snd_seq_free_event);
 	SCHISM_ALSA_SYM(snd_seq_connect_from);
@@ -243,10 +245,10 @@ static void _alsa_send(struct midi_port *p, const unsigned char *data, uint32_t 
 		ALSA_snd_seq_ev_clear(&ev);
 		ALSA_snd_seq_ev_set_source(&ev, amp->local_port);
 		ALSA_snd_seq_ev_set_subs(&ev);
-		if (!delay) {
-			ALSA_snd_seq_ev_set_direct(&ev);
-		} else {
+		if (delay) {
 			ALSA_snd_seq_ev_schedule_tick(&ev, amp->alsa_queue, 1, delay);
+		} else {
+			ALSA_snd_seq_ev_set_direct(&ev);
 		}
 
 		/* we handle our own */
@@ -255,7 +257,11 @@ static void _alsa_send(struct midi_port *p, const unsigned char *data, uint32_t 
 
 		rr = ALSA_snd_midi_event_encode(ex->dev, data, len, &ev);
 		if (rr < 1) break;
-		ALSA_snd_seq_event_output(amp->seq, &ev);
+		if (delay) {
+			ALSA_snd_seq_event_output(amp->seq, &ev);
+		} else {
+			ALSA_snd_seq_event_output_direct(amp->seq, &ev);
+		}
 		ALSA_snd_seq_free_event(&ev);
 		data += rr;
 		len -= rr;
