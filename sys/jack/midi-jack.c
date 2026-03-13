@@ -83,14 +83,16 @@ static int load_jack_syms(void);
 
 void *jack_dltrick_handle_ = NULL;
 
-static void jack_dlend(void) {
+static void jack_dlend(void)
+{
 	if (jack_dltrick_handle_) {
 		loadso_object_unload(jack_dltrick_handle_);
 		jack_dltrick_handle_ = NULL;
 	}
 }
 
-static int jack_dlinit(void) {
+static int jack_dlinit(void)
+{
 	if (jack_dltrick_handle_)
 		return 0;
 
@@ -109,7 +111,8 @@ static int jack_dlinit(void) {
 // FIXME this is repeated in many places
 SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
-static int load_jack_sym(const char *fn, void *addr) {
+static int load_jack_sym(const char *fn, void *addr)
+{
 	void *func = loadso_function_load(jack_dltrick_handle_, fn);
 	if (!func)
 		return 0;
@@ -126,14 +129,16 @@ static int load_jack_sym(const char *fn, void *addr) {
 
 #define SCHISM_JACK_SYM(x) JACK_##x = x
 
-static int jack_dlinit(void) {
+static int jack_dlinit(void)
+{
 	load_jack_syms();
 	return 0;
 }
 
 #endif
 
-static int load_jack_syms(void) {
+static int load_jack_syms(void)
+{
 	SCHISM_JACK_SYM(jack_client_open);
 	SCHISM_JACK_SYM(jack_client_close);
 	SCHISM_JACK_SYM(jack_activate);
@@ -189,15 +194,18 @@ struct jack_midi {
 	jack_port_t* port;
 };
 
-static void _jack_send(struct midi_port *p, const unsigned char *data, uint32_t len, uint32_t delay) {
+static void _jack_send(struct midi_port *p, const unsigned char *data, uint32_t len, uint32_t delay)
+{
 	struct jack_midi_provider *jmp = p->provider->userdata;
 
 	while (len > 0) {
 		/* this sucks and is totally inaccurate, since midi_event_length doesn't care about sysex.
 		 * (can we even SEND sysex through jack?) */
 		uint32_t real_len = midi_event_length(*data);
-		if (real_len > len)
-			return;
+		real_len = MIN(real_len, len);
+
+		if (!real_len)
+			return; // ???
 
 		if (real_len + sizeof(real_len) > jmp->ringbuffer_out_max_write)
 			return;
@@ -216,8 +224,9 @@ static void _jack_send(struct midi_port *p, const unsigned char *data, uint32_t 
 	(void)delay;
 }
 
-static int _jack_start(struct midi_port *p) {
-	struct jack_midi* m = (struct jack_midi *)p->userdata;
+static int _jack_start(struct midi_port *p)
+{
+	struct jack_midi *m = (struct jack_midi *)p->userdata;
 	struct jack_midi_provider *jmp = p->provider->userdata;
 
 	if (p->io & MIDI_INPUT)
@@ -230,7 +239,7 @@ static int _jack_start(struct midi_port *p) {
 
 static int _jack_stop(struct midi_port *p)
 {
-	struct jack_midi* m = (struct jack_midi *)p->userdata;
+	struct jack_midi *m = (struct jack_midi *)p->userdata;
 	struct jack_midi_provider *jmp = p->provider->userdata;
 
 	if (p->io & MIDI_INPUT)
@@ -282,7 +291,7 @@ static int _jack_process(jack_nframes_t nframes, void *user_data)
 	       && JACK_jack_ringbuffer_read_space(jmp->ringbuffer_out) >= sizeof(size) + size) {
 		JACK_jack_ringbuffer_read_advance(jmp->ringbuffer_out, sizeof(size));
 
-		jack_midi_data_t* data = JACK_jack_midi_event_reserve(midi_out_buffer, 0, size);
+		jack_midi_data_t *data = JACK_jack_midi_event_reserve(midi_out_buffer, 0, size);
 
 		if (data)
 			JACK_jack_ringbuffer_read(jmp->ringbuffer_out, (char*)data, size);
