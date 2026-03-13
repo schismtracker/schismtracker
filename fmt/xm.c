@@ -454,6 +454,9 @@ static void fix_xm_envelope_loop(song_envelope_t *s_env, int sustain_flag)
 	int n;
 	float v;
 
+	if (s_env->loop_end <= 0)
+		return; /* WTF */
+
 	if (s_env->ticks[s_env->loop_end - 1] == s_env->ticks[s_env->loop_end] - 1) {
 		// simplest case: prior node is one tick behind already, set envelope end index
 		s_env->loop_end--;
