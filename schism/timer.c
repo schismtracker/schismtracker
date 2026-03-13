@@ -38,7 +38,11 @@ timer_ticks_t timer_ticks(void)
 
 timer_ticks_t timer_ticks_us(void)
 {
-	return backend->ticks_us();
+	if (backend->ticks_us)
+		return backend->ticks_us();
+
+	/* MS -> US */
+	return timer_ticks() * UINT64_C(1000);
 }
 
 void timer_usleep(uint64_t usec)
@@ -100,6 +104,8 @@ static mt_sem_t *timer_oneshot_sem = NULL;
 /* This function does all the heavy lifting (INCLUDING mutex crap) */
 static timer_ticks_t timer_oneshot_work_(void)
 {
+	timer_ticks_t wait;
+
 #ifdef USE_THREADS
 	mt_mutex_lock(timer_oneshot_mutex);
 #endif
@@ -123,7 +129,7 @@ static timer_ticks_t timer_oneshot_work_(void)
 #endif
 
 	// Now process any timers that have finished
-	timer_ticks_t wait = UINT64_MAX;
+	wait = UINT64_MAX;
 
 	if (oneshot_data_list) {
 		struct timer_oneshot_data_ *data = oneshot_data_list, *prev = NULL;
@@ -154,6 +160,8 @@ static timer_ticks_t timer_oneshot_work_(void)
 			}
 		}
 	}
+
+	if (wait < 1000) wait = 1000;
 
 	return wait / 1000;
 }
@@ -260,8 +268,8 @@ int timer_init(void)
 		oneshot_data_pending = NULL;
 		oneshot_data_list = NULL;
 
-#ifdef USE_THREADS
 		timer_oneshot_mutex = mt_mutex_create();
+#ifdef USE_THREADS
 		timer_oneshot_sem = mt_sem_create();
 
 		atm_store(&timer_oneshot_thread_cancelled, 0);
