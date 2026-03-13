@@ -210,7 +210,7 @@ SCHISM_ABS_VARIANT(64)
 
 /* round((x + y) / 2) */
 #define SCHISM_UAVG_VARIANT(BITS) \
-	static inline SCHISM_ALWAYS_INLINE \
+	static inline SCHISM_ALWAYS_INLINE SCHISM_CONST \
 	uint##BITS##_t bavgu##BITS(uint##BITS##_t x, uint##BITS##_t y) \
 	{ \
 		uint##BITS##_t x_d_rem    = (x & 1); \
@@ -236,7 +236,7 @@ SCHISM_UAVG_VARIANT(64)
 
 /* round((x + y) / 2) */
 #define SCHISM_SAVG_VARIANT(BITS) \
-	static inline SCHISM_ALWAYS_INLINE \
+	static inline SCHISM_ALWAYS_INLINE SCHISM_CONST \
 	int##BITS##_t bavgs##BITS(int##BITS##_t x, int##BITS##_t y) \
 	{ \
 		int##BITS##_t x_d_rem    = (x % 2); \
@@ -257,7 +257,7 @@ SCHISM_SAVG_VARIANT(64)
 /* ------------------------------------------------------------------------ */
 /* floor(log10(x)) */
 
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 int bplacesu8(uint8_t x)
 {
 	if (x < UINT8_C(10)) return 1;
@@ -265,7 +265,7 @@ int bplacesu8(uint8_t x)
 	return 3;
 }
 
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 int bplacesu16(uint16_t x)
 {
 	if (x < UINT16_C(10)) return 1;
@@ -275,7 +275,7 @@ int bplacesu16(uint16_t x)
 	return 5;
 }
 
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 int bplacesu32(uint32_t x)
 {
 	if (x < UINT32_C(10)) return 1;
@@ -290,7 +290,7 @@ int bplacesu32(uint32_t x)
 	return 10;
 }
 
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 int bplacesu64(uint64_t x)
 {
 	if (x < UINT64_C(10)) return 1;
@@ -318,7 +318,7 @@ int bplacesu64(uint64_t x)
 /* floor(log10(abs(x))) */
 
 #define SCHISM_SPLACES_VARIANT(BITS) \
-	static inline SCHISM_ALWAYS_INLINE \
+	static inline SCHISM_ALWAYS_INLINE SCHISM_CONST \
 	int bplacess##BITS(int##BITS##_t x) \
 	{ \
 		return bplacesu##BITS(babs##BITS(x)); \
@@ -396,7 +396,7 @@ void barray_clear_impl(uint32_t *barray, int bit)
 	barray[bit >> 5] &= ~((uint32_t)1 << (bit & 0x1F));
 }
 
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 int barray_isset_impl(uint32_t *barray, int bit)
 {
 	return !!(barray[bit >> 5] & ((uint32_t)1 << (bit & 0x1F)));
@@ -414,7 +414,7 @@ int barray_isset_impl(uint32_t *barray, int bit)
 /* Gets the nearest power of 2 from a 32-bit integer
  * Can easily be used for 8, 16, or 64 bit as well
  * by adding or removing shifts */
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 uint32_t bnextpow2(uint32_t x)
 {
 	x--;
@@ -430,7 +430,7 @@ uint32_t bnextpow2(uint32_t x)
 /* ------------------------------------------------------------------------ */
 /* fast 32-bit log2. */
 
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 uint32_t blog2(uint32_t x)
 {
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_clz, 3, 4, 6)
@@ -453,7 +453,7 @@ uint32_t blog2(uint32_t x)
 /* ------------------------------------------------------------------------ */
 /* reverses the bits in x, fast */
 
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 uint32_t breverse32(uint32_t x)
 {
 	x = (x & 0xFFFF0000) >> 16 | (x & 0x0000FFFF) << 16;
@@ -467,7 +467,7 @@ uint32_t breverse32(uint32_t x)
 /* ------------------------------------------------------------------------ */
 /* fast greatest common divisor/factor implementation */
 
-static inline SCHISM_ALWAYS_INLINE
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 uint32_t bgcd32(uint32_t a, uint32_t b)
 {
 	while (a != 0) {
