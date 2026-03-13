@@ -1083,30 +1083,26 @@ static void _env_draw_loop(int xs, int xe, int sustain)
 {
 	int y = 0;
 	int c = (status.flags & CLASSIC_MODE) ? 12 : 3;
+	int c1, c2;
 
 	if (sustain) {
-		while (y < 62) {
-			/* unrolled once */
-			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
-			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
-			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
-			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
-		}
+		c1 = c;
+		c2 = 0;
 	} else {
-		while (y < 62) {
-			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
-			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
-			vgamem_ovl_drawpixel(&env_overlay, xs, y, c);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, c); y++;
-			vgamem_ovl_drawpixel(&env_overlay, xs, y, 0);
-			vgamem_ovl_drawpixel(&env_overlay, xe, y, 0); y++;
-		}
+		c1 = 0;
+		c2 = c;
+	}
+
+	while (y < 62) {
+		/* unrolled once */
+		vgamem_ovl_drawpixel(&env_overlay, xs, y, c1);
+		vgamem_ovl_drawpixel(&env_overlay, xe, y, c1); y++;
+		vgamem_ovl_drawpixel(&env_overlay, xs, y, c2);
+		vgamem_ovl_drawpixel(&env_overlay, xe, y, c2); y++;
+		vgamem_ovl_drawpixel(&env_overlay, xs, y, c );
+		vgamem_ovl_drawpixel(&env_overlay, xe, y, c ); y++;
+		vgamem_ovl_drawpixel(&env_overlay, xs, y, 0 );
+		vgamem_ovl_drawpixel(&env_overlay, xe, y, 0 ); y++;
 	}
 }
 
