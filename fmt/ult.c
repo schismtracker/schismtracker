@@ -329,7 +329,7 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			continue;
 		smp->length = usmp.size_end - usmp.size_start;
 		smp->loop_start = usmp.loop_start;
-		smp->loop_end = MIN(usmp.loop_end, smp->length);
+		smp->loop_end = usmp.loop_end;
 		smp->volume = usmp.volume; //mphack - should be 0-64 not 0-256
 		smp->global_volume = 64;
 
