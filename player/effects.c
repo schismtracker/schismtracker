@@ -2142,11 +2142,11 @@ void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t
 		break;
 
 	case VOLFX_PANSLIDELEFT: // <x (FT2)
-		fx_panning_slide(csf->flags, chan, vol);
+		fx_panning_slide(csf->flags, chan, (vol << 4) | 0x0F);
 		break;
 
 	case VOLFX_PANSLIDERIGHT: // >x (FT2)
-		fx_panning_slide(csf->flags, chan, vol << 4);
+		fx_panning_slide(csf->flags, chan, (vol & 0x0F) | 0xF0);
 		break;
 	}
 }
