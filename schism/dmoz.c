@@ -1793,8 +1793,9 @@ static int qsort_cmp_dir(const void *_a, const void *_b)
 
 void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist)
 {
-	qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
-	if (dlist)
+	if (flist->files && flist->num_files)
+		qsort(flist->files, flist->num_files, sizeof(dmoz_file_t *), qsort_cmp_file);
+	if (dlist && dlist->dirs)
 		qsort(dlist->dirs, dlist->num_dirs, sizeof(dmoz_dir_t *), qsort_cmp_dir);
 }
 
