@@ -396,7 +396,7 @@ void barray_clear_impl(uint32_t *barray, int bit)
 	barray[bit >> 5] &= ~((uint32_t)1 << (bit & 0x1F));
 }
 
-static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
+static inline SCHISM_ALWAYS_INLINE SCHISM_PURE
 int barray_isset_impl(uint32_t *barray, int bit)
 {
 	return !!(barray[bit >> 5] & ((uint32_t)1 << (bit & 0x1F)));
