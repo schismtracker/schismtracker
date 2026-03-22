@@ -268,8 +268,8 @@ int timer_init(void)
 		oneshot_data_pending = NULL;
 		oneshot_data_list = NULL;
 
-		timer_oneshot_mutex = mt_mutex_create();
 #ifdef USE_THREADS
+		timer_oneshot_mutex = mt_mutex_create();
 		timer_oneshot_sem = mt_sem_create();
 
 		atm_store(&timer_oneshot_thread_cancelled, 0);
