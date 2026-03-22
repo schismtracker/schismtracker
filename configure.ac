@@ -433,10 +433,28 @@ AC_CHECK_SIZEOF([float])
 AC_CHECK_SIZEOF([double])
 AC_CHECK_SIZEOF([long double])
 
+# SCHISM_CHECK_C23_FLOAT(SUFFIX)
+# ------------------------------
+AC_DEFUN([SCHISM_CHECK_C23_FLOAT], [
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[
+				#include <stdio.h>
+				static const _Float$1 x = 1.0f$1;
+			]],
+			[[
+				printf("%f\n", (double)x);
+			]]
+		)],
+		[AC_CHECK_SIZEOF(_Float$1)],
+		[] dnl nothing
+	)
+])
+
 dnl Added with C23
-AC_CHECK_SIZEOF([_Float32])
-AC_CHECK_SIZEOF([_Float64])
-AC_CHECK_SIZEOF([_Float64x])
+SCHISM_CHECK_C23_FLOAT([32])
+SCHISM_CHECK_C23_FLOAT([64])
+SCHISM_CHECK_C23_FLOAT([64x])
 
 dnl GNU-C specific floating point extensions
 AC_CHECK_SIZEOF([__float80])
