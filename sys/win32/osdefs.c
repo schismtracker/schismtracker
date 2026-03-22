@@ -1269,8 +1269,8 @@ int win32_event(schism_event_t *event)
 			SCHISM_ANSI_UNICODE({
 				int needed = DragQueryFileA(drop, 0, NULL, 0);
 
-				char *f = mem_alloc((needed + 1) * sizeof(char));
-				DragQueryFileA(drop, 0, f, needed);
+				char *f = mem_alloc(needed + 1);
+				DragQueryFileA(drop, 0, f, needed + 1);
 				f[needed] = 0;
 
 				charset_iconv(f, &e.drop.file, CHARSET_ANSI, CHARSET_CHAR,
