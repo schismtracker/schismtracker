@@ -552,7 +552,7 @@ SCHISM_NORETURN void schism_assert_fail(const char *msg, const char *exp, const 
 	do { \
 		/* Make sure the message is actually a string.. */ \
 		SCHISM_STATIC_ASSERT(sizeof((msg)[0]) == 1u, "Assertion message must be a string"); \
-		if (!(x)) schism_assert_fail((msg), #x, __FILE__, __LINE__); \
+		if (!SCHISM_UNLIKELY(x)) schism_assert_fail((msg), #x, __FILE__, __LINE__); \
 	} while (0)
 #else
 # define SCHISM_RUNTIME_ASSERT(x, msg) do { (x); } while (0)
