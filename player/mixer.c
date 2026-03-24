@@ -459,7 +459,9 @@ static const mix_interface_t mix_functions[2 * 2 * 16] = {
 static inline SCHISM_ALWAYS_INLINE
 uint32_t distance_to_buffer_length(struct song_smp_pos from, struct song_smp_pos to, struct song_smp_pos increment)
 {
-	return ((uint32_t)csf_smp_pos_div(csf_smp_pos_sub(csf_smp_pos_sub(to, from), csf_smp_pos(1,0)), increment)) + 1;
+	return (csf_smp_pos_lt(from, to))
+	     ? (((uint32_t)csf_smp_pos_div(csf_smp_pos_sub(csf_smp_pos_sub(to, from), csf_smp_pos(1,0)), increment)) + 1)
+		 : 1;
 }
 
 struct mix_loop_state {
@@ -648,7 +650,7 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 		} else if ((chan->flags & CHN_LOOP_WRAPPED) && at_loop_start) {
 			// Interpolate properly after looping
 			sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE, 0), inv);
-			chan->current_sample_data = mls->lookahead_ptr + ((chan->length - loop_start) * ((chan->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((chan->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
+			chan->current_sample_data = mls->lookahead_ptr + ((chan->loop_end - loop_start) * ((chan->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((chan->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
 			checkdest = 0;
 		} else if (csf_smp_pos_is_positive(chan->increment) && pos_dest >= (int32_t)mls->lookahead_start && sample_count > 1) {
 			// Don't go past the loop start!
