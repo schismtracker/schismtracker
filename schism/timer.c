@@ -96,7 +96,10 @@ struct timer_oneshot_data_ {
 
 // A list of pending timers that will be added to the real list
 // by the running thread.
-static struct timer_oneshot_data_ *oneshot_data_pending SCHISM_GUARDED_BY(timer_oneshot_mutex) = NULL;
+#ifdef USE_THREADS
+SCHISM_GUARDED_BY(timer_oneshot_mutex)
+#endif
+static struct timer_oneshot_data_ *oneshot_data_pending = NULL;
 
 // this should NEVER be touched outside of the worker/thread
 static struct timer_oneshot_data_ *oneshot_data_list = NULL;
