@@ -494,12 +494,12 @@ static void asio_close_device(schism_audio_device_t *dev)
 	current_device = NULL;
 }
 
-static void asio_lock_device(schism_audio_device_t *dev)
+static void asio_lock_device(schism_audio_device_t *dev) SCHISM_ACQUIRES_LOCK(dev->mutex)
 {
 	mt_mutex_lock(dev->mutex);
 }
 
-static void asio_unlock_device(schism_audio_device_t *dev)
+static void asio_unlock_device(schism_audio_device_t *dev) SCHISM_RELEASES_LOCK(dev->mutex)
 {
 	mt_mutex_unlock(dev->mutex);
 }

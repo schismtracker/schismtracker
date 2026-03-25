@@ -35,6 +35,8 @@
 
 typedef uint64_t mt_thread_id_t;
 
+struct SCHISM_CAPABILITY("mutex") mt_mutex;
+
 /* private to each backend */
 typedef struct mt_thread mt_thread_t;
 typedef struct mt_mutex mt_mutex_t;
@@ -57,8 +59,8 @@ mt_thread_id_t mt_thread_id(void);
 
 mt_mutex_t *mt_mutex_create(void);
 void mt_mutex_delete(mt_mutex_t *mutex);
-void mt_mutex_lock(mt_mutex_t *mutex);
-void mt_mutex_unlock(mt_mutex_t *mutex);
+void mt_mutex_lock(mt_mutex_t *mutex) SCHISM_ACQUIRES_LOCK(mutex);
+void mt_mutex_unlock(mt_mutex_t *mutex) SCHISM_RELEASES_LOCK(mutex);
 
 mt_cond_t *mt_cond_create(void);
 void mt_cond_delete(mt_cond_t *cond);

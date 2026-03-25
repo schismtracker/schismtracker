@@ -434,12 +434,12 @@ uint32_t midi_engine_port_count(void)
 
 /* these are used for locking the ports, so that for example
  * the ports can be kept intact while drawing to the screen */
-void midi_engine_port_lock(void)
+void midi_engine_port_lock(void) SCHISM_ACQUIRES_LOCK(midi_port_mutex)
 {
 	mt_mutex_lock(midi_port_mutex);
 }
 
-void midi_engine_port_unlock(void)
+void midi_engine_port_unlock(void) SCHISM_RELEASES_LOCK(midi_port_mutex)
 {
 	mt_mutex_unlock(midi_port_mutex);
 }
@@ -640,8 +640,10 @@ static int64_t midi_port_get_unused(void)
 	}
 
 	/* no overflow */
-	if (port_alloc + 4u < port_alloc)
+	if (port_alloc + 4u < port_alloc) {
+		mt_mutex_unlock(midi_port_mutex);
 		return -1;
+	}
 
 	pt = realloc(port_top, sizeof(*port_top) * (port_alloc + 4u));
 	if (!pt) {

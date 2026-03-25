@@ -96,6 +96,10 @@ void mt_mutex_delete(mt_mutex_t *mutex)
 */
 }
 
+#ifdef __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wthread-safety-analysis"
+#endif
 void mt_mutex_lock(mt_mutex_t *mutex)
 {
 #ifdef USE_THREADS
@@ -125,6 +129,9 @@ void mt_mutex_unlock(mt_mutex_t *mutex)
 		"make sure we're actually a mutex?");
 */
 }
+#ifdef __clang__
+# pragma clang diagnostic pop
+#endif
 
 // ---------------------------------------------------------------------------
 /* condition variables are inherently incompatible with non-threaded

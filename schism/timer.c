@@ -72,6 +72,17 @@ void timer_msleep(uint32_t ms)
 	backend->msleep(ms);
 }
 
+#ifdef USE_THREADS
+/* XXX: these pointers ought to be atomic too. */
+static mt_thread_t *timer_oneshot_thread = NULL;
+static struct atm timer_oneshot_thread_cancelled = { 0 };
+
+/* this protects the oneshot PENDING list, not the actual
+ * list itself (important!) */
+static mt_mutex_t *timer_oneshot_mutex = NULL;
+static mt_sem_t *timer_oneshot_sem = NULL;
+#endif
+
 // A linked list of timers.
 struct timer_oneshot_data_ {
 	void (*callback)(void *param);
@@ -85,21 +96,10 @@ struct timer_oneshot_data_ {
 
 // A list of pending timers that will be added to the real list
 // by the running thread.
-static struct timer_oneshot_data_ *oneshot_data_pending = NULL;
+static struct timer_oneshot_data_ *oneshot_data_pending SCHISM_GUARDED_BY(timer_oneshot_mutex) = NULL;
 
 // this should NEVER be touched outside of the worker/thread
 static struct timer_oneshot_data_ *oneshot_data_list = NULL;
-
-#ifdef USE_THREADS
-/* XXX: these pointers ought to be atomic too. */
-static mt_thread_t *timer_oneshot_thread = NULL;
-static struct atm timer_oneshot_thread_cancelled = { 0 };
-
-/* this protects the oneshot PENDING list, not the actual
- * list itself (important!) */
-static mt_mutex_t *timer_oneshot_mutex = NULL;
-static mt_sem_t *timer_oneshot_sem = NULL;
-#endif
 
 /* This function does all the heavy lifting (INCLUDING mutex crap) */
 static timer_ticks_t timer_oneshot_work_(void)
@@ -232,6 +232,23 @@ void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param)
 #endif
 }
 
+static void timer_setup_oneshot(void) SCHISM_THREAD_SAFE
+{
+	/* Technically, this next line is the only one that needs
+	 * SCHISM_THREAD_SAFE, but whatever */
+	oneshot_data_pending = NULL;
+	oneshot_data_list = NULL;
+
+#ifdef USE_THREADS
+	timer_oneshot_mutex = mt_mutex_create();
+	timer_oneshot_sem = mt_sem_create();
+
+	atm_store(&timer_oneshot_thread_cancelled, 0);
+	timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func,
+		"Timer oneshot thread", NULL);
+#endif
+}
+
 int timer_init(void)
 {
 	static const schism_timer_backend_t *backends[] = {
@@ -264,19 +281,9 @@ int timer_init(void)
 	if (!backend)
 		return 0;
 
-	if (!backend->oneshot) {
-		oneshot_data_pending = NULL;
-		oneshot_data_list = NULL;
-
-#ifdef USE_THREADS
-		timer_oneshot_mutex = mt_mutex_create();
-		timer_oneshot_sem = mt_sem_create();
-
-		atm_store(&timer_oneshot_thread_cancelled, 0);
-		timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func,
-			"Timer oneshot thread", NULL);
-#endif
-	}
+	/* XXX should just use builtin oneshot everywhere */
+	if (!backend->oneshot)
+		timer_setup_oneshot();
 
 	return 1;
 }
