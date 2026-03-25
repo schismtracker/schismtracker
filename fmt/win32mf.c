@@ -125,12 +125,12 @@ static HRESULT STDMETHODCALLTYPE slurp_async_op_QueryInterface(IUnknown *This, R
 
 static ULONG STDMETHODCALLTYPE slurp_async_op_AddRef(IUnknown *This)
 {
-	return InterlockedIncrement(&(((struct slurp_async_op *)This)->ref_cnt));
+	return InterlockedIncrement((volatile LONG *)&(((struct slurp_async_op *)This)->ref_cnt));
 }
 
 static ULONG STDMETHODCALLTYPE slurp_async_op_Release(IUnknown *This)
 {
-	ULONG ref = InterlockedDecrement(&(((struct slurp_async_op *)This)->ref_cnt));
+	ULONG ref = InterlockedDecrement((volatile LONG *)&(((struct slurp_async_op *)This)->ref_cnt));
 	if (!ref)
 		free(This);
 
@@ -190,12 +190,12 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_QueryInterface(IMFAsyncCal
 
 static ULONG STDMETHODCALLTYPE slurp_async_callback_AddRef(IMFAsyncCallback *This)
 {
-	return InterlockedIncrement(&(((struct slurp_async_callback *)This)->ref_cnt));
+	return InterlockedIncrement((volatile LONG *)&(((struct slurp_async_callback *)This)->ref_cnt));
 }
 
 static ULONG STDMETHODCALLTYPE slurp_async_callback_Release(IMFAsyncCallback *This)
 {
-	ULONG ref = InterlockedDecrement(&(((struct slurp_async_callback *)This)->ref_cnt));
+	ULONG ref = InterlockedDecrement((volatile LONG *)&(((struct slurp_async_callback *)This)->ref_cnt));
 	if (!ref)
 		free(This);
 
@@ -302,14 +302,14 @@ static ULONG STDMETHODCALLTYPE mfbytestream_AddRef(IMFByteStream *This)
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	return InterlockedIncrement(&mfb->ref_cnt);
+	return InterlockedIncrement((volatile LONG *)&mfb->ref_cnt);
 }
 
 static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 
-	long ref = InterlockedDecrement(&mfb->ref_cnt);
+	long ref = InterlockedDecrement((volatile LONG *)&mfb->ref_cnt);
 	if (!ref) {
 		mt_mutex_delete(mfb->mutex);
 		free(mfb);
