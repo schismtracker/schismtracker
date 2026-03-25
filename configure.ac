@@ -1069,6 +1069,10 @@ AC_DEFUN([SCHISM_CHECK_COMPILE_FLAG], [
 	fi
 ])
 
+dnl Make clang actually error on unknown flags, so we don't spam with
+dnl stupid errors that drown out real problems.
+SCHISM_CHECK_COMPILE_FLAG([-Werror=unknown-warning-option])
+
 dnl Unlike a grand -Werror, this one could be rather important:
 dnl functions returning random values are no good under any circumstances.
 SCHISM_CHECK_COMPILE_FLAG([-Werror=return-type])
