@@ -239,9 +239,11 @@ struct stat {
 #ifdef __has_attribute
 # define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
 	__has_attribute(x)
+# define SCHISM_HAS_ATTRIBUTE(x) __has_attribute(x)
 #else
 # define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
 	SCHISM_GNUC_ATLEAST(major, minor, patch)
+# define SCHISM_HAS_ATTRIBUTE(x) (0)
 #endif
 
 #ifdef __has_builtin
@@ -485,10 +487,49 @@ struct stat {
 # define SCHISM_UNREACHABLE /* no-op */
 #endif
 
+/* Declares char arrays as non-C-strings.
+ * e.g.
+ * SCHISM_NONSTRING char tag[4] = "M.K."; */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__nonstring__, 8, 0, 0)
 # define SCHISM_NONSTRING __attribute__((__nonstring__))
 #else
 # define SCHISM_NONSTRING
+#endif
+
+/* Annotates that a function acquires a lock (e.g. a mutex) */
+#if SCHISM_HAS_ATTRIBUTE(__acquire_capability__)
+# define SCHISM_ACQUIRES_LOCK(m) __attribute__((__acquire_capability__(m)))
+#elif SCHISM_MSVC_ATLEAST(18, 0, 0)
+# define SCHISM_ACQUIRES_LOCK(m) _Acquires_lock_(m)
+#else
+# define SCHISM_ACQUIRES_LOCK(m)
+#endif
+
+/* Ditto, but for releasing a lock */
+#if SCHISM_HAS_ATTRIBUTE(__release_capability__)
+# define SCHISM_RELEASES_LOCK(m) __attribute__((__release_capability__(m)))
+#elif SCHISM_MSVC_ATLEAST(18, 0, 0)
+# define SCHISM_RELEASES_LOCK(m) _Requires_lock_held_(m) _Releases_lock_(m)
+#else
+# define SCHISM_RELEASES_LOCK(m)
+#endif
+
+#if SCHISM_HAS_ATTRIBUTE(__guarded_by__)
+# define SCHISM_GUARDED_BY(m) __attribute__((__guarded_by__(m)))
+#else /* MSVC? */
+# define SCHISM_GUARDED_BY(m)
+#endif
+
+#if SCHISM_HAS_ATTRIBUTE(__capability__)
+# define SCHISM_CAPABILITY(c) __attribute__((__capability__(c)))
+#else
+# define SCHISM_CAPABILITY(c)
+#endif
+
+#if SCHISM_HAS_ATTRIBUTE(__no_thread_safety_analysis__)
+# define SCHISM_THREAD_SAFE __attribute__((__no_thread_safety_analysis__))
+#else
+# define SCHISM_THREAD_SAFE
 #endif
 
 /* Win32, used for threads */
