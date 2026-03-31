@@ -658,17 +658,22 @@ static void do_delete_file(SCHISM_UNUSED void *data)
 
 static void show_selected_song_length(void)
 {
+	uint32_t len;
+	char *path;
+	song_t *song;
+
 	if (current_file < 0 || current_file >= flist.num_files)
 		return;
 
-	char *ptr = flist.files[current_file]->path;
-	song_t *song = song_create_load(ptr);
+	path = flist.files[current_file]->path;
+	song = song_create_load(path);
 	if (!song) {
-		log_appendf(4, "%s: %s", ptr, fmt_strerror(errno));
+		log_appendf(4, "%s: %s", path, fmt_strerror(errno));
 		return;
 	}
-	show_length_dialog(dmoz_path_get_basename(ptr), csf_get_length(song));
-	csf_free(song);
+	len = csf_get_length(song);
+	csf_free(song); /* free before showing the dialog */
+	show_length_dialog(dmoz_path_get_basename(path), len);
 }
 
 static int file_list_handle_text_input(const char *text)

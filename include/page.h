@@ -447,7 +447,7 @@ void new_song_dialog(void);
 void save_song_or_save_as(void);
 
 // support for the song length dialog
-void show_length_dialog(const char *label, unsigned int length);
+void show_length_dialog(const char *label, uint32_t length);
 
 /* page_patedit.c */
 void update_current_row(void);

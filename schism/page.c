@@ -1838,11 +1838,12 @@ void show_song_timejump(void)
 	d->action_yes = _timejump_ok_ptr;
 }
 
-void show_length_dialog(const char *label, unsigned int length)
+void show_length_dialog(const char *label, uint32_t length)
 {
 	char *buf;
 
-	if (asprintf(&buf, "%s: %3u:%02u:%02u", label, length / 3600, (length / 60) % 60, length % 60) == -1) {
+	if (asprintf(&buf, "%s: %3" PRIu32 ":%02" PRIu32 ":%02" PRIu32, label,
+			(uint32_t)(length / 3600), (uint32_t)((length / 60) % 60), (uint32_t)(length % 60)) == -1) {
 		perror("asprintf");
 		return;
 	}
