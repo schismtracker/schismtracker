@@ -170,22 +170,66 @@ static void _dw_stdio_seek(disko_t *ds, int64_t pos, int whence)
 // ---------------------------------------------------------------------------
 // memory backend
 
+/* Allocate memory blocks in order of the fibonnaci sequence.
+ * This is similar to, but not quite the same as growing by the golden
+ * ratio. (The fibonnaci sequence naturally caves towards the golden ratio)
+ *
+ * This function gets the next number in the fibonnaci sequence
+ * via a precomputed table. This table is trivial to reproduce,
+ * so I won't lay out the code here. :) */
+static uint64_t next_fib64(uint64_t x)
+{
+	static const uint64_t fib_tab[] = {
+		/*1,*/2,3,5,8,13,21,34,
+		55,89,144,233,377,610,987,1597,
+		2584,4181,6765,10946,17711,28657,46368,75025,
+		121393,196418,317811,514229,832040,1346269,2178309,3524578,
+		5702887,9227465,14930352,24157817,39088169,63245986,102334155,165580141,
+		267914296,433494437,701408733,1134903170,1836311903,2971215073,4807526976,7778742049,
+		12586269025,20365011074,32951280099,53316291173,86267571272,139583862445,225851433717,365435296162,
+		591286729879,956722026041,1548008755920,2504730781961,4052739537881,6557470319842,10610209857723,17167680177565,
+		27777890035288,44945570212853,72723460248141,117669030460994,190392490709135,308061521170129,498454011879264,806515533049393,
+		1304969544928657,2111485077978050,3416454622906707,5527939700884757,8944394323791464,14472334024676221,23416728348467685,37889062373143906,
+		61305790721611591,99194853094755497,160500643816367088,259695496911122585,420196140727489673,679891637638612258,1100087778366101931,1779979416004714189,
+		2880067194370816120,4660046610375530309,7540113804746346429,12200160415121876738
+	};
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(fib_tab); i++)
+		if (fib_tab[i] >= x)
+			return fib_tab[i];
+
+	/* NOTE: This size is HUGE, we're gonna have a visit to the ER afterward. */
+	return x;
+}
+
+static size_t next_fib_size(size_t x)
+{
+	uint64_t f = next_fib64(x);
+
+	/* overflow check; works regardless of the width of size_t */
+	return ((size_t)f == f) ? f : x;
+}
+
 // 0 => memory error, abandon ship
 static int _dw_bufcheck(disko_t *ds, size_t extend)
 {
+	size_t newlen;
+
 	if (ds->error)
 		return 0; /* punt */
 
-	if (ds->pos + extend <= ds->length)
+	newlen = ds->pos + extend;
+	if (newlen < ds->pos)
+		return 0; /* overflow */
+
+	if (newlen <= ds->length)
 		return 1;
 
-	ds->length = MAX(ds->length, ds->pos + extend);
+	ds->length = MAX(ds->length, newlen);
 
 	if (ds->length >= ds->allocated) {
-		/* grow the buffer by the golden ratio; this is different
-		 * than file streams, but they are different anyhow.
-		 * both Java and Python also use phi here. */
-		size_t newsize = MAX(ds->allocated * M_PHI, ds->length);
+		size_t newsize = next_fib_size(ds->length);
 		uint8_t *new = realloc(ds->data, newsize);
 		if (!new) {
 			/* would it be better to just keep the same buffer? */
