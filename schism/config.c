@@ -53,7 +53,7 @@ int cfg_video_want_fixed_height = 0;
 int cfg_video_mousecursor = MOUSE_EMULATED;
 int cfg_video_width, cfg_video_height;
 int cfg_video_hardware = 0;
-int cfg_video_want_menu_bar = 1;
+int cfg_video_want_menu_bar = 0;
 
 // If these are set to zero, it means to use the
 // system key repeat or the default fallback values.
@@ -216,7 +216,7 @@ void cfg_load(void)
 	cfg_video_mousecursor = cfg_get_number(&cfg, "Video", "mouse_cursor", MOUSE_EMULATED);
 	cfg_video_mousecursor = CLAMP(cfg_video_mousecursor, 0, MOUSE_MAX_STATE);
 	cfg_video_hardware = cfg_get_number(&cfg, "Video", "hardware", 1);
-	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 1);
+	cfg_video_want_menu_bar = !!cfg_get_number(&cfg, "Video", "want_menu_bar", 0);
 
 	{
 		/* width and height are now essentially treated as a ratio.
