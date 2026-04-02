@@ -220,8 +220,11 @@ static int _dw_bufcheck(disko_t *ds, size_t extend)
 		return 0; /* punt */
 
 	newlen = ds->pos + extend;
-	if (newlen < ds->pos)
-		return 0; /* overflow */
+	if (newlen < ds->pos) {
+		/* :) */
+		disko_seterror(ds, ERANGE);
+		return 0;
+	}
 
 	if (newlen <= ds->length)
 		return 1;
