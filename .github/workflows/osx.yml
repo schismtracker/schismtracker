@@ -203,7 +203,7 @@ jobs:
           tar xvf "libogg-$LIBOGG_VERSION.tar.xz"
           pushd "libogg-$LIBOGG_VERSION"
           # libogg's configure is too old
-          autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
+          autoreconf -I"$HOME/x86_64prefix/share/aclocal" -fi
           popd
 
       - name: 'Build libogg (powerpc)'
@@ -251,7 +251,7 @@ jobs:
           echo "$FLAC_SHA256  flac-$FLAC_VERSION.tar.xz" | shasum -a 256 -c -
           tar xvf "flac-$FLAC_VERSION.tar.xz"
           pushd "flac-$FLAC_VERSION"
-          autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
+          autoreconf -I"$HOME/x86_64prefix/share/aclocal" -fi
           popd
 
       - name: 'Build FLAC (powerpc)'
