@@ -549,7 +549,9 @@ static int sdl3_video_startup(void)
 
 	/* okay, i think we're ready */
 	sdl3_HideCursor();
+#ifdef SCHISM_SDL3_USE_COMPOSITION
 	sdl3_StartTextInput(video.window);
+#endif
 	set_icon();
 
 	return 1;

@@ -37,6 +37,7 @@ Just disable it for now I guess
 #define SCHISM_SDL3_SMOOTH_RESIZING 1
 */
 
+/* FIXME: use a .h file that contains every function we need */
 static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
 static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
@@ -53,6 +54,8 @@ static void (SDLCALL *sdl3_SetWindowsMessageHook)(SDL_WindowsMessageHook callbac
 #ifdef SCHISM_USE_X11
 static void (SDLCALL *sdl3_SetX11EventHook)(SDL_X11EventHook callback, void *userdata);
 #endif
+
+static SDL_Keycode (SDLCALL *sdl3_GetKeyFromScancode)(SDL_Scancode, SDL_Keymod, bool);
 
 #ifndef SDLK_EXTENDED_MASK // Debian doesn't have this for some reason
 #define SDLK_EXTENDED_MASK (1u << 29)
@@ -106,6 +109,7 @@ static schism_keymod_t sdl3_event_mod_state(void)
 	return sdl3_modkey_trans(sdl3_GetModState());
 }
 
+#ifdef SCHISM_SDL3_USE_COMPOSITION
 /* These are here for linking text input to keyboard inputs.
  * If no keyboard input can be found, then the text will
  * be sent as a SCHISM_TEXTINPUT event.
@@ -137,6 +141,7 @@ static void pop_pending_keydown(const char *text)
 		have_pending_keydown = 0;
 	}
 }
+#endif
 
 #ifdef SCHISM_WIN32
 # include <windows.h>
@@ -190,6 +195,38 @@ static bool SDLCALL sdl3_x11_msg_hook(SCHISM_UNUSED void *userdata, SCHISM_UNUSE
 #endif
 
 	return true;
+}
+#endif
+
+#if !defined(SCHISM_SDL3_USE_COMPOSITION)
+static void sdl3_fill_text(schism_event_t *sce, const SDL_Event *se)
+{
+	size_t len;
+	SDL_Keycode ch;
+
+	ch = sdl3_GetKeyFromScancode(se->key.scancode, se->key.mod, false);
+
+	len = 0;
+
+	/* translate to UTF-8 */
+	if (ch < 0x80) {
+		sce->key.text[len++] = (unsigned char)ch;
+	} else if (ch < 0x800) {
+		sce->key.text[len++] = (unsigned char)((ch >> 6) | 0xC0);
+		sce->key.text[len++] = (unsigned char)((ch & 0x3F) | 0x80);
+	} else if (ch < 0x10000) {
+		sce->key.text[len++] = (unsigned char)((ch >> 12) | 0xE0);
+		sce->key.text[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
+		sce->key.text[len++] = (unsigned char)((ch & 0x3F) | 0x80);
+	} else if (ch < 0x110000) {
+		sce->key.text[len++] = (unsigned char)((ch >> 18) | 0xF0);
+		sce->key.text[len++] = (unsigned char)(((ch >> 12) & 0x3F) | 0x80);
+		sce->key.text[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
+		sce->key.text[len++] = (unsigned char)((ch & 0x3F) | 0x80);
+	}
+
+	/* NUL terminate */
+	sce->key.text[len] = 0;
 }
 #endif
 
@@ -263,8 +300,10 @@ static void sdl3_pump_events(void)
 			sdl3_display_scale_changed_cb();
 			break;
 		case SDL_EVENT_KEY_DOWN:
+#ifdef SCHISM_SDL3_USE_COMPOSITION
 			// pop any pending keydowns
 			pop_pending_keydown(NULL);
+#endif
 
 			if (e.key.key & SDLK_EXTENDED_MASK)
 				break; // I don't know how to handle these
@@ -278,17 +317,24 @@ static void sdl3_pump_events(void)
 			schism_event.key.scancode = e.key.scancode;
 			schism_event.key.mod = sdl3_modkey_trans(e.key.mod); // except this one!
 
-			if (!sdl3_video_text_input_active()) {
+#ifdef SCHISM_SDL3_USE_COMPOSITION
+			if (sdl3_video_text_input_active()) {
+				push_pending_keydown(&schism_event);
+			} else {
+#else
+			{
+				sdl3_fill_text(&schism_event, &e);
+#endif
 				// push it NOW
 				events_push_event(&schism_event);
-			} else {
-				push_pending_keydown(&schism_event);
 			}
 
 			break;
 		case SDL_EVENT_KEY_UP:
+#ifdef SCHISM_SDL3_USE_COMPOSITION
 			// pop any pending keydowns
 			pop_pending_keydown(NULL);
+#endif
 
 			if (e.key.key & SDLK_EXTENDED_MASK)
 				break; // I don't know how to handle these
@@ -299,13 +345,20 @@ static void sdl3_pump_events(void)
 			schism_event.key.scancode = e.key.scancode;
 			schism_event.key.mod = sdl3_modkey_trans(e.key.mod);
 
+#ifndef SCHISM_SDL3_USE_COMPOSITION
+			sdl3_fill_text(&schism_event, &e);
+#endif
+
 			events_push_event(&schism_event);
 
 			break;
 		case SDL_EVENT_TEXT_INPUT:
+#ifdef SCHISM_SDL3_USE_COMPOSITION
 			if (have_pending_keydown) {
 				pop_pending_keydown(e.text.text);
-			} else {
+			} else
+#endif
+			{
 				schism_event.type = SCHISM_TEXTINPUT;
 
 				strncpy(schism_event.text.text, e.text.text, ARRAY_SIZE(schism_event.text.text));
@@ -376,7 +429,9 @@ static void sdl3_pump_events(void)
 		}
 	}
 
+#ifdef SCHISM_SDL3_USE_COMPOSITION
 	pop_pending_keydown(NULL);
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -421,6 +476,7 @@ static int sdl3_events_load_syms(void)
 #ifdef SCHISM_SDL3_SMOOTH_RESIZING
 	SCHISM_SDL3_SYM(AddEventWatch);
 #endif
+	SCHISM_SDL3_SYM(GetKeyFromScancode);
 
 	SCHISM_SDL3_SYM(free);
 

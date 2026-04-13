@@ -30,6 +30,19 @@
 
 #include <SDL3/SDL.h>
 
+/*
+Whether to use text composition.
+
+Text composition swallows dead keys, which sucks for us, because
+we need some of those in rare cases. However, disabling it creates
+new problems, because then composition won't work at all!!
+
+I'm leaving it enabled for now, the situation it's needed is
+somewhat rare. A more complete patch might disable composition
+at runtime depending on whether the current widget accepts text.
+*/
+#define SCHISM_SDL3_USE_COMPOSITION 1
+
 #include "headers.h"
 
 int sdl3_init(void);
