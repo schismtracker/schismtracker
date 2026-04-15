@@ -59,6 +59,11 @@
 
 #include "osdefs.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <stdint.h>
+#endif
+
 #if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2) && !defined(SCHISM_XBOX)
 # include <signal.h>
 #endif
@@ -413,25 +418,741 @@ static void key_event_reset(struct key_event *kk, int start_x, int start_y)
 
 /* -------------------------------------------- */
 
+static unsigned int event_lx = 0, event_ly = 0;
+static timer_ticks_t event_last_mouse_down, event_ticker, event_last_audio_poll;
+static time_t event_startdown;
+static int event_downtrip;
+static int event_fix_numlock_key;
+static int event_screensaver;
+static int event_button = -1;
+static struct key_event event_kk;
+static int event_keyboard_focus = 0;
+
+#ifdef __EMSCRIPTEN__
+static char web_pending_open_path[SCHISM_PATH_MAX + 1] = {0};
+static char web_pending_original_name[SCHISM_PATH_MAX + 1] = {0};
+static int web_has_pending_open = 0;
+static int web_open_result = 0; /* 0=pending/idle, 1=success, -1=failed */
+static int web_save_requested = 0;
+static uint32_t web_loop_heartbeat = 0;
+static uint8_t *web_export_data = NULL;
+static int web_export_size = 0;
+static int web_export_state = 0; /* 0=idle, 1=ready, -1=failed */
+EMSCRIPTEN_KEEPALIVE void schism_web_export_clear(void);
+
+EMSCRIPTEN_KEEPALIVE int schism_web_open_buffer(const uint8_t *data, int len, int ext_kind)
+{
+	static const char *exts[] = {
+		"it", "s3m", "xm", "mod", "mtm", "stm", "669", "ult", "bin",
+	};
+	const char *ext = "bin";
+	char path[128];
+	FILE *fp;
+
+	if (!data || len <= 0)
+		return -1;
+
+	if (ext_kind >= 0 && ext_kind < (int)(ARRAY_SIZE(exts)))
+		ext = exts[ext_kind];
+
+	snprintf(path, sizeof(path), "/tmp/web-import.%s", ext);
+	fp = fopen(path, "wb");
+	if (!fp)
+		return -2;
+
+	if ((int)fwrite(data, 1, (size_t)len, fp) != len) {
+		fclose(fp);
+		return -3;
+	}
+	fclose(fp);
+
+	strncpy(web_pending_open_path, path, sizeof(web_pending_open_path) - 1);
+	web_pending_open_path[sizeof(web_pending_open_path) - 1] = '\0';
+	web_pending_original_name[0] = '\0';
+	web_has_pending_open = 1;
+	web_open_result = 0;
+	return 0;
+}
+
+/* Queue a load from a path already populated in the MemFS (e.g. Module.FS.writeFile).
+ * Avoids ccall("array") copying huge buffers through the JS/WASM marshalling layer.
+ * original_filename: UTF-8 basename shown in the UI (File Name line); may be NULL.
+ * Allowed paths: /tmp/... (ephemeral) or /persistent/... (IDBFS-backed). */
+EMSCRIPTEN_KEEPALIVE int schism_web_open_vfs_path(const char *path, const char *original_filename)
+{
+	if (!path || !path[0])
+		return -1;
+	if (strncmp(path, "/tmp/", 5) != 0 && strncmp(path, "/persistent/", 12) != 0)
+		return -2;
+
+	strncpy(web_pending_open_path, path, sizeof(web_pending_open_path) - 1);
+	web_pending_open_path[sizeof(web_pending_open_path) - 1] = '\0';
+	web_pending_original_name[0] = '\0';
+	if (original_filename && original_filename[0]) {
+		strncpy(web_pending_original_name, original_filename, sizeof(web_pending_original_name) - 1);
+		web_pending_original_name[sizeof(web_pending_original_name) - 1] = '\0';
+	}
+	web_has_pending_open = 1;
+	web_open_result = 0;
+	return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE int schism_web_open_result_get(void)
+{
+	return web_open_result;
+}
+
+EMSCRIPTEN_KEEPALIVE int schism_web_save_it_now(void)
+{
+	FILE *fp;
+	long size;
+	uint32_t old_flags;
+
+	schism_web_export_clear();
+
+	/* Avoid expensive/fragile backup rename loops in virtual FS. */
+	old_flags = status.flags;
+	status.flags &= ~(MAKE_BACKUPS | NUMBERED_BACKUPS);
+	if (song_save("/tmp/web-export.it", "IT") != SAVE_SUCCESS) {
+		status.flags = old_flags;
+		web_export_state = -1;
+		return -1;
+	}
+	status.flags = old_flags;
+
+	fp = fopen("/tmp/web-export.it", "rb");
+	if (!fp) {
+		web_export_state = -1;
+		return -2;
+	}
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		fclose(fp);
+		web_export_state = -1;
+		return -3;
+	}
+	size = ftell(fp);
+	if (size <= 0 || fseek(fp, 0, SEEK_SET) != 0) {
+		fclose(fp);
+		web_export_state = -1;
+		return -4;
+	}
+
+	web_export_data = malloc((size_t)size);
+	if (!web_export_data) {
+		fclose(fp);
+		web_export_state = -1;
+		return -5;
+	}
+	if ((long)fread(web_export_data, 1, (size_t)size, fp) != size) {
+		fclose(fp);
+		schism_web_export_clear();
+		web_export_state = -1;
+		return -6;
+	}
+	fclose(fp);
+
+	web_export_size = (int)size;
+	web_export_state = 1;
+	return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE int schism_web_save_now(const char *type)
+{
+	FILE *fp;
+	long size;
+	uint32_t old_flags;
+	const char *save_type = (type && *type) ? type : "IT";
+
+	schism_web_export_clear();
+
+	/* Avoid expensive/fragile backup rename loops in virtual FS. */
+	old_flags = status.flags;
+	status.flags &= ~(MAKE_BACKUPS | NUMBERED_BACKUPS);
+	if (song_save("/tmp/web-export.tmp", save_type) != SAVE_SUCCESS) {
+		status.flags = old_flags;
+		web_export_state = -1;
+		return -1;
+	}
+	status.flags = old_flags;
+
+	fp = fopen("/tmp/web-export.tmp", "rb");
+	if (!fp) {
+		web_export_state = -1;
+		return -2;
+	}
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		fclose(fp);
+		web_export_state = -1;
+		return -3;
+	}
+	size = ftell(fp);
+	if (size <= 0 || fseek(fp, 0, SEEK_SET) != 0) {
+		fclose(fp);
+		web_export_state = -1;
+		return -4;
+	}
+
+	web_export_data = malloc((size_t)size);
+	if (!web_export_data) {
+		fclose(fp);
+		web_export_state = -1;
+		return -5;
+	}
+	if ((long)fread(web_export_data, 1, (size_t)size, fp) != size) {
+		fclose(fp);
+		schism_web_export_clear();
+		web_export_state = -1;
+		return -6;
+	}
+	fclose(fp);
+
+	web_export_size = (int)size;
+	web_export_state = 1;
+	return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE void schism_web_request_save_it(void)
+{
+	web_save_requested = 1;
+}
+
+EMSCRIPTEN_KEEPALIVE int schism_web_export_state(void)
+{
+	return web_export_state;
+}
+
+EMSCRIPTEN_KEEPALIVE int schism_web_export_size(void)
+{
+	return web_export_size;
+}
+
+EMSCRIPTEN_KEEPALIVE uintptr_t schism_web_export_ptr(void)
+{
+	return (uintptr_t)web_export_data;
+}
+
+EMSCRIPTEN_KEEPALIVE int schism_web_export_copy(uint8_t *dst, int max_len)
+{
+	if (!dst || !web_export_data || web_export_size <= 0 || max_len < web_export_size)
+		return -1;
+
+	memcpy(dst, web_export_data, (size_t)web_export_size);
+	return web_export_size;
+}
+
+EMSCRIPTEN_KEEPALIVE void schism_web_export_clear(void)
+{
+	free(web_export_data);
+	web_export_data = NULL;
+	web_export_size = 0;
+	web_export_state = 0;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t schism_web_loop_heartbeat_get(void)
+{
+	return web_loop_heartbeat;
+}
+#endif
+
+static void event_loop_iteration(void)
+{
+	schism_event_t se;
+	while (events_poll_event(&se)) {
+		if (midi_engine_handle_event(&se))
+			continue;
+
+		key_event_reset(&event_kk, event_kk.sx, event_kk.sy);
+
+		if (se.type == SCHISM_KEYDOWN || se.type == SCHISM_MOUSEBUTTONDOWN) {
+			event_kk.state = KEY_PRESS;
+		} else if (se.type == SCHISM_KEYUP || se.type == SCHISM_MOUSEBUTTONUP) {
+			event_kk.state = KEY_RELEASE;
+		}
+		if (se.type == SCHISM_KEYDOWN || se.type == SCHISM_TEXTINPUT || se.type == SCHISM_KEYUP) {
+			if (se.key.sym == 0) {
+				// XXX when does this happen?
+				event_kk.mouse = MOUSE_NONE;
+				event_kk.is_repeat = 0;
+			}
+		}
+
+		switch (se.type) {
+		case SCHISM_QUIT:
+			show_exit_prompt();
+			break;
+		case SCHISM_AUDIODEVICEADDED:
+		case SCHISM_AUDIODEVICEREMOVED:
+			refresh_audio_device_list();
+			status.flags |= NEED_UPDATE;
+			break;
+		case SCHISM_TEXTINPUT: {
+			handle_text_input(se.text.text);
+			break;
+		}
+		case SCHISM_KEYDOWN:
+			if (se.key.repeat) {
+				// Only use the system repeat if we don't have our own configuration
+				if (kbd_key_repeat_enabled())
+					break;
+
+				event_kk.is_repeat = 1;
+			}
+
+			/* normalize the text for processing */
+			event_kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8,
+				CHARSET_UTF8);
+
+			SCHISM_FALLTHROUGH;
+		case SCHISM_KEYUP:
+			event_kk.sym = se.key.sym;
+			event_kk.scancode = se.key.scancode;
+
+			event_kk.mouse = MOUSE_NONE;
+
+			/* wow, I hate this */
+			if (event_kk.sym == SCHISM_KEYSYM_CAPSLOCK) {
+				if (se.type == SCHISM_KEYDOWN)
+					status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
+				else
+					status.keymod &= ~(SCHISM_KEYMOD_CAPS_PRESSED);
+			}
+
+			/* grab the keymod */
+			event_kk.mod = se.key.mod;
+			/* apply stupid hacky shit */
+			event_kk.mod &= ~(SCHISM_KEYMOD_CAPS_PRESSED);
+			event_kk.mod |= (status.keymod & SCHISM_KEYMOD_CAPS_PRESSED);
+
+			/* apply OS-specific fixups to account for bugs in SDL */
+			os_get_modkey(&event_kk.mod);
+			/* numlock hacks, mostly here because of macs */
+			switch (event_fix_numlock_key) {
+			case NUMLOCK_GUESS:
+				/* should be handled per OS */
+				break;
+			case NUMLOCK_ALWAYS_OFF:
+				event_kk.mod &= ~SCHISM_KEYMOD_NUM;
+				break;
+			case NUMLOCK_ALWAYS_ON:
+				event_kk.mod |= SCHISM_KEYMOD_NUM;
+				break;
+			};
+			/* copy the keymod into the status global */
+			status.keymod = event_kk.mod;
+
+			/* apply translations for different keyboard layouts,
+			 * e.g. shift-8 -> asterisk on standard U.S. */
+			kbd_key_translate(&event_kk);
+			/* airball */
+			handle_key(&event_kk);
+
+			if (se.type == SCHISM_KEYUP) {
+				/* only empty the key repeat if
+				 * the last keydown is the same sym */
+				if ((status.last_orig_keysym == event_kk.orig_sym)
+					|| kbd_is_modifier_key(&event_kk))
+					kbd_empty_key_repeat();
+			} else {
+				kbd_cache_key_repeat(&event_kk);
+
+				if (!kbd_is_modifier_key(&event_kk)) {
+					status.last_keysym = event_kk.sym;
+					status.last_orig_keysym = event_kk.orig_sym;
+					status.last_keymod = event_kk.mod;
+				}
+			}
+			break;
+		case SCHISM_MOUSEMOTION:
+		case SCHISM_MOUSEWHEEL:
+		case SCHISM_MOUSEBUTTONDOWN:
+		case SCHISM_MOUSEBUTTONUP: {
+			if (event_kk.state == KEY_PRESS) {
+				status.keymod = events_get_keymod_state();
+				os_get_modkey(&status.keymod);
+			}
+
+			event_kk.sym = 0;
+			event_kk.mod = 0;
+
+			// Handle the coordinate translation
+			switch (se.type) {
+			case SCHISM_MOUSEWHEEL:
+				event_kk.state = KEY_DRAG; /* ummm */
+				video_translate(se.wheel.mouse_x, se.wheel.mouse_y, &event_kk.fx, &event_kk.fy);
+				event_kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
+				break;
+			case SCHISM_MOUSEMOTION:
+				event_kk.state = KEY_DRAG;
+				video_translate(se.motion.x, se.motion.y, &event_kk.fx, &event_kk.fy);
+				break;
+			case SCHISM_MOUSEBUTTONDOWN:
+				video_translate(se.button.x, se.button.y, &event_kk.fx, &event_kk.fy);
+				// we also have to update the current button
+				if (se.button.button == MOUSE_BUTTON_LEFT) {
+					/* macosx cruft: Ctrl-LeftClick = RightClick */
+					event_button = (status.keymod & SCHISM_KEYMOD_CTRL) ? (MOUSE_BUTTON_RIGHT)
+						: (status.keymod & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI)) ? (MOUSE_BUTTON_MIDDLE)
+						: MOUSE_BUTTON_LEFT;
+				} else {
+					event_button = se.button.button;
+				}
+				break;
+			case SCHISM_MOUSEBUTTONUP:
+				video_translate(se.button.x, se.button.y, &event_kk.fx, &event_kk.fy);
+				break;
+			}
+
+			/* character resolution */
+			event_kk.x = event_kk.fx / event_kk.rx;
+			/* half-character selection */
+			if ((event_kk.fx / (event_kk.rx/2)) % 2 == 0) {
+				event_kk.hx = 0;
+			} else {
+				event_kk.hx = 1;
+			}
+			event_kk.y = event_kk.fy / event_kk.ry;
+
+			if (se.type == SCHISM_MOUSEWHEEL) {
+				handle_key(&event_kk);
+				break; /* nothing else to do here */
+			}
+			if (se.type == SCHISM_MOUSEBUTTONDOWN) {
+				event_kk.sx = event_kk.x;
+				event_kk.sy = event_kk.y;
+			}
+
+			// what?
+			if (event_startdown) event_startdown = 0;
+
+			switch (event_button) {
+			case MOUSE_BUTTON_RIGHT:
+			case MOUSE_BUTTON_MIDDLE:
+			case MOUSE_BUTTON_LEFT:
+				event_kk.mouse_button = event_button;
+
+				if (event_kk.state == KEY_RELEASE) {
+					event_ticker = timer_ticks();
+					if (event_lx == event_kk.x && event_ly == event_kk.y && (event_ticker - event_last_mouse_down) < 300) {
+						event_last_mouse_down = 0;
+						event_kk.mouse = MOUSE_DBLCLICK;
+					} else {
+						event_last_mouse_down = event_ticker;
+						event_kk.mouse = MOUSE_CLICK;
+					}
+					event_lx = event_kk.x;
+					event_ly = event_kk.y;
+
+					// dirty hack
+					event_button = -1;
+				} else {
+					event_kk.mouse = MOUSE_CLICK;
+				}
+				if (status.dialog_type == DIALOG_NONE) {
+					if (event_kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
+						if (event_kk.state == KEY_RELEASE && event_kk.mouse_button == MOUSE_BUTTON_RIGHT) {
+							video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);
+							menu_show();
+							break;
+						} else if (event_kk.state == KEY_PRESS && event_kk.mouse_button == MOUSE_BUTTON_LEFT) {
+							time(&event_startdown);
+						}
+					}
+				}
+				switch (event_kk.state) {
+				case KEY_PRESS:
+					if (widget_change_focus_to_xy(event_kk.x, event_kk.y)) {
+						event_kk.on_target = 1;
+					} else {
+						event_kk.on_target = 0;
+					}
+					break;
+				case KEY_DRAG:
+					event_kk.on_target = (widget_find_xy(event_kk.x, event_kk.y) == *selected_widget);
+					break;
+				/* silence warning */
+				case KEY_RELEASE:
+					break;
+				}
+				if (se.type == SCHISM_MOUSEBUTTONUP && event_downtrip) {
+					event_downtrip = 0;
+					break;
+				}
+				//if (se.type != SCHISM_MOUSEMOTION)
+					handle_key(&event_kk);
+				break;
+			default:
+				break;
+			};
+			break;
+		}
+		/* this logic sucks, but it does what should probably be considered the "right" thing to do */
+		case SCHISM_WINDOWEVENT_FOCUS_GAINED:
+			event_keyboard_focus = 1;
+			SCHISM_FALLTHROUGH;
+		case SCHISM_WINDOWEVENT_SHOWN:
+			video_mousecursor(MOUSE_RESET_STATE);
+			break;
+		case SCHISM_WINDOWEVENT_ENTER:
+			if (event_keyboard_focus)
+				video_mousecursor(MOUSE_RESET_STATE);
+			break;
+		case SCHISM_WINDOWEVENT_FOCUS_LOST:
+			event_keyboard_focus = 0;
+			SCHISM_FALLTHROUGH;
+		case SCHISM_WINDOWEVENT_LEAVE:
+			video_show_cursor(1);
+			break;
+		case SCHISM_WINDOWEVENT_RESIZED:
+		case SCHISM_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
+			video_resize(se.window.data.resized.width, se.window.data.resized.height);
+			SCHISM_FALLTHROUGH;
+		case SCHISM_WINDOWEVENT_EXPOSED:
+			status.flags |= (NEED_UPDATE);
+			break;
+		case SCHISM_DROPFILE:
+			dialog_destroy();
+			switch(status.current_page) {
+			case PAGE_SAMPLE_LIST:
+			case PAGE_LOAD_SAMPLE:
+			case PAGE_LIBRARY_SAMPLE:
+				song_load_sample(sample_get_current(), se.drop.file);
+				memused_songchanged();
+				status.flags |= SONG_NEEDS_SAVE;
+				set_page(PAGE_SAMPLE_LIST);
+				break;
+			case PAGE_INSTRUMENT_LIST_GENERAL:
+			case PAGE_INSTRUMENT_LIST_VOLUME:
+			case PAGE_INSTRUMENT_LIST_PANNING:
+			case PAGE_INSTRUMENT_LIST_PITCH:
+			case PAGE_LOAD_INSTRUMENT:
+			case PAGE_LIBRARY_INSTRUMENT:
+				song_load_instrument_with_prompt(instrument_get_current(), se.drop.file);
+				memused_songchanged();
+				status.flags |= SONG_NEEDS_SAVE;
+				set_page(PAGE_INSTRUMENT_LIST);
+				break;
+			default:
+				song_load(se.drop.file);
+				break;
+			}
+			free(se.drop.file);
+			break;
+		case SCHISM_EVENT_UPDATE_IPMIDI:
+			status.flags |= (NEED_UPDATE);
+			midi_engine_poll_ports();
+			break;
+		case SCHISM_EVENT_PLAYBACK:
+			/* this is the sound thread */
+			midi_send_flush();
+			if (!(status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)))
+				playback_update();
+			break;
+		case SCHISM_EVENT_PASTE:
+			/* handle clipboard events */
+			_do_clipboard_paste_op(&se);
+			free(se.clipboard.clipboard);
+			break;
+		case SCHISM_EVENT_NATIVE_OPEN: /* open song */
+			song_load(se.open.file);
+			free(se.open.file);
+			break;
+		case SCHISM_EVENT_NATIVE_SCRIPT:
+			/* destroy any active dialog before changing pages */
+			dialog_destroy();
+			if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
+				new_song_dialog();
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
+				save_song_or_save_as();
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
+				set_page(PAGE_SAVE_MODULE);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
+				set_page(PAGE_EXPORT_MODULE);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
+				set_page(PAGE_LOG);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
+				set_page(PAGE_FONT_EDIT);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
+				set_page(PAGE_LOAD_MODULE);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
+				set_page(PAGE_HELP);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
+				set_page(PAGE_PATTERN_EDITOR);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
+				set_page(PAGE_ORDERLIST_PANNING);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
+				set_page(PAGE_SONG_VARIABLES);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
+				set_page(PAGE_MESSAGE);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
+				set_page(PAGE_INFO);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
+				song_start();
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
+				song_loop_pattern(get_current_pattern(), 0);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
+				song_start_at_order(get_current_order(), 0);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
+				play_song_from_mark();
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
+				song_stop();
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
+				show_song_length();
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
+				set_page(PAGE_SAMPLE_LIST);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
+				set_page(PAGE_LIBRARY_SAMPLE);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
+				/* does nothing :) */
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
+				set_page(PAGE_INSTRUMENT_LIST);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
+				set_page(PAGE_LIBRARY_INSTRUMENT);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
+				set_page(PAGE_PREFERENCES);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
+				set_page(PAGE_CONFIG);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
+				set_page(PAGE_MIDI);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
+				set_page(PAGE_PALETTE_EDITOR);
+			} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
+				toggle_display_fullscreen();
+			}
+			free(se.script.which);
+			break;
+		default:
+			break;
+		}
+	}
+
+	/* handle key repeats */
+	kbd_handle_key_repeat();
+
+	/* now we can do whatever we need to do */
+	time(&status.now);
+	localtime_r(&status.now, &status.tmnow);
+
+	if (status.dialog_type == DIALOG_NONE
+	    && event_startdown && (status.now - event_startdown) > 1) {
+		menu_show();
+		event_startdown = 0;
+		event_downtrip = 1;
+	}
+	if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
+		clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
+			     ? CLIPPY_BUFFER : CLIPPY_SELECT);
+		status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
+	}
+
+#ifdef __EMSCRIPTEN__
+	web_loop_heartbeat++;
+
+	if (web_has_pending_open && web_pending_open_path[0]) {
+		int ok = song_load_unchecked(web_pending_open_path) ? 1 : 0;
+
+		web_open_result = ok ? 1 : -1;
+		if (ok && web_pending_original_name[0]) {
+			song_set_loaded_filename(web_pending_original_name);
+			status.flags |= NEED_UPDATE;
+		}
+		web_pending_original_name[0] = '\0';
+		web_pending_open_path[0] = '\0';
+		web_has_pending_open = 0;
+	}
+
+	if (web_save_requested) {
+		web_save_requested = 0;
+		schism_web_save_it_now();
+	}
+
+#endif
+
+	check_update();
+
+	switch (song_get_mode()) {
+	case MODE_PLAYING:
+	case MODE_PATTERN_LOOP:
+		if (event_screensaver) {
+			video_toggle_screensaver(0);
+			event_screensaver = 0;
+		}
+		break;
+	default:
+		if (!event_screensaver) {
+			video_toggle_screensaver(1);
+			event_screensaver = 1;
+		}
+		break;
+	};
+
+	// Check for new audio devices every 5 seconds.
+	if (timer_ticks_passed(timer_ticks(), event_last_audio_poll + 5000)) {
+		refresh_audio_device_list();
+		status.flags |= NEED_UPDATE;
+		event_last_audio_poll = timer_ticks();
+	}
+
+	if (status.flags & DISKWRITER_ACTIVE) {
+		int q = disko_sync();
+		while (q == DW_SYNC_MORE && !events_have_event()) {
+			check_update();
+			q = disko_sync();
+		}
+		if (q == DW_SYNC_DONE) {
+#ifdef ENABLE_HOOKS
+			run_disko_complete_hook();
+#endif
+			if (diskwrite_to) {
+				printf("Diskwrite complete, exiting...\n");
+				schism_exit(0);
+			}
+		}
+	}
+
+	{
+		/* This takes a LOT of time if we just base it on files.
+		 * So here I've just based it on how LONG we've spent.
+		 *
+		 * I'm just setting it to a maximum of 10ms, which I think
+		 * is an okay amount of time to spend on it.
+		 *
+		 * Ideally we would do this stuff in a different thread, so
+		 * that the main thread doesn't get hogged by it at all, but
+		 * that would mean guarding it all behind mutexes. :( */
+		timer_ticks_t start = timer_ticks();
+
+		while (start + 10 > timer_ticks() && dmoz_worker() && !events_have_event());
+	}
+
+	if (!events_have_event())
+		midi_engine_worker();
+
+	if (!events_have_event())
+		timer_oneshot_worker();
+
+	/* sleep for a little bit to not hog CPU time */
+	if (!events_have_event())
+#ifndef __EMSCRIPTEN__
+		timer_msleep(5);
+#endif
+
+	os_onframe();
+}
+
 SCHISM_NORETURN static void event_loop(void)
 {
-	unsigned int lx = 0, ly = 0; /* last x and y position (character) */
-	timer_ticks_t last_mouse_down, ticker, last_audio_poll;
-	time_t startdown;
-	int downtrip;
-	int fix_numlock_key;
-	int screensaver;
-	int button = -1;
-	struct key_event kk;
+	event_fix_numlock_key = status.fix_numlock_setting;
+	event_downtrip = 0;
+	event_last_mouse_down = 0;
+	event_last_audio_poll = timer_ticks();
+	event_startdown = 0;
+	event_screensaver = 1;
+	event_button = -1;
+	event_keyboard_focus = 0;
+	event_lx = 0;
+	event_ly = 0;
+	key_event_reset(&event_kk, 0, 0);
 
-	int keyboard_focus = 0;
-
-	fix_numlock_key = status.fix_numlock_setting;
-
-	downtrip = 0;
-	last_mouse_down = 0;
-	last_audio_poll = timer_ticks();
-	startdown = 0;
 	status.last_keysym = 0;
 	status.last_orig_keysym = 0;
 
@@ -439,470 +1160,18 @@ SCHISM_NORETURN static void event_loop(void)
 	os_get_modkey(&status.keymod);
 
 	video_toggle_screensaver(1);
-	screensaver = 1;
 
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
-	for (;;) {
-		schism_event_t se;
-		while (events_poll_event(&se)) {
-			if (midi_engine_handle_event(&se))
-				continue;
-
-			key_event_reset(&kk, kk.sx, kk.sy);
-
-			if (se.type == SCHISM_KEYDOWN || se.type == SCHISM_MOUSEBUTTONDOWN) {
-				kk.state = KEY_PRESS;
-			} else if (se.type == SCHISM_KEYUP || se.type == SCHISM_MOUSEBUTTONUP) {
-				kk.state = KEY_RELEASE;
-			}
-			if (se.type == SCHISM_KEYDOWN || se.type == SCHISM_TEXTINPUT || se.type == SCHISM_KEYUP) {
-				if (se.key.sym == 0) {
-					// XXX when does this happen?
-					kk.mouse = MOUSE_NONE;
-					kk.is_repeat = 0;
-				}
-			}
-
-			switch (se.type) {
-			case SCHISM_QUIT:
-				show_exit_prompt();
-				break;
-			case SCHISM_AUDIODEVICEADDED:
-			case SCHISM_AUDIODEVICEREMOVED:
-				refresh_audio_device_list();
-				status.flags |= NEED_UPDATE;
-				break;
-			case SCHISM_TEXTINPUT: {
-				handle_text_input(se.text.text);
-				break;
-			}
-			case SCHISM_KEYDOWN:
-				if (se.key.repeat) {
-					// Only use the system repeat if we don't have our own configuration
-					if (kbd_key_repeat_enabled())
-						break;
-
-					kk.is_repeat = 1;
-				}
-
-				/* normalize the text for processing */
-				kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8,
-					CHARSET_UTF8);
-
-				SCHISM_FALLTHROUGH;
-			case SCHISM_KEYUP:
-				kk.sym = se.key.sym;
-				kk.scancode = se.key.scancode;
-
-				kk.mouse = MOUSE_NONE;
-
-				/* wow, I hate this */
-				if (kk.sym == SCHISM_KEYSYM_CAPSLOCK) {
-					if (se.type == SCHISM_KEYDOWN)
-						status.keymod |= SCHISM_KEYMOD_CAPS_PRESSED;
-					else
-						status.keymod &= ~(SCHISM_KEYMOD_CAPS_PRESSED);
-				}
-
-				/* grab the keymod */
-				kk.mod = se.key.mod;
-				/* apply stupid hacky shit */
-				kk.mod &= ~(SCHISM_KEYMOD_CAPS_PRESSED);
-				kk.mod |= (status.keymod & SCHISM_KEYMOD_CAPS_PRESSED);
-
-				/* apply OS-specific fixups to account for bugs in SDL */
-				os_get_modkey(&kk.mod);
-				/* numlock hacks, mostly here because of macs */
-				switch (fix_numlock_key) {
-				case NUMLOCK_GUESS:
-					/* should be handled per OS */
-					break;
-				case NUMLOCK_ALWAYS_OFF:
-					kk.mod &= ~SCHISM_KEYMOD_NUM;
-					break;
-				case NUMLOCK_ALWAYS_ON:
-					kk.mod |= SCHISM_KEYMOD_NUM;
-					break;
-				};
-				/* copy the keymod into the status global */
-				status.keymod = kk.mod;
-
-				/* apply translations for different keyboard layouts,
-				 * e.g. shift-8 -> asterisk on standard U.S. */
-				kbd_key_translate(&kk);
-				/* airball */
-				handle_key(&kk);
-
-				if (se.type == SCHISM_KEYUP) {
-					/* only empty the key repeat if
-					 * the last keydown is the same sym */
-					if ((status.last_orig_keysym == kk.orig_sym)
-						|| kbd_is_modifier_key(&kk))
-						kbd_empty_key_repeat();
-				} else {
-					kbd_cache_key_repeat(&kk);
-
-					if (!kbd_is_modifier_key(&kk)) {
-						status.last_keysym = kk.sym;
-						status.last_orig_keysym = kk.orig_sym;
-						status.last_keymod = kk.mod;
-					}
-				}
-				break;
-			case SCHISM_MOUSEMOTION:
-			case SCHISM_MOUSEWHEEL:
-			case SCHISM_MOUSEBUTTONDOWN:
-			case SCHISM_MOUSEBUTTONUP: {
-				if (kk.state == KEY_PRESS) {
-					status.keymod = events_get_keymod_state();
-					os_get_modkey(&status.keymod);
-				}
-
-				kk.sym = 0;
-				kk.mod = 0;
-
-				// Handle the coordinate translation
-				switch (se.type) {
-				case SCHISM_MOUSEWHEEL:
-					kk.state = KEY_DRAG; /* ummm */
-					video_translate(se.wheel.mouse_x, se.wheel.mouse_y, &kk.fx, &kk.fy);
-					kk.mouse = (se.wheel.y > 0) ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN;
-					break;
-				case SCHISM_MOUSEMOTION:
-					kk.state = KEY_DRAG;
-					video_translate(se.motion.x, se.motion.y, &kk.fx, &kk.fy);
-					break;
-				case SCHISM_MOUSEBUTTONDOWN:
-					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
-					// we also have to update the current button
-					if (se.button.button == MOUSE_BUTTON_LEFT) {
-						/* macosx cruft: Ctrl-LeftClick = RightClick */
-						button = (status.keymod & SCHISM_KEYMOD_CTRL) ? (MOUSE_BUTTON_RIGHT)
-							: (status.keymod & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI)) ? (MOUSE_BUTTON_MIDDLE)
-							: MOUSE_BUTTON_LEFT;
-					} else {
-						button = se.button.button;
-					}
-					break;
-				case SCHISM_MOUSEBUTTONUP:
-					video_translate(se.button.x, se.button.y, &kk.fx, &kk.fy);
-					break;
-				}
-
-				/* character resolution */
-				kk.x = kk.fx / kk.rx;
-				/* half-character selection */
-				if ((kk.fx / (kk.rx/2)) % 2 == 0) {
-					kk.hx = 0;
-				} else {
-					kk.hx = 1;
-				}
-				kk.y = kk.fy / kk.ry;
-
-				if (se.type == SCHISM_MOUSEWHEEL) {
-					handle_key(&kk);
-					break; /* nothing else to do here */
-				}
-				if (se.type == SCHISM_MOUSEBUTTONDOWN) {
-					kk.sx = kk.x;
-					kk.sy = kk.y;
-				}
-
-				// what?
-				if (startdown) startdown = 0;
-
-				switch (button) {
-				case MOUSE_BUTTON_RIGHT:
-				case MOUSE_BUTTON_MIDDLE:
-				case MOUSE_BUTTON_LEFT:
-					kk.mouse_button = button;
-
-					if (kk.state == KEY_RELEASE) {
-						ticker = timer_ticks();
-						if (lx == kk.x && ly == kk.y && (ticker - last_mouse_down) < 300) {
-							last_mouse_down = 0;
-							kk.mouse = MOUSE_DBLCLICK;
-						} else {
-							last_mouse_down = ticker;
-							kk.mouse = MOUSE_CLICK;
-						}
-						lx = kk.x;
-						ly = kk.y;
-
-						// dirty hack
-						button = -1;
-					} else {
-						kk.mouse = MOUSE_CLICK;
-					}
-					if (status.dialog_type == DIALOG_NONE) {
-						if (kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
-							if (kk.state == KEY_RELEASE && kk.mouse_button == MOUSE_BUTTON_RIGHT) {
-								video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);
-								menu_show();
-								break;
-							} else if (kk.state == KEY_PRESS && kk.mouse_button == MOUSE_BUTTON_LEFT) {
-								time(&startdown);
-							}
-						}
-					}
-					switch (kk.state) {
-					case KEY_PRESS:
-						if (widget_change_focus_to_xy(kk.x, kk.y)) {
-							kk.on_target = 1;
-						} else {
-							kk.on_target = 0;
-						}
-						break;
-					case KEY_DRAG:
-						kk.on_target = (widget_find_xy(kk.x, kk.y) == *selected_widget);
-						break;
-					/* silence warning */
-					case KEY_RELEASE:
-						break;
-					}
-					if (se.type == SCHISM_MOUSEBUTTONUP && downtrip) {
-						downtrip = 0;
-						break;
-					}
-					//if (se.type != SCHISM_MOUSEMOTION)
-						handle_key(&kk);
-					break;
-				default:
-					break;
-				};
-				break;
-			}
-			/* this logic sucks, but it does what should probably be considered the "right" thing to do */
-			case SCHISM_WINDOWEVENT_FOCUS_GAINED:
-				keyboard_focus = 1;
-				SCHISM_FALLTHROUGH;
-			case SCHISM_WINDOWEVENT_SHOWN:
-				video_mousecursor(MOUSE_RESET_STATE);
-				break;
-			case SCHISM_WINDOWEVENT_ENTER:
-				if (keyboard_focus)
-					video_mousecursor(MOUSE_RESET_STATE);
-				break;
-			case SCHISM_WINDOWEVENT_FOCUS_LOST:
-				keyboard_focus = 0;
-				SCHISM_FALLTHROUGH;
-			case SCHISM_WINDOWEVENT_LEAVE:
-				video_show_cursor(1);
-				break;
-			case SCHISM_WINDOWEVENT_RESIZED:
-			case SCHISM_WINDOWEVENT_SIZE_CHANGED: /* tiling window managers */
-				video_resize(se.window.data.resized.width, se.window.data.resized.height);
-				SCHISM_FALLTHROUGH;
-			case SCHISM_WINDOWEVENT_EXPOSED:
-				status.flags |= (NEED_UPDATE);
-				break;
-			case SCHISM_DROPFILE:
-				dialog_destroy();
-				switch(status.current_page) {
-				case PAGE_SAMPLE_LIST:
-				case PAGE_LOAD_SAMPLE:
-				case PAGE_LIBRARY_SAMPLE:
-					song_load_sample(sample_get_current(), se.drop.file);
-					memused_songchanged();
-					status.flags |= SONG_NEEDS_SAVE;
-					set_page(PAGE_SAMPLE_LIST);
-					break;
-				case PAGE_INSTRUMENT_LIST_GENERAL:
-				case PAGE_INSTRUMENT_LIST_VOLUME:
-				case PAGE_INSTRUMENT_LIST_PANNING:
-				case PAGE_INSTRUMENT_LIST_PITCH:
-				case PAGE_LOAD_INSTRUMENT:
-				case PAGE_LIBRARY_INSTRUMENT:
-					song_load_instrument_with_prompt(instrument_get_current(), se.drop.file);
-					memused_songchanged();
-					status.flags |= SONG_NEEDS_SAVE;
-					set_page(PAGE_INSTRUMENT_LIST);
-					break;
-				default:
-					song_load(se.drop.file);
-					break;
-				}
-				free(se.drop.file);
-				break;
-			case SCHISM_EVENT_UPDATE_IPMIDI:
-				status.flags |= (NEED_UPDATE);
-				midi_engine_poll_ports();
-				break;
-			case SCHISM_EVENT_PLAYBACK:
-				/* this is the sound thread */
-				midi_send_flush();
-				if (!(status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)))
-					playback_update();
-				break;
-			case SCHISM_EVENT_PASTE:
-				/* handle clipboard events */
-				_do_clipboard_paste_op(&se);
-				free(se.clipboard.clipboard);
-				break;
-			case SCHISM_EVENT_NATIVE_OPEN: /* open song */
-				song_load(se.open.file);
-				free(se.open.file);
-				break;
-			case SCHISM_EVENT_NATIVE_SCRIPT:
-				/* destroy any active dialog before changing pages */
-				dialog_destroy();
-				if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
-					new_song_dialog();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
-					save_song_or_save_as();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
-					set_page(PAGE_SAVE_MODULE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
-					set_page(PAGE_EXPORT_MODULE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
-					set_page(PAGE_LOG);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
-					set_page(PAGE_FONT_EDIT);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
-					set_page(PAGE_LOAD_MODULE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
-					set_page(PAGE_HELP);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
-					set_page(PAGE_PATTERN_EDITOR);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
-					set_page(PAGE_ORDERLIST_PANNING);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
-					set_page(PAGE_SONG_VARIABLES);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
-					set_page(PAGE_MESSAGE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
-					set_page(PAGE_INFO);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
-					song_start();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
-					song_loop_pattern(get_current_pattern(), 0);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
-					song_start_at_order(get_current_order(), 0);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
-					play_song_from_mark();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
-					song_stop();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
-					show_song_length();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
-					set_page(PAGE_SAMPLE_LIST);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
-					set_page(PAGE_LIBRARY_SAMPLE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
-					/* does nothing :) */
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
-					set_page(PAGE_INSTRUMENT_LIST);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
-					set_page(PAGE_LIBRARY_INSTRUMENT);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
-					set_page(PAGE_PREFERENCES);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
-					set_page(PAGE_CONFIG);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
-					set_page(PAGE_MIDI);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
-					set_page(PAGE_PALETTE_EDITOR);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
-					toggle_display_fullscreen();
-				}
-				free(se.script.which);
-				break;
-			default:
-				break;
-			}
-		}
-
-		/* handle key repeats */
-		kbd_handle_key_repeat();
-
-		/* now we can do whatever we need to do */
-		time(&status.now);
-		localtime_r(&status.now, &status.tmnow);
-
-		if (status.dialog_type == DIALOG_NONE
-		    && startdown && (status.now - startdown) > 1) {
-			menu_show();
-			startdown = 0;
-			downtrip = 1;
-		}
-		if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
-			clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-				     ? CLIPPY_BUFFER : CLIPPY_SELECT);
-			status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
-		}
-
-		check_update();
-
-		switch (song_get_mode()) {
-		case MODE_PLAYING:
-		case MODE_PATTERN_LOOP:
-			if (screensaver) {
-				video_toggle_screensaver(0);
-				screensaver = 0;
-			}
-			break;
-		default:
-			if (!screensaver) {
-				video_toggle_screensaver(1);
-				screensaver = 1;
-			}
-			break;
-		};
-
-		// Check for new audio devices every 5 seconds.
-		if (timer_ticks_passed(timer_ticks(), last_audio_poll + 5000)) {
-			refresh_audio_device_list();
-			status.flags |= NEED_UPDATE;
-			last_audio_poll = timer_ticks();
-		}
-
-		if (status.flags & DISKWRITER_ACTIVE) {
-			int q = disko_sync();
-			while (q == DW_SYNC_MORE && !events_have_event()) {
-				check_update();
-				q = disko_sync();
-			}
-			if (q == DW_SYNC_DONE) {
-#ifdef ENABLE_HOOKS
-				run_disko_complete_hook();
-#endif
-				if (diskwrite_to) {
-					printf("Diskwrite complete, exiting...\n");
-					schism_exit(0);
-				}
-			}
-		}
-
-		{
-			/* This takes a LOT of time if we just base it on files.
-			 * So here I've just based it on how LONG we've spent.
-			 *
-			 * I'm just setting it to a maximum of 10ms, which I think
-			 * is an okay amount of time to spend on it.
-			 *
-			 * Ideally we would do this stuff in a different thread, so
-			 * that the main thread doesn't get hogged by it at all, but
-			 * that would mean guarding it all behind mutexes. :( */
-			timer_ticks_t start = timer_ticks();
-
-			while (start + 10 > timer_ticks() && dmoz_worker() && !events_have_event());
-		}
-
-		if (!events_have_event())
-			midi_engine_worker();
-
-		if (!events_have_event())
-			timer_oneshot_worker();
-
-		/* sleep for a little bit to not hog CPU time */
-		if (!events_have_event())
-			timer_msleep(5);
-
-		os_onframe();
-	}
-
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(event_loop_iteration, 0, 1);
+	emscripten_exit_with_live_runtime();
+	__builtin_unreachable();
+#else
+	for (;;)
+		event_loop_iteration();
 	schism_exit(0);
+#endif
 }
 
 #ifndef NDEBUG

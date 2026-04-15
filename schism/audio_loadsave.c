@@ -96,7 +96,7 @@ static void _fix_names(song_t *qq)
 // ------------------------------------------------------------------------
 // file stuff
 
-static void song_set_filename(const char *file)
+void song_set_loaded_filename(const char *file)
 {
 	if (file && *file) {
 		strncpy(song_filename, file, ARRAY_SIZE(song_filename) - 1);
@@ -107,6 +107,11 @@ static void song_set_filename(const char *file)
 		song_filename[0] = '\0';
 		song_basename[0] = '\0';
 	}
+}
+
+static void song_set_filename(const char *file)
+{
+	song_set_loaded_filename(file);
 }
 
 // clear patterns => clear filename and save flag

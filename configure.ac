@@ -329,10 +329,20 @@ PKG_PROG_PKG_CONFIG([0.9.0], [
 ])
 
 dnl Unicode crap
-PKG_CHECK_MODULES([UTF8PROC], [libutf8proc], [utf8proc_found=yes], [utf8proc_found=no])
-if test "x$utf8proc_found" = "xno"; then
-	AC_MSG_ERROR([*** Failed to find utf8proc])
-fi
+case "$CC" in
+*emcc*)
+	utf8proc_found=yes
+	UTF8PROC_CFLAGS=""
+	UTF8PROC_LIBS=""
+	AC_MSG_WARN([Using Emscripten UTF-8 fallback (no external utf8proc)])
+	;;
+*)
+	PKG_CHECK_MODULES([UTF8PROC], [libutf8proc], [utf8proc_found=yes], [utf8proc_found=no])
+	if test "x$utf8proc_found" = "xno"; then
+		AC_MSG_ERROR([*** Failed to find utf8proc])
+	fi
+	;;
+esac
 
 AC_SUBST([UTF8PROC_CFLAGS])
 AC_SUBST([UTF8PROC_LIBS])

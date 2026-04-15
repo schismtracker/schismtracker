@@ -129,6 +129,8 @@ song_create_load:
 void song_new(int flags);
 void song_load(const char *file);
 int song_load_unchecked(const char *file);
+/* Replace stored path/basename after load (e.g. web import uses a temp /tmp path). */
+void song_set_loaded_filename(const char *file);
 song_t *song_create_load(const char *file);
 
 // song_create_load returns NULL on error and sets errno to what might not be a standard value

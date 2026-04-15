@@ -38,6 +38,41 @@ See the
 [docs/](https://github.com/schismtracker/schismtracker/tree/master/docs) folder
 for platform-specific instructions.
 
+### WebAssembly (browser) build
+
+A web build scaffold is available via Emscripten.
+
+```sh
+source /path/to/emsdk/emsdk_env.sh
+./scripts/build-web.sh
+```
+
+Then run the generated files with any static server:
+
+```sh
+cd build-web/dist
+python3 -m http.server 8080
+```
+
+Open <http://localhost:8080>.
+
+The generated web runner supports:
+
+- module open/save from the browser UI
+- persistent storage via IndexedDB (`/persistent/modules`)
+- stored module management via `Stored Action` + `Run Action`
+  (`Load Stored`, `Refresh List`, `Rename Stored`, `Delete Stored`)
+- display scale switching (`Fit Window`, `x1`, `x2`, `x3`)
+
+Quick first-run checklist:
+
+1. Open one module with `Open Module` and confirm tracker playback/UI response.
+2. Reload the page and verify the file appears in the stored modules list.
+3. Pick `Load Stored` in `Stored Action`, click `Run Action`, and verify load.
+4. Try `Rename Stored` and `Delete Stored` from `Stored Action`, then reload to confirm persistence.
+
+For full details, see `docs/building_for_web.md`.
+
 ## Packaging status
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/schismtracker.svg)](https://repology.org/project/schismtracker/versions)

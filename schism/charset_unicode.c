@@ -23,7 +23,46 @@
 
 #include "charset.h"
 
+#ifdef __EMSCRIPTEN__
+#include <stdint.h>
+#include <sys/types.h>
+#include <string.h>
+
+typedef int utf8proc_option_t;
+
+#define UTF8PROC_NULLTERM 1
+#define UTF8PROC_COMPOSE 2
+#define UTF8PROC_CASEFOLD 4
+#define UTF8PROC_DECOMPOSE 8
+
+/*
+ * WASM bootstrap fallback: keep byte sequence unchanged and duplicate input.
+ * This keeps browser builds moving while proper utf8proc wiring is added.
+ */
+static int utf8proc_map(const uint8_t *str, ssize_t in_len, uint8_t **dst, utf8proc_option_t options)
+{
+	(void) options;
+
+	size_t len;
+	if (in_len > 0) {
+		len = (size_t) in_len;
+	} else {
+		len = strlen((const char *) str);
+	}
+
+	uint8_t *out = calloc(len + 1, 1);
+	if (!out)
+		return -1;
+
+	memcpy(out, str, len);
+	out[len] = 0;
+	*dst = out;
+
+	return (int) len;
+}
+#else
 #include <utf8proc.h>
+#endif
 
 static inline void *charset_map_to_utf8(const void *in, charset_t inset, utf8proc_option_t option)
 {
