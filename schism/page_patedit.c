@@ -572,6 +572,9 @@ static void modplug_encode_8bit(unsigned char *ptr, uint8_t x)
 {
 	ptr[0] = x / 10;
 	ptr[1] = x % 10;
+
+	ptr[0] += '0';
+	ptr[1] += '0';
 }
 
 /* ptr needs to be at least 2 bytes long */
