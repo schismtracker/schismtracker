@@ -567,6 +567,25 @@ static int multichannel_get_previous(int cur_channel)
 /* --------------------------------------------------------------------------------------------------------- */
 /* this global state is stupid and dumb */
 
+/* ptr needs to be at least 2 bytes long */
+static void modplug_encode_8bit(unsigned char *ptr, uint8_t x)
+{
+	ptr[0] = x / 10;
+	ptr[1] = x % 10;
+}
+
+/* ptr needs to be at least 2 bytes long */
+static int16_t modplug_decode_8bit(const unsigned char *ptr)
+{
+	if (ptr[0] < '0' || ptr[0] > 'I' || ptr[1] < '0' || ptr[1] > '9')
+		return -1; /* invalid */
+
+	if (ptr[0] == 'I' && ptr[1] > '5')
+		return -1; /* invalid */
+
+	return ((ptr[0] - '0') * 10) + (ptr[1] - '0');
+}
+
 static void clipboard_paste_overwrite(int suppress, int grow);
 static void clipboard_paste_insert(void);
 static void clipboard_paste_mix_notes(int clip, int xlate);
@@ -642,6 +661,7 @@ static int pattern_selection_system_paste_modplug(const char *str, struct patter
 	/* okay, let's start parsing */
 	while (*str) {
 		song_note_t n = {0};
+		int16_t ins;
 
 		if (!str[0] || !str[1] || !str[2])
 			break;
@@ -677,9 +697,9 @@ static int pattern_selection_system_paste_modplug(const char *str, struct patter
 		str += 3;
 
 		/* instrument number */
-		n.instrument = (sscanf(str, "%02u", &scantmp) == 1)
-			? scantmp
-			: 0;
+
+		ins = modplug_decode_8bit(str);
+		n.instrument = (ins >= 0 && ins <= MAX_INSTRUMENTS) ? ins : 0;
 
 		str += 2;
 
@@ -872,7 +892,7 @@ static void pattern_selection_system_copyout(void)
 			}
 			len += 3;
 			if (cur_note->instrument)
-				snprintf(str+len, 3, "%02d", cur_note->instrument % 100);
+				modplug_encode_8bit(str + len, cur_note->instrument);
 			else
 				str[len] = str[len+1] = '.';
 			snprintf(str+len+3, 3, "%02d", cur_note->volparam % 100);
