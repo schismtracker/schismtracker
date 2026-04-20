@@ -68,8 +68,8 @@ SCHISM_NONSTRING const char hexdigits[16] = "0123456789ABCDEF";
  *         '!' = volume '$' = keyoff
  *         '&' = setenvposition
  *         '('/')' = noteslide up/down (IMF) */
-static const char effects[] =     ".JFEGHLKRXODB!CQATI?SMNVW$UY?P&Z()?";
-static const char ptm_effects[] = ".0123456789ABCDRFFT????GHK?YXPLZ()?";
+static const char effects[35] =     ".JFEGHLKRXODB!CQATI?SMNVW$UY?P&Z()?";
+static const char ptm_effects[35] = ".0123456789ABCDRFFT????GHK?YXPLZ()?";
 
 /* --------------------------------------------------------------------- */
 
@@ -100,7 +100,7 @@ void kbd_sharp_flat_toggle(kbd_sharp_flat_t e)
 
 char get_effect_char(int effect)
 {
-	if (effect < 0 || effect > 34) {
+	if (effect < 0 || effect >= sizeof(effects)) {
 		log_appendf(4, "get_effect_char: effect %d out of range",
 				effect);
 		return '?';
@@ -113,7 +113,7 @@ int get_ptm_effect_number(unsigned char effect)
 	const char *ptr;
 	if (effect >= 'a' && effect <= 'z') effect -= 32;
 
-	ptr = strchr(ptm_effects, effect);
+	ptr = memchr(ptm_effects, effect, sizeof(ptm_effects));
 	return ptr ? (ptr - effects) : -1;
 }
 
@@ -130,7 +130,7 @@ int get_effect_number(unsigned char effect)
 		if (status.flags & CLASSIC_MODE) return -1;
 	}
 
-	ptr = strchr(effects, effect);
+	ptr = memchr(effects, effect, sizeof(effects));
 	return ptr ? ptr - effects : -1;
 }
 int kbd_get_effect_number(struct key_event *k)
