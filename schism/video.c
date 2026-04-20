@@ -452,8 +452,11 @@ void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uin
 	for (y = 0, fixedy = 0; y < height; y++, fixedy += scaley) {
 		uint32_t x;
 		uint64_t fixedx;
+		uint32_t scaled_y;
 
-		const uint32_t scaled_y = fixedy >> 32;
+		/* round */
+		scaled_y = (fixedy + 0x80000000) >> 32;
+		scaled_y = CLAMP(scaled_y, 0, 399);
 
 		// only scan again if we have to, or if this the first scan
 		if (y == 0 || scaled_y != last_scaled_y) {
@@ -476,7 +479,9 @@ void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uin
 		}
 
 		for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
-			const uint32_t scaled_x = fixedx >> 32;
+			/* round */
+			uint32_t scaled_x = (fixedx + 0x80000000) >> 32;
+			scaled_x = CLAMP(scaled_x, 0, 639);
 
 			switch (bpp) {
 			case 1: *pixels = pixels_u.uc[scaled_x]; break;
