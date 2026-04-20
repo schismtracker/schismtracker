@@ -610,7 +610,7 @@ static int pattern_selection_system_paste_modplug(const char *str, struct patter
 	/* magic bytes and their respective effect mapping functions */
 	static const struct {
 		SCHISM_NONSTRING char magic[3];
-		int (*map)(char f);
+		int (*map)(unsigned char f);
 	} fx_maps[] = {
 		{" IT", get_effect_number},
 		{"S3M", get_effect_number},
@@ -621,7 +621,7 @@ static int pattern_selection_system_paste_modplug(const char *str, struct patter
 
 	int copyin_x, copyin_y;
 	int copyin_w, copyin_h;
-	int (*fx_map)(char f);
+	int (*fx_map)(unsigned char f);
 	int x, i;
 	unsigned int scantmp;
 	disko_t ds;

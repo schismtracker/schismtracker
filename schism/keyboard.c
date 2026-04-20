@@ -108,7 +108,7 @@ char get_effect_char(int effect)
 	return effects[effect];
 }
 
-int get_ptm_effect_number(char effect)
+int get_ptm_effect_number(unsigned char effect)
 {
 	const char *ptr;
 	if (effect >= 'a' && effect <= 'z') effect -= 32;
@@ -117,7 +117,7 @@ int get_ptm_effect_number(char effect)
 	return ptr ? (ptr - effects) : -1;
 }
 
-int get_effect_number(char effect)
+int get_effect_number(unsigned char effect)
 {
 	const char *ptr;
 
