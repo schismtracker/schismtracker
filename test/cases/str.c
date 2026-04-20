@@ -25,6 +25,7 @@
 #include "test-assertions.h"
 
 #include "str.h"
+#include "mem.h"
 
 static testresult_t test_str_from_num_thousands(int32_t n, const char *expect)
 {
@@ -216,5 +217,69 @@ TEST_STR_GET_NUM_LINES_TEMPLATE(awesome_CRLF_LF, "awesome\r\n\n", 2)
 TEST_STR_GET_NUM_LINES_TEMPLATE(awesome_CR_hai_LF, "awesome\rhai\n", 2)
 
 #undef TEST_STR_GET_NUM_LINES_TEMPLATE
+
+/* ------------------------------------------------------------------------ */
+
+/* err, need to move this to a test/cases/mem.c */
+testresult_t test_str_dup(void)
+{
+	int r;
+	const char *t;
+	char *x;
+
+	t = "67";
+	x = str_dup(t);
+
+	r = strcmp(t, x);
+
+	free(x);
+
+	if (r != 0)
+		RETURN_FAIL;
+
+	RETURN_PASS;
+}
+
+static testresult_t test_str_trim_gen(const char *text, const char *expect,
+		int (*f)(char *s))
+{
+	int r;
+	char *x = str_dup(text);
+
+	f(x);
+
+	r = strcmp(x, expect);
+
+	free(x);
+
+	if (r != 0)
+		RETURN_FAIL;
+
+	RETURN_PASS;
+}
+
+static testresult_t test_str_trims(const char *text, const char *expectl,
+		const char *expectr, const char *expect)
+{
+	ASSERT_PRINTF(test_str_trim_gen(text, expectl, str_ltrim) == SCHISM_TESTRESULT_PASS, "%s", "str_ltrim");
+	ASSERT_PRINTF(test_str_trim_gen(text, expectr, str_rtrim) == SCHISM_TESTRESULT_PASS, "%s", "str_rtrim");
+	ASSERT_PRINTF(test_str_trim_gen(text, expect,  str_trim)  == SCHISM_TESTRESULT_PASS, "%s", "str_trim");
+
+	RETURN_PASS;
+}
+
+#define WHITESPACE " \t\v\r\n"
+
+testresult_t test_str_trim(void)
+{
+	/* TODO add some nontrivial cases */
+	return test_str_trims(WHITESPACE "67" WHITESPACE "67" WHITESPACE,
+		/* left */
+		"67" WHITESPACE "67" WHITESPACE,
+		/* right */
+		WHITESPACE "67" WHITESPACE "67",
+		/* both */
+		"67" WHITESPACE "67");
+}
 
 /* TODO test the rest of the str functions */
