@@ -848,6 +848,11 @@ SCHISM_HOT static void sdl3_video_blit(void)
 			while (!sdl3_LockSurface(video.u.s.surface))
 				timer_msleep(10);
 
+		/* Zero this if we need to letterbox */
+		if (video.u.s.clip.x || video.u.s.clip.y) {
+			memset(video.u.s.surface->pixels, 0, video.u.s.surface->pitch * video.u.s.surface->h);
+		}
+
 		video_blitSC(SDL_BYTESPERPIXEL(video.format),
 			video.u.s.surface->pixels,
 			video.u.s.surface->pitch,

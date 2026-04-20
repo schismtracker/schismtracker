@@ -775,6 +775,7 @@ SCHISM_HOT static void sdl2_video_blit(void)
 
 		sdl2_RenderClear(video.u.r.renderer);
 
+		/* FIXME: fallback to texture updating if needed */
 		sdl2_LockTexture(video.u.r.texture, NULL, (void **)&pixels, &pitch);
 
 		switch (video.format) {
@@ -797,6 +798,11 @@ SCHISM_HOT static void sdl2_video_blit(void)
 		if (SDL_MUSTLOCK(video.u.s.surface))
 			while (sdl2_LockSurface(video.u.s.surface) < 0)
 				timer_msleep(10);
+
+		/* Zero this if we need to letterbox */
+		if (video.u.s.clip.x || video.u.s.clip.y) {
+			memset(video.u.s.surface->pixels, 0, video.u.s.surface->pitch * video.u.s.surface->h);
+		}
 
 		video_blitSC(video.u.s.surface->format->BytesPerPixel,
 			video.u.s.surface->pixels,
