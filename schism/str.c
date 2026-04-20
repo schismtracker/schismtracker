@@ -220,7 +220,7 @@ char *str_from_num_thousands(int32_t n, char buf[15])
 /* --------------------------------------------------------------------- */
 /* STRING HANDLING FUNCTIONS */
 
-static const char *whitespace = " \t\v\r\n";
+static const char whitespace[] = " \t\v\r\n";
 
 int str_ltrim(char *s)
 {
@@ -236,7 +236,7 @@ int str_rtrim(char *s)
 {
 	ptrdiff_t len = (ptrdiff_t)strlen(s) - 1;
 
-	while (len >= 0 && strchr(whitespace, s[len]))
+	while (len >= 0 && memchr(whitespace, s[len], sizeof(whitespace) - 1))
 		len--;
 	len++;
 
