@@ -324,6 +324,7 @@ static const uint8_t uFFFD[] = {
  * faster processing on older systems, who usually have smaller
  * caches and slower memory accesses.  or that's the theory,
  * anyway. I have yet to put it to the test :) */
+#define VGAMEM_SCANNER_BIOSCHAR(c) (((c & 0x80)?bios:bioslow)[(c & 0x7F) << 3])
 #define VGAMEM_SCANNER_VARIANT(BITS) \
 	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, const uint32_t tc[16],\
 		const uint32_t mouseline[80], const uint32_t mouseline_mask[80]) \
@@ -378,29 +379,13 @@ static const uint8_t uFFFD[] = {
 	\
 				/* These are ordered by how often they will probably appear
 				 * for an average user of Schism (i.e., English speakers). */ \
-				if (c >= 0x20 && c <= 0x7F) { \
-					/* ASCII */ \
-					dg = itf[c << 3]; \
-				} else if (c >= 0xA0 && c <= 0xFF) { \
-					/* extended latin */ \
-					dg = extlatin[(c - 0xA0) << 3]; \
-				} else if (c >= 0x390 && c <= 0x3C9) { \
-					/* greek */ \
-					dg = greek[(c - 0x390) << 3]; \
-				} else if (c >= 0x3040 && c <= 0x309F) { \
-					/* japanese hiragana */ \
-					dg = hiragana[(c - 0x3040) << 3]; \
-				} else if ((c8 = char_unicode_to_cp437(c)) >= 0) { \
-					dg = (c8 & 0x80) \
-						? bios[(c8 & 0x7F) << 3] \
-						: bioslow[(c8 & 0x7F) << 3]; \
-				} else if ((c8 = char_unicode_to_itf(c)) >= 0) { \
-					dg = itf[c8 << 3]; \
-				} else if ((c8 = char_unicode_to_cp866(c)) >= 0) { \
-					dg = cp866[(c8 & 0x7F) << 3]; \
-				} else { \
-					dg = uFFFD[yl]; \
-				} \
+				dg = (c >= 0x20 && c <= 0x7F)               ? itf[c << 3] \
+				   : (c >= 0xA0 && c <= 0xFF)               ? extlatin[(c - 0xA0) << 3] \
+				   : (c >= 0x390 && c <= 0x3C9)             ? greek[(c - 0x390) << 3] \
+				   : ((c8 = char_unicode_to_cp437(c)) >= 0) ? VGAMEM_SCANNER_BIOSCHAR(c8) \
+				   : ((c8 = char_unicode_to_itf(c)) >= 0)   ? itf[c8 << 3] \
+				   : ((c8 = char_unicode_to_cp866(c)) >= 0) ? cp866[(c8 & 0x7F) << 3] \
+				   : uFFFD[yl]; \
 	\
 				fg = VGAMEM_UNICODE_FG(*bp); \
 				bg = VGAMEM_UNICODE_BG(*bp); \
@@ -412,9 +397,7 @@ static const uint8_t uFFFD[] = {
 				bg = VGAMEM_BG(*bp); \
 				fg2 = fg; \
 				bg2 = bg; \
-				dg = (c & 0x80) \
-					? bios[(c & 0x7F) << 3] \
-					: bioslow[(c & 0x7F) << 3]; \
+				dg = VGAMEM_SCANNER_BIOSCHAR(c); \
 			} else { \
 				/* none of the above, this is an ITF character */ \
 				fg = VGAMEM_FG(*bp); \
