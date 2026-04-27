@@ -33,15 +33,23 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
+#define PERIOD_B9 14
+#define PERIOD_C0 13696
+#define PERIOD_MIN PERIOD_B9
+#define PERIOD_MAX PERIOD_C0
+
+/* This correctly imports what OpenMPT writes, which in 2026 is probably
+ * the de-facto standard for "correctness".
+ *
+ * Might need to add a replacement log2(), it's simple enough to implement
+ * with a log() call and a magic constant
+ *
+ * Of note: Older versions of Schism incorrectly imported B-2 as C-3. */
 static int _mod_period_to_note(int period)
 {
-	int n;
-
-	if (period)
-		for (n = 0; n <= NOTE_LAST; n++)
-			if (period >= (32 * period_table[n % 12] >> (n / 12 + 2)))
-				return n + 1;
-	return NOTE_NONE;
+	return (period >= PERIOD_MIN && period <= PERIOD_MAX)
+		? round(12.0 * log2((double) PERIOD_C0 / period)) + 1
+		: NOTE_NONE;
 }
 
 void mod_import_note(const uint8_t p[4], song_note_t *note)

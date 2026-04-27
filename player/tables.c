@@ -30,10 +30,6 @@ const uint8_t vc_portamento_table[16] = {
 	0x80, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
-const uint16_t period_table[12] = {
-	1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 907,
-};
-
 
 const uint16_t finetune_table[16] = {
 	7895, 7941, 7985, 8046, 8107, 8169, 8232, 8280,

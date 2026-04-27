@@ -31,7 +31,6 @@
 
 extern const uint8_t vc_portamento_table[16]; // volume column Gx
 
-extern const uint16_t period_table[12];
 extern const uint16_t finetune_table[16];
 
 extern const int8_t sine_table[256];
