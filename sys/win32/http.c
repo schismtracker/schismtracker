@@ -132,8 +132,6 @@ static int http_wininet_send_request_(struct http *r, const char *domain,
 		disko_write(&ds, buffer, sizeof(buffer));
 	}
 
-	disko_write(&ds, "\0\0\0\0", 4);
-
 	cb(ds.data, ds.length - 4, userdata);
 
 	disko_memclose(&ds, 0);

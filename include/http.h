@@ -41,10 +41,7 @@ struct http {
 	/* send_request: sends an HTTP GET request; returns the results in a
 	 * callback
 	 *
-	 * NOTE: this function blocks!
-	 *
-	 * For ease of string operations, `data` is always padded
-	 * with four NUL bytes on the end. */
+	 * NOTE: this function blocks! */
 	int (*send_request_)(struct http *r, const char *domain, const char *path,
 		uint32_t reqflags, http_request_cb_spec cb, void *userdata);
 

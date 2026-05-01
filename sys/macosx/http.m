@@ -67,7 +67,6 @@ static int http_macosx_send_request_(struct http *r, const char *domain,
 	}
 
 	disko_write(&ds, data.bytes, data.length);
-	disko_write(&ds, "\0\0\0\0", 4);
 
 	cb(ds.data, ds.length, userdata);
 
