@@ -53,7 +53,7 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev ${{matrix.backend.pkgs}} libasound2-dev libflac-dev git libtool zip wget
+          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev ${{matrix.backend.pkgs}} libasound2-dev libflac-dev git libtool zip wget libcurl4-openssl-dev
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -92,7 +92,7 @@ jobs:
       - name: 'Install dependencies'
         run: |
           sudo apt-get update
-          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libsdl1.2-dev libasound2-dev libflac-dev git libtool zip wget libbz2-dev
+          sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libsdl1.2-dev libasound2-dev libflac-dev git libtool zip wget libbz2-dev libcurl4-openssl-dev
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -108,7 +108,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --with-flac --with-alsa --with-jack
+          ../configure --with-flac --with-alsa --with-jack --enable-update-checking
           make
           cd ..
 
