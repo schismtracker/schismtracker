@@ -43,27 +43,25 @@ static void update_thread_http_cb(const void *data, size_t len, void *userdata)
 {
 	cfg_file_t cfg = {0};
 	const char *ptr;
+	int syear, smon, sday;
+	uint32_t sver;
 
 	cfg_read_mem(data, len, &cfg);
 
 	ptr = cfg_get_string(&cfg, "Latest", "version", NULL, 0, NULL);
-	if (ptr) {
-		int syear, smon, sday;
+	if (!ptr) goto done;
 
-		if (ver_parse_schism_version(ptr, &syear, &smon, &sday)) {
-			uint32_t sver = ver_mktime(syear, smon, sday);
+	if (ver_parse_schism_version(ptr, &syear, &smon, &sday) != 0)
+		goto done;
 
-			if (sver > ver_reserved) {
-				log_nl();
-				log_appendf(1,
-					"A new version of Schism Tracker has been released!");
-				log_appendf(1,
-					"Download version %s from https://schismtracker.org/",
-					ptr);
-			}
-		}
-	}
+	sver = ver_mktime(syear, smon, sday);
+	if (sver <= ver_reserved) goto done;
 
+	log_nl();
+	log_appendf(1, "A new version of Schism Tracker has been released!");
+	log_appendf(1, "Download version %s from https://schismtracker.org/", ptr);
+
+done:
 	cfg_free(&cfg);
 }
 
@@ -75,8 +73,8 @@ static int update_thread(void *userdata)
 	if (http_init(&r) < 0)
 		return 1;
 
-	ret = http_send_request(&r, "www.schismtracker.org", "/phone_home.ini",
-		HTTP_REQ_SSL, update_thread_http_cb, NULL);
+	ret = http_send_request(&r, "127.0.0.1", "/phone_home.ini",
+		0, update_thread_http_cb, NULL);
 
 	http_quit(&r);
 
