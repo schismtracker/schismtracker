@@ -60,6 +60,8 @@ typedef struct cfg_file cfg_file_t;
 /* --------------------------------------------------------------------------------------------------------- */
 /* public functions */
 
+int cfg_read_mem(const void *data, size_t size, cfg_file_t *cfg);
+
 int cfg_read(cfg_file_t *cfg);
 
 /* write the structure back to disk. this will (try to) copy the current configuration to filename~ first.

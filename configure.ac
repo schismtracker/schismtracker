@@ -173,6 +173,11 @@ AC_ARG_WITH([avformat],
 	[],
 	[with_avformat=check])
 
+AC_ARG_WITH([curl],
+	[AS_HELP_STRING([--with-curl],[Build with libcurl support @<:default=check@:>@])],
+	[],
+	[with_curl=check])
+
 AC_ARG_ENABLE(sdl12-linking,
 	AS_HELP_STRING([--enable-sdl12-linking], [Link to SDL 1.2 rather than loading at runtime @<:default=check@:>@]),
 	SDL12_LINKING=$enableval,
@@ -218,6 +223,11 @@ AC_ARG_ENABLE(zstd-linking,
 	ZSTD_LINKING=$enableval,
 	ZSTD_LINKING=check)
 
+AC_ARG_ENABLE(curl-linking,
+	AS_HELP_STRING([--enable-curl-linking], [Link to curl rather than loading at runtime @<:default=check@:>@]),
+	CURL_LINKING=$enableval,
+	CURL_LINKING=check)
+
 dnl We disable the tests by default. This is primarily to aid package maintainers,
 dnl who would be surprised to find a whole new binary :)
 AC_ARG_ENABLE(tests,
@@ -229,6 +239,12 @@ AC_ARG_ENABLE(threads,
 	AS_HELP_STRING([--enable-threads], [Use multithreading]),
 	THREADS=$enableval,
 	THREADS=yes)
+
+dnl Default to no; this is enabled in release builds.
+AC_ARG_ENABLE(update-checking,
+	AS_HELP_STRING([--enable-update-checking], [Build update checking code]),
+	UPDATE=$enableval,
+	UPDATE=no)
 
 dnl These are used in the Win32 build so that we can intermix mingw32 and mingw-w64 parts.
 dnl This is really a hack, and it would be nicer if we could avoid this, but unfortunately
@@ -883,6 +899,12 @@ SCHISM_PKGCONFIG_CHECK([USE_LZMA], [LINK_TO_LZMA], [$with_lzma], [$LZMA_LINKING]
 SCHISM_PKGCONFIG_CHECK([USE_ZSTD], [LINK_TO_ZSTD], [$with_zstd], [$ZSTD_LINKING], [libzstd], [ZSTD], [USE_ZSTD], [ZSTD_DYNAMIC_LOAD], [zstd])
 SCHISM_PKGCONFIG_CHECK([USE_SDL3], [LINK_TO_SDL3], [$with_sdl3], [$SDL3_LINKING], [sdl3], [SDL3], [SCHISM_SDL3], [SDL3_DYNAMIC_LOAD], [SDL 3])
 SCHISM_PKGCONFIG_CHECK([USE_SDL2], [LINK_TO_SDL2], [$with_sdl2], [$SDL2_LINKING], [sdl2], [SDL2], [SCHISM_SDL2], [SDL2_DYNAMIC_LOAD], [SDL 2])
+SCHISM_PKGCONFIG_CHECK([USE_CURL], [LINK_TO_CURL], [$with_curl], [$CURL_LINKING], [libcurl], [CURL], [SCHISM_CURL], [CURL_DYNAMIC_LOAD], [curl])
+
+dnl update
+if test "x$UPDATE" = "xyes"; then
+	AC_DEFINE([SCHISM_UPDATE], [1], [ ])
+fi
 
 dnl -- need to define this globally for wii hax
 libSDL12found=no

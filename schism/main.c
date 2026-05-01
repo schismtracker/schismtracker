@@ -56,6 +56,7 @@
 #include "cpu.h"
 #include "atomic.h"
 #include "ieee-float.h"
+#include "update.h"
 
 #include "osdefs.h"
 
@@ -1222,6 +1223,11 @@ int schism_main(int argc, char **argv)
 	if (BITARRAY_ISSET(startup_flags, SF_HEADLESS))
 		status.flags |= STATUS_IS_HEADLESS; // for the log
 
+	SCHISM_RUNTIME_ASSERT(mt_init(), "Failed to initialize a multithreading backend!");
+
+	/* log depends on multithreading to guard the variables */
+	log_init();
+
 	/* Eh. */
 	log_append2(0, 3, 0, schism_banner(0));
 	log_nl();
@@ -1236,6 +1242,8 @@ int schism_main(int argc, char **argv)
 	cfg_init_dir();
 #endif
 
+	SCHISM_RUNTIME_ASSERT(timer_init(), "Failed to initialize a timers backend!");
+
 #if ENABLE_HOOKS
 	if (BITARRAY_ISSET(startup_flags, SF_HOOKS)) {
 		run_startup_hook();
@@ -1243,7 +1251,8 @@ int schism_main(int argc, char **argv)
 	}
 #endif
 
-	/* mt is no longer required  --paper */
+	/* mt is no longer required  --paper
+	 * note: it IS required for making http requests */
 	mt_init();
 	SCHISM_RUNTIME_ASSERT(!util_initumask(), "Failed to initialize umask mutex");
 	SCHISM_RUNTIME_ASSERT(!atm_init(), "Failed to initialize atomics!");
@@ -1402,6 +1411,10 @@ int schism_main(int argc, char **argv)
 #endif
 	/* poll once */
 	midi_engine_poll_ports();
+
+	/* now, launch the update thread. */
+	if (cfg_check_for_updates)
+		update_check();
 
 	event_loop();
 

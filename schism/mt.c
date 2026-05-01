@@ -51,6 +51,37 @@ void mt_thread_wait(mt_thread_t *thread, int *status)
 #endif
 }
 
+#ifdef USE_THREADS
+/* "Detach" emulation -- note this is a little different.
+ * All "detached" threads are actually waited for when
+ * the process exits. */
+
+static mt_thread_t **detached;
+static size_t detached_sz;
+static size_t detached_alloc;
+
+/* Waits for all "detached" threads to finish */
+static void wait_for_detached(void)
+{
+	size_t i;
+
+	for (i = 0; i < detached_sz; i++)
+		mt_thread_wait(detached[i], NULL);
+}
+#endif
+
+void mt_thread_detach(mt_thread_t *thread)
+{
+#ifdef USE_THREADS
+	if (detached_alloc >= detached_sz) {
+		detached_alloc = (detached_alloc ? (detached_alloc * 2) : 16);
+		detached = mem_realloc(detached, detached_alloc);
+	}
+
+	detached[detached_sz++] = thread;
+#endif
+}
+
 void mt_thread_set_priority(int priority)
 {
 #ifdef USE_THREADS
@@ -324,6 +355,8 @@ void mt_quit(void)
 {
 #ifdef USE_THREADS
 	if (mt_backend) {
+		wait_for_detached();
+
 		mt_backend->quit();
 		mt_backend = NULL;
 	}

@@ -41,6 +41,7 @@ static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (SDLCALL *fn)(void *), void
 static void (SDLCALL *sdl12_WaitThread)(SDL_Thread *thread, int *status);
 static uint32_t (SDLCALL *sdl12_ThreadID)(void);
 
+
 struct mt_thread {
 	SDL_Thread *thread;
 
