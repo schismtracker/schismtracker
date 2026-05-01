@@ -176,7 +176,8 @@ noinst_HEADERS = \
 	sys/x11/init.h \
 	sys/win32/win32-vista.h \
 	sys/asio/audio-asio.h \
-	test/cases/version-values.h
+	test/cases/version-values.h \
+	sys/curl/http-funcs.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -546,6 +547,18 @@ endif
 
 endif
 
+if USE_CURL
+files_curl = \
+	sys/curl/http.c
+
+cflags_curl=$(CURL_CFLAGS)
+
+if LINK_TO_CURL
+libs_curl=$(CURL_LIBS)
+endif
+
+endif
+
 if USE_NETWORK
 cflags_network=
 libs_network=$(NETWORK_LIBS)
@@ -740,7 +753,8 @@ schismtracker_SOURCES = \
 	$(files_zlib)			\
 	$(files_bzip2)			\
 	$(files_lzma)			\
-	$(files_zstd)
+	$(files_zstd)			\
+	$(files_curl)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtrackertest_OBJECTS)) $(HEADERS)
@@ -752,7 +766,7 @@ component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_wiiu) $(cflags_macos) $(cflags_os2) \
 	$(cflags_xbox) $(UTF8PROC_CFLAGS) $(cflags_avformat) \
 	$(cflags_asio) $(cflags_zlib) $(cflags_bzip2) \
-	$(cflags_lzma) $(cflags_zstd)
+	$(cflags_lzma) $(cflags_zstd) $(cflags_curl)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
@@ -766,7 +780,7 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
 	$(libs_os2) $(libs_xbox) $(libs_avformat) \
 	$(libs_asio) $(libs_zlib) $(libs_bzip2) \
-	$(libs_lzma) $(libs_zstd)
+	$(libs_lzma) $(libs_zstd) $(libs_curl)
 schismtracker_LDFLAGS = $(ldflags_macosx) \
 	$(ldflags_wii)
 

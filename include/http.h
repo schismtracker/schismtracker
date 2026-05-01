@@ -58,10 +58,18 @@ struct http {
 int http_init(struct http *r);
 void http_quit(struct http *r);
 
+/* NOTE: we should have an API that can do this pseudo-asynchronously,
+ * rather, grabbing a few bytes at a time; we can then plug that into
+ * slurp_nonseek */
 int http_send_request(struct http *r, const char *domain, const char *path,
 	uint32_t reqflags, http_request_cb_spec cb, void *userdata);
 
+/* Build a URL with the given domain, path, and reqflags
+ * This does not do any URL encoding (yet); beware! */
+char *http_build_url(const char *domain, const char *path, uint32_t reqflags);
+
 int http_wininet_init(struct http *r); /* SCHISM_WIN32 */
 int http_macosx_init(struct http *r);  /* SCHISM_MACOSX */
+int http_curl_init(struct http *r);    /* SCHISM_CURL */
 
 #endif /* SCHISM_HTTP_H_ */

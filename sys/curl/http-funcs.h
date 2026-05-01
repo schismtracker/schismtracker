@@ -21,57 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "headers.h"
-
-#include "http.h"
-
-int http_init(struct http *r)
-{
-	static int (*const funcs[])(struct http *r) = {
-#ifdef SCHISM_WIN32
-		http_wininet_init,
+#ifndef LIB
+# define LIB(name)
 #endif
-#ifdef SCHISM_MACOSX
-		http_macosx_init,
+#ifndef FUNC
+# define FUNC(lib, ret, name, params)
 #endif
-#ifdef SCHISM_CURL
-		http_curl_init,
-#endif
-		NULL
-	};
-	size_t i;
 
-	if (!r)
-		return -1;
+LIB(curl)
 
-	for (i = 0; funcs[i]; i++)
-		if (funcs[i](r) == 0)
-			return 0;
+FUNC(curl, CURL *, curl_easy_init, (void))
+FUNC(curl, CURLcode, curl_easy_setopt, (CURL *, CURLoption, ...))
+FUNC(curl, void, curl_easy_cleanup, (CURL *))
+FUNC(curl, CURLcode, curl_easy_perform, (CURL *))
 
-	return -1;
-}
-
-void http_quit(struct http *r)
-{
-	if (r && r->destroy_)
-		r->destroy_(r);
-}
-
-int http_send_request(struct http *r, const char *domain, const char *path,
-	uint32_t reqflags, http_request_cb_spec cb, void *userdata)
-{
-	if (r && r->send_request_)
-		return r->send_request_(r, domain, path, reqflags, cb, userdata);
-
-	return -1;
-}
-
-char *http_build_url(const char *domain, const char *path, uint32_t reqflags)
-{
-	char *s;
-
-	if (asprintf(&s, "%s://%s%s", (reqflags & HTTP_REQ_SSL) ? "https" : "http", domain, path) < 0)
-		return NULL;
-
-	return s;
-}
+#undef LIB
+#undef FUNC
