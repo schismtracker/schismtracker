@@ -53,7 +53,9 @@ void mt_thread_wait(mt_thread_t *thread, int *status)
 
 void mt_thread_detach(mt_thread_t *thread)
 {
+#ifdef USE_THREADS
 	mt_backend->thread_detach(thread);
+#endif
 }
 
 void mt_thread_set_priority(int priority)
