@@ -39,6 +39,7 @@ version=20250704
 ... maybe more in the future?
 */
 
+#ifdef SCHISM_UPDATE
 static void update_thread_http_cb(const void *data, size_t len, void *userdata)
 {
 	cfg_file_t cfg = {0};
@@ -73,8 +74,8 @@ static int update_thread(void *userdata)
 	if (http_init(&r) < 0)
 		return 1;
 
-	ret = http_send_request(&r, "127.0.0.1", "/phone_home.ini",
-		0, update_thread_http_cb, NULL);
+	ret = http_send_request(&r, "www.schismtracker.org", "/phone_home.ini",
+		HTTP_REQ_SSL, update_thread_http_cb, NULL);
 
 	http_quit(&r);
 
@@ -90,3 +91,7 @@ void update_check(void)
 
 	mt_thread_detach(thread);
 }
+#else
+/* stub */
+void update_check(void) { }
+#endif

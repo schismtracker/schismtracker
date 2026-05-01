@@ -240,6 +240,12 @@ AC_ARG_ENABLE(threads,
 	THREADS=$enableval,
 	THREADS=yes)
 
+dnl Default to no; this is enabled in release builds.
+AC_ARG_ENABLE(update-checking,
+	AS_HELP_STRING([--enable-update-checking], [Build update checking code]),
+	UPDATE=$enableval,
+	UPDATE=no)
+
 dnl These are used in the Win32 build so that we can intermix mingw32 and mingw-w64 parts.
 dnl This is really a hack, and it would be nicer if we could avoid this, but unfortunately
 dnl there is no real windows toolchain available that allows to target super old windows
@@ -894,6 +900,11 @@ SCHISM_PKGCONFIG_CHECK([USE_ZSTD], [LINK_TO_ZSTD], [$with_zstd], [$ZSTD_LINKING]
 SCHISM_PKGCONFIG_CHECK([USE_SDL3], [LINK_TO_SDL3], [$with_sdl3], [$SDL3_LINKING], [sdl3], [SDL3], [SCHISM_SDL3], [SDL3_DYNAMIC_LOAD], [SDL 3])
 SCHISM_PKGCONFIG_CHECK([USE_SDL2], [LINK_TO_SDL2], [$with_sdl2], [$SDL2_LINKING], [sdl2], [SDL2], [SCHISM_SDL2], [SDL2_DYNAMIC_LOAD], [SDL 2])
 SCHISM_PKGCONFIG_CHECK([USE_CURL], [LINK_TO_CURL], [$with_curl], [$CURL_LINKING], [libcurl], [CURL], [SCHISM_CURL], [CURL_DYNAMIC_LOAD], [curl])
+
+dnl update
+if test "x$UPDATE" = "xyes"; then
+	AC_DEFINE([SCHISM_UPDATE], [1], [ ])
+fi
 
 dnl -- need to define this globally for wii hax
 libSDL12found=no
