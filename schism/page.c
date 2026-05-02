@@ -819,13 +819,8 @@ static int handle_key_global(struct key_event * k)
 			return 0;
 		if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
-			if (status.current_page == PAGE_ORDERLIST_PANNING) {
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_ORDERLIST_VOLUMES);
-			} else {
-				if (k->state == KEY_PRESS)
-					set_page(PAGE_ORDERLIST_PANNING);
-			}
+			if (k->state == KEY_PRESS)
+				set_page((status.current_page == PAGE_ORDERLIST_PANNING) ? PAGE_ORDERLIST_VOLUMES : PAGE_ORDERLIST_PANNING);
 		} else if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_PRESS) {
 				_mp_finish(NULL);
