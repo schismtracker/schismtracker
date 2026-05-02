@@ -347,8 +347,6 @@ static void check_update(void)
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
 	if (video_is_visible() && (status.flags & NEED_UPDATE)) {
-		status.flags &= ~NEED_UPDATE;
-
 		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
 			if (!timer_ticks_passed(now, next))
 				return;
@@ -364,6 +362,8 @@ static void check_update(void)
 		redraw_screen();
 		video_refresh();
 		video_blit();
+
+		status.flags &= ~NEED_UPDATE;
 	} else if (status.flags & SOFTWARE_MOUSE_MOVED) {
 		video_blit();
 		status.flags &= ~(SOFTWARE_MOUSE_MOVED);
