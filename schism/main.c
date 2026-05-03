@@ -341,12 +341,26 @@ static void parse_options(int argc, char **argv)
 
 static void check_update(void)
 {
-	static timer_ticks_t next = 0;
 	timer_ticks_t now = timer_ticks();
+	float r;
+
+	if (video_refresh_rate(&r) == 0) {
+		/* Limit to the refresh rate */
+		static timer_ticks_t rr_next = 0;
+
+		if (!timer_ticks_passed(now, rr_next))
+			return; /* ignore */
+
+		rr_next = now + (1000.0f / r);
+	}
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
 	if (video_is_visible() && (status.flags & NEED_UPDATE)) {
+		static timer_ticks_t next = 0;
+		float r;
+
+		/* XXX this is dumb */
 		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
 			if (!timer_ticks_passed(now, next))
 				return;

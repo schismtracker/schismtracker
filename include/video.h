@@ -147,6 +147,11 @@ int video_is_screensaver_enabled(void);
 void video_toggle_screensaver(int enabled);
 
 /* ------------------------------------------------------------------------ */
+/* grab screen refresh rate */
+
+int video_refresh_rate(float *r);
+
+/* ------------------------------------------------------------------------ */
 
 /* function to callback to map an RGB value; used for the linear blitter only */
 typedef uint32_t (*schism_map_rgb_spec)(void *data, uint8_t r, uint8_t g, uint8_t b);

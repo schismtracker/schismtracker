@@ -948,6 +948,13 @@ void video_calculate_clip(uint32_t w, uint32_t h,
 }
 
 /* ------------------------------------------------------------------------ */
+
+int video_refresh_rate(float *r)
+{
+	return (backend && backend->refresh_rate) ? backend->refresh_rate(r) : -1;
+}
+
+/* ------------------------------------------------------------------------ */
 /* I'm so yuv! */
 
 static uint32_t yuvformat = VIDEO_YUV_NONE;
@@ -1699,3 +1706,4 @@ void video_opengl_report(void)
 		log_append(5,0, " Pixel buffer object extensions available");
 #endif
 }
+

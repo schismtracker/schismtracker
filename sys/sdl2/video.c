@@ -91,6 +91,7 @@ static SDL_bool (SDLCALL *sdl2_SetHint)(const char *name, const char *value);
 static int (SDLCALL *sdl2_RenderSetLogicalSize)(SDL_Renderer * renderer, int w, int h);
 static SDL_bool (SDLCALL *sdl2_GetWindowGrab)(SDL_Window * window);
 static void (SDLCALL *sdl2_StartTextInput)(void);
+static int (SDLCALL *sdl2_GetWindowDisplayMode)(SDL_Window *, SDL_DisplayMode *);
 
 static int (SDLCALL *sdl2_LockSurface)(SDL_Surface * surface);
 static void (SDLCALL *sdl2_UnlockSurface)(SDL_Surface * surface);
@@ -879,6 +880,20 @@ static void sdl2_video_show_cursor(int enabled)
 	sdl2_ShowCursor(enabled ? SDL_ENABLE : SDL_DISABLE);
 }
 
+/* negative if unknown */
+static int sdl2_video_refresh_rate(float *r)
+{
+	/* This can get nasty if the user has the window
+	 * in two, three, four monitors */
+	SDL_DisplayMode m;
+
+	if (sdl2_GetWindowDisplayMode(video.window, &m) < 0)
+		return -1;
+
+	*r = m.refresh_rate;
+	return 0;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 static int sdl2_video_load_syms(void)
@@ -932,6 +947,7 @@ static int sdl2_video_load_syms(void)
 	SCHISM_SDL2_SYM(LockSurface);
 	SCHISM_SDL2_SYM(UnlockSurface);
 	SCHISM_SDL2_SYM(StartTextInput);
+	SCHISM_SDL2_SYM(GetWindowDisplayMode);
 
 	return 0;
 }
@@ -1033,4 +1049,6 @@ const schism_video_backend_t schism_video_backend_sdl2 = {
 	.mousecursor_changed = sdl2_video_mousecursor_changed,
 	.get_wm_data = sdl2_video_get_wm_data,
 	.show_cursor = sdl2_video_show_cursor,
+
+	.refresh_rate = sdl2_video_refresh_rate,
 };

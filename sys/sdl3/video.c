@@ -934,6 +934,29 @@ static int sdl3_video_get_wm_data(video_wm_data_t *wm_data)
 
 //////////////////////////////////////////////////////////////////////////////
 
+/* negative if unknown */
+static int sdl3_video_refresh_rate(float *r)
+{
+	const SDL_DisplayMode *m;
+	SDL_DisplayID i;
+
+	i = sdl3_GetDisplayForWindow(video.window);
+	if (!i)
+		return -1;
+
+	m = sdl3_GetCurrentDisplayMode(i);
+	if (!m)
+		return -1;
+
+	if (m->refresh_rate == 0.0f)
+		return -1; /* "unspecified" */
+
+	*r = m->refresh_rate;
+	return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 static int sdl3_video_load_syms(void)
 {
 	SCHISM_SDL3_SYM(InitSubSystem);
@@ -1078,4 +1101,6 @@ const schism_video_backend_t schism_video_backend_sdl3 = {
 	.mousecursor_changed = sdl3_video_mousecursor_changed,
 	.get_wm_data = sdl3_video_get_wm_data,
 	.show_cursor = sdl3_video_show_cursor,
+
+	.refresh_rate = sdl3_video_refresh_rate,
 };
