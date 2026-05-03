@@ -1,6 +1,6 @@
 --- SDL-1.2.13-old/configure.in 2007-12-30 20:48:40.000000000 -0500
 +++ SDL-1.2.13/configure.in	2025-01-09 20:46:51.562601898 -0500
-@@ -2507,6 +2507,58 @@
+@@ -2507,6 +2507,59 @@
          SOURCES="$srcdir/src/main/beos/*.cc $SOURCES"
          EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lroot -lbe -lmedia -lgame -ldevice -ltextencoding"
          ;;
@@ -11,6 +11,7 @@
 +        CheckDummyVideo
 +        CheckDiskAudio
 +        CheckDummyAudio
++        CheckMacGL
 +
 +        if test "x$enable_loadso" = "xyes"; then
 +            AC_DEFINE(SDL_LOADSO_MACOS)
