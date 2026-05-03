@@ -1241,7 +1241,6 @@ struct video_opengl_funcs {
 	void (APIENTRY *glClearColor)(GLclampf,GLclampf,GLclampf,GLclampf);
 	const GLubyte* (APIENTRY *glGetString)(GLenum);
 	void (APIENTRY *glTexImage2D)(GLenum,GLint,GLint,GLsizei,GLsizei,GLint,GLenum,GLenum,const GLvoid *);
-	void (APIENTRY *glGetIntegerv)(GLenum, GLint *);
 	void (APIENTRY *glShadeModel)(GLenum);
 	void (APIENTRY *glGenTextures)(GLsizei,GLuint*);
 	void (APIENTRY *glDeleteTextures)(GLsizei, const GLuint *);
@@ -1301,7 +1300,6 @@ static int video_opengl_reload_funcs(struct video_opengl_funcs *f,
 	Z(glClearColor);
 	Z(glGetString);
 	Z(glTexImage2D);
-	Z(glGetIntegerv);
 	Z(glShadeModel);
 	Z(glGenTextures);
 	Z(glDeleteTextures);
