@@ -123,6 +123,7 @@ noinst_HEADERS = \
 	include/fmt.h			\
 	include/fft-vars.h		\
 	include/headers.h		\
+	include/http.h			\
 	include/ieee-float.h    \
 	include/it.h			\
 	include/keyboard.h      \
@@ -145,6 +146,7 @@ noinst_HEADERS = \
 	include/test-tempfile.h    \
 	include/tree.h			\
 	include/util.h			\
+	include/update.h		\
 	include/version.h		\
 	include/vgamem.h      \
 	include/video.h			\
@@ -174,7 +176,8 @@ noinst_HEADERS = \
 	sys/x11/init.h \
 	sys/win32/win32-vista.h \
 	sys/asio/audio-asio.h \
-	test/cases/version-values.h
+	test/cases/version-values.h \
+	sys/curl/http-funcs.h
 
 dist_man_MANS = sys/posix/schismtracker.1
 
@@ -310,7 +313,8 @@ files_win32 = \
 	sys/win32/clippy.c \
 	sys/win32/timer.c \
 	sys/win32/audio-waveout.c \
-	sys/win32/audio-dsound.c
+	sys/win32/audio-dsound.c \
+	sys/win32/http.c
 cflags_win32=-I$(srcdir)/sys/win32
 lib_win32=-lwinmm -lgdi32 $(DSOUND_LIBS)
 
@@ -409,7 +413,8 @@ files_macosx = \
 	sys/macosx/clippy.m \
 	sys/macosx/dmoz.m \
 	sys/macosx/audio.c \
-	fmt/macosxca.c
+	fmt/macosxca.c \
+	sys/macosx/http.m
 cflags_macosx=
 libs_macosx=
 ldflags_macosx=-framework Cocoa \
@@ -542,6 +547,18 @@ endif
 
 endif
 
+if USE_CURL
+files_curl = \
+	sys/curl/http.c
+
+cflags_curl=$(CURL_CFLAGS)
+
+if LINK_TO_CURL
+libs_curl=$(CURL_LIBS)
+endif
+
+endif
+
 if USE_NETWORK
 cflags_network=
 libs_network=$(NETWORK_LIBS)
@@ -660,6 +677,7 @@ schismtracker_SOURCES = \
 	schism/events.c  		\
 	schism/fakemem.c		\
 	schism/fonts.c          \
+	schism/http.c			\
 	schism/ieee-float.c     \
 	schism/itf.c			\
 	schism/keyboard.c		\
@@ -700,6 +718,7 @@ schismtracker_SOURCES = \
 	schism/status.c			\
 	schism/str.c             \
 	schism/timer.c          \
+	schism/update.c			\
 	schism/util.c			\
 	schism/version.c		\
 	schism/vgamem.c        \
@@ -734,7 +753,8 @@ schismtracker_SOURCES = \
 	$(files_zlib)			\
 	$(files_bzip2)			\
 	$(files_lzma)			\
-	$(files_zstd)
+	$(files_zstd)			\
+	$(files_curl)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtrackertest_OBJECTS)) $(HEADERS)
@@ -746,7 +766,7 @@ component_cflags = $(cflags_alsa) $(cflags_oss) \
 	$(cflags_wiiu) $(cflags_macos) $(cflags_os2) \
 	$(cflags_xbox) $(UTF8PROC_CFLAGS) $(cflags_avformat) \
 	$(cflags_asio) $(cflags_zlib) $(cflags_bzip2) \
-	$(cflags_lzma) $(cflags_zstd)
+	$(cflags_lzma) $(cflags_zstd) $(cflags_curl)
 schismtracker_CPPFLAGS = -I$(srcdir)/include -I. $(cppflags_wii) $(cppflags_wiiu)
 schismtracker_CFLAGS = $(AM_CFLAGS) $(component_cflags)
 schismtracker_OBJCFLAGS = $(AM_OBJCFLAGS) $(component_cflags)
@@ -760,7 +780,7 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
 	$(libs_os2) $(libs_xbox) $(libs_avformat) \
 	$(libs_asio) $(libs_zlib) $(libs_bzip2) \
-	$(libs_lzma) $(libs_zstd)
+	$(libs_lzma) $(libs_zstd) $(libs_curl)
 schismtracker_LDFLAGS = $(ldflags_macosx) \
 	$(ldflags_wii)
 
