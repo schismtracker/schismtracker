@@ -704,21 +704,21 @@ int float_init(void)
 	x.f8 = F64_C(1.0);
 	/* Interpret as a big endian byte sequence (Important!) */
 	x.u8 = bswapBE64(x.u8);
-	switch (x.u8) {
-	case UINT64_C(0x000000000000f03f):
+
+	/* Note: OpenWatcom does not implement 64-bit switch statements.
+	 * This is a cold code path, so it doesn't matter whether it is
+	 * an if-else chain or not. */
+	if (x.u8 == UINT64_C(0x000000000000f03f)) {
 		/* Intel byte order IEEE float format */
 		f64_format = F64_INTEL;
-		break;
-	case UINT64_C(0x3ff0000000000000):
+	} else if (x.u8 == UINT64_C(0x3ff0000000000000)) {
 		/* Motorola byte order IEEE float format */
 		f64_format = F64_MOTOROLA;
-		break;
-	default:
+	} else {
 		/*
 		log_appendf(1, "unknown 64-bit floating point format: 1.0 = 0x%016" PRIx64, x.u8);
 		*/
 		f64_format = F64_UNKNOWN;
-		break;
 	}
 #endif
 
