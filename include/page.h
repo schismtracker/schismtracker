@@ -368,6 +368,7 @@ enum page_numbers {
 	PAGE_INFO,
 
 	PAGE_CONFIG,
+	PAGE_SHORTCUTS,
 	PAGE_PREFERENCES,
 
 	PAGE_MIDI,
@@ -434,6 +435,7 @@ void about_load_page(struct page *page);
 void library_sample_load_page(struct page *page);
 void library_instrument_load_page(struct page *page);
 void config_load_page(struct page *page);
+void shortcuts_page_load_page(struct page *page);
 void waterfall_load_page(struct page *page);
 void timeinfo_load_page(struct page *page);
 

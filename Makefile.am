@@ -707,6 +707,7 @@ schismtracker_SOURCES = \
 	schism/page_palette.c		\
 	schism/page_patedit.c		\
 	schism/page_preferences.c	\
+	schism/page_shortcuts.c		\
 	schism/page_samples.c		\
 	schism/page_timeinfo.c		\
 	schism/page_vars.c		\
@@ -717,6 +718,7 @@ schismtracker_SOURCES = \
 	schism/slurp.c			\
 	schism/status.c			\
 	schism/str.c             \
+	schism/shortcuts.c		\
 	schism/timer.c          \
 	schism/util.c			\
 	schism/version.c		\

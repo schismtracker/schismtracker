@@ -36,6 +36,9 @@
 #include "timer.h"
 #include "mem.h"
 #include "atomic.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include "dmoz.h"
 
@@ -53,6 +56,87 @@ static volatile int midi_worker_thread_cancel = 0;
 static volatile int midi_worker_thread_tried = 0;
 
 static struct midi_provider *port_providers = NULL;
+
+#ifdef __EMSCRIPTEN__
+static struct midi_port *web_midi_port = NULL;
+
+EM_JS(void, schism_web_midi_init_js, (void), {
+  if (typeof Module.schismInitWebMIDI === "function") {
+    Module.schismInitWebMIDI();
+  }
+});
+
+EM_JS(void, schism_web_midi_send_js, (const uint8_t *data, int len), {
+  if (typeof Module.schismWebMIDISend === "function") {
+    Module.schismWebMIDISend(data, len);
+  }
+});
+
+static int web_midi_enable(SCHISM_UNUSED struct midi_port *p)
+{
+	return 1;
+}
+
+static int web_midi_disable(SCHISM_UNUSED struct midi_port *p)
+{
+	return 1;
+}
+
+static void web_midi_send(SCHISM_UNUSED struct midi_port *p,
+	const unsigned char *seq, uint32_t len, SCHISM_UNUSED uint32_t delay)
+{
+	if (!seq || len == 0)
+		return;
+
+	if (len > INT_MAX)
+		len = INT_MAX;
+
+	schism_web_midi_send_js(seq, (int)len);
+}
+
+int web_midi_setup(void)
+{
+	static const struct midi_driver driver = {
+		.flags = 0,
+		.poll = NULL,
+		.thread = NULL,
+		.work = NULL,
+		.enable = web_midi_enable,
+		.disable = web_midi_disable,
+		.send = web_midi_send,
+		.drain = NULL,
+		.destroy_userdata = NULL,
+	};
+	struct midi_provider *prov;
+	uint32_t port_num;
+
+	prov = midi_provider_register("WebMIDI", &driver, NULL);
+	if (!prov)
+		return 0;
+
+	port_num = midi_port_register(prov, MIDI_INPUT | MIDI_OUTPUT, "Web MIDI I/O", NULL, NULL);
+	if ((int32_t)port_num < 0)
+		return 0;
+
+	web_midi_port = midi_engine_port(port_num, NULL);
+	schism_web_midi_init_js();
+	return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE int schism_web_midi_receive(const uint8_t *data, int len)
+{
+	if (!web_midi_port || !data || len <= 0)
+		return 0;
+
+	midi_received_cb(web_midi_port, data, (uint32_t)len);
+	return 1;
+}
+#else
+int web_midi_setup(void)
+{
+	return 0;
+}
+#endif
 
 /* configurable midi stuff */
 int midi_flags = MIDI_TICK_QUANTIZE | MIDI_RECORD_NOTEOFF
@@ -269,6 +353,9 @@ static void _midi_engine_connect(void)
 #endif
 #ifdef SCHISM_MACOS
 	midimgr_midi_setup();
+#endif
+#ifdef __EMSCRIPTEN__
+	web_midi_setup();
 #endif
 }
 

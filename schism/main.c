@@ -49,6 +49,7 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
+#include "shortcuts.h"
 #include "fmt.h"
 #include "timer.h"
 #include "mt.h"
@@ -651,6 +652,24 @@ EMSCRIPTEN_KEEPALIVE void schism_web_export_clear(void)
 EMSCRIPTEN_KEEPALIVE uint32_t schism_web_loop_heartbeat_get(void)
 {
 	return web_loop_heartbeat;
+}
+
+/* Direct navigation from the HTML shell when browser/SDL eat Ctrl+F1 / Ctrl+Shift+F1. */
+EMSCRIPTEN_KEEPALIVE void schism_web_open_system_config(void)
+{
+	dialog_destroy();
+	set_page(PAGE_CONFIG);
+}
+
+EMSCRIPTEN_KEEPALIVE void schism_web_open_shortcut_config(void)
+{
+	dialog_destroy();
+	set_page(PAGE_SHORTCUTS);
+}
+
+EMSCRIPTEN_KEEPALIVE int schism_web_shortcut_capture_active(void)
+{
+	return (status.current_page == PAGE_SHORTCUTS) && shortcuts_is_capture_mode();
 }
 #endif
 

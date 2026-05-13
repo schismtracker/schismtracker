@@ -231,9 +231,14 @@ static void change_video_settings(void)
 }
 
 static void change_menu_bar_settings(void) {
-	cfg_video_want_menu_bar = !!widgets_config[16].d.togglebutton.state;
+	cfg_video_want_menu_bar = !!widgets_config[17].d.togglebutton.state;
 
 	video_toggle_menu(!video_is_fullscreen());
+}
+
+static void open_shortcut_settings(void)
+{
+	set_page(PAGE_SHORTCUTS);
 }
 
 /* --------------------------------------------------------------------- */
@@ -257,6 +262,7 @@ static void config_draw_const(void)
 	draw_text("Video Scaling:", 2, 28, 0, 2);
 	draw_text("Video Rendering:", 2, 40, 0, 2);
 	draw_text("Full Screen:", 38, 28, 0, 2);
+	draw_text("Shortcuts:", 39, 37, 0, 2);
 	if (video_have_menu())
 		draw_text("Menu Bar:", 38, 32, 0, 2);
 
@@ -299,8 +305,8 @@ static void config_set_page(void)
 	widgets_config[15].d.togglebutton.state = !video_is_hardware();
 
 	if (video_have_menu()) {
-		widgets_config[16].d.togglebutton.state = !!cfg_video_want_menu_bar;
-		widgets_config[17].d.togglebutton.state = !cfg_video_want_menu_bar;
+		widgets_config[17].d.togglebutton.state = !!cfg_video_want_menu_bar;
+		widgets_config[18].d.togglebutton.state = !cfg_video_want_menu_bar;
 	}
 }
 
@@ -310,7 +316,7 @@ void config_load_page(struct page *page)
 	page->title = "System Configuration (Ctrl-F1)";
 	page->draw_const = config_draw_const;
 	page->set_page = config_set_page;
-	page->total_widgets = 16;
+	page->total_widgets = 17;
 	page->widgets = widgets_config;
 	page->help_index = HELP_GLOBAL;
 
@@ -405,15 +411,20 @@ void config_load_page(struct page *page)
 			change_video_settings,
 			"Software",
 			2, video_renderer_group);
+	widget_create_button(widgets_config+16,
+			44, 39, 17,
+			14,16,16,16,0,
+			open_shortcut_settings,
+			"Configure...", 2);
 	////
 	if (video_have_menu()) {
-		widget_create_togglebutton(widgets_config+16,
+		widget_create_togglebutton(widgets_config+17,
 				44, 34, 5,
 				8,9,11,10,10,
 				change_menu_bar_settings,
 				"Yes",
 				2, video_menu_bar_group);
-		widget_create_togglebutton(widgets_config+17,
+		widget_create_togglebutton(widgets_config+18,
 				54, 34, 5,
 				10,10,9,10,0,
 				change_menu_bar_settings,

@@ -63,6 +63,14 @@ The generated web runner supports:
 - stored module management via `Stored Action` + `Run Action`
   (`Load Stored`, `Refresh List`, `Rename Stored`, `Delete Stored`)
 - display scale switching (`Fit Window`, `x1`, `x2`, `x3`)
+- Web MIDI input/output bridge (browser permission required)
+- configurable app shortcuts from `System Configuration -> Shortcuts -> Configure...`
+  (duplicate bindings are rejected and conflict target is shown)
+
+Shortcut note for browser builds:
+
+- `Ctrl+F1` can be reserved by browser/OS in some environments.
+- If so, open shortcut settings with `Ctrl+Shift+F1`, then navigate from there.
 
 Quick first-run checklist:
 

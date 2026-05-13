@@ -102,21 +102,46 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         color: #ddd;
       }
       header {
-        padding: 10px 12px;
+        padding: 7px 10px;
         border-bottom: 1px solid #2a2a2a;
-        font-size: 14px;
+        font-size: 12px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        white-space: nowrap;
       }
-      #status { color: #9ad; margin-left: 4px; }
+      .header-title {
+        color: #d7d7d7;
+        font-weight: 600;
+        margin-right: 4px;
+        flex: 0 0 auto;
+      }
+      .header-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 5px;
+        border: 1px solid #2c2c2c;
+        border-radius: 5px;
+        background: #181818;
+        flex: 0 0 auto;
+      }
+      #status { color: #9ad; }
+      #midiStatus { color: #7c9; }
+      .status-item {
+        padding: 0 2px;
+        white-space: nowrap;
+        flex: 0 0 auto;
+      }
       button {
         font: inherit;
         color: #ddd;
         background: #222;
         border: 1px solid #3a3a3a;
         border-radius: 4px;
-        padding: 4px 8px;
+        padding: 3px 6px;
         cursor: pointer;
       }
       select {
@@ -125,7 +150,7 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         background: #222;
         border: 1px solid #3a3a3a;
         border-radius: 4px;
-        padding: 4px 8px;
+        padding: 3px 6px;
       }
       canvas {
         width: 100vw;
@@ -137,33 +162,42 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
   </head>
   <body>
     <header>
-      Schism Tracker Web build
-      <button id="openBtn" type="button">Open Module</button>
-      <select id="storedModules" aria-label="Stored modules">
-        <option value="">(stored modules)</option>
-      </select>
-      <select id="storedAction" aria-label="Stored module action">
-        <option value="load">Load Stored</option>
-        <option value="refresh">Refresh List</option>
-        <option value="rename">Rename Stored</option>
-        <option value="delete">Delete Stored</option>
-      </select>
-      <button id="storedActionRunBtn" type="button">Run Action</button>
-      <select id="scaleMode" aria-label="Display scale">
-        <option value="fit" selected>Fit Window</option>
-        <option value="1">x1</option>
-        <option value="2">x2</option>
-        <option value="3">x3</option>
-      </select>
-      <select id="saveFormat" aria-label="Save format">
-        <option value="IT">IT</option>
-        <option value="S3M">S3M</option>
-      </select>
-      <button id="saveBtn" type="button">Save Module</button>
-      <input id="openFile" type="file" hidden />
-      <span id="status">loading...</span>
+      <span class="header-title">Schism Web</span>
+      <div class="header-group">
+        <button id="openBtn" type="button">Open</button>
+        <input id="openFile" type="file" hidden />
+      </div>
+      <div class="header-group">
+        <select id="storedModules" aria-label="Stored modules">
+          <option value="">Stored</option>
+        </select>
+        <select id="storedAction" aria-label="Stored module action">
+          <option value="load">Load</option>
+          <option value="refresh">Refresh</option>
+          <option value="rename">Rename</option>
+          <option value="delete">Delete</option>
+        </select>
+        <button id="storedActionRunBtn" type="button">Go</button>
+      </div>
+      <div class="header-group">
+        <select id="saveFormat" aria-label="Save format">
+          <option value="IT">IT</option>
+          <option value="S3M">S3M</option>
+        </select>
+        <button id="saveBtn" type="button">Save</button>
+      </div>
+      <div class="header-group">
+        <select id="scaleMode" aria-label="Display scale">
+          <option value="fit" selected>Fit</option>
+          <option value="1">x1</option>
+          <option value="2">x2</option>
+          <option value="3">x3</option>
+        </select>
+      </div>
+      <span id="midiStatus" class="status-item">MIDI: initializing...</span>
+      <span id="status" class="status-item">loading...</span>
     </header>
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" tabindex="1"></canvas>
     <script>
       const statusEl = document.getElementById("status");
       const openBtn = document.getElementById("openBtn");
@@ -174,7 +208,10 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
       const saveFormat = document.getElementById("saveFormat");
       const saveBtn = document.getElementById("saveBtn");
       const openFile = document.getElementById("openFile");
+      const midiStatusEl = document.getElementById("midiStatus");
       const headerEl = document.querySelector("header");
+      /** True after user clicks the tracker canvas; cleared on header mousedown */
+      let schismKeyboardGameFocus = false;
       const schismLogicalWidth = 640;
       const schismLogicalHeight = 400;
 
@@ -209,6 +246,92 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
       let schismIdbReady = false;
       let schismIdbSupported = false;
       let schismSyncPromise = null;
+      let schismWebMIDIInitialized = false;
+      let schismWebMIDIAccess = null;
+
+      function schismUpdateMIDIStatus(text, isError) {
+        if (!midiStatusEl) return;
+        midiStatusEl.textContent = text;
+        midiStatusEl.style.color = isError ? "#f99" : "#7c9";
+      }
+
+      function schismRefreshMIDIStatusCounts() {
+        if (!schismWebMIDIAccess) {
+          schismUpdateMIDIStatus("MIDI: unavailable", true);
+          return;
+        }
+        let inCount = 0;
+        let outCount = 0;
+        if (schismWebMIDIAccess.inputs) {
+          for (const _ of schismWebMIDIAccess.inputs.values()) inCount++;
+        }
+        if (schismWebMIDIAccess.outputs) {
+          for (const _ of schismWebMIDIAccess.outputs.values()) outCount++;
+        }
+        schismUpdateMIDIStatus(`MIDI: in ${inCount}, out ${outCount}`, false);
+      }
+
+      function schismAttachWebMIDIInputs() {
+        if (!schismWebMIDIAccess || !schismWebMIDIAccess.inputs) {
+          schismRefreshMIDIStatusCounts();
+          return;
+        }
+        for (const input of schismWebMIDIAccess.inputs.values()) {
+          input.onmidimessage = (ev) => {
+            try {
+              const bytes = ev && ev.data ? new Uint8Array(ev.data) : null;
+              if (!bytes || bytes.length === 0) return;
+              if (!Module || typeof Module.ccall !== "function") return;
+              Module.ccall(
+                "schism_web_midi_receive",
+                "number",
+                ["array", "number"],
+                [bytes, bytes.length]
+              );
+            } catch (err) {
+              console.error("WebMIDI input bridge failed", err);
+            }
+          };
+        }
+        schismRefreshMIDIStatusCounts();
+      }
+
+      function schismInitWebMIDI() {
+        if (schismWebMIDIInitialized) return;
+        schismWebMIDIInitialized = true;
+        schismUpdateMIDIStatus("MIDI: requesting access...", false);
+        if (!navigator.requestMIDIAccess) {
+          console.warn("WebMIDI is not supported in this browser.");
+          schismUpdateMIDIStatus("MIDI: unsupported", true);
+          return;
+        }
+        navigator.requestMIDIAccess({ sysex: false }).then(
+          (access) => {
+            schismWebMIDIAccess = access;
+            schismAttachWebMIDIInputs();
+            access.onstatechange = () => {
+              schismAttachWebMIDIInputs();
+            };
+          },
+          (err) => {
+            console.warn("WebMIDI access denied/unavailable", err);
+            schismUpdateMIDIStatus("MIDI: permission denied/unavailable", true);
+          }
+        );
+      }
+
+      function schismWebMIDISend(ptr, len) {
+        try {
+          if (!schismWebMIDIAccess || !schismWebMIDIAccess.outputs || !Module || !Module.HEAPU8) return;
+          const end = ptr + len;
+          const bytes = Uint8Array.from(Module.HEAPU8.subarray(ptr, end));
+          for (const output of schismWebMIDIAccess.outputs.values()) {
+            output.send(bytes);
+          }
+        } catch (err) {
+          console.error("WebMIDI output bridge failed", err);
+        }
+      }
 
       function schismMountIdbfs() {
         const FS = Module.FS;
@@ -569,11 +692,102 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
       window.Module = {
         preRun: [schismMountIdbfs],
         canvas: document.getElementById("canvas"),
+        schismInitWebMIDI,
+        schismWebMIDISend,
         setStatus(text) {
           statusEl.textContent = text;
         },
         onRuntimeInitialized() {
           statusEl.textContent = "ready (click canvas to focus)";
+          /* Browsers often bind F1–F12 (help, devtools, etc.). When the tracker
+           * canvas is focused, reserve those keys for SDL/WASM. */
+          if (Module.canvas) {
+            Module.canvas.style.outline = "none";
+            Module.canvas.addEventListener("mousedown", () => {
+              schismKeyboardGameFocus = true;
+              try {
+                Module.canvas.focus();
+              } catch (_e) {
+                /* ignore */
+              }
+            });
+          }
+          if (headerEl) {
+            headerEl.addEventListener("mousedown", () => {
+              schismKeyboardGameFocus = false;
+            });
+          }
+          let schismWebCfgComboTs = 0;
+          function schismWebIsPhysicalF1(ev) {
+            /* Chrome often reserves Ctrl+F1; key may be "" or "Unidentified" but code stays F1 */
+            return (
+              ev.key === "F1" ||
+              ev.code === "F1" ||
+              ev.code === "Help"
+            );
+          }
+          function schismWebFunctionKeyNumber(ev) {
+            if (ev.key && ev.key.length >= 2 && ev.key[0] === "F") {
+              const n = parseInt(ev.key.slice(1), 10);
+              if (n >= 1 && n <= 12) return n;
+            }
+            if (ev.code && ev.code.length >= 2 && ev.code[0] === "F") {
+              const n = parseInt(ev.code.slice(1), 10);
+              if (n >= 1 && n <= 12) return n;
+            }
+            return 0;
+          }
+          function schismWebMaybeOpenConfigPages(ev) {
+            if (!Module || !Module.canvas || typeof Module.ccall !== "function") return;
+            let captureActive = 0;
+            try {
+              captureActive = Module.ccall("schism_web_shortcut_capture_active", "number", [], []);
+            } catch (_err) {
+              captureActive = 0;
+            }
+            if (headerEl && ev.target && typeof ev.target.closest === "function" && ev.target.closest("header")) {
+              return;
+            }
+            const useGameKeys =
+              schismKeyboardGameFocus || document.activeElement === Module.canvas;
+            if (!useGameKeys) return;
+            if (!schismWebIsPhysicalF1(ev)) return;
+            if (!ev.ctrlKey || ev.altKey || ev.metaKey) return;
+            if (captureActive) {
+              ev.preventDefault();
+              return;
+            }
+            if (ev.type === "keydown" && ev.repeat) return;
+            /* keydown may never fire for Ctrl+F1; keyup on F1 usually does — debounce both */
+            const t = Date.now();
+            if (t - schismWebCfgComboTs < 420) return;
+            schismWebCfgComboTs = t;
+            ev.preventDefault();
+            try {
+              if (ev.shiftKey) {
+                Module.ccall("schism_web_open_shortcut_config", null, [], []);
+              } else {
+                Module.ccall("schism_web_open_system_config", null, [], []);
+              }
+            } catch (err) {
+              console.error("schism web config shortcut", err);
+            }
+          }
+          document.addEventListener("keydown", function (ev) {
+            if (!Module || !Module.canvas) return;
+            schismWebMaybeOpenConfigPages(ev);
+            if (headerEl && ev.target && typeof ev.target.closest === "function" && ev.target.closest("header")) {
+              return;
+            }
+            const useGameKeys =
+              schismKeyboardGameFocus || document.activeElement === Module.canvas;
+            if (!useGameKeys) return;
+            const fn = schismWebFunctionKeyNumber(ev);
+            if (fn >= 1 && fn <= 12) {
+              ev.preventDefault();
+            }
+          }, true);
+          document.addEventListener("keyup", schismWebMaybeOpenConfigPages, true);
 
           window.addEventListener("beforeunload", schismSyncToIDB);
           document.addEventListener("visibilitychange", function () {

@@ -41,6 +41,7 @@
 #include "mem.h"
 #include "str.h"
 #include "config.h"
+#include "shortcuts.h"
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -487,6 +488,7 @@ static int handle_key_global(struct key_event * k)
 	if (k->mouse != MOUSE_NONE) {
 		return 0;
 	}
+	shortcuts_remap_key_event(k);
 
 	/* first, check the truly global keys (the ones that still work if
 	 * a dialog's open) */
@@ -608,7 +610,11 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_F1:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & SCHISM_KEYMOD_CTRL) {
+		if ((k->mod & SCHISM_KEYMOD_CTRL) && (k->mod & SCHISM_KEYMOD_SHIFT)) {
+			_mp_finish(NULL);
+			if (k->state == KEY_PRESS)
+				set_page(PAGE_SHORTCUTS);
+		} else if (k->mod & SCHISM_KEYMOD_CTRL) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_CONFIG);
@@ -954,6 +960,12 @@ static int _handle_ime(struct key_event *k)
 	static int digraph_c = 0;
 	static uint32_t cs_unicode = 0;
 	static int cs_unicode_c = 0;
+
+	/* F1–F12 are reserved for global shortcuts (Help, System config, etc.).
+	 * Do not run IME/digraph logic here, or Ctrl/F-key chords break when a
+	 * text-accepting widget is focused (and some browser/SDL combos mis-route). */
+	if (k->sym >= SCHISM_KEYSYM_F1 && k->sym <= SCHISM_KEYSYM_F12)
+		return 0;
 
 	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
 	    && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
@@ -1649,6 +1661,7 @@ void load_pages(void)
 	waterfall_load_page(pages + PAGE_WATERFALL);
 	about_load_page(pages+PAGE_ABOUT);
 	config_load_page(pages + PAGE_CONFIG);
+	shortcuts_page_load_page(pages + PAGE_SHORTCUTS);
 	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
 	timeinfo_load_page(pages + PAGE_TIME_INFORMATION);
 

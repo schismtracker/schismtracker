@@ -17,7 +17,7 @@ have [git](https://git-scm.com/) installed and in your PATH.
 
 ### Get MSYS2 and install it
 
-Go to the URL http://msys2.github.io/ and download the 64-bit installer.
+Go to the URL [http://msys2.github.io/](http://msys2.github.io/) and download the 64-bit installer.
 
 Once installed, follow these instructions to get up-to-date files. This process
 is also described in their web page, so in case of conflict, you might opt to
@@ -26,38 +26,50 @@ follow their instructions.
 Run the MSYS2 shell (a start menu shortcut should have been created) and update
 the pacman package manager:
 
-	pacman -Sy pacman
+```
+pacman -Sy pacman
+```
 
 Follow the onscreen options and choose "yes" where prompted.
 Close the MSYS2 window. Run it again from the Start menu and update the system:
 
-	pacman -Syu
+```
+pacman -Syu
+```
 
 Again follow the instructions, chose "yes" where prompted, and close the MSYS2 window.
 
-Run it again from the Start menu _(note: the update
+Run it again from the Start menu *(note: the update
 process can, in some cases, break the start menu shortcut - in which case you
 may need to look in C:\msys64 (or wherever you installed MSYS2) and run
-msys2\_shell.cmd)_ and update the rest with:
+msys2shell.cmd)* and update the rest with:
 
-	pacman -Su
+```
+pacman -Su
+```
 
 ### Install the toolchains
 
 Once you have the shell environment ready, it's time to get the compilers.
 Execute the following command:
 
-	pacman -S mingw-w64-x86_64-toolchain libtool autoconf automake make perl
+```
+pacman -S mingw-w64-x86_64-toolchain libtool autoconf automake make perl
+```
 
 If asked to "enter a selection", hit Enter to go with the default.
 
 Also, you need the following specific dependencies:
 
-	pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-pkgconf mingw-w64-x86_64-libutf8proc
+```
+pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-pkgconf mingw-w64-x86_64-libutf8proc
+```
 
 For optional FLAC sample loading, you'll also need the following dependency:
 
-	pacman -S mingw-w64-x86_64-flac
+```
+pacman -S mingw-w64-x86_64-flac
+```
 
 Once you have installed these packages, close all your MSYS2 windows
 before continuing with the instructions.
@@ -70,7 +82,9 @@ compiler. We will be using the one called "MSYS2 MINGW64" throughout.
 
 If you've lost the shortcuts, you can also start the 64bit compiler with
 
-	msys2_shell.cmd -mingw64
+```
+msys2_shell.cmd -mingw64
+```
 
 ### Configure schismtracker to build
 
@@ -82,24 +96,32 @@ schismtracker-master folder (the one that contains README.md) using `cd`
 Drive letters are mapped to /x , example C:/
 is /c/, D:/ is /d/ ..., and so on. For example:
 
-	cd /c/Users/YourUserName/Downloads/schismtracker-master/
+```
+cd /c/Users/YourUserName/Downloads/schismtracker-master/
+```
 
 Reconfigure it:
 
-	autoreconf -i
+```
+autoreconf -i
+```
 
-_(note: if you get a "possibly undefined macro: AM\_PATH\_SDL" error, you're
+*(note: if you get a "possibly undefined macro: AMPATHSDL" error, you're
 probably using the standard msys2 shell - either use the mingw start menu
-shortcuts, or start `msys2_shell.cmd` with `-mingw64` as mentioned above)_
+shortcuts, or start `msys2_shell.cmd` with `-mingw64` as mentioned above)*
 
 Make a folder to build the binary in:
 
-	mkdir build
+```
+mkdir build
+```
 
 Now move into the build subdir and run the configure script:
 
-	cd build
-	../configure
+```
+cd build
+../configure
+```
 
 ### Automated testing
 
@@ -107,19 +129,23 @@ If you are doing ongoing development, you should enable Schism Tracker's
 automated test suite. This is done by passing `--enable-tests` to
 `./configure`.
 
-	../configure --enable-tests
+```
+../configure --enable-tests
+```
 
 The resulting `Makefile` will produce a second binary alongside
 `schismtracker.exe` called `schismtrackertests.exe`:
 
-	$ make
-	(..)
-	$ ./schismtrackertest.exe
-	TEST: test_bshift_arithmetic ..................................... PASS (0 ms)
-	TEST: test_bshift_right_shift_negative ........................... PASS (0 ms)
-	TEST: test_bshift_left_shift_overflow ............................ PASS (0 ms)
-	Results: 3 passed, 0 failed
-	$
+```
+$ make
+(..)
+$ ./schismtrackertest.exe
+TEST: test_bshift_arithmetic ..................................... PASS (0 ms)
+TEST: test_bshift_right_shift_negative ........................... PASS (0 ms)
+TEST: test_bshift_left_shift_overflow ............................ PASS (0 ms)
+Results: 3 passed, 0 failed
+$
+```
 
 In this build mode, if you make a change that requires corresponding changes
 to tests, you discover immediately on the next build.
@@ -128,12 +154,16 @@ to tests, you discover immediately on the next build.
 
 In order to build Schism, from the build folder, run:
 
-	make
+```
+make
+```
 
 You should now have an executable in the build folder that you can run from
 Windows Explorer, or with
 
-	./schismtracker.exe
+```
+./schismtracker.exe
+```
 
 After the first time, you can usually build Schism again without having to run
 `autoreconf` or `../configure` again, but if you run into problems, follow the
@@ -163,4 +193,7 @@ the SDL.dll file with the executable. For a 64bit build, the file is located in
 If you want to reduce the exe size (removing the debugging information), use
 the following command from MSYS2 MINGW64:
 
-	strip -g schismtracker.exe
+```
+strip -g schismtracker.exe
+```
+

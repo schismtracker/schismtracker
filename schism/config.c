@@ -31,6 +31,7 @@
 #include "str.h"
 #include "palettes.h"
 #include "video.h"
+#include "shortcuts.h"
 
 #include "config-parser.h"
 #include "dmoz.h"
@@ -388,6 +389,7 @@ void cfg_load(void)
 	str_realloc(&cfg_font, cfg_get_string(&cfg, "General", "font", NULL, 0, "font.cfg"), 0);
 
 	cfg_load_palette(&cfg);
+	shortcuts_load(&cfg);
 
 	/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -492,6 +494,7 @@ static void cfg_save_world(cfg_file_t *cfg)
 	cfg_set_number(cfg, "General", "altgr_is_alt", !!(status.flags & ALTGR_IS_ALT));
 
 	cfg_set_number(cfg, "General", "midi_like_tracker", !!(status.flags & MIDI_LIKE_TRACKER));
+	shortcuts_save(cfg);
 	/* Say, whose bright idea was it to make this a string setting?
 	The config file is human editable but that's mostly for developer convenience and debugging
 	purposes. These sorts of things really really need to be options in the GUI so that people
