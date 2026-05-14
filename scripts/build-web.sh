@@ -174,6 +174,7 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         height: calc(100vh - 42px);
         display: block;
         image-rendering: pixelated;
+        touch-action: none;
       }
     </style>
   </head>
@@ -715,19 +716,25 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
           statusEl.textContent = text;
         },
         onRuntimeInitialized() {
-          statusEl.textContent = "ready (click canvas to focus)";
+          statusEl.textContent = "ready (click or tap canvas to focus)";
           /* Browsers often bind F1–F12 (help, devtools, etc.). When the tracker
            * canvas is focused, reserve those keys for SDL/WASM. */
           if (Module.canvas) {
             Module.canvas.style.outline = "none";
-            Module.canvas.addEventListener("mousedown", () => {
+            function schismCanvasGrabFocus() {
               schismKeyboardGameFocus = true;
               try {
-                Module.canvas.focus();
+                Module.canvas.focus({ preventScroll: true });
               } catch (_e) {
-                /* ignore */
+                try {
+                  Module.canvas.focus();
+                } catch (_e2) {
+                  /* ignore */
+                }
               }
-            });
+            }
+            Module.canvas.addEventListener("mousedown", schismCanvasGrabFocus);
+            Module.canvas.addEventListener("pointerdown", schismCanvasGrabFocus);
           }
           if (headerEl) {
             headerEl.addEventListener("mousedown", () => {

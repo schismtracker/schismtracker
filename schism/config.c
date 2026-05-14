@@ -198,6 +198,14 @@ void cfg_load(void)
 # define WANT_FIXED_DEFAULT 1
 # define WANT_FIXED_WIDTH_DEFAULT 8
 # define WANT_FIXED_HEIGHT_DEFAULT 5
+#elif defined(__EMSCRIPTEN__)
+/* Browser: CSS-scaled canvas + SDL renderer logical size need matching mouse
+ * coordinates; fixed logical mode keeps 640x400 tracker space predictable. */
+# define WIDTH_DEFAULT 640
+# define HEIGHT_DEFAULT 400
+# define WANT_FIXED_DEFAULT 1
+# define WANT_FIXED_WIDTH_DEFAULT 8
+# define WANT_FIXED_HEIGHT_DEFAULT 5
 #else
 # define WIDTH_DEFAULT 640
 # define HEIGHT_DEFAULT 400
