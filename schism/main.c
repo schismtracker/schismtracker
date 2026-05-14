@@ -1158,6 +1158,14 @@ static void event_loop_iteration(void)
 	os_onframe();
 }
 
+#ifdef __EMSCRIPTEN__
+/* SDL (video/audio) on Emscripten may call emscripten_set_main_loop_timing during
+ * init; Emscripten requires emscripten_set_main_loop to have run first. */
+static void schism_em_main_stub(void)
+{
+}
+#endif
+
 SCHISM_NORETURN static void event_loop(void)
 {
 	event_fix_numlock_key = status.fix_numlock_setting;
@@ -1183,6 +1191,7 @@ SCHISM_NORETURN static void event_loop(void)
 	time(&status.now);
 	localtime_r(&status.now, &status.tmnow);
 #ifdef __EMSCRIPTEN__
+	emscripten_cancel_main_loop();
 	emscripten_set_main_loop(event_loop_iteration, 0, 1);
 	emscripten_exit_with_live_runtime();
 	__builtin_unreachable();
@@ -1503,6 +1512,9 @@ static void schism_sighandler(SCHISM_UNUSED int x)
 /* the real main function is called per-platform */
 int schism_main(int argc, char **argv)
 {
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(schism_em_main_stub, 0, 1);
+#endif
 	/* defaults */
 	BITARRAY_ZERO(startup_flags);
 	BITARRAY_SET(startup_flags, SF_HOOKS);
@@ -1577,10 +1589,16 @@ int schism_main(int argc, char **argv)
 	if (BITARRAY_ISSET(startup_flags, SF_HEADLESS)) {
 		if (!diskwrite_to) {
 			fprintf(stderr, "Error: --headless requires --diskwrite\n");
+#ifdef __EMSCRIPTEN__
+			emscripten_cancel_main_loop();
+#endif
 			return 1;
 		}
 		if (!initial_song) {
 			fprintf(stderr, "Error: --headless requires an input song file\n");
+#ifdef __EMSCRIPTEN__
+			emscripten_cancel_main_loop();
+#endif
 			return 1;
 		}
 
