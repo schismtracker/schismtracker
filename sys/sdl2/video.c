@@ -986,6 +986,12 @@ static int sdl2_video_init(void)
 	sdl2_SetHint("SDL_WINDOWS_DPI_AWARENESS", "permonitorv2");
 	sdl2_SetHint("SDL_ENABLE_SCREEN_KEYBOARD", "0");
 	sdl2_SetHint("SDL_GRAB_KEYBOARD", "1");
+#ifdef __EMSCRIPTEN__
+	/* Mouse hit-testing uses emscripten_get_element_css_size vs. targetX/Y; keep
+	 * hints that help embedded shells and first click. */
+	sdl2_SetHint("SDL_MOUSE_FOCUS_CLICKTHROUGH", "1");
+	sdl2_SetHint("SDL_EMSCRIPTEN_KEYBOARD_ELEMENT", "#canvas");
+#endif
 
 	if (sdl2_InitSubSystem(SDL_INIT_VIDEO) < 0) {
 		sdl2_quit();

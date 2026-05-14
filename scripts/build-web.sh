@@ -117,6 +117,7 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         background: #111;
         color: #ddd;
+        overflow-x: hidden;
       }
       header {
         padding: 7px 10px;
@@ -169,13 +170,26 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         border-radius: 4px;
         padding: 3px 6px;
       }
-      canvas {
-        width: 100vw;
-        height: calc(100vh - 42px);
+      /* Keep the canvas CSS size at the SDL logical size (640x400). Scaling only
+       * via transform so emscripten_get_element_css_size matches mouse targetX/Y
+       * (see SDL Emscripten_HandleMouseMove). Stretching the canvas with width:100vw
+       * breaks that ratio on Chrome/macOS. */
+      #canvas-wrap {
+        display: block;
+        width: 640px;
+        height: 400px;
+        margin: 0 auto;
+        transform-origin: top center;
+        image-rendering: pixelated;
+      }
+      #canvas {
+        width: 640px;
+        height: 400px;
         display: block;
         image-rendering: pixelated;
         touch-action: none;
         cursor: none;
+        vertical-align: top;
       }
     </style>
   </head>
@@ -216,7 +230,10 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
       <span id="midiStatus" class="status-item">MIDI: initializing...</span>
       <span id="status" class="status-item">loading...</span>
     </header>
-    <canvas id="canvas" tabindex="1"></canvas>
+    <div id="canvas-wrap">
+      <canvas id="canvas" tabindex="1"></canvas>
+    </div>
+    <div id="canvas-spacer" aria-hidden="true"></div>
     <script>
       const statusEl = document.getElementById("status");
       const openBtn = document.getElementById("openBtn");
@@ -229,6 +246,8 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
       const openFile = document.getElementById("openFile");
       const midiStatusEl = document.getElementById("midiStatus");
       const headerEl = document.querySelector("header");
+      const canvasWrapEl = document.getElementById("canvas-wrap");
+      const canvasSpacerEl = document.getElementById("canvas-spacer");
       /** True after user clicks the tracker canvas; cleared on header mousedown */
       let schismKeyboardGameFocus = false;
       const schismLogicalWidth = 640;
@@ -626,23 +645,34 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
 
       function updateCanvasScale() {
         const canvas = Module.canvas;
-        if (!canvas) return;
+        if (!canvas || !canvasWrapEl) return;
         const baseW = schismLogicalWidth;
         const baseH = schismLogicalHeight;
         const mode = scaleMode ? scaleMode.value : "fit";
+        const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height) : 42;
+        canvas.style.width = `${baseW}px`;
+        canvas.style.height = `${baseH}px`;
+        canvas.style.margin = "0";
+        canvasWrapEl.style.width = `${baseW}px`;
+        canvasWrapEl.style.height = `${baseH}px`;
         if (mode === "fit") {
-          const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height) : 42;
-          const h = Math.max(120, window.innerHeight - headerH);
-          canvas.style.width = "100vw";
-          canvas.style.height = `${h}px`;
-          canvas.style.margin = "0";
+          const availW = window.innerWidth;
+          const availH = Math.max(120, window.innerHeight - headerH);
+          const sx = availW / baseW;
+          const sy = availH / baseH;
+          const s = Math.min(sx, sy);
+          canvasWrapEl.style.transform = `scale(${s})`;
+          if (canvasSpacerEl) {
+            canvasSpacerEl.style.height = `${Math.ceil(baseH * s)}px`;
+          }
           return;
         }
         const mult = Number(mode);
         if (!Number.isFinite(mult) || mult <= 0) return;
-        canvas.style.width = `${Math.round(baseW * mult)}px`;
-        canvas.style.height = `${Math.round(baseH * mult)}px`;
-        canvas.style.margin = "0";
+        canvasWrapEl.style.transform = `scale(${mult})`;
+        if (canvasSpacerEl) {
+          canvasSpacerEl.style.height = `${Math.ceil(baseH * mult)}px`;
+        }
       }
 
       async function runStoredAction() {
@@ -782,6 +812,9 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
             }
             Module.canvas.addEventListener("mousedown", schismCanvasGrabFocus);
             Module.canvas.addEventListener("pointerdown", schismCanvasGrabFocus);
+            Module.canvas.addEventListener("contextmenu", (ev) => {
+              ev.preventDefault();
+            });
           }
           requestAnimationFrame(() =>
             requestAnimationFrame(() => {
