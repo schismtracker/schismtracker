@@ -625,7 +625,7 @@ int snprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *
 #endif
 #ifndef HAVE_VSNPRINTF
 #undef vsnprintf // stupid windows
-int vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT_PRINTF(2, 0);
+int vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT_PRINTF(3, 0);
 #endif
 #ifndef HAVE_STRPTIME
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
