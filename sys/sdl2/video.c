@@ -112,9 +112,6 @@ typedef int SDL_ScaleMode;
 
 static int (SDLCALL *sdl2_SetTextureScaleMode)(SDL_Texture *texture, SDL_ScaleMode scaleMode);
 
-// ONLY in SDL 2.0.18 and newer
-static void (SDLCALL *sdl2_RenderWindowToLogical)(SDL_Renderer * renderer, int windowX, int windowY, float *logicalX, float *logicalY);
-
 // Only used in SDL >= 2.30.5, because of a bug in prior versions that makes
 // SDL_DestroyWindowRenderer completely useless for our use case
 //
@@ -663,28 +660,6 @@ static void sdl2_video_translate(uint32_t vx, uint32_t vy, uint32_t *x, uint32_t
 {
 	uint32_t cx, cy, cw, ch;
 
-	/* When RenderSetLogicalSize is active, SDL may still deliver mouse in
-	 * window/canvas pixels (notably on Emscripten with a CSS-sized canvas).
-	 * Map to logical coordinates before clipping to the tracker framebuffer. */
-#ifdef __EMSCRIPTEN__
-	const int schism_map_mouse_via_logical = 1;
-#else
-	const int schism_map_mouse_via_logical = cfg_video_want_fixed;
-#endif
-	if (video.type == VIDEO_TYPE_RENDERER && schism_map_mouse_via_logical && sdl2_RenderWindowToLogical && video.u.r.renderer) {
-		float lx, ly;
-		int wx = (int)vx;
-		int wy = (int)vy;
-
-		sdl2_RenderWindowToLogical(video.u.r.renderer, wx, wy, &lx, &ly);
-		if (lx < 0.f)
-			lx = 0.f;
-		if (ly < 0.f)
-			ly = 0.f;
-		vx = (uint32_t)(lx + 0.5f);
-		vy = (uint32_t)(ly + 0.5f);
-	}
-
 	switch (video.type) {
 	case VIDEO_TYPE_SURFACE:
 		cx = video.u.s.clip.x;
@@ -978,9 +953,6 @@ static int sdl_video_load_optional_syms(void)
 {
 #if SDL2_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 12)
 	SCHISM_SDL2_SYM(SetTextureScaleMode);
-#endif
-#if SDL2_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 0, 18)
-	SCHISM_SDL2_SYM(RenderWindowToLogical);
 #endif
 #if SDL2_DYNAMIC_LOAD || SDL_VERSION_ATLEAST(2, 28, 0)
 	SCHISM_SDL2_SYM(HasWindowSurface);

@@ -175,6 +175,7 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         display: block;
         image-rendering: pixelated;
         touch-action: none;
+        cursor: none;
       }
     </style>
   </head>
@@ -232,6 +233,25 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
       let schismKeyboardGameFocus = false;
       const schismLogicalWidth = 640;
       const schismLogicalHeight = 400;
+
+      let schismLastMouseClientX = -1;
+      let schismLastMouseClientY = -1;
+      document.addEventListener(
+        "mousemove",
+        (ev) => {
+          schismLastMouseClientX = ev.clientX;
+          schismLastMouseClientY = ev.clientY;
+        },
+        { capture: true }
+      );
+      document.addEventListener(
+        "pointermove",
+        (ev) => {
+          schismLastMouseClientX = ev.clientX;
+          schismLastMouseClientY = ev.clientY;
+        },
+        { capture: true }
+      );
 
       function schismFsMkdirp(fs, path) {
         const parts = path.split("/").filter(Boolean);
@@ -707,6 +727,33 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         }
       }
 
+      function schismPrimeCanvasPointer() {
+        try {
+          const c = typeof Module !== "undefined" && Module && Module.canvas;
+          if (!c) return;
+          const r = c.getBoundingClientRect();
+          let x = schismLastMouseClientX;
+          let y = schismLastMouseClientY;
+          const inside =
+            x >= r.left && x < r.right && y >= r.top && y < r.bottom;
+          if (!inside) {
+            x = r.left + r.width * 0.5;
+            y = r.top + r.height * 0.5;
+          }
+          c.dispatchEvent(
+            new MouseEvent("mousemove", {
+              bubbles: true,
+              cancelable: true,
+              view: window,
+              clientX: x,
+              clientY: y,
+            })
+          );
+        } catch (_e) {
+          /* ignore */
+        }
+      }
+
       window.Module = {
         preRun: [schismMountIdbfs],
         canvas: document.getElementById("canvas"),
@@ -736,6 +783,11 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
             Module.canvas.addEventListener("mousedown", schismCanvasGrabFocus);
             Module.canvas.addEventListener("pointerdown", schismCanvasGrabFocus);
           }
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              schismPrimeCanvasPointer();
+            })
+          );
           if (headerEl) {
             headerEl.addEventListener("mousedown", () => {
               schismKeyboardGameFocus = false;
@@ -899,6 +951,12 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
           };
         }
       };
+
+      window.addEventListener("pageshow", function () {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(schismPrimeCanvasPointer);
+        });
+      });
     </script>
     <script src="./schismtracker.js"></script>
   </body>
