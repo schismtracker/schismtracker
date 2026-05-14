@@ -1118,6 +1118,9 @@ void handle_key(struct key_event *k)
 
 	if (handle_key_global(k)) return;
 	if (!(status.flags & DISKWRITER_ACTIVE) && menu_handle_key(k)) return;
+	/* Dialog shortcuts (Return/Escape/yn…) must run before widgets: see dialog.c
+	 * comment about KEY_PRESS Return and dialog_handle_key. */
+	if ((status.dialog_type & DIALOG_BOX) && dialog_handle_key(k)) return;
 	if (widget_handle_key(k)) return;
 
 	/* now check a couple other keys. */
@@ -1201,11 +1204,8 @@ void handle_key(struct key_event *k)
 		break;
 	}
 
-	/* and if we STILL didn't handle the key, pass it to the page.
-	 * (or dialog, if one's active) */
-	if (status.dialog_type & DIALOG_BOX) {
-		dialog_handle_key(k);
-	} else {
+	/* and if we STILL didn't handle the key, pass it to the page. */
+	if (!(status.dialog_type & DIALOG_BOX)) {
 		if (status.flags & DISKWRITER_ACTIVE) return;
 		if (ACTIVE_PAGE.handle_key) ACTIVE_PAGE.handle_key(k);
 	}

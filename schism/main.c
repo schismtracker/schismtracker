@@ -49,6 +49,7 @@
 #include "fonts.h"
 #include "dialog.h"
 #include "widget.h"
+#include "page.h"
 #include "shortcuts.h"
 #include "fmt.h"
 #include "timer.h"
@@ -350,31 +351,48 @@ static void check_update(void)
 	timer_ticks_t now = timer_ticks();
 	float r;
 
-	if (video_refresh_rate(&r) == 0) {
+	/* Throttle full redraws to display Hz when known (SDL3 already rejects 0 Hz).
+	 * SDL2 Emscripten often reports refresh_rate 0: never divide by it or the
+	 * loop sticks in the early-return path and the UI / mouse cursor freeze. */
+	if (video_refresh_rate(&r) == 0 && r >= 1.0f) {
 		/* Limit to the refresh rate */
 		static timer_ticks_t rr_next = 0;
 
-		if (!timer_ticks_passed(now, rr_next))
+		if (!timer_ticks_passed(now, rr_next)) {
+			if (video_is_visible() && (status.flags & SOFTWARE_MOUSE_MOVED)) {
+				video_blit();
+				status.flags &= ~SOFTWARE_MOUSE_MOVED;
+			}
 			return; /* ignore */
+		}
 
-		rr_next = now + (1000.0f / r);
+		rr_next = now + (timer_ticks_t)(1000.0f / r);
 	}
 
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
 	if (video_is_visible() && (status.flags & NEED_UPDATE)) {
 		static timer_ticks_t next = 0;
-		float r;
 
 		/* XXX this is dumb */
 		if (!video_is_focused() && (status.flags & LAZY_REDRAW)) {
-			if (!timer_ticks_passed(now, next))
+			if (!timer_ticks_passed(now, next)) {
+				if (status.flags & SOFTWARE_MOUSE_MOVED) {
+					video_blit();
+					status.flags &= ~SOFTWARE_MOUSE_MOVED;
+				}
 				return;
+			}
 
 			next = now + 500;
 		} else if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
-			if (!timer_ticks_passed(now, next))
+			if (!timer_ticks_passed(now, next)) {
+				if (status.flags & SOFTWARE_MOUSE_MOVED) {
+					video_blit();
+					status.flags &= ~SOFTWARE_MOUSE_MOVED;
+				}
 				return;
+			}
 
 			next = now + 100;
 		}
@@ -900,6 +918,15 @@ static void event_loop_iteration(void)
 					handle_key(&event_kk);
 				break;
 			default:
+				/* Motion after button-up leaves event_button at -1; still need hover/drag
+				 * semantics (widgets + pages) and consistent MOUSE_NONE for this path. */
+				if (se.type == SCHISM_MOUSEMOTION) {
+					event_kk.mouse = MOUSE_NONE;
+					if (event_kk.state == KEY_DRAG) {
+						event_kk.on_target = (widget_find_xy(event_kk.x, event_kk.y) == *selected_widget);
+					}
+					handle_key(&event_kk);
+				}
 				break;
 			};
 			break;
@@ -1513,7 +1540,10 @@ static void schism_sighandler(SCHISM_UNUSED int x)
 int schism_main(int argc, char **argv)
 {
 #ifdef __EMSCRIPTEN__
-	emscripten_set_main_loop(schism_em_main_stub, 0, 1);
+	/* Third arg must be 0: simulate_infinite_loop=1 throws "unwind" and aborts
+	 * this invocation of schism_main, so no init below would run (MIDI/Web
+	 * shell stays at "initializing…"). The real loop in event_loop() uses 1. */
+	emscripten_set_main_loop(schism_em_main_stub, 0, 0);
 #endif
 	/* defaults */
 	BITARRAY_ZERO(startup_flags);

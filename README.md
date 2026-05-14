@@ -40,6 +40,34 @@ for platform-specific instructions.
 
 ### WebAssembly (browser) build
 
+#### Browser port in this fork (`web-emscripten`)
+
+The **WebAssembly / in-browser** work in this repository lives on the
+[`web-emscripten`](https://github.com/koide-at/schismtracker-emscripten/tree/web-emscripten)
+branch of the fork
+[**schismtracker-emscripten**](https://github.com/koide-at/schismtracker-emscripten),
+which tracks upstream
+[**schismtracker/schismtracker**](https://github.com/schismtracker/schismtracker)
+(`master`). That branch adds the Emscripten pipeline, the generated runner in
+`scripts/build-web.sh`, and related UI/docs so Schism can run in a modern
+browser; it is **not** an official upstream release channel.
+
+Some of the browser-port changes were written or refactored with help from
+**AI-assisted coding tools** (for example Cursor). Treat this port as
+experimental: always compare against upstream sources and run your own tests
+before relying on it.
+
+#### Related documentation
+
+| Document | Description |
+| -------- | ----------- |
+| [docs/building_for_web.md](docs/building_for_web.md) | Web/WASM build steps, status, and troubleshooting (English) |
+| [docs/building_for_web_ja.md](docs/building_for_web_ja.md) | Same topic (Japanese) |
+| [docs/shortcuts_ja.md](docs/shortcuts_ja.md) | Shortcut reference in Japanese, including Web rebind notes |
+| [docs/shortcuts_ja_audit.md](docs/shortcuts_ja_audit.md) | Re-audit of shortcut coverage vs current sources (Japanese) |
+
+The build entry point is [scripts/build-web.sh](scripts/build-web.sh).
+
 A web build scaffold is available via Emscripten.
 
 ```sh
@@ -78,8 +106,6 @@ Quick first-run checklist:
 2. Reload the page and verify the file appears in the stored modules list.
 3. Pick `Load Stored` in `Stored Action`, click `Run Action`, and verify load.
 4. Try `Rename Stored` and `Delete Stored` from `Stored Action`, then reload to confirm persistence.
-
-For full details, see `docs/building_for_web.md`.
 
 ## Packaging status
 

@@ -422,6 +422,38 @@ static void pop_pending_keydown(const char *text)
 	}
 }
 
+/* While SDL text input is active, KEYDOWN is normally held until TEXTINPUT (or
+ * flushed on KEYUP). Emscripten and some stacks omit KEYUP and/or TEXTINPUT for
+ * Enter/Escape/navigation keys, so the pending KEYDOWN never reaches the app. */
+static int sdl2_keydown_skip_text_pending(SDL_Keycode sym)
+{
+	switch (sym) {
+	case SDLK_RETURN:
+	case SDLK_KP_ENTER:
+	case SDLK_ESCAPE:
+	case SDLK_TAB:
+	case SDLK_UP:
+	case SDLK_DOWN:
+	case SDLK_LEFT:
+	case SDLK_RIGHT:
+	case SDLK_PAGEUP:
+	case SDLK_PAGEDOWN:
+	case SDLK_HOME:
+	case SDLK_END:
+	case SDLK_INSERT:
+	case SDLK_DELETE:
+	case SDLK_PRINTSCREEN:
+	case SDLK_SCROLLLOCK:
+	case SDLK_PAUSE:
+		return 1;
+	default:
+		break;
+	}
+	if (sym >= SDLK_F1 && sym <= SDLK_F24)
+		return 1;
+	return 0;
+}
+
 static void sdl2_pump_events(void)
 {
 	SDL_Event e;
@@ -499,6 +531,8 @@ static void sdl2_pump_events(void)
 
 			if (!sdl2_IsTextInputActive()) {
 				// push it NOW
+				events_push_event(&schism_event);
+			} else if (sdl2_keydown_skip_text_pending(e.key.keysym.sym)) {
 				events_push_event(&schism_event);
 			} else {
 				push_pending_keydown(&schism_event);

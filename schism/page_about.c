@@ -55,6 +55,10 @@ static struct vgamem_overlay logo_image = {
 static int _fixup_ignore_globals(struct key_event *k)
 {
 	if (k->mouse && k->y > 20) return 0;
+	/* Pointer motion uses sym==0 and mouse==MOUSE_NONE; do not swallow it or
+	 * SOFTWARE_MOUSE_MOVED / widget hover never runs on this page. */
+	if (!k->sym && k->state == KEY_DRAG && !k->mouse)
+		return 0;
 	switch (k->sym) {
 	case SCHISM_KEYSYM_LEFT:
 	case SCHISM_KEYSYM_RIGHT:

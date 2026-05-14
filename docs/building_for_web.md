@@ -58,6 +58,10 @@ python3 -m http.server 8080
 
 Open [http://localhost:8080](http://localhost:8080).
 
+`http://127.0.0.1` and `http://localhost` are different origins; IndexedDB (IDBFS)
+persistence is partitioned per origin. Prefer **`localhost`** when debugging
+local-only oddities.
+
 ## Known web-specific constraints
 
 - Audio usually starts only after user interaction.
@@ -102,10 +106,13 @@ The stored list is sorted by most recently modified file first.
 
 Display scaling is selectable from the toolbar:
 
-- `Fit Window`: stretch to available viewport area (default)
-- `x1`: fixed `640x400` logical size
-- `x2`: fixed `1280x800`
-- `x3`: fixed `1920x1200`
+- `Fit Window`: largest size that **preserves the 640×400 logical aspect ratio**
+  in the area below the header (letterboxed). Default.
+- `x1`: fixed `640×400` CSS size (1:1 with the logical framebuffer)
+- `x2`: fixed `1280×800`
+- `x3`: fixed `1920×1200`
+
+The tracker canvas is **left-aligned** in the page (not centred under the header).
 
 ### Web MIDI (input/output)
 

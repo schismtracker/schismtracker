@@ -42,6 +42,11 @@
 
 #include <SDL_syswm.h>
 
+/* Some SDL2 builds ship a reduced headers set; keep Emscripten focus logic buildable. */
+#if defined(__EMSCRIPTEN__) && !defined(SDL_WINDOW_MOUSE_FOCUS)
+#define SDL_WINDOW_MOUSE_FOCUS 0x00000400u
+#endif
+
 #ifndef SCHISM_MACOSX
 #include "auto/schismico_hires.h"
 #endif
@@ -545,6 +550,13 @@ static int sdl2_video_startup(void)
 	sdl2_ShowCursor(SDL_DISABLE);
 	set_icon();
 
+#ifdef __EMSCRIPTEN__
+	/* Startup order + saved cfg can leave mouse motion filtered in SDL. */
+	sdl2_EventState(SDL_MOUSEMOTION, SDL_ENABLE);
+	sdl2_EventState(SDL_MOUSEBUTTONDOWN, SDL_ENABLE);
+	sdl2_EventState(SDL_MOUSEBUTTONUP, SDL_ENABLE);
+#endif
+
 	return 1;
 }
 
@@ -576,6 +588,17 @@ static void sdl2_video_fullscreen(int new_fs_flag)
 
 static void sdl2_video_resize(uint32_t width, uint32_t height)
 {
+#ifdef __EMSCRIPTEN__
+	/* SDL Emscripten may report CSS-scaled pixel sizes in RESIZED; keep Schism's
+	 * cached dimensions on the logical tracker size. Do not call
+	 * SDL_SetWindowSize here — it fights the browser canvas and can cause
+	 * erratic pointer jumps / resize feedback. */
+	if (width > 0 && height > 0 &&
+	    (width != (uint32_t)cfg_video_width || height != (uint32_t)cfg_video_height)) {
+		width = cfg_video_width;
+		height = cfg_video_height;
+	}
+#endif
 	video.width = width;
 	video.height = height;
 	if (video.type == VIDEO_TYPE_SURFACE)
@@ -605,7 +628,14 @@ static void sdl2_video_colors(unsigned char palette[16][3])
 
 static int sdl2_video_is_focused(void)
 {
+#ifdef __EMSCRIPTEN__
+	/* The canvas often has mouse focus before it receives keyboard focus; until
+	 * then INPUT_FOCUS can stay unset and the emulated cursor would never draw. */
+	return !!(sdl2_GetWindowFlags(video.window)
+		& (SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS));
+#else
 	return !!(sdl2_GetWindowFlags(video.window) & SDL_WINDOW_INPUT_FOCUS);
+#endif
 }
 
 static int sdl2_video_is_visible(void)
@@ -887,7 +917,11 @@ static int sdl2_video_refresh_rate(float *r)
 	if (sdl2_GetWindowDisplayMode(video.window, &m) < 0)
 		return -1;
 
-	*r = m.refresh_rate;
+	/* SDL may report 0 Hz (e.g. Emscripten / unknown). main.c divides by this. */
+	if (m.refresh_rate <= 0)
+		return -1;
+
+	*r = (float)m.refresh_rate;
 	return 0;
 }
 
@@ -991,6 +1025,12 @@ static int sdl2_video_init(void)
 	 * hints that help embedded shells and first click. */
 	sdl2_SetHint("SDL_MOUSE_FOCUS_CLICKTHROUGH", "1");
 	sdl2_SetHint("SDL_EMSCRIPTEN_KEYBOARD_ELEMENT", "#canvas");
+# ifdef SDL_HINT_TOUCH_MOUSE_EVENTS
+	sdl2_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+# endif
+# ifdef SDL_HINT_MOUSE_AUTO_CAPTURE
+	sdl2_SetHint(SDL_HINT_MOUSE_AUTO_CAPTURE, "0");
+# endif
 #endif
 
 	if (sdl2_InitSubSystem(SDL_INIT_VIDEO) < 0) {

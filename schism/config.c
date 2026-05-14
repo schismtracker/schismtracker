@@ -264,6 +264,23 @@ void cfg_load(void)
 		cfg_video_want_fixed_height = den * 400;
 	}
 
+#ifdef __EMSCRIPTEN__
+	/* Web shell keeps a 640×400 canvas (optionally CSS-scaled). A profile synced
+	 * from desktop can turn off want_fixed or set unrelated window sizes; that
+	 * breaks SDL Emscripten mouse mapping (targetX/Y vs window and css size). */
+	cfg_video_want_fixed = 1;
+	cfg_video_want_fixed_width = 640;
+	cfg_video_want_fixed_height = 400;
+	cfg_video_width = WIDTH_DEFAULT;
+	cfg_video_height = HEIGHT_DEFAULT;
+	/* GLES/WebGL mouse + logical-size bugs have been observed with the default
+	 * accelerated renderer in some Emscripten/SDL builds; software is stable. */
+	cfg_video_hardware = 0;
+	/* Saved desktop profiles sometimes set mouse_cursor to "disabled", which
+	 * turns off SDL mouse motion delivery (see sdl2_video_mousecursor_changed). */
+	cfg_video_mousecursor = MOUSE_EMULATED;
+#endif
+
 	tmp = dmoz_get_home_directory();
 	cfg_get_string(&cfg, "Directories", "modules", cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules), tmp);
 	cfg_get_string(&cfg, "Directories", "samples", cfg_dir_samples, ARRAY_SIZE(cfg_dir_samples), tmp);

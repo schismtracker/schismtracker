@@ -194,6 +194,20 @@ int dialog_handle_key(struct key_event * k)
 	if (d->handle_key && d->handle_key(k))
 		return 1;
 
+	/* widget_handle_key runs before us in handle_key() and consumes KEY_PRESS
+	 * Return (button depress) while activation waits for KEY_RELEASE. Some
+	 * browser/SDL stacks never deliver the release for Enter; handle it here. */
+	if (NO_MODIFIER(k->mod) && status.dialog_type == DIALOG_CUSTOM && k->state == KEY_PRESS) {
+		if (k->sym == SCHISM_KEYSYM_RETURN) {
+			dialog_yes(d->data);
+			return 1;
+		}
+		if (k->sym == SCHISM_KEYSYM_ESCAPE) {
+			dialog_cancel(d->data);
+			return 1;
+		}
+	}
+
 	/* this SHOULD be handling on k->state press but the widget key handler is stealing that key. */
 	if (k->state == KEY_RELEASE && NO_MODIFIER(k->mod)) {
 		switch (k->sym) {

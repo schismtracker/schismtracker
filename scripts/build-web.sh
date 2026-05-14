@@ -46,6 +46,15 @@ if [ ! -f "${ROOT_DIR}/configure" ]; then
   (cd "${ROOT_DIR}" && autoreconf -i)
 fi
 
+# schismico*.c used to live under schism/auto/; stale build Makefiles still point
+# emcc at schism/auto/schismtracker-schismico_hires.o after the move.
+if [ -f "${BUILD_DIR}/Makefile" ] \
+  && grep -q 'schism/auto/schismico_hires' "${BUILD_DIR}/Makefile" 2>/dev/null \
+  && [ -f "${CONFIGURE_SRC_DIR}/schism/schismico_hires.c" ]; then
+  echo "info: web build Makefile is stale (schismico path); removing for reconfigure" >&2
+  rm -f "${BUILD_DIR}/Makefile" "${BUILD_DIR}/config.status" "${BUILD_DIR}/config.log"
+fi
+
 cd "${BUILD_DIR}"
 
 # Out-of-tree configure refuses a srcdir that still has in-tree configure
@@ -117,7 +126,6 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         background: #111;
         color: #ddd;
-        overflow-x: hidden;
       }
       header {
         padding: 7px 10px;
@@ -170,26 +178,12 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         border-radius: 4px;
         padding: 3px 6px;
       }
-      /* Keep the canvas CSS size at the SDL logical size (640x400). Scaling only
-       * via transform so emscripten_get_element_css_size matches mouse targetX/Y
-       * (see SDL Emscripten_HandleMouseMove). Stretching the canvas with width:100vw
-       * breaks that ratio on Chrome/macOS. */
-      #canvas-wrap {
+      /* Canvas CSS size is set only in updateCanvasScale() so 640×400 logical
+       * aspect is preserved (Fit = letterbox inside the viewport below header). */
+      canvas {
         display: block;
-        width: 640px;
-        height: 400px;
-        margin: 0 auto;
-        transform-origin: top center;
+        margin: 0;
         image-rendering: pixelated;
-      }
-      #canvas {
-        width: 640px;
-        height: 400px;
-        display: block;
-        image-rendering: pixelated;
-        touch-action: none;
-        cursor: none;
-        vertical-align: top;
       }
     </style>
   </head>
@@ -230,10 +224,7 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
       <span id="midiStatus" class="status-item">MIDI: initializing...</span>
       <span id="status" class="status-item">loading...</span>
     </header>
-    <div id="canvas-wrap">
-      <canvas id="canvas" tabindex="1"></canvas>
-    </div>
-    <div id="canvas-spacer" aria-hidden="true"></div>
+    <canvas id="canvas" tabindex="1"></canvas>
     <script>
       const statusEl = document.getElementById("status");
       const openBtn = document.getElementById("openBtn");
@@ -246,31 +237,10 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
       const openFile = document.getElementById("openFile");
       const midiStatusEl = document.getElementById("midiStatus");
       const headerEl = document.querySelector("header");
-      const canvasWrapEl = document.getElementById("canvas-wrap");
-      const canvasSpacerEl = document.getElementById("canvas-spacer");
       /** True after user clicks the tracker canvas; cleared on header mousedown */
       let schismKeyboardGameFocus = false;
       const schismLogicalWidth = 640;
       const schismLogicalHeight = 400;
-
-      let schismLastMouseClientX = -1;
-      let schismLastMouseClientY = -1;
-      document.addEventListener(
-        "mousemove",
-        (ev) => {
-          schismLastMouseClientX = ev.clientX;
-          schismLastMouseClientY = ev.clientY;
-        },
-        { capture: true }
-      );
-      document.addEventListener(
-        "pointermove",
-        (ev) => {
-          schismLastMouseClientX = ev.clientX;
-          schismLastMouseClientY = ev.clientY;
-        },
-        { capture: true }
-      );
 
       function schismFsMkdirp(fs, path) {
         const parts = path.split("/").filter(Boolean);
@@ -645,34 +615,29 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
 
       function updateCanvasScale() {
         const canvas = Module.canvas;
-        if (!canvas || !canvasWrapEl) return;
+        if (!canvas) return;
         const baseW = schismLogicalWidth;
         const baseH = schismLogicalHeight;
         const mode = scaleMode ? scaleMode.value : "fit";
-        const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height) : 42;
-        canvas.style.width = `${baseW}px`;
-        canvas.style.height = `${baseH}px`;
+        canvas.style.display = "block";
         canvas.style.margin = "0";
-        canvasWrapEl.style.width = `${baseW}px`;
-        canvasWrapEl.style.height = `${baseH}px`;
         if (mode === "fit") {
+          const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height) : 42;
           const availW = window.innerWidth;
           const availH = Math.max(120, window.innerHeight - headerH);
           const sx = availW / baseW;
           const sy = availH / baseH;
           const s = Math.min(sx, sy);
-          canvasWrapEl.style.transform = `scale(${s})`;
-          if (canvasSpacerEl) {
-            canvasSpacerEl.style.height = `${Math.ceil(baseH * s)}px`;
-          }
+          const w = Math.max(1, Math.floor(baseW * s));
+          const h = Math.max(1, Math.floor(baseH * s));
+          canvas.style.width = `${w}px`;
+          canvas.style.height = `${h}px`;
           return;
         }
         const mult = Number(mode);
         if (!Number.isFinite(mult) || mult <= 0) return;
-        canvasWrapEl.style.transform = `scale(${mult})`;
-        if (canvasSpacerEl) {
-          canvasSpacerEl.style.height = `${Math.ceil(baseH * mult)}px`;
-        }
+        canvas.style.width = `${Math.round(baseW * mult)}px`;
+        canvas.style.height = `${Math.round(baseH * mult)}px`;
       }
 
       async function runStoredAction() {
@@ -757,33 +722,6 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
         }
       }
 
-      function schismPrimeCanvasPointer() {
-        try {
-          const c = typeof Module !== "undefined" && Module && Module.canvas;
-          if (!c) return;
-          const r = c.getBoundingClientRect();
-          let x = schismLastMouseClientX;
-          let y = schismLastMouseClientY;
-          const inside =
-            x >= r.left && x < r.right && y >= r.top && y < r.bottom;
-          if (!inside) {
-            x = r.left + r.width * 0.5;
-            y = r.top + r.height * 0.5;
-          }
-          c.dispatchEvent(
-            new MouseEvent("mousemove", {
-              bubbles: true,
-              cancelable: true,
-              view: window,
-              clientX: x,
-              clientY: y,
-            })
-          );
-        } catch (_e) {
-          /* ignore */
-        }
-      }
-
       window.Module = {
         preRun: [schismMountIdbfs],
         canvas: document.getElementById("canvas"),
@@ -793,34 +731,20 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
           statusEl.textContent = text;
         },
         onRuntimeInitialized() {
-          statusEl.textContent = "ready (click or tap canvas to focus)";
+          statusEl.textContent = "ready (click canvas to focus)";
           /* Browsers often bind F1–F12 (help, devtools, etc.). When the tracker
            * canvas is focused, reserve those keys for SDL/WASM. */
           if (Module.canvas) {
             Module.canvas.style.outline = "none";
-            function schismCanvasGrabFocus() {
+            Module.canvas.addEventListener("mousedown", () => {
               schismKeyboardGameFocus = true;
               try {
-                Module.canvas.focus({ preventScroll: true });
+                Module.canvas.focus();
               } catch (_e) {
-                try {
-                  Module.canvas.focus();
-                } catch (_e2) {
-                  /* ignore */
-                }
+                /* ignore */
               }
-            }
-            Module.canvas.addEventListener("mousedown", schismCanvasGrabFocus);
-            Module.canvas.addEventListener("pointerdown", schismCanvasGrabFocus);
-            Module.canvas.addEventListener("contextmenu", (ev) => {
-              ev.preventDefault();
             });
           }
-          requestAnimationFrame(() =>
-            requestAnimationFrame(() => {
-              schismPrimeCanvasPointer();
-            })
-          );
           if (headerEl) {
             headerEl.addEventListener("mousedown", () => {
               schismKeyboardGameFocus = false;
@@ -984,12 +908,6 @@ cat > "${DIST_DIR}/index.html" <<'HTML'
           };
         }
       };
-
-      window.addEventListener("pageshow", function () {
-        requestAnimationFrame(function () {
-          requestAnimationFrame(schismPrimeCanvasPointer);
-        });
-      });
     </script>
     <script src="./schismtracker.js"></script>
   </body>
