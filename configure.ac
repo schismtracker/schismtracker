@@ -975,42 +975,52 @@ find_lib()
 
 AM_CONDITIONAL([USE_X11], [false])
 AM_CONDITIONAL([LINK_TO_X11], [false])
-AC_PATH_X
-AC_PATH_XTRA
-if test "x$have_x" = "xyes"; then
-	case "$host" in
-		*-*-darwin*)
-			dnl Apple now puts this in /opt/X11 ?
-			x11_lib='/opt/X11/lib/libX11.6.dylib'
-			;;
-		*-*-openbsd*)
-			x11_lib='libX11.so'
-			;;
-		*)
-			x11_lib=[`find_lib "libX11.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
-			;;
-	esac
+dnl Cross builds for Emscripten still run AC_PATH_X on the build machine and
+dnl can pick up X11, producing sys/x11 objects that cannot link for wasm.
+schism_skip_x11=no
+case "$host" in
+	wasm32-*|wasm64-*|*-*-emscripten*)
+		schism_skip_x11=yes
+		;;
+esac
+if test "x$schism_skip_x11" != "xyes"; then
+	AC_PATH_X
+	AC_PATH_XTRA
+	if test "x$have_x" = "xyes"; then
+		case "$host" in
+			*-*-darwin*)
+				dnl Apple now puts this in /opt/X11 ?
+				x11_lib='/opt/X11/lib/libX11.6.dylib'
+				;;
+			*-*-openbsd*)
+				x11_lib='libX11.so'
+				;;
+			*)
+				x11_lib=[`find_lib "libX11.so.*" "$X_LIBS -L/usr/X11/$base_libdir -L/usr/X11R6/$base_libdir" | sed 's/.*\/\(.*\)/\1/; q'`]
+				;;
+		esac
 
-	if test "x$have_loadso" != "xyes" && test "x$X11_LINKING" = "xno"; then
-		AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+		if test "x$have_loadso" != "xyes" && test "x$X11_LINKING" = "xno"; then
+			AC_MSG_ERROR([*** Failed to find a proper dynamic loading backend])
+		fi
+
+		AC_DEFINE([SCHISM_USE_X11], [1], [ ])
+
+		AM_CONDITIONAL([USE_X11], [true])
+
+		if test "x$have_loadso" = "xyes" && test "x$X11_LINKING" = "xno" && test "x$x11_lib" != "x"; then
+			echo "-- dynamic libX11 -> $x11_lib"
+			AC_DEFINE_UNQUOTED(X11_LIBRARY_LIBX11_PATH, "$x11_lib", [ ])
+			AC_DEFINE([X11_DYNAMIC_LOAD], [1], [ ])
+		else
+			X11_LINKING=yes
+			EXTRA_LDFLAGS="$EXTRA_LDFLAGS $X_LIBS -lX11"
+			AM_CONDITIONAL([LINK_TO_X11], [true])
+		fi
+
+		AC_SUBST([X_CFLAGS])
+		AC_SUBST([X_LIBS])
 	fi
-
-	AC_DEFINE([SCHISM_USE_X11], [1], [ ])
-
-	AM_CONDITIONAL([USE_X11], [true])
-
-	if test "x$have_loadso" = "xyes" && test "x$X11_LINKING" = "xno" && test "x$x11_lib" != "x"; then
-		echo "-- dynamic libX11 -> $x11_lib"
-		AC_DEFINE_UNQUOTED(X11_LIBRARY_LIBX11_PATH, "$x11_lib", [ ])
-		AC_DEFINE([X11_DYNAMIC_LOAD], [1], [ ])
-	else
-		X11_LINKING=yes
-		EXTRA_LDFLAGS="$EXTRA_LDFLAGS $X_LIBS -lX11"
-		AM_CONDITIONAL([LINK_TO_X11], [true])
-	fi
-
-	AC_SUBST([X_CFLAGS])
-	AC_SUBST([X_LIBS])
 fi
 
 dnl --------------------------------------------------------------------------

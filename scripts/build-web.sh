@@ -48,6 +48,23 @@ fi
 
 cd "${BUILD_DIR}"
 
+# Out-of-tree configure refuses a srcdir that still has in-tree configure
+# artifacts (config.status). That happens when ./configure was run in the
+# source tree for a native build, then this script uses build-web/ or /tmp/...
+# as a separate build directory — including when CONFIGURE_SRC_DIR is a
+# symlink to ROOT_DIR (paths with spaces).
+if [ ! -f "${BUILD_DIR}/Makefile" ] && [ -f "${ROOT_DIR}/config.status" ]; then
+  echo "info: clearing native in-tree configure state so emscripten can configure out-of-tree..."
+  if [ -f "${ROOT_DIR}/Makefile" ]; then
+    if ! (cd "${ROOT_DIR}" && make distclean); then
+      echo "warn: make distclean failed; removing config.status so configure can proceed" >&2
+      rm -f "${ROOT_DIR}/config.status" "${ROOT_DIR}/config.log" "${ROOT_DIR}/libtool"
+    fi
+  else
+    rm -f "${ROOT_DIR}/config.status" "${ROOT_DIR}/config.log" "${ROOT_DIR}/libtool"
+  fi
+fi
+
 if [ ! -f "${BUILD_DIR}/Makefile" ]; then
   emconfigure "${CONFIGURE_SRC_DIR}/configure" \
     --host=wasm32-unknown-emscripten \
