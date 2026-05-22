@@ -382,6 +382,13 @@ ATM_IMPL(64, int64_t)
 int32_t atm_sub(struct atm *atm, int32_t x) { return atm_add(atm, -x); }
 int64_t atm64_sub(struct atm64 *atm, int64_t x) { return atm64_add(atm, -x); }
 
+/* these are slower than they could be; whatever */
+int32_t atm_inc(struct atm *atm) { return atm_add(atm, 1); }
+int64_t atm64_inc(struct atm64 *atm) { return atm64_add(atm, 1); }
+
+int32_t atm_dec(struct atm *atm) { return atm_add(atm, -1); }
+int64_t atm64_dec(struct atm64 *atm) { return atm64_add(atm, -1); }
+
 /* pointer ---- */
 
 #define ATM_PTR_IMPL(NAME, TYPE) \

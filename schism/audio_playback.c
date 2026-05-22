@@ -1787,7 +1787,7 @@ static void audio_simple_mix_(struct schism_audio_device_simple *dev)
 	}
 
 #if !defined(USE_THREADS)
-	atm_sub(&dev->to_mix, 1);
+	atm_dec(&dev->to_mix);
 #endif
 }
 
@@ -1828,12 +1828,12 @@ static int audio_simple_worker_impl_(struct schism_audio_device_simple *dev)
 			dev->vtbl->wait((schism_audio_device_t *)dev);
 		}
 #endif
-		atm_sub(&dev->played, 1);
+		atm_dec(&dev->played);
 	}
 
 #if !defined(USE_THREADS)
 	/* Uh oh, need to do some mangling */
-	atm_add(&dev->to_mix, 1);
+	atm_inc(&dev->to_mix);
 
 	/* If we're locked, we cannot do anything. Wait until next time. */
 	if (!atm_load(&dev->locked))
@@ -1933,7 +1933,7 @@ void audio_simple_lock(struct schism_audio_device_simple *dev)
 #if defined(USE_THREADS)
 	mt_mutex_lock(dev->mutex);
 #else
-	atm_add(&dev->locked, 1);
+	atm_inc(&dev->locked);
 #endif
 }
 
