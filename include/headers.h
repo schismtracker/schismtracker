@@ -34,6 +34,27 @@
 #define _GNU_SOURCE /* need this for some stupid gnu crap */
 #endif
 
+/* build-config.h must be included before the mingw workaround below
+ * because that's where SCHISM_WIN32 is defined. */
+#ifdef HAVE_CONFIG_H
+# include <build-config.h>
+#endif
+
+#if defined(SCHISM_WIN32) && defined(__MINGW32__)
+/* Work around a mingw-w64 bug introduced in nov 2025 where unistd.h
+ * references off_t without pulling in its definition. Including
+ * _mingw_off_t.h here (while NO_OLDNAMES is not yet defined) gets
+ * off_t typedef'd before anything else touches unistd.h. The defines
+ * just below this block then suppress the rest of the OLDNAMES
+ * pollution.
+ * upstream bug: https://sourceforge.net/p/mingw-w64/bugs/1014/ */
+# undef NO_OLDNAMES
+# include <_mingw.h>
+# ifdef __MINGW64_VERSION_MAJOR
+#  include <_mingw_off_t.h>
+# endif
+#endif
+
 #ifndef NO_OLDNAMES
 /* Mingw-w64 */
 # define NO_OLDNAMES
@@ -41,10 +62,6 @@
 #ifndef _NO_OLDNAMES
 /* Mingw.org */
 # define _NO_OLDNAMES
-#endif
-
-#ifdef HAVE_CONFIG_H
-# include <build-config.h>
 #endif
 
 /* ------------------------------------------------------------------------ */
