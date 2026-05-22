@@ -457,8 +457,6 @@ static int keybinds_handle_cfg_entry(cfg_file_t *cfg, int section, int bind)
 
 		str = cfg_get_string(cfg, s, ss, NULL, 0, NULL);
 
-		/*log_appendf(1, "checking config, %s, %s: %s", s, ss, str ? str : "(null)");*/
-
 		free(s);
 		free(ss);
 	}
@@ -478,7 +476,7 @@ static int keybinds_handle_cfg_entry(cfg_file_t *cfg, int section, int bind)
 		return 0;
 	}
 
-	printf("%s\n", def);
+	log_appendf(4, "default keybind is bogus: '%s'", def);
 
 	SCHISM_RUNTIME_ASSERT(0, "default keybind is bogus");
 
@@ -596,9 +594,6 @@ void keybinds_event(const struct key_event *kk)
 					b->state = 0;
 					b->repeats = 0;
 				}
-
-				/*log_appendf(1, "KEYBIND/%" PRIuSZ "/%" PRIuSZ ": state: %" PRIx8 ", repeats: %" PRIu16,
-					i, j, b->state, b->repeats);*/
 			}
 		}
 	}
