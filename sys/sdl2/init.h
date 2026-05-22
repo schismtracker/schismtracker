@@ -27,7 +27,21 @@
 // We have to include this **before** headers.h because
 // otherwise tgmath.h doesn't work quite right combined
 // with intrin.h under Win32. What the hell.
-#include <build-config.h>
+#ifdef HAVE_CONFIG_H
+# include <build-config.h>
+#endif
+
+/* Pull in just the mingw-w64 off_t workaround here, *before* the
+ * SDL include below transitively drags in <unistd.h>. We can't
+ * include the whole of headers.h yet because its <tgmath.h> conflicts
+ * with SDL's <intrin.h> on mingw — see the comment above.
+ * upstream bug: https://sourceforge.net/p/mingw-w64/bugs/1014/ */
+#if defined(SCHISM_WIN32) && defined(__MINGW32__)
+# include <_mingw.h>
+# ifdef __MINGW64_VERSION_MAJOR
+#  include <_mingw_off_t.h>
+# endif
+#endif
 
 /* stupid win32 crap */
 #define NO_OLDNAMES

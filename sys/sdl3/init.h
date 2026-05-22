@@ -24,6 +24,20 @@
 #ifndef SCHISM_SYS_SDL3_INIT_H_
 #define SCHISM_SYS_SDL3_INIT_H_
 
+/* Same tgmath.h/intrin.h dance as sys/sdl2/init.h: we can't pull in
+ * all of headers.h up here because <tgmath.h> conflicts with SDL's
+ * <intrin.h>, but we do need the mingw-w64 off_t workaround to land
+ * before <SDL3/SDL.h> transitively includes <unistd.h>. */
+#ifdef HAVE_CONFIG_H
+# include <build-config.h>
+#endif
+#if defined(SCHISM_WIN32) && defined(__MINGW32__)
+# include <_mingw.h>
+# ifdef __MINGW64_VERSION_MAJOR
+#  include <_mingw_off_t.h>
+# endif
+#endif
+
 /* win32 */
 #define NO_OLDNAMES
 #define _NO_OLDNAMES
