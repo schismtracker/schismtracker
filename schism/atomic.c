@@ -36,7 +36,47 @@
  * a volatile union of pointer and int[32/64]_t. Then we can implement
  * everything else simply as calls to that function. :) */
 
-#if defined(SCHISM_WIIU)
+#if defined(SCHISM_MACOS)
+# ifndef ATM_DEFINED
+#  include <DriverSynchronization.h>
+
+static /*for now*/ int atm_cmpxchg(struct atm *atm, int32_t oldval, int32_t newval)
+{
+	return CompareAndSwap(oldval, newval, &atm->x);
+}
+
+int32_t atm_load(struct atm *atm)
+{
+	return AddAtomic(0, &atm->x);
+}
+
+void atm_store(struct atm *atm, int32_t v)
+{
+	int value;
+	do {
+		value = atm->x;
+	} while (!atm32_cmpxchg(&atm->x, value, v));
+}
+
+int32_t atm_add(struct atm *atm, int32_t x)
+{
+	return AddAtomic(x, &atm->x);
+}
+
+int32_t atm_inc(struct atm *atm)
+{
+	return IncrementAtomic(&atm->x);
+}
+
+int32_t atm_dec(struct atm *atm)
+{
+	return DecrementAtomic(&atm->x);
+}
+#  define ATM_DEFINED
+#  define ATM_INC_DEFINED
+#  define ATM_DEC_DEFINED
+# endif
+#elif defined(SCHISM_WIIU)
 /* There is a critical bug in the WiiU processor, where atomics
  * do not work correctly. This is fixed on the OS side. */
 # include <coreinit/atomic.h>
@@ -383,10 +423,14 @@ int32_t atm_sub(struct atm *atm, int32_t x) { return atm_add(atm, -x); }
 int64_t atm64_sub(struct atm64 *atm, int64_t x) { return atm64_add(atm, -x); }
 
 /* these are slower than they could be; whatever */
+#ifndef ATM_INC_DEFINED
 int32_t atm_inc(struct atm *atm) { return atm_add(atm, 1); }
+#endif
 int64_t atm64_inc(struct atm64 *atm) { return atm64_add(atm, 1); }
 
+#ifndef ATM_DEC_DEFINED
 int32_t atm_dec(struct atm *atm) { return atm_add(atm, -1); }
+#endif
 int64_t atm64_dec(struct atm64 *atm) { return atm64_add(atm, -1); }
 
 /* pointer ---- */
