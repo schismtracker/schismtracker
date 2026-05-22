@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# generates keybinds_codes.c
+# generates keybinds-codes.c
 
 import zlib
 import io
@@ -395,7 +395,7 @@ def generate_function(file: io.TextIOWrapper, name: str, keybinds: Keybinds):
 
 	f.write("}\n\n")
 
-with open("../schism/keybinds_codes.c", "w") as f:
+with open("../schism/keybinds-codes.c", "w") as f:
 	f.write("""/*
  * Schism Tracker - a cross-platform Impulse Tracker clone
  * copyright (c) 2003-2005 Storlek <storlek@rigelseven.com>
