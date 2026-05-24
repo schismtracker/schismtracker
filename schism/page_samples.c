@@ -48,7 +48,7 @@ static struct vgamem_overlay sample_image = {
 
 static int dialog_f1_hack = 0;
 
-static struct widget widgets_samplelist[20];
+static struct widget widgets_samplelist[21];
 static const int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
 
 static int top_sample = 1;
@@ -69,6 +69,11 @@ static const char *const loop_states[] = { "Off", "On Forwards", "On Ping Pong",
 static int last_note = NOTE_MIDC;
 
 static int num_save_formats = 0;
+
+/* wave graph loop marker drag */
+static int sample_loop_mouse_edit;
+static int sample_loop_drag_sustain;
+static int sample_loop_drag_end;
 
 /* --------------------------------------------------------------------- */
 
@@ -1920,6 +1925,160 @@ static void update_sample_loop_points(void)
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
 }
 
+static int sample_waveform_in_bounds(struct key_event *k)
+{
+	return (k->x >= (int)sample_image.x1 && k->x <= (int)sample_image.x2
+		&& k->y >= (int)sample_image.y1 && k->y <= (int)sample_image.y2);
+}
+
+static int sample_waveform_mouse_x(struct key_event *k)
+{
+	int x = k->fx - sample_image.x1 * k->rx;
+
+	if (x < 0)
+		x = 0;
+	if (x >= sample_image.width)
+		x = sample_image.width - 1;
+	return x;
+}
+
+static uint32_t sample_waveform_x_to_pos(int x, uint32_t length)
+{
+	if (length <= 1 || sample_image.width <= 1)
+		return 0;
+	return (uint32_t)x * length / (sample_image.width - 1);
+}
+
+static uint32_t sample_waveform_pos_to_x(uint32_t pos, uint32_t length)
+{
+	if (length == 0 || sample_image.width <= 1)
+		return 0;
+	return pos * (sample_image.width - 1) / length;
+}
+
+static void sample_waveform_apply_drag_pos(song_sample_t *sample, uint32_t pos)
+{
+	if (sample_loop_drag_sustain) {
+		if (sample_loop_drag_end) {
+			if (pos <= sample->sustain_start)
+				pos = sample->sustain_start + 1;
+			if (pos > sample->length)
+				pos = sample->length;
+			sample->sustain_end = pos;
+			widgets_samplelist[14].d.numentry.value = pos;
+		} else {
+			if (pos >= sample->sustain_end)
+				pos = sample->sustain_end - 1;
+			if (sample->length > 0 && pos > sample->length - 1)
+				pos = sample->length - 1;
+			sample->sustain_start = pos;
+			widgets_samplelist[13].d.numentry.value = pos;
+		}
+	} else {
+		if (sample_loop_drag_end) {
+			if (pos <= sample->loop_start)
+				pos = sample->loop_start + 1;
+			if (pos > sample->length)
+				pos = sample->length;
+			sample->loop_end = pos;
+			widgets_samplelist[11].d.numentry.value = pos;
+		} else {
+			if (pos >= sample->loop_end)
+				pos = sample->loop_end - 1;
+			if (sample->length > 0 && pos > sample->length - 1)
+				pos = sample->length - 1;
+			sample->loop_start = pos;
+			widgets_samplelist[10].d.numentry.value = pos;
+		}
+	}
+}
+
+static int sample_waveform_handle_mouse(struct key_event *k)
+{
+	song_sample_t *sample;
+	uint32_t start, end, start_x, end_x, pos;
+	int ovl_x, dist_start, dist_end;
+
+	if (k->mouse != MOUSE_CLICK)
+		return 0;
+
+	sample = song_get_sample(current_sample);
+	if (!sample || !sample->data || (sample->flags & CHN_ADLIB))
+		return 0;
+
+	if (k->state == KEY_RELEASE) {
+		if (sample_loop_mouse_edit) {
+			video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);
+			update_sample_loop_points();
+			memused_songchanged();
+			sample_loop_mouse_edit = 0;
+			return 1;
+		}
+		return 0;
+	}
+
+	if (!sample_loop_mouse_edit && !sample_waveform_in_bounds(k))
+		return 0;
+
+	if (sample_loop_mouse_edit) {
+		video_set_mousecursor_shape(CURSOR_SHAPE_CROSSHAIR);
+		ovl_x = sample_waveform_mouse_x(k);
+		pos = sample_waveform_x_to_pos(ovl_x, sample->length);
+		song_lock_audio();
+		sample_waveform_apply_drag_pos(sample, pos);
+		song_unlock_audio();
+		status.flags |= NEED_UPDATE;
+		return 1;
+	}
+
+	if (k->state != KEY_PRESS)
+		return 0;
+
+	if (k->mouse_button == MOUSE_BUTTON_LEFT) {
+		if (!(sample->flags & CHN_LOOP))
+			return 0;
+		sample_loop_drag_sustain = 0;
+		start = sample->loop_start;
+		end = sample->loop_end;
+	} else if (k->mouse_button == MOUSE_BUTTON_RIGHT) {
+		if (!(sample->flags & CHN_SUSTAINLOOP))
+			return 0;
+		sample_loop_drag_sustain = 1;
+		start = sample->sustain_start;
+		end = sample->sustain_end;
+	} else {
+		return 0;
+	}
+
+	ovl_x = sample_waveform_mouse_x(k);
+	start_x = sample_waveform_pos_to_x(start, sample->length);
+	end_x = sample_waveform_pos_to_x(end, sample->length);
+	dist_start = abs(ovl_x - (int)start_x);
+	dist_end = abs(ovl_x - (int)end_x);
+	sample_loop_drag_end = (dist_end < dist_start);
+
+	sample_loop_mouse_edit = 1;
+	video_set_mousecursor_shape(CURSOR_SHAPE_CROSSHAIR);
+	pos = sample_waveform_x_to_pos(ovl_x, sample->length);
+	song_lock_audio();
+	sample_waveform_apply_drag_pos(sample, pos);
+	song_unlock_audio();
+	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+	return 1;
+}
+
+static int sample_waveform_handle_key(struct key_event *k)
+{
+	return sample_waveform_handle_mouse(k);
+}
+
+static int sample_list_pre_handle_key(struct key_event *k)
+{
+	if (sample_loop_mouse_edit && sample_waveform_handle_mouse(k))
+		return 1;
+	return 0;
+}
+
 /* --------------------------------------------------------------------- */
 
 static void update_values_in_song(void)
@@ -2039,9 +2198,10 @@ void sample_list_load_page(struct page *page)
 	page->title = "Sample List (F3)";
 	page->draw_const = sample_list_draw_const;
 	page->predraw_hook = sample_list_predraw_hook;
+	page->pre_handle_key = sample_list_pre_handle_key;
 	page->handle_key = sample_list_handle_key;
 	page->set_page = sample_list_reposition;
-	page->total_widgets = 20;
+	page->total_widgets = 21;
 	page->widgets = widgets_samplelist;
 	page->help_index = HELP_SAMPLE_LIST;
 
@@ -2089,6 +2249,15 @@ void sample_list_load_page(struct page *page)
 			    0, 0, update_values_in_song, "Random", 1, vibrato_waveforms);
 	/* 19 = vibrato rate */
 	widget_create_thumbbar(widgets_samplelist + 19, 56, 46, 16, 17, 19, 0, update_values_in_song, 0, 255);
+	/* 20 = sample wave graph */
+	widget_create_other(widgets_samplelist + 20, 9, sample_waveform_handle_key, NULL, NULL);
+	widgets_samplelist[20].x = 55;
+	widgets_samplelist[20].y = 26;
+	widgets_samplelist[20].width = 22;
+	widgets_samplelist[20].height = 4;
+	widgets_samplelist[8].next.down = 20;
+	widgets_samplelist[20].next.up = 8;
+	widgets_samplelist[20].next.down = 9;
 
 	/* count how many formats there really are */
 	num_save_formats = 0;
