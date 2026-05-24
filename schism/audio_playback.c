@@ -1879,7 +1879,7 @@ struct schism_audio_device {
 
 	/* slab memory buffer */
 	void *buf;
-	int buflen;
+	uint32_t buflen;
 
 	/* microseconds to sleep */
 	int64_t us;
