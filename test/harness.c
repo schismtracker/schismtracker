@@ -30,6 +30,7 @@
 #include "mem.h"
 #include "str.h"
 #include "mt.h"
+#include "atomic.h"
 
 /* these are no-ops now  --paper */
 #define result_to_exit_code(x) (x)
@@ -97,6 +98,7 @@ int schism_test_main(int argc, char **argv)
 
 	/* oke */
 	mt_init();
+	atm_init();
 	SCHISM_RUNTIME_ASSERT(timer_init(), "need timers");
 	SCHISM_RUNTIME_ASSERT(localtime_r_init(), "need localtime_r");
 
@@ -179,6 +181,7 @@ int schism_test_main(int argc, char **argv)
 	/* weird, these cause a hang on macosx  --paper
 	 * Seems to work fine now (???) */
 	timer_quit();
+	atm_quit();
 	mt_quit();
 
 	return exit_code;

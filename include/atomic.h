@@ -49,6 +49,8 @@ struct atm_ptr {
 int atm_init(void);
 void atm_quit(void);
 
+/* Atomic compare and swap (exchange). */
+int atm_cmpxchg(struct atm *atm, int32_t oldval, int32_t newval);
 int32_t atm_load(struct atm *atm);
 void atm_store(struct atm *atm, int32_t x);
 /* Adds 'x' to the atomic 'atm' and returns the original value
@@ -62,6 +64,8 @@ int32_t atm_inc(struct atm *atm);
 /* Decrements 'atm' by 1 */
 int32_t atm_dec(struct atm *atm);
 
+/* Atomic compare and swap (exchange) */
+int atm64_cmpxchg(struct atm64 *atm, int64_t oldval, int64_t newval);
 int64_t atm64_load(struct atm64 *atm);
 void atm64_store(struct atm64 *atm, int64_t x);
 /* Adds 'x' to the atomic 'atm' and returns the original value
@@ -75,6 +79,7 @@ int64_t atm64_inc(struct atm64 *atm);
 /* Decrements 'atm' by 1 */
 int64_t atm64_dec(struct atm64 *atm);
 
+int atm_ptr_cmpxchg(struct atm_ptr *atm, void *oldval, void *newval);
 void *atm_ptr_load(struct atm_ptr *atm);
 void atm_ptr_store(struct atm_ptr *atm, void *x);
 
