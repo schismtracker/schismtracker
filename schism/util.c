@@ -478,13 +478,13 @@ vector signed short altivec_set1_s16(signed short x)
 #define altivec_load_unaligned_(x) vec_perm(vec_ld(0, x), vec_ld(16, x), vec_lvsl(0, x))
 
 static inline SCHISM_ALWAYS_INLINE
-vector signed char altivec_loadu_s8(const void *x)
+vector signed char altivec_loadu_s8(const signed char *x)
 {
 	return altivec_load_unaligned_(x);
 }
 
 static inline SCHISM_ALWAYS_INLINE
-vector signed short altivec_loadu_s16(const void *x)
+vector signed short altivec_loadu_s16(const signed short *x)
 {
 	return altivec_load_unaligned_(x);
 }
