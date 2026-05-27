@@ -67,6 +67,8 @@ typedef HRESULT (WINAPI *MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
 typedef HRESULT (WINAPI *MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
 typedef HRESULT (WINAPI *MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
 typedef HRESULT (WINAPI *MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
+typedef HRESULT (WINAPI *MF_MFAllocateWorkQueueSpec)(DWORD *pdwWorkQueue);
+typedef HRESULT (WINAPI *MF_MFUnlockWorkQueueSpec)(DWORD dwWorkQueue);
 typedef HRESULT (WINAPI *MF_QISearchSpec)(void     *that,LPCQITAB pqit,REFIID   riid,void     **ppv);
 typedef HRESULT (WINAPI *MF_CoInitializeExSpec)(LPVOID pvReserved, DWORD  dwCoInit);
 typedef void (WINAPI *MF_CoUninitializeSpec)(void);
@@ -88,6 +90,8 @@ static MF_QISearchSpec MF_QISearch;
 static MF_CoInitializeExSpec MF_CoInitializeEx;
 static MF_CoUninitializeSpec MF_CoUninitialize;
 static MF_CoTaskMemFreeSpec MF_CoTaskMemFree;
+static MF_MFUnlockWorkQueueSpec MF_MFUnlockWorkQueue;
+static MF_MFAllocateWorkQueueSpec MF_MFAllocateWorkQueue;
 
 static int media_foundation_initialized = 0;
 
@@ -281,6 +285,9 @@ struct mfbytestream {
 	/* IMFByteStream vtable */
 	CONST_VTBL IMFByteStreamVtbl *lpvtbl;
 
+	/* allocated work queue (destroyed on Release) */
+	DWORD work_queue;
+
 	/* our stuff... */
 	slurp_t *fp;
 	mt_mutex_t *mutex;
@@ -311,6 +318,7 @@ static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
 
 	long ref = InterlockedDecrement((volatile LONG *)&mfb->ref_cnt);
 	if (!ref) {
+		MF_MFUnlockWorkQueue(mfb->work_queue);
 		mt_mutex_delete(mfb->mutex);
 		free(mfb);
 	}
@@ -431,6 +439,9 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYT
 	IMFAsyncResult *result = NULL;
 	QWORD pos;
 	HRESULT hr = S_OK;
+	struct mfbytestream *This_;
+
+	This_ = (struct mfbytestream *)This;
 
 	if (FAILED(hr = mfbytestream_GetCurrentPosition(This, &pos)))
 		return hr;
@@ -447,7 +458,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYT
 	if (FAILED(hr = MF_MFCreateAsyncResult(op, pCallback, punkState, &result)))
 		goto fail;
 
-	hr = MF_MFPutWorkItem(MFASYNC_CALLBACK_QUEUE_STANDARD, callback, (IUnknown *)result);
+	hr = MF_MFPutWorkItem(This_->work_queue, callback, (IUnknown *)result);
 
 fail:
 	if (result)
@@ -582,6 +593,12 @@ static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
 		return 0;
 	}
 	mfb->ref_cnt = 1;
+
+	if (FAILED(MF_MFAllocateWorkQueue(&mfb->work_queue))) {
+		mt_mutex_delete(mfb->mutex);
+		free(mfb);
+		return 0;
+	}
 
 	*imf = (IMFByteStream *)mfb;
 	return 1;
@@ -1050,6 +1067,8 @@ int win32mf_init(void)
 	LOAD_MF_OBJECT(mfplat, MFCreateAsyncResult);
 	LOAD_MF_OBJECT(mfplat, MFPutWorkItem);
 	LOAD_MF_OBJECT(mfplat, MFInvokeCallback);
+	LOAD_MF_OBJECT(mfplat, MFAllocateWorkQueue);
+	LOAD_MF_OBJECT(mfplat, MFUnlockWorkQueue);
 
 	LOAD_MF_LIBRARY(mfreadwrite);
 
