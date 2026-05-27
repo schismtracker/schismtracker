@@ -25,6 +25,10 @@
 # define TEST_FUNC(x) testresult_t x(void);
 #endif
 
+TEST_FUNC(test_atm_cmpxchg)
+TEST_FUNC(test_atm_load_store)
+TEST_FUNC(test_atm_add)
+
 TEST_FUNC(test_bshift_arithmetic)
 TEST_FUNC(test_bshift_right_shift_negative)
 TEST_FUNC(test_bshift_left_shift_overflow)
