@@ -27,6 +27,9 @@
 #include "util.h"
 #include "charset.h"
 
+void log_init(void);
+void log_quit(void);
+
 /* appends a line to the log in charset 'set' (all log functions are
  * in essence a wrapper around this in some way or another) */
 void log_append3(charset_t set, int color, int must_free, const char *text);
@@ -34,7 +37,6 @@ void log_append3(charset_t set, int color, int must_free, const char *text);
 /* convenience function -- underlines the previous line */
 void log_underline(void);
 
-/* newline */
 void log_nl(void);
 
 /* appends a line into the log in the ITF font */
