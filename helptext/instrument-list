@@ -35,6 +35,7 @@
 |   Alt-P           Enter previous note
 |   Alt-Up/Down     Transpose all notes a semitone up/down
 |   Alt-Ins/Del     Insert/Delete a row from the table
+|   Alt-F           Toggle extended note-map view
 :   , (Comma)       Toggle edit mask for current field
 |
 | Envelope Keys.

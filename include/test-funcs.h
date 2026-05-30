@@ -238,4 +238,7 @@ TEST_FUNC(test_ver_parse_schism_version)
 TEST_FUNC(test_ver_parse_ctimestamp)
 TEST_FUNC(test_ver_parse_cdate)
 
+TEST_FUNC(test_it_fxext_roundtrip_extended)
+TEST_FUNC(test_it_fxext_roundtrip_plain)
+
 #undef TEST_FUNC

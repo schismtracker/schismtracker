@@ -94,6 +94,42 @@ static int note_trans_top_line = 0;
 static int note_trans_sel_line = 0;
 
 static int note_trans_cursor_pos = 0;
+static int note_trans_extended_mode = 0;
+
+static int note_trans_max_cursor_pos(void)
+{
+	return note_trans_extended_mode ? 6 : 3;
+}
+
+static void note_trans_sync_extended_mode_from_instrument(song_instrument_t *ins)
+{
+	note_trans_extended_mode = ins && (ins->flags & INST_NOTE_FXMAP);
+	note_trans_cursor_pos = MIN(note_trans_cursor_pos, note_trans_max_cursor_pos());
+}
+
+void instrument_sync_note_trans_extended(void)
+{
+	note_trans_sync_extended_mode_from_instrument(
+		song_get_instrument(current_instrument));
+	status.flags |= NEED_UPDATE;
+}
+
+static void note_trans_toggle_extended_mode(void)
+{
+	song_instrument_t *ins = song_get_instrument(current_instrument);
+
+	note_trans_extended_mode ^= 1;
+	note_trans_cursor_pos = MIN(note_trans_cursor_pos, note_trans_max_cursor_pos());
+
+	if (ins) {
+		if (note_trans_extended_mode)
+			ins->flags |= INST_NOTE_FXMAP;
+		else
+			ins->flags &= ~INST_NOTE_FXMAP;
+	}
+
+	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+}
 
 /* shared by all the numentries on a page
  * (0 = volume, 1 = panning, 2 = pitch) */
@@ -244,8 +280,12 @@ void instrument_set(int n)
 		new_ins = CLAMP(n, 0, _last_vis_inst());
 	}
 
-	if (current_instrument == new_ins)
+	if (current_instrument == new_ins) {
+		note_trans_sync_extended_mode_from_instrument(
+			song_get_instrument(current_instrument));
+		status.flags |= NEED_UPDATE;
 		return;
+	}
 
 	envelope_edit_mode = 0;
 	current_instrument = new_ins;
@@ -257,6 +297,7 @@ void instrument_set(int n)
 	current_node_pan = ins->pan_env.nodes ? CLAMP(current_node_vol, 0, ins->pan_env.nodes - 1) : 0;
 	current_node_pitch = ins->pitch_env.nodes ? CLAMP(current_node_vol, 0, ins->pan_env.nodes - 1) : 0;
 
+	note_trans_sync_extended_mode_from_instrument(ins);
 	status.flags |= NEED_UPDATE;
 }
 
@@ -684,50 +725,40 @@ static void note_trans_reposition(void)
 	}
 }
 
-static void note_trans_draw(void)
+static void note_trans_draw_mask(void)
 {
-	int pos, n;
-	int is_selected = (ACTIVE_PAGE.selected_widget == 5);
-	int bg, sel_bg = (is_selected ? 14 : 0);
-	song_instrument_t *ins = song_get_instrument(current_instrument);
-	char buf[4];
+	if (ACTIVE_PAGE.selected_widget != 5 || (status.flags & CLASSIC_MODE))
+		return;
 
-	for (pos = 0, n = note_trans_top_line; pos < 32; pos++, n++) {
-		bg = ((n == note_trans_sel_line) ? sel_bg : 0);
-
-		/* invalid notes are translated to themselves (and yes, this edits the actual instrument) */
-		if (ins->note_map[n] < 1 || ins->note_map[n] > 120)
-			ins->note_map[n] = n + 1;
-
-		draw_text(get_note_string(n + 1, buf), 32, 16 + pos, 2, bg);
-		draw_char(168, 35, 16 + pos, 2, bg);
-		draw_text(get_note_string(ins->note_map[n], buf), 36, 16 + pos, 2, bg);
-		if (is_selected && n == note_trans_sel_line) {
-			if (note_trans_cursor_pos == 0)
-				draw_char(buf[0], 36, 16 + pos, 0, 3);
-			else if (note_trans_cursor_pos == 1)
-				draw_char(buf[2], 38, 16 + pos, 0, 3);
-		}
-		draw_char(0, 39, 16 + pos, 2, bg);
-		if (ins->sample_map[n]) {
-			str_from_num99(ins->sample_map[n], buf);
-		} else {
-			buf[0] = buf[1] = '\xAD';
-			buf[2] = 0;
-		}
-		draw_text(buf, 40, 16 + pos, 2, bg);
-		if (is_selected && n == note_trans_sel_line) {
-			if (note_trans_cursor_pos == 2)
-				draw_char(buf[0], 40, 16 + pos, 0, 3);
-			else if (note_trans_cursor_pos == 3)
-				draw_char(buf[1], 41, 16 + pos, 0, 3);
-		}
-	}
-
-	/* draw the little mask thingy at the bottom. Could optimize this....  -delt.
-	   Sure can! This could share the same track-view functions that the
-	   pattern editor ought to be using. -Storlek */
-	if (is_selected && !(status.flags & CLASSIC_MODE)) {
+	if (note_trans_extended_mode) {
+		switch (note_trans_cursor_pos) {
+		case 0:
+			draw_char(171, 36, 48, 3, 2);
+			draw_char(171, 37, 48, 3, 2);
+			draw_char(169, 38, 48, 3, 2);
+			if (note_sample_mask) {
+				draw_char(169, 39, 48, 3, 2);
+			}
+			break;
+		case 1:
+			draw_char(169, 38, 48, 3, 2);
+			if (note_sample_mask) {
+				draw_char(170, 39, 48, 3, 2);
+			}
+			break;
+		case 2:
+		case 3:
+			draw_char(note_sample_mask ? 171 : 169, 39, 48, 3, 2);
+			break;
+		case 4:
+			draw_char(169, 40, 48, 3, 2);
+			break;
+		case 5:
+		case 6:
+			draw_char(169, 41, 48, 3, 2);
+			break;
+		};
+	} else {
 		switch (note_trans_cursor_pos) {
 		case 0:
 			draw_char(171, 36, 48, 3, 2);
@@ -754,6 +785,151 @@ static void note_trans_draw(void)
 	}
 }
 
+static void note_trans_draw_classic(int pos, int n, int is_selected, int bg, song_instrument_t *ins)
+{
+	char buf[4];
+
+	/* invalid notes are translated to themselves (and yes, this edits the actual instrument) */
+	if (ins->note_map[n] < 1 || ins->note_map[n] > 120)
+		ins->note_map[n] = n + 1;
+
+	draw_text(get_note_string(n + 1, buf), 32, 16 + pos, 2, bg);
+	draw_char(168, 35, 16 + pos, 2, bg);
+	draw_text(get_note_string(ins->note_map[n], buf), 36, 16 + pos, 2, bg);
+	if (is_selected && n == note_trans_sel_line) {
+		if (note_trans_cursor_pos == 0)
+			draw_char(buf[0], 36, 16 + pos, 0, 3);
+		else if (note_trans_cursor_pos == 1)
+			draw_char(buf[2], 38, 16 + pos, 0, 3);
+	}
+	draw_char(0, 39, 16 + pos, 2, bg);
+	if (ins->sample_map[n]) {
+		str_from_num99(ins->sample_map[n], buf);
+	} else {
+		buf[0] = buf[1] = '\xAD';
+		buf[2] = 0;
+	}
+	draw_text(buf, 40, 16 + pos, 2, bg);
+	if (is_selected && n == note_trans_sel_line) {
+		if (note_trans_cursor_pos == 2)
+			draw_char(buf[0], 40, 16 + pos, 0, 3);
+		else if (note_trans_cursor_pos == 3)
+			draw_char(buf[1], 41, 16 + pos, 0, 3);
+	}
+}
+
+static void note_trans_draw_extended(int pos, int n, int is_selected, int bg, song_instrument_t *ins)
+{
+	char note_buf[4], ins_buf[3], fx_buf[3];
+	int cpos = (is_selected && n == note_trans_sel_line) ? note_trans_cursor_pos : -1;
+	int fg1, fg2, bg1, bg2;
+
+	/* invalid notes are translated to themselves (and yes, this edits the actual instrument) */
+	if (ins->note_map[n] < 1 || ins->note_map[n] > 120)
+		ins->note_map[n] = n + 1;
+
+	draw_text(get_note_string(n + 1, note_buf), 32, 16 + pos, 2, bg);
+	draw_char(168, 35, 16 + pos, 2, bg);
+
+	get_note_string(ins->note_map[n], note_buf);
+	draw_text(note_buf, 36, 16 + pos, 6, bg);
+	if (cpos == 0)
+		draw_char(note_buf[0], 36, 16 + pos, 0, 3);
+	else if (cpos == 1)
+		draw_char(note_buf[2], 38, 16 + pos, 0, 3);
+
+	if (ins->sample_map[n])
+		str_from_num99(ins->sample_map[n], ins_buf);
+	else
+		ins_buf[0] = ins_buf[1] = '\xAD';
+
+	fg1 = fg2 = (ins->sample_map[n] ? 10 : 2);
+	bg1 = bg2 = bg;
+	switch (cpos) {
+	case 2:
+		fg1 = 0;
+		bg1 = 3;
+		break;
+	case 3:
+		fg2 = 0;
+		bg2 = 3;
+		break;
+	}
+	draw_half_width_chars(ins_buf[0], ins_buf[1], 39, 16 + pos, fg1, bg1, fg2, bg2);
+
+	draw_char(get_effect_char(ins->effect_map[n]), 40, 16 + pos,
+		(cpos == 4 ? 0 : 2), (cpos == 4 ? 3 : bg));
+
+	snprintf(fx_buf, sizeof(fx_buf), "%02X", ins->param_map[n]);
+	fg1 = fg2 = 2;
+	bg1 = bg2 = bg;
+	switch (cpos) {
+	case 5:
+		fg1 = 0;
+		bg1 = 3;
+		break;
+	case 6:
+		fg2 = 0;
+		bg2 = 3;
+		break;
+	}
+	draw_half_width_chars(fx_buf[0], fx_buf[1], 41, 16 + pos, fg1, bg1, fg2, bg2);
+}
+
+static void note_trans_draw(void)
+{
+	int pos, n;
+	int is_selected = (ACTIVE_PAGE.selected_widget == 5);
+	int bg, sel_bg = (is_selected ? 14 : 0);
+	song_instrument_t *ins = song_get_instrument(current_instrument);
+
+	for (pos = 0, n = note_trans_top_line; pos < 32; pos++, n++) {
+		bg = ((n == note_trans_sel_line) ? sel_bg : 0);
+
+		if (note_trans_extended_mode)
+			note_trans_draw_extended(pos, n, is_selected, bg, ins);
+		else
+			note_trans_draw_classic(pos, n, is_selected, bg, ins);
+	}
+
+	/* draw the little mask thingy at the bottom. Could optimize this....  -delt.
+	   Sure can! This could share the same track-view functions that the
+	   pattern editor ought to be using. -Storlek */
+	note_trans_draw_mask();
+}
+
+static int note_trans_cursor_from_x(int x)
+{
+	if (note_trans_extended_mode) {
+		switch (x) {
+		case 36:
+			return 0;
+		case 37:
+		case 38:
+			return 1;
+		case 39:
+			return 2;
+		case 40:
+			return 4;
+		case 41:
+			return 5;
+		default:
+			return 0;
+		}
+	}
+
+	switch (x - 36) {
+	case 2:
+		return 1;
+	case 4:
+		return 2;
+	case 5:
+		return 3;
+	default:
+		return 0;
+	}
+}
+
 static void instrument_note_trans_transpose(song_instrument_t *ins, int dir)
 {
 	int i;
@@ -768,7 +944,10 @@ static void instrument_note_trans_insert(song_instrument_t *ins, int pos)
 	for (i = 119; i > pos; i--) {
 		ins->note_map[i] = ins->note_map[i-1];
 		ins->sample_map[i] = ins->sample_map[i-1];
+		ins->effect_map[i] = ins->effect_map[i-1];
+		ins->param_map[i] = ins->param_map[i-1];
 	}
+	ins->flags |= INST_NOTE_FXMAP;
 	if (pos) {
 		ins->note_map[pos] = ins->note_map[pos-1]+1;
 	} else {
@@ -782,7 +961,10 @@ static void instrument_note_trans_delete(song_instrument_t *ins, int pos)
 	for (i = pos; i < 120; i++) {
 		ins->note_map[i] = ins->note_map[i+1];
 		ins->sample_map[i] = ins->sample_map[i+1];
+		ins->effect_map[i] = ins->effect_map[i+1];
+		ins->param_map[i] = ins->param_map[i+1];
 	}
+	ins->flags |= INST_NOTE_FXMAP;
 	ins->note_map[119] = ins->note_map[118]+1;
 }
 
@@ -792,6 +974,7 @@ static int note_trans_handle_key(struct key_event * k)
 	int new_line = prev_line;
 	int prev_pos = note_trans_cursor_pos;
 	int new_pos = prev_pos;
+	int modified = 0;
 	song_instrument_t *ins = song_get_instrument(current_instrument);
 	int c, n;
 
@@ -810,20 +993,7 @@ static int note_trans_handle_key(struct key_event * k)
 		if (k->x >= 32 && k->x <= 41 && k->y >= 16 && k->y <= 47) {
 			new_line = note_trans_top_line + k->y - 16;
 			if (new_line == prev_line) {
-				switch (k->x - 36) {
-				case 2:
-					new_pos = 1;
-					break;
-				case 4:
-					new_pos = 2;
-					break;
-				case 5:
-					new_pos = 3;
-					break;
-				default:
-					new_pos = 0;
-					break;
-				};
+				new_pos = note_trans_cursor_from_x(k->x);
 			}
 		}
 	} else if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -832,15 +1002,19 @@ static int note_trans_handle_key(struct key_event * k)
 		switch (k->sym) {
 		case SCHISM_KEYSYM_UP:
 			instrument_note_trans_transpose(ins, 1);
+			modified = 1;
 			break;
 		case SCHISM_KEYSYM_DOWN:
 			instrument_note_trans_transpose(ins, -1);
+			modified = 1;
 			break;
 		case SCHISM_KEYSYM_INSERT:
 			instrument_note_trans_insert(ins, note_trans_sel_line);
+			modified = 1;
 			break;
 		case SCHISM_KEYSYM_DELETE:
 			instrument_note_trans_delete(ins, note_trans_sel_line);
+			modified = 1;
 			break;
 		case SCHISM_KEYSYM_n:
 			n = note_trans_sel_line - 1; // the line to copy *from*
@@ -848,7 +1022,11 @@ static int note_trans_handle_key(struct key_event * k)
 				break;
 			ins->note_map[note_trans_sel_line] = ins->note_map[n] + 1;
 			ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
+			ins->effect_map[note_trans_sel_line] = ins->effect_map[n];
+			ins->param_map[note_trans_sel_line] = ins->param_map[n];
+			ins->flags |= INST_NOTE_FXMAP;
 			new_line++;
+			modified = 1;
 			break;
 		case SCHISM_KEYSYM_p:
 			n = note_trans_sel_line + 1; // the line to copy *from*
@@ -856,7 +1034,11 @@ static int note_trans_handle_key(struct key_event * k)
 				break;
 			ins->note_map[note_trans_sel_line] = ins->note_map[n] - 1;
 			ins->sample_map[note_trans_sel_line] = ins->sample_map[n];
+			ins->effect_map[note_trans_sel_line] = ins->effect_map[n];
+			ins->param_map[note_trans_sel_line] = ins->param_map[n];
+			ins->flags |= INST_NOTE_FXMAP;
 			new_line--;
+			modified = 1;
 			break;
 		case SCHISM_KEYSYM_a:
 			c = sample_get_current();
@@ -866,6 +1048,7 @@ static int note_trans_handle_key(struct key_event * k)
 				// Copy the name too.
 				memcpy(ins->name, current_song->samples[c].name, 32);
 			}
+			modified = 1;
 			break;
 		default:
 			return 0;
@@ -974,6 +1157,7 @@ static int note_trans_handle_key(struct key_event * k)
 				if (note_sample_mask || (status.flags & CLASSIC_MODE))
 					ins->sample_map[note_trans_sel_line] = sample_get_current();
 				new_line++;
+				modified = 1;
 				break;
 			case 1:        /* octave */
 				c = kbd_char_to_hex(k);
@@ -982,6 +1166,7 @@ static int note_trans_handle_key(struct key_event * k)
 				n = ((n - 1) % 12) + (12 * c) + 1;
 				ins->note_map[note_trans_sel_line] = n;
 				new_line++;
+				modified = 1;
 				break;
 
 				/* Made it possible to enter H to R letters
@@ -993,12 +1178,14 @@ static int note_trans_handle_key(struct key_event * k)
 					ins->sample_map[note_trans_sel_line] =
 						sample_get_current();
 					new_line++;
+					modified = 1;
 					break;
 				}
 
 				if ((k->sym == SCHISM_KEYSYM_PERIOD && NO_MODIFIER(k->mod)) || k->sym == SCHISM_KEYSYM_DELETE) {
 					ins->sample_map[note_trans_sel_line] = 0;
 					new_line += (k->sym == SCHISM_KEYSYM_PERIOD) ? 1 : 0;
+					modified = 1;
 					break;
 				}
 				if (k->sym == SCHISM_KEYSYM_COMMA && NO_MODIFIER(k->mod)) {
@@ -1022,6 +1209,46 @@ static int note_trans_handle_key(struct key_event * k)
 				n = MIN(n, MAX_SAMPLES - 1);
 				ins->sample_map[note_trans_sel_line] = n;
 				sample_set(n);
+				modified = 1;
+				break;
+
+			case 4:        /* effect letter */
+				if ((k->sym == SCHISM_KEYSYM_PERIOD && NO_MODIFIER(k->mod))
+				|| k->sym == SCHISM_KEYSYM_DELETE) {
+					ins->effect_map[note_trans_sel_line] = FX_NONE;
+					ins->param_map[note_trans_sel_line] = 0;
+					ins->flags |= INST_NOTE_FXMAP;
+					new_line++;
+					modified = 1;
+					break;
+				}
+				n = kbd_get_effect_number(k);
+				if (n < 0)
+					return 0;
+				ins->effect_map[note_trans_sel_line] = n;
+				ins->flags |= INST_NOTE_FXMAP;
+				new_pos = 5;
+				modified = 1;
+				break;
+			case 5:        /* effect param, high nibble */
+				c = kbd_char_to_hex(k);
+				if (c < 0)
+					return 0;
+				n = ins->param_map[note_trans_sel_line];
+				ins->param_map[note_trans_sel_line] = (c << 4) | (n & 0xf);
+				ins->flags |= INST_NOTE_FXMAP;
+				new_pos = 6;
+				modified = 1;
+				break;
+			case 6:        /* effect param, low nibble */
+				c = kbd_char_to_hex(k);
+				if (c < 0)
+					return 0;
+				n = ins->param_map[note_trans_sel_line];
+				ins->param_map[note_trans_sel_line] = (n & 0xf0) | c;
+				ins->flags |= INST_NOTE_FXMAP;
+				new_line++;
+				modified = 1;
 				break;
 			}
 			break;
@@ -1029,11 +1256,14 @@ static int note_trans_handle_key(struct key_event * k)
 	}
 
 	new_line = CLAMP(new_line, 0, 119);
-	note_trans_cursor_pos = CLAMP(new_pos, 0, 3);
+	note_trans_cursor_pos = CLAMP(new_pos, 0, note_trans_max_cursor_pos());
 	if (new_line != prev_line) {
 		note_trans_sel_line = new_line;
 		note_trans_reposition();
 	}
+
+	if (modified)
+		status.flags |= SONG_NEEDS_SAVE;
 
 	/* this causes unneeded redraws in some cases... oh well :P */
 	status.flags |= NEED_UPDATE;
@@ -1466,7 +1696,7 @@ static int _env_handle_key_viewmode(struct key_event *k, song_envelope_t *env, i
 			return 1;
 
 		if (k->state == KEY_PRESS) {
-			song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
+			song_keyjazz_preview(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
 			return 1;
 		} else if (k->state == KEY_RELEASE) {
 			song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
@@ -1795,7 +2025,7 @@ static int _env_handle_key_editmode(struct key_event *k, song_envelope_t *env, i
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		song_keyup(KEYJAZZ_NOINST, current_instrument, last_note);
-		song_keydown(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
+		song_keyjazz_preview(KEYJAZZ_NOINST, current_instrument, last_note, 64, KEYJAZZ_CHAN_CURRENT);
 		return 1;
 	case SCHISM_KEYSYM_RETURN:
 		if (k->state == KEY_PRESS)
@@ -2234,6 +2464,14 @@ static void instrument_list_handle_alt_key(struct key_event *k)
 
 static int instrument_list_pre_handle_key(struct key_event * k)
 {
+	if (instrument_list_subpage == PAGE_INSTRUMENT_LIST_GENERAL
+	    && (k->mod & SCHISM_KEYMOD_ALT) && k->sym == SCHISM_KEYSYM_f) {
+		if (k->state == KEY_RELEASE)
+			return 1;
+		note_trans_toggle_extended_mode();
+		return 1;
+	}
+
 	// Only handle plain F4 key when no dialog is active.
 	if (status.dialog_type != DIALOG_NONE || k->sym != SCHISM_KEYSYM_F4 || (k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)))
 		return 0;
@@ -2338,7 +2576,7 @@ static void instrument_list_handle_key(struct key_event * k)
 				song_keyup(KEYJAZZ_NOINST, current_instrument, n);
 				status.last_keysym = 0;
 			} else if (!k->is_repeat) {
-				song_keydown(KEYJAZZ_NOINST, current_instrument, n, v, KEYJAZZ_CHAN_AUTO);
+				song_keyjazz_preview(KEYJAZZ_NOINST, current_instrument, n, v, KEYJAZZ_CHAN_AUTO);
 			}
 			last_note = n;
 		}

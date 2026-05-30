@@ -790,7 +790,8 @@ schismtrackertest_SOURCES = \
 	test/cases/util.c			\
 	test/cases/video.c			\
 	test/cases/version.c		\
-	test/cases/charset.c
+	test/cases/charset.c \
+	test/cases/it_fxext.c
 
 # err, this is flaky, but okay for now i guess
 mains =									\
@@ -805,7 +806,6 @@ schismtrackertest_OBJCFLAGS = $(schimtracker_OBJCFLAGS)
 schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES) schismtracker$(EXEEXT)
 schismtrackertest_LDADD = $(filter-out $(mains),$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
 schismtrackertest_LDFLAGS = $(schismtracker_LDFLAGS)
-
 
 if USE_MACOSX
 appbundle = dist/SchismTracker.app

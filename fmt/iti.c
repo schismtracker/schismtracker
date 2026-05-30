@@ -395,6 +395,64 @@ int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrumen
 	return 1;
 }
 
+#define IT_INST_FXEXT_MAGIC   UINT32_C(0x58484353) /* SCHX */
+#define IT_INST_FXEXT_VERSION 1
+#define IT_INST_FXEXT_SLOTS   (NOTE_LAST - NOTE_FIRST + 1)
+#define IT_INST_FXEXT_SIZE    (4 + 2 + IT_INST_FXEXT_SLOTS * 2)
+
+static int instrument_has_fxext(const song_instrument_t *ins)
+{
+	return ins && (ins->flags & INST_NOTE_FXMAP);
+}
+
+int load_it_instrument_fxext(song_instrument_t *ins, slurp_t *fp)
+{
+	unsigned char hdr[6];
+	uint32_t magic;
+	uint16_t version;
+
+	if (!ins)
+		return 0;
+
+	if (slurp_peek(fp, hdr, sizeof(hdr)) != sizeof(hdr))
+		return 0;
+
+	memcpy(&magic, hdr, sizeof(magic));
+	if (magic != IT_INST_FXEXT_MAGIC)
+		return 0;
+
+	memcpy(&version, hdr + 4, sizeof(version));
+	version = bswapLE16(version);
+	if (version != IT_INST_FXEXT_VERSION) {
+		log_appendf(4, " Warning: unknown SCHX instrument extension version %u",
+			(unsigned)version);
+		return 0;
+	}
+
+	if (!slurp_available(fp, IT_INST_FXEXT_SIZE, SEEK_CUR))
+		return 0;
+
+	slurp_read(fp, &magic, sizeof(magic));
+	slurp_read(fp, &version, sizeof(version));
+	slurp_read(fp, ins->effect_map, IT_INST_FXEXT_SLOTS);
+	slurp_read(fp, ins->param_map, IT_INST_FXEXT_SLOTS);
+
+	ins->flags |= INST_NOTE_FXMAP;
+
+	return 1;
+}
+
+static void save_it_instrument_fxext(disko_t *fp, song_instrument_t *ins)
+{
+	uint32_t magic = IT_INST_FXEXT_MAGIC;
+	uint16_t version = bswapLE16(IT_INST_FXEXT_VERSION);
+
+	disko_write(fp, &magic, sizeof(magic));
+	disko_write(fp, &version, sizeof(version));
+	disko_write(fp, ins->effect_map, IT_INST_FXEXT_SLOTS);
+	disko_write(fp, ins->param_map, IT_INST_FXEXT_SLOTS);
+}
+
 int fmt_iti_load_instrument(slurp_t *fp, int slot)
 {
 	struct instrumentloader ii;
@@ -402,6 +460,8 @@ int fmt_iti_load_instrument(slurp_t *fp, int slot)
 
 	if (!load_it_instrument(&ii, ins, fp))
 		return 0;
+
+	load_it_instrument_fxext(ins, fp);
 
 	/* okay, on to samples */
 	for (int j = 0; j < ii.expect_samples; j++) {
@@ -604,12 +664,14 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 	/* unused padding */
 	disko_write(fp, "\0\0\0\0", 4);
 
+	if (instrument_has_fxext(ins))
+		save_it_instrument_fxext(fp, ins);
+
 	// ITI files *need* to write 554 bytes due to alignment, but in a song it doesn't matter
 	if (iti_file) {
 		int64_t pos = disko_tell(fp);
 
-		// ack
-		SCHISM_RUNTIME_ASSERT(pos == 554, "ITI file headers should always be 554 bytes long");
+		SCHISM_RUNTIME_ASSERT(pos >= 554, "ITI file headers should be at least 554 bytes long");
 
 		/* okay, now go through samples */
 		for (int j = 0; j < iti_nalloc; j++) {
