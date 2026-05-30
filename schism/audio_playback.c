@@ -483,6 +483,19 @@ static int keyjazz_note_to_chan[NOTE_LAST + 1] = {0};
 /* last note played by channel tracking */
 static int keyjazz_chan_to_note[MAX_CHANNELS + 1] = {0};
 
+/* Apply Oxx after keyjazz note start (mirrors handle_effect FX_OFFSET). */
+static void keyjazz_apply_offset(song_t *csf, song_voice_t *chan, int note, int param)
+{
+	if (!NOTE_IS_NOTE(note) || !chan->length)
+		return;
+
+	chan->mem_offset = (chan->mem_offset & ~0xff00) | (param << 8);
+
+	chan->position = csf_smp_pos(chan->mem_offset, 0);
+	if (csf_smp_pos_gt(chan->position, csf_smp_pos(chan->length, 0)))
+		chan->position = csf_smp_pos((csf->flags & SONG_ITOLDEFFECTS) ? chan->length : 0, 0);
+}
+
 /* **** chan ranges from 1 to MAX_CHANNELS   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
@@ -661,6 +674,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->increment = csf_smp_pos_negate(c->increment); // lousy hack
 	csf_note_change(current_song, chan_internal, note, 0, 0, 1);
 
+	if (effect == FX_OFFSET)
+		keyjazz_apply_offset(current_song, c, note, param);
+
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		/* midi keyjazz shouldn't require a sample */
 		song_note_t mc = {0};
@@ -680,8 +696,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	TODO:
 	- If this is the ONLY channel playing, and the song is stopped, always reset the tick count
 	  (will fix the "random" behavior for most effects)
-	- If other channels are playing, don't reset the tick count, but do process first-tick effects
-	  for this note *right now* (this will fix keyjamming with effects like Oxx and SCx)
+	- If other channels are playing, don't reset the tick count, but do process other first-tick
+	  effects for this note *right now* (e.g. SCx note delay)
 	- Need to handle volume column effects with this function...
 	*/
 	if (current_song->flags & SONG_ENDREACHED) {
@@ -692,6 +708,34 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	song_unlock_audio();
 
 	return chan;
+}
+
+int song_instrument_map_fx(const song_instrument_t *ins, int note,
+		uint8_t *effect, uint8_t *param)
+{
+	int slot;
+
+	if (!ins || !(ins->flags & INST_NOTE_FXMAP) || !NOTE_IS_NOTE(note))
+		return 0;
+	slot = note - NOTE_FIRST;
+	if (ins->effect_map[slot] == FX_NONE)
+		return 0;
+	*effect = ins->effect_map[slot];
+	*param = ins->param_map[slot];
+	return 1;
+}
+
+int song_keyjazz_preview(int samp, int ins, int note, int vol, int chan)
+{
+	uint8_t fx = FX_PANNING, param = 0x80;
+	song_instrument_t *instrument;
+
+	if (ins >= 1 && song_is_instrument_mode()) {
+		instrument = song_get_instrument(ins);
+		if (instrument)
+			song_instrument_map_fx(instrument, note, &fx, &param);
+	}
+	return song_keyrecord(samp, ins, note, vol, chan, fx, param);
 }
 
 int song_keydown(int samp, int ins, int note, int vol, int chan)

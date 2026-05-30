@@ -3076,6 +3076,37 @@ static int note_is_empty(song_note_t *p)
 }
 #endif
 
+/* Fill *smp and *ins for song_keyrecord from a pattern cell (see song_single_step). */
+static void song_keyjazz_from_cell(const song_note_t *note, int *smp, int *ins)
+{
+	*smp = *ins = note->instrument;
+	if (song_is_instrument_mode()) {
+		if (*ins < 1)
+			*ins = KEYJAZZ_NOINST;
+		*smp = KEYJAZZ_NOINST;
+	} else {
+		if (*smp < 1)
+			*smp = KEYJAZZ_NOINST;
+		*ins = KEYJAZZ_NOINST;
+	}
+}
+
+static void patedit_apply_instrument_map_fx(song_note_t *cur_note, int key_note)
+{
+	song_instrument_t *ins;
+	uint8_t fx, param;
+
+	if (template_mode || !NOTE_IS_NOTE(key_note) || !song_is_instrument_mode())
+		return;
+	if (cur_note->instrument < 1)
+		return;
+	ins = song_get_instrument(cur_note->instrument);
+	if (!song_instrument_map_fx(ins, key_note, &fx, &param))
+		return;
+	cur_note->effect = fx;
+	cur_note->param = param;
+}
+
 // FIXME: why the 'row' param? should it be removed, or should the references to current_row be replaced?
 // fwiw, every call to this uses current_row.
 // return: zero if there was a template error, nonzero otherwise
@@ -3158,12 +3189,6 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	int ins = KEYJAZZ_NOINST, smp = KEYJAZZ_NOINST;
 	int song_was_playing = SONG_PLAYING;
 
-	if (song_is_instrument_mode()) {
-		ins = instrument_get_current();
-	} else {
-		smp = sample_get_current();
-	}
-
 	status.flags |= SONG_NEEDS_SAVE;
 
 	speed = song_get_current_speed();
@@ -3229,25 +3254,36 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		}
 		n = k->midi_note;
 
-		if (!quantize_next_row) {
-			c = song_keydown(smp, ins, n, v, c);
-		}
-
 		cur_note = pattern + MAX_CHANNELS * r + (c-1);
 		patedit_record_note(cur_note, c, r, n, 0);
 
 		if (!template_mode) {
-			cur_note->instrument = song_get_current_instrument();
-
+			if (edit_copy_mask & MASK_INSTRUMENT) {
+				if (song_is_instrument_mode())
+					cur_note->instrument = instrument_get_current();
+				else
+					cur_note->instrument = sample_get_current();
+			}
+			if (edit_copy_mask & MASK_VOLUME) {
+				cur_note->voleffect = mask_note.voleffect;
+				cur_note->volparam = mask_note.volparam;
+			}
+			if (edit_copy_mask & MASK_EFFECT) {
+				cur_note->effect = mask_note.effect;
+				cur_note->param = mask_note.param;
+			}
 			if (midi_flags & MIDI_RECORD_VELOCITY) {
 				cur_note->voleffect = VOLFX_VOLUME;
 				cur_note->volparam = v;
 			}
+			patedit_apply_instrument_map_fx(cur_note, n);
 			tick %= speed;
 			if (!(midi_flags & MIDI_TICK_QUANTIZE) && !cur_note->effect && tick != 0) {
 				cur_note->effect = FX_SPECIAL;
 				cur_note->param = 0xD0 | MIN(tick, 15);
 			}
+			song_keyjazz_from_cell(cur_note, &smp, &ins);
+			c = song_keyrecord(smp, ins, n, v, c, cur_note->effect, cur_note->param);
 		}
 	}
 
@@ -3326,13 +3362,6 @@ static int pattern_editor_insert(struct key_event *k)
 		// FIXME: this is actually quite wrong; instrument numbers should be independent for each
 		// channel and take effect when the instrument is played (e.g. with 4/8 or keyjazz input)
 		// also, this is fully idiotic
-		smp = ins = cur_note->instrument;
-		if (song_is_instrument_mode()) {
-			smp = KEYJAZZ_NOINST;
-		} else {
-			ins = KEYJAZZ_NOINST;
-		}
-
 		if (k->sym == SCHISM_KEYSYM_4) {
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -3342,6 +3371,7 @@ static int pattern_editor_insert(struct key_event *k)
 			} else {
 				vol = KEYJAZZ_DEFAULTVOL;
 			}
+			song_keyjazz_from_cell(cur_note, &smp, &ins);
 			song_keyrecord(smp, ins, cur_note->note,
 				vol, current_channel, cur_note->effect, cur_note->param);
 			advance_cursor(!(k->mod & SCHISM_KEYMOD_SHIFT), 1);
@@ -3354,15 +3384,6 @@ static int pattern_editor_insert(struct key_event *k)
 			advance_cursor(!(k->mod & SCHISM_KEYMOD_SHIFT), 0);
 			return 1;
 		}
-
-		if (song_is_instrument_mode()) {
-			if (edit_copy_mask & MASK_INSTRUMENT)
-				ins = instrument_get_current();
-		} else {
-			if (edit_copy_mask & MASK_INSTRUMENT)
-				smp = sample_get_current();
-		}
-
 
 		if (k->sym == SCHISM_KEYSYM_SPACE) {
 			/* copy mask to note */
@@ -3388,6 +3409,7 @@ static int pattern_editor_insert(struct key_event *k)
 		if (k->state == KEY_RELEASE) {
 			if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
 				/* coda mode */
+				song_keyjazz_from_cell(cur_note, &smp, &ins);
 				song_keyup(smp, ins, n);
 			}
 			/* it would be weird to have this enabled and keyjazz_noteoff
@@ -3421,11 +3443,6 @@ static int pattern_editor_insert(struct key_event *k)
 			writenote = 0;
 			n = NOTE_NONE;
 		}
-		/* Be quiet when pasting templates.
-		It'd be nice to "play" a template when pasting it (maybe only for ones that are one row high)
-		so as to hear the chords being inserted etc., but that's a little complicated to do. */
-		if (NOTE_IS_NOTE(n) && !(template_mode && writenote))
-			song_keydown(smp, ins, n, vol, current_channel);
 		if (!writenote)
 			break;
 
@@ -3448,9 +3465,12 @@ static int pattern_editor_insert(struct key_event *k)
 			}
 		}
 
-		/* try again, now that we have the effect (this is a dumb way to do this...) */
-		if (NOTE_IS_NOTE(n) && !template_mode)
-			song_keyrecord(smp, ins, n, vol, current_channel, cur_note->effect, cur_note->param);
+		if (NOTE_IS_NOTE(n) && !template_mode) {
+			patedit_apply_instrument_map_fx(cur_note, n);
+			song_keyjazz_from_cell(cur_note, &smp, &ins);
+			song_keyrecord(smp, ins, n, vol, current_channel,
+				cur_note->effect, cur_note->param);
+		}
 
 		/* copy the note back to the mask */
 		mask_note.note = n;
