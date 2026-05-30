@@ -806,3 +806,21 @@ schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES) schismtracker$(EX
 schismtrackertest_LDADD = $(filter-out $(mains),$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
 schismtrackertest_LDFLAGS = $(schismtracker_LDFLAGS)
 
+
+if USE_MACOSX
+appbundle = dist/SchismTracker.app
+
+$(appbundle): schismtracker$(EXEEXT) $(top_srcdir)/sys/macosx/Schism_Tracker.app/Contents/Info.plist
+	$(MKDIR_P) dist
+	rm -rf $(appbundle)
+	cp -R $(top_srcdir)/sys/macosx/Schism_Tracker.app $(appbundle)
+	$(MKDIR_P) $(appbundle)/Contents/MacOS
+	cp schismtracker$(EXEEXT) $(appbundle)/Contents/MacOS/
+
+.PHONY: macos-app app
+macos-app app: $(appbundle)
+
+clean-local:
+	rm -rf $(appbundle)
+endif
+

@@ -34,5 +34,10 @@
 /schismtrackertest
 /stamp-h1
 configure~
+/dist/
+/config.guess~
+/config.sub~
+/schism_crash_*.log
+compile_commands.json
 .DS_Store
 ._*
