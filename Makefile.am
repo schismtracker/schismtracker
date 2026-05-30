@@ -132,6 +132,7 @@ noinst_HEADERS = \
 	include/mem.h           \
 	include/osdefs.h		\
 	include/page.h			\
+	include/patedit_record.h	\
 	include/palettes.h          \
 	include/pattern-view.h		\
 	include/sample-edit.h		\
@@ -688,6 +689,7 @@ schismtracker_SOURCES = \
 	schism/page_orderpan.c		\
 	schism/page_palette.c		\
 	schism/page_patedit.c		\
+	schism/patedit_record.c		\
 	schism/page_preferences.c	\
 	schism/page_samples.c		\
 	schism/page_timeinfo.c		\
@@ -784,6 +786,7 @@ schismtrackertest_SOURCES = \
 	test/cases/config-parser.c  \
 	test/cases/disko.c			\
 	test/cases/mplink.c         \
+	test/cases/patedit_record.c	\
 	test/cases/sanity.c			\
 	test/cases/slurp.c          \
 	test/cases/str.c			\

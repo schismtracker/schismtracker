@@ -27,6 +27,7 @@
 #include "config.h"
 #include "page.h"
 #include "song.h"
+#include "patedit_record.h"
 #include "slurp.h"
 #include "config-parser.h"
 #include "mem.h"
@@ -810,6 +811,8 @@ void song_single_step(int patno, int row)
 // this should be called with the audio LOCKED
 static void song_reset_play_state(void)
 {
+	patedit_deferred_clear_all();
+
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
 	memset(keyjazz_note_to_chan, 0, sizeof(keyjazz_note_to_chan));
 	memset(keyjazz_chan_to_note, 0, sizeof(keyjazz_chan_to_note));
@@ -1157,6 +1160,7 @@ void song_set_current_global_volume(int volume)
 void song_set_current_order(int order)
 {
 	song_lock_audio();
+	patedit_deferred_clear_all();
 	csf_set_current_order(current_song, order);
 	song_unlock_audio();
 }

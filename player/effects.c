@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "player/sndfile.h"
+#include "patedit_record.h"
 
 #include "player/cmixer.h"
 #include "player/snd_fm.h"
@@ -2162,6 +2163,12 @@ void csf_process_effects(song_t *csf, int firsttick)
 	patloop = 0;
 
 	for (nchan = 0, chan = csf->voices; nchan < MAX_CHANNELS; nchan++, chan++) {
+		if (firsttick && patedit_deferred_test(csf->current_pattern, csf->row,
+				nchan + 1)) {
+			patedit_deferred_clear(csf->current_pattern, csf->row, nchan + 1);
+			continue;
+		}
+
 		chan->n_command = 0;
 
 		uint32_t instr = chan->row_instr;

@@ -1,6 +1,8 @@
-# Follow-Mode Row Placement Design Spec
+# Follow-Mode Row Placement
 
-Design specification for redoing row placement when recording via **keyjazz** or **MIDI** with **playback tracing** (Ctrl-F) enabled. This document is forward-looking; implementation has not landed yet.
+Design and implementation reference for row placement when recording via **keyjazz** or **MIDI** with **playback tracing** (Ctrl-F) enabled.
+
+**Status:** Implemented. Core logic lives in [`include/patedit_record.h`](../include/patedit_record.h) and [`schism/patedit_record.c`](../schism/patedit_record.c); recording paths in [`schism/page_patedit.c`](../schism/page_patedit.c); player hooks in [`player/sndmix.c`](../player/sndmix.c) and [`player/effects.c`](../player/effects.c). Automated tests in [`test/cases/patedit_record.c`](../test/cases/patedit_record.c).
 
 ---
 
@@ -23,7 +25,7 @@ Design specification for redoing row placement when recording via **keyjazz** or
 
 With **Ctrl-F / playback tracing** on, recording in the pattern editor while the song plays suffers from misaligned row placement:
 
-1. **Cursor vs engine lag** — Keyjazz and MIDI write to `current_row` (editor cursor). Preview audio uses the live engine. The cursor updates in `pattern_editor_playback_update()` on row changes and is often **one row behind** `song_get_current_row()` at key-press time.
+1. **Cursor vs engine lag** — Keyjazz and MIDI previously wrote to `current_row` (editor cursor) while preview audio used the live engine. The cursor updates in `pattern_editor_playback_update()` on row changes and was often **one row behind** `song_get_current_row()` at key-press time. Follow-mode recording now uses `patedit_resolve_record_target()` for the write cell when tracing and playing.
 
 2. **IT tick order vs musical lateness** — `song_get_current_tick()` returns `tick_count % speed`. Within a row at speed 6 the chronological order is `0 → 5 → 4 → 3 → 2 → 1`. Presses in the **last half** of the row can sound correct live but write to the **current** engine row, feeling one row **early** in the pattern relative to the next downbeat.
 
@@ -49,7 +51,6 @@ With **Ctrl-F / playback tracing** on, recording in the pattern editor while the
 - New UI toggles beyond documenting existing MIDI Tick Quantize behavior.
 - Row snap when not playing or not tracing (keep cursor-based behavior).
 - Changing `song_get_current_tick()` semantics.
-- Implementation in this document (spec only).
 
 ---
 
@@ -94,10 +95,10 @@ row_offset = 0
 cell = pattern + MAX_CHANNELS * record_row + (channel - 1)
 ```
 
-### Snap gating (`should_snap`)
+### Snap gating (`patedit_should_snap`)
 
 ```c
-static int should_snap(int input_is_midi, int tick, int speed)
+int patedit_should_snap(int input_is_midi, int tick, int speed)
 {
     if (input_is_midi && !(midi_flags & MIDI_TICK_QUANTIZE))
         return 0;
@@ -105,7 +106,7 @@ static int should_snap(int input_is_midi, int tick, int speed)
 }
 ```
 
-Keyjazz always evaluates `patedit_tick_should_snap` when tracing + playing. MIDI only when Tick Quantize is on.
+Implemented in `schism/patedit_record.c`. Keyjazz always evaluates `patedit_tick_should_snap` when tracing + playing. MIDI only when Tick Quantize is on.
 
 ### Call sites
 
@@ -204,7 +205,14 @@ Immediate live preview via `song_keyrecord`, without double-trigger when the pla
 
 ### Storage
 
-Runtime overlay only — **not** in `song_note_t`, not saved to `.it`. Proposed: per-pattern bitmask or sparse `(row, channel)` set parallel to pattern data. Exact structure is an open implementation choice.
+Runtime overlay only — **not** in `song_note_t`, not saved to `.it`.
+
+```c
+/* schism/patedit_record.c */
+static uint64_t deferred[MAX_PATTERNS][256];  /* one bit per channel (1–64) per row */
+```
+
+Rows are indexed 0–255; only rows within a pattern’s length are used. `patedit_deferred_mark()` takes the audio lock; test/clear on the player thread do not re-lock.
 
 ### First row visit (unified policy)
 
@@ -213,7 +221,7 @@ A deferred cell is **fully consumed** on first visit — live input already hand
 1. **Row read** (`csf_process_tick` in `player/sndmix.c`, ~line 988): mask note column — do not copy `m->note` into `chan->row_note`; pass masked cell to `csf_midi_out_note` (no double MIDI out/off).
 2. **First tick effects** (`csf_process_effects` in `player/effects.c`): skip entire per-channel processing when `deferred && firsttick` (`continue` at top of channel loop).
 3. **Later ticks in same row:** process normally.
-4. **Clear deferred** for that row after first visit; subsequent loops play the cell normally.
+4. **Clear deferred** for that `(pattern, row, channel)` when first-tick effects are skipped (`patedit_deferred_clear` in `csf_process_effects`); subsequent loops play the cell normally.
 
 ### When to set deferred
 
@@ -222,11 +230,20 @@ A deferred cell is **fully consumed** on first visit — live input already hand
 
 ### Lifecycle — clear all deferred
 
-Playback stop, restart, order jump, pattern loop restart, song load, pattern load/replace. Any stale overlay after these events is invalid.
+`patedit_deferred_clear_all()` also clears per-channel note-on anchors. Called from:
+
+| Event | Location |
+|-------|----------|
+| Playback stop / restart / pattern loop start | `song_reset_play_state()` in `schism/audio_playback.c` |
+| Order jump (editor) | `song_set_current_order()` in `schism/audio_playback.c` |
+| Pattern replace | `song_pattern_install()` in `schism/mplink.c` |
+| Song load / new (pattern editor) | `pated_song_changed()` in `schism/page_patedit.c` |
+
+Per-channel anchor cleared on note-off write via `patedit_anchor_clear_channel()`.
 
 ### Thread safety
 
-Editor marks deferred under UI input; player reads/clears on audio thread. Use existing `song_lock_audio()` patterns in `schism/audio_playback.c`.
+`patedit_deferred_mark()` uses `song_lock_audio()`. The player reads and clears deferred bits during `csf_process_tick` / `csf_process_effects` on the audio thread without additional locking (same pattern as other playback-side state).
 
 ### Sequence (note-on snap)
 
@@ -257,9 +274,9 @@ Row N+1 (next loop)
 
 So the anchor/bump/deferred logic in this section targets **MIDI** (`MIDI_RECORD_NOTEOFF`, default on, plus tracing + playing). It applies to keyjazz **only if** the user enables `keyjazz_write_noteoff` — same rules for parity, but that path is uncommon.
 
-Normal keyboard follow-mode recording is note-on only; §4–§7 cover it. This section can be implemented in `pattern_editor_insert_midi()` first; keyjazz release handling in `pattern_editor_insert()` only when `keyjazz_write_noteoff && playback_tracing`.
+Normal keyboard follow-mode recording is note-on only; §4–§7 cover it. Implemented in `pattern_editor_insert_midi()` and `pattern_editor_insert()` (note column) when `keyjazz_write_noteoff && playback_tracing`.
 
-Supersedes the cursor-based “bump to next row if occupied” hack in `pattern_editor_insert()` (~line 3403) for the opt-in keyjazz write path.
+Replaced the former cursor-based “bump to next row if occupied” hack in `pattern_editor_insert()` with resolve + anchor + `song_get_pattern_offset` bump.
 
 ### Minimum note duration — bump, don't suppress
 
@@ -286,7 +303,7 @@ else
     write NOTE_OFF normally
 ```
 
-Reset anchor on: new note-on on that voice; playback stop/load/pattern replace (with deferred clear).
+Reset anchor on: `patedit_note_on_anchor()` after each note-on write; `patedit_anchor_clear_channel()` after note-off write; `patedit_deferred_clear_all()` on playback/song discontinuities (see §7 lifecycle).
 
 ### Examples
 
@@ -314,29 +331,34 @@ Deferred `NOTE_OFF` uses the same first-visit policy as deferred note-on (mask n
 
 ---
 
-## 10. Shared helper API (sketch)
+## 10. Shared helper API
+
+Public header: [`include/patedit_record.h`](../include/patedit_record.h). Implementation: [`schism/patedit_record.c`](../schism/patedit_record.c).
 
 ```c
 typedef struct {
     int pattern, row, row_offset, tick, speed;
     song_note_t *cell;
-    int snap_applied;  /* row_offset > 0 from END_ROW_v2 */
+    int snap_applied;  /* row_offset > 0 from END_ROW_v2 snap */
 } patedit_record_target_t;
+
+int patedit_tick_should_snap(int tick, int speed);       /* END_ROW_v2 */
+int patedit_should_snap(int input_is_midi, int tick, int speed);
 
 int patedit_resolve_record_target(patedit_record_target_t *out, int channel,
     int input_is_midi);
 
-int patedit_tick_should_snap(int tick, int speed);  /* END_ROW_v2 */
-
 void patedit_deferred_clear_all(void);
 void patedit_deferred_mark(int pat, int row, int chan);
+void patedit_deferred_clear(int pat, int row, int chan);
 int  patedit_deferred_test(int pat, int row, int chan);
 
 void patedit_note_on_anchor(int pat, int row, int chan, int note);
 int  patedit_note_off_needs_bump(int pat, int row, int chan, int note);
+void patedit_anchor_clear_channel(int chan);
 ```
 
-Existing helper to reuse: `song_get_pattern_offset()` in `schism/mplink.c` (pattern loop wrap and song-mode pattern advance).
+Pattern offset helper (unchanged): `song_get_pattern_offset()` in `schism/mplink.c` — pattern loop wrap and song-mode pattern advance for snap and note-off bumps.
 
 ---
 
@@ -344,12 +366,17 @@ Existing helper to reuse: `song_get_pattern_offset()` in `schism/mplink.c` (patt
 
 ### Automated
 
-Extend `test/cases/mplink.c` for `song_get_pattern_offset()` edge cases (already partially covered): pattern loop wrap, song-mode next pattern, length-1 pattern.
+`test/cases/mplink.c` — `song_get_pattern_offset()` edge cases (pattern loop wrap, song-mode next pattern, length-1 pattern, etc.).
 
-Add unit tests for:
+`test/cases/patedit_record.c` (run via `schismtrackertest`):
 
-- `patedit_tick_should_snap()` across speeds 1–12
-- Snap gating (MIDI flag on/off, keyjazz always on when tracing)
+| Test | Coverage |
+|------|----------|
+| `test_patedit_tick_should_snap_speed6` | Speed 6 snap/no-snap ticks |
+| `test_patedit_tick_should_snap_speeds_1_to_12` | END_ROW_v2 table for speeds 1–12 |
+| `test_patedit_should_snap_midi_gating` | `MIDI_TICK_QUANTIZE` on/off; keyjazz path |
+| `test_patedit_deferred_mark_clear` | Deferred bitmask mark/test/clear |
+| `test_patedit_note_off_needs_bump` | Per-channel anchor matching |
 
 ### Manual
 
@@ -368,22 +395,29 @@ Add unit tests for:
 
 ---
 
-## 12. Implementation phases
+## 12. Implementation status
 
-1. `patedit_tick_should_snap` + `patedit_resolve_record_target` helpers + unit tests
-2. Deferred overlay (mark/test/clear) + player hooks in `sndmix.c` / `effects.c`
-3. Wire keyjazz path in `pattern_editor_insert()`
-4. Wire MIDI path in `pattern_editor_insert_midi()`
-5. Note-off anchor + bump logic (`pattern_editor_insert_midi()`; keyjazz only if `keyjazz_write_noteoff`)
-6. Manual test matrix; remove any debug logging
-7. Optional: restore condensed post-mortem pointer in repo README or dev notes
+| Phase | Status |
+|-------|--------|
+| `patedit_record` module + unit tests | Done |
+| Deferred overlay + player hooks (`sndmix.c`, `effects.c`) | Done |
+| Keyjazz path (`pattern_editor_insert()` note column) | Done |
+| MIDI path (`pattern_editor_insert_midi()`) | Done |
+| Note-off anchor + bump (MIDI + opt-in `keyjazz_write_noteoff`) | Done |
+| Lifecycle clears (stop, order jump, pattern install, song change) | Done |
+| Manual test matrix (§11) | Recommended when changing this code |
+
+**Still out of scope:** waterfall and other recording entry points (future parity).
 
 ---
 
-## 13. Open questions
+## 13. Implementation notes
 
-- Exact deferred overlay data structure (bitmask vs sparse set).
-- Edge case: snap or note-off bump crosses pattern boundary — confirm deferred clear timing vs row read order.
+**Deferred storage:** Per-pattern `uint64_t` row bitmask (64 channels), not serialized to disk.
+
+**Pattern boundary:** Snap and note-off bumps use `song_get_pattern_offset()` for +1 row and wrap/advance. Deferred marks use the **resolved** `(pattern, row)` after offset. `patedit_deferred_clear_all()` on playback discontinuities avoids stale bits if the player jumps patterns/orders.
+
+**Pitch bend while tracing:** MIDI pitch-bend effect writes also use `patedit_resolve_record_target()` when tracing and playing.
 
 ---
 
@@ -478,32 +512,41 @@ Recording code uses `song_get_current_tick()` (`tick_count % speed` in `schism/a
 
 ---
 
-## Key code references (current baseline)
+## Key code references
 
-Both write paths use `current_row` today — the bug this spec fixes:
+**Recording target resolution** (follow-mode writes use `tgt.cell`, not `current_row`):
 
 ```c
-/* pattern_editor_insert_midi */
-cur_note = pattern + MAX_CHANNELS * current_row + (c-1);
-
-/* pattern_editor_insert */
-cur_note = pattern + MAX_CHANNELS * current_row + current_channel - 1;
+patedit_record_target_t tgt;
+if (patedit_resolve_record_target(&tgt, channel, input_is_midi))
+    cur_note = tgt.cell;
 ```
 
-Cursor chase (display only, stays separate):
+**Note-on snap deferred mark:**
 
 ```c
-/* pattern_editor_playback_update */
+if (tgt.snap_applied)
+    patedit_deferred_mark(tgt.pattern, tgt.row, channel);
+```
+
+**Note-off bump** (after resolve; extra +1 when anchor matches):
+
+```c
+if (patedit_note_off_needs_bump(tgt.pattern, tgt.row, chan, note)) {
+    song_get_pattern_offset(&tgt.pattern, &patbuf, &tgt.row, 1);
+    cur_note = patbuf + MAX_CHANNELS * tgt.row + (chan - 1);
+    patedit_deferred_mark(tgt.pattern, tgt.row, chan);
+}
+```
+
+**Cursor chase** (display only; placement does not depend on it):
+
+```c
+/* pattern_editor_playback_update — schism/page_patedit.c */
 if (playback_tracing) {
     set_current_pattern(playing_pattern);
     current_row = playing_row;
 }
 ```
 
-Offset helper:
-
-```c
-/* schism/mplink.c */
-int song_get_pattern_offset(int *pattern_number, song_note_t **buf,
-    int *row, int offset);
-```
+**Player first visit** (`player/sndmix.c` — mask note; `player/effects.c` — skip first-tick channel FX and clear deferred bit).

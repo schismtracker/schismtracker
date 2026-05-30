@@ -189,6 +189,12 @@ TEST_FUNC(test_song_get_pattern_offset_from_middle_over_two_patterns)
 TEST_FUNC(test_song_get_pattern_offset_song_LAST)
 TEST_FUNC(test_song_get_pattern_offset_past_end_of_song)
 
+TEST_FUNC(test_patedit_tick_should_snap_speed6)
+TEST_FUNC(test_patedit_tick_should_snap_speeds_1_to_12)
+TEST_FUNC(test_patedit_should_snap_midi_gating)
+TEST_FUNC(test_patedit_deferred_mark_clear)
+TEST_FUNC(test_patedit_note_off_needs_bump)
+
 TEST_FUNC(test_mem_xor)
 
 TEST_FUNC(test_disko_mem)
