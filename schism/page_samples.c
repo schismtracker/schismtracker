@@ -2157,9 +2157,14 @@ static void offset_jam_create_host_instrument(void)
 			ins_ptr->effect_map[slot] = FX_NONE;
 			ins_ptr->param_map[slot] = 0;
 		} else {
-			ins_ptr->effect_map[slot] = FX_OFFSET;
 			oxx = (offset_jam_quantize_pos(offset_jam_pos[map_idx]) >> 8) & 0xFF;
-			ins_ptr->param_map[slot] = oxx;
+			if (oxx) {
+				ins_ptr->effect_map[slot] = FX_OFFSET;
+				ins_ptr->param_map[slot] = oxx;
+			} else {
+				ins_ptr->effect_map[slot] = FX_NONE;
+				ins_ptr->param_map[slot] = 0;
+			}
 		}
 	}
 
