@@ -3183,44 +3183,29 @@ static int patedit_record_note(song_note_t *cur_note, int channel, SCHISM_UNUSED
 static int pattern_editor_insert_midi(struct key_event *k)
 {
 	song_note_t *pattern, *cur_note = NULL;
-	int n, v = 0, pd, speed, tick, offset = 0;
-	int r = current_row, c = current_channel, p = current_pattern;
-	int quantize_next_row = 0;
+	int n, v = 0, c, pd, speed, tick;
 	int ins = KEYJAZZ_NOINST, smp = KEYJAZZ_NOINST;
-	int song_was_playing = SONG_PLAYING;
 
 	status.flags |= SONG_NEEDS_SAVE;
-
-	speed = song_get_current_speed();
-	tick = song_get_current_tick();
+	song_get_pattern(current_pattern, &pattern);
 
 	if (midi_start_record && !SONG_PLAYING) {
 		switch (midi_start_record) {
 		case 1: /* pattern loop */
-			song_loop_pattern(p, r);
+			song_loop_pattern(current_pattern, current_row);
 			midi_playback_tracing = playback_tracing;
 			playback_tracing = 1;
 			break;
 		case 2: /* song play */
-			song_start_at_pattern(p, r);
+			song_start_at_pattern(current_pattern, current_row);
 			midi_playback_tracing = playback_tracing;
 			playback_tracing = 1;
 			break;
 		};
 	}
 
-	// this is a long one
-	if (midi_flags & MIDI_TICK_QUANTIZE             // if quantize is on
-			&& song_was_playing                     // and the song was playing
-			&& playback_tracing                     // and we are following the song
-			&& tick > 0 && tick <= speed / 2 + 1) { // and the note is too late
-		/* correct late notes to the next row */
-		/* tick + 1 because processing the keydown itself takes another tick */
-		offset++;
-		quantize_next_row = 1;
-	}
-
-	song_get_pattern_offset(&p, &pattern, &r, offset);
+	speed = song_get_current_speed();
+	tick = song_get_current_tick();
 
 	if (k->midi_note == -1) {
 		/* nada */
@@ -3238,9 +3223,9 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			return 0;
 		}
 
-		cur_note = pattern + MAX_CHANNELS * r + (c-1);
+		cur_note = pattern + MAX_CHANNELS * current_row + (c-1);
 		/* never "overwrite" a note off */
-		patedit_record_note(cur_note, c, r, NOTE_OFF, 0);
+		patedit_record_note(cur_note, c, current_row, NOTE_OFF, 0);
 
 
 	} else {
@@ -3253,9 +3238,10 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			tick = 0;
 		}
 		n = k->midi_note;
+		c = current_channel;
 
-		cur_note = pattern + MAX_CHANNELS * r + (c-1);
-		patedit_record_note(cur_note, c, r, n, 0);
+		cur_note = pattern + MAX_CHANNELS * current_row + (c-1);
+		patedit_record_note(cur_note, c, current_row, n, 0);
 
 		if (!template_mode) {
 			if (edit_copy_mask & MASK_INSTRUMENT) {
@@ -3299,7 +3285,7 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	/* pitch bend */
 	for (c = 0; c < MAX_CHANNELS; c++) {
 		if ((channel_multi[c] & 1) && (channel_multi[c] & (~1))) {
-			cur_note = pattern + MAX_CHANNELS * r + c;
+			cur_note = pattern + MAX_CHANNELS * current_row + c;
 
 			if (cur_note->effect) {
 				if (cur_note->effect != FX_PORTAMENTOUP
