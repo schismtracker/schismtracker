@@ -354,8 +354,17 @@ static void check_update(void)
 		rr_next = now + (1000.0f / r);
 	}
 
+	int mouse_moved = 0;
+
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
+	if (status.flags & SOFTWARE_MOUSE_MOVED) {
+		mouse_moved = 1;
+		if (sample_list_offset_jam_mouse_moved())
+			status.flags |= NEED_UPDATE;
+		status.flags &= ~(SOFTWARE_MOUSE_MOVED);
+	}
+
 	if (video_is_visible() && (status.flags & NEED_UPDATE)) {
 		static timer_ticks_t next = 0;
 		float r;
@@ -378,9 +387,8 @@ static void check_update(void)
 		video_blit();
 
 		status.flags &= ~NEED_UPDATE;
-	} else if (status.flags & SOFTWARE_MOUSE_MOVED) {
+	} else if (mouse_moved) {
 		video_blit();
-		status.flags &= ~(SOFTWARE_MOUSE_MOVED);
 	}
 }
 
