@@ -1301,6 +1301,9 @@ int schism_main(int argc, char **argv)
 
 		// Load and export song
 		if (song_load_unchecked(initial_song)) {
+			// headless skips audio_init, so apply the configured interpolation mode here
+			csf_set_resampling_mode(current_song, audio_settings.interpolation_mode);
+
 			const char *multi = strcasestr(diskwrite_to, "%c");
 			const char *driver = (strcasestr(diskwrite_to, ".aif")
 					  ? (multi ? "MAIFF" : "AIFF")
