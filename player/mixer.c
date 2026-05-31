@@ -99,6 +99,43 @@
 #include "player/precomp_lut.h"
 
 // ----------------------------------------------------------------------------
+// HighLife-style 256-tap windowed sinc (runtime, dynamic anti-alias cutoff)
+// ----------------------------------------------------------------------------
+
+#define SINC256_TAPS 256
+
+// One interpolated output point. `base`/`len`/`chans` describe the real sample
+// buffer so taps falling outside [0,len) read zero (clamped, loop-seam softens).
+// `cutoff` is the anti-alias cutoff (1/speed, clamped to 1) shared by both channels.
+#define DEFINE_SINC256_INTERP(bits) \
+	static inline SCHISM_ALWAYS_INLINE \
+	int32_t sinc256_interp##bits(const int##bits##_t *base, int32_t len, int chans, int ch, \
+		int32_t poshi, double frac, double cutoff) \
+	{ \
+		if (frac == 0.0) \
+			frac = 1.0e-25; \
+	\
+		double mix = 0.0; \
+		for (int s = -SINC256_TAPS; s <= SINC256_TAPS; s++) { \
+			int32_t idx = poshi + s; \
+			if (idx < 0 || idx >= len) \
+				continue; \
+	\
+			double x = (double)s - frac; \
+			double k_window = 0.5 + 0.5 * cos(x / (double)SINC256_TAPS * M_zPI); \
+			double k_sinc = sin(cutoff * M_zPI * x) / (M_zPI * x); \
+			mix += (double)base[idx * chans + ch] * k_sinc * k_window; \
+		} \
+	\
+		return (int32_t)mix; \
+	}
+
+DEFINE_SINC256_INTERP(16)
+DEFINE_SINC256_INTERP(8)
+
+#undef DEFINE_SINC256_INTERP
+
+// ----------------------------------------------------------------------------
 // MIXING MACROS
 // ----------------------------------------------------------------------------
 
@@ -138,6 +175,13 @@
 	int32_t poshi  = csf_smp_pos_get_whole(position); \
 	int32_t poslo  = csf_smp_pos_get_frac(position) >> 16;
 
+#define SNDMIX_GETSINC256POS \
+	int32_t poshi   = csf_smp_pos_get_whole(position); \
+	double  sinc_frac = (double)csf_smp_pos_get_frac(position) / 4294967296.0; \
+	double  sinc_cutoff = fabs((double)csf_smp_pos_get_full(chan->increment) / 4294967296.0); \
+	if (sinc_cutoff <= 0.0) sinc_cutoff = 1.0e-25; \
+	sinc_cutoff = MIN(1.0 / sinc_cutoff, 1.0);
+
 // No interpolation
 #define SNDMIX_GETMONOVOLNOIDO(bits) \
 	int32_t vol = lshift_signed(p[csf_smp_pos_get_whole(position)], -bits + 16);
@@ -174,6 +218,13 @@
 			(windowed_fir_lut[firidx + 7] * (int32_t)p[poshi + 8 - 4]) \
 			, 1), \
 		WFIR_##bits##SHIFT - 1);
+
+// sinc256 interpolation (runtime). reads from the real sample buffer with
+// clamped tap indices, so it never depends on the loop lookahead buffers.
+#define SNDMIX_GETMONOVOLSINC256(bits) \
+	int32_t vol = sinc256_interp##bits((const int##bits##_t *)chan->ptr_sample->data, \
+		(int32_t)chan->ptr_sample->length, 1, 0, \
+		poshi, sinc_frac, sinc_cutoff) << (16 - bits);
 
 /////////////////////////////////////////////////////////////////////////////
 // Stereo
@@ -234,6 +285,13 @@
 			(windowed_fir_lut[firidx + 7] * p[(poshi + 8 - 4) * 2 + 1]) \
 			, 1), \
 		WFIR_##bits##SHIFT - 1);
+
+// sinc256 stereo interpolation (runtime)
+#define SNDMIX_GETSTEREOVOLSINC256(bits) \
+	int32_t vol_l = sinc256_interp##bits((const int##bits##_t *)chan->ptr_sample->data, \
+		(int32_t)chan->ptr_sample->length, 2, 0, poshi, sinc_frac, sinc_cutoff) << (16 - bits); \
+	int32_t vol_r = sinc256_interp##bits((const int##bits##_t *)chan->ptr_sample->data, \
+		(int32_t)chan->ptr_sample->length, 2, 1, poshi, sinc_frac, sinc_cutoff) << (16 - bits);
 
 #define SNDMIX_STOREVUMETER \
 	uint32_t vol_avg = avg_u32(safe_abs_32(vol_lx), safe_abs_32(vol_rx)); \
@@ -352,7 +410,8 @@ typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, /* none */, NOIDO) \
 	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Linear,     LINEAR) \
 	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Spline,     SPLINE) \
-	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, FirFilter,  FIRFILTER)
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, FirFilter,  FIRFILTER) \
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Sinc256,    SINC256)
 
 #define DEFINE_MIX_INTERFACE_CHANNELS(BITS) \
 	DEFINE_MIX_INTERFACE_RESAMPLING(BITS, Mono,   MONO) \
@@ -432,6 +491,7 @@ DEFINE_STEREO_RESAMPLE_INTERFACE(16)
 #define MIXNDX_LINEARSRC    0x10
 #define MIXNDX_SPLINESRC    0x20
 #define MIXNDX_FIRSRC       0x30
+#define MIXNDX_SINC256SRC   0x40
 
 #define BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, ramp) \
 	filter##Mono8Bit##resampling##ramp##Mix, \
@@ -448,11 +508,12 @@ DEFINE_STEREO_RESAMPLE_INTERFACE(16)
 	BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, Filter)
 
 // mix_(bits)(m/s)[_filt]_(interp/spline/fir/whatever)[_ramp]
-static const mix_interface_t mix_functions[2 * 2 * 16] = {
+static const mix_interface_t mix_functions[2 * 2 * 20] = {
 	BUILD_MIX_FUNCTION_TABLE(/* none */)
 	BUILD_MIX_FUNCTION_TABLE(Linear)
 	BUILD_MIX_FUNCTION_TABLE(Spline)
 	BUILD_MIX_FUNCTION_TABLE(FirFilter)
+	BUILD_MIX_FUNCTION_TABLE(Sinc256)
 };
 
 /* yap */
@@ -722,6 +783,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				[SRCMODE_LINEAR] = MIXNDX_LINEARSRC,
 				[SRCMODE_SPLINE] = MIXNDX_SPLINESRC,
 				[SRCMODE_POLYPHASE] = MIXNDX_FIRSRC,
+				[SRCMODE_SINC256] = MIXNDX_SINC256SRC,
 			};
 
 			flags |= srcflags[csf->mix_interpolation];

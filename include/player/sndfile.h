@@ -249,6 +249,7 @@ enum {
 	SRCMODE_LINEAR,
 	SRCMODE_SPLINE,
 	SRCMODE_POLYPHASE,
+	SRCMODE_SINC256, // HighLife-style 256-tap windowed sinc
 	NUM_SRC_MODES
 };
 

@@ -47,12 +47,12 @@ static struct widget widgets_preferences[49];
 
 static const char *interpolation_modes[] = {
 	"Non-Interpolated", "Linear",
-	"Cubic Spline", "8-Tap FIR Filter", NULL
+	"Cubic Spline", "8-Tap FIR Filter", "256-Tap Sinc", NULL
 };
 #define interp_modes ((int)ARRAY_SIZE(interpolation_modes) - 1)
 
 static const int interp_group[] = {
-	2,3,4,5,-1,
+	2,3,4,5,6,-1,
 };
 
 static int ramp_group[] = { /* not const because it is modified */
