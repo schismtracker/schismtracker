@@ -51,13 +51,19 @@ static const char *interpolation_modes[] = {
 };
 #define interp_modes ((int)ARRAY_SIZE(interpolation_modes) - 1)
 
-static const int interp_group[] = {
-	2,3,4,5,6,-1,
-};
-
 static int ramp_group[] = { /* not const because it is modified */
 	-1,-1,-1,
 };
+
+#define INTERP_BOX_X 2
+#define INTERP_BOX_Y 20
+#define INTERP_BOX_WIDTH 33
+#define INTERP_BOX_HEIGHT 6
+#define INTERP_BOX_END_X (INTERP_BOX_X+INTERP_BOX_WIDTH-1)
+#define INTERP_BOX_END_Y (INTERP_BOX_Y+INTERP_BOX_HEIGHT-1)
+
+/* "Output Equalizer" row; other EQ widgets are offset from this. */
+#define EQ_Y (AUDIO_DRIVER_BOX_END_Y + 3)
 
 #define AUDIO_DEVICE_BOX_X 37
 #define AUDIO_DEVICE_BOX_Y 16
@@ -78,13 +84,14 @@ static int ramp_group[] = { /* not const because it is modified */
 static void preferences_draw_const(void)
 {
 	char buf[80];
-	int i;
 
 	draw_text("Master Volume Left", 2, 14, 0, 2);
 	draw_text("Master Volume Right", 2, 15, 0, 2);
 	draw_box(21, 13, 27, 16, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	draw_text("Mixing Mode", 2, 18, 0, 2);
+	draw_box(INTERP_BOX_X - 1, INTERP_BOX_Y - 1, INTERP_BOX_END_X + 1,
+		INTERP_BOX_END_Y + 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
 	draw_text("Available Audio Devices", AUDIO_DEVICE_BOX_X, AUDIO_DEVICE_BOX_Y - 2, 0, 2);
 	draw_box(AUDIO_DEVICE_BOX_X - 1, AUDIO_DEVICE_BOX_Y - 1, AUDIO_DEVICE_BOX_END_X + 1,
@@ -94,18 +101,16 @@ static void preferences_draw_const(void)
 	draw_box(AUDIO_DRIVER_BOX_X - 1, AUDIO_DRIVER_BOX_Y - 1, AUDIO_DRIVER_BOX_END_X + 1,
 		AUDIO_DRIVER_BOX_END_Y + 1, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	for (i = 0; interpolation_modes[i]; i++);
+	draw_text("Output Equalizer", 2, EQ_Y, 0, 2);
+	draw_text(     "Low Frequency Band", 7, EQ_Y+2, 0, 2);
+	draw_text( "Med Low Frequency Band", 3, EQ_Y+3, 0, 2);
+	draw_text("Med High Frequency Band", 2, EQ_Y+4, 0, 2);
+	draw_text(    "High Frequency Band", 6, EQ_Y+5, 0, 2);
 
-	draw_text("Output Equalizer", 2, 21+i*3, 0, 2);
-	draw_text(     "Low Frequency Band", 7, 23+i*3, 0, 2);
-	draw_text( "Med Low Frequency Band", 3, 24+i*3, 0, 2);
-	draw_text("Med High Frequency Band", 2, 25+i*3, 0, 2);
-	draw_text(    "High Frequency Band", 6, 26+i*3, 0, 2);
+	draw_text("Ramp volume at start of sample",2,EQ_Y+8,0,2);
 
-	draw_text("Ramp volume at start of sample",2,29+i*3,0,2);
-
-	draw_box(25, 22+i*3, 47, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_box(52, 22+i*3, 74, 27+i*3, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(25, EQ_Y+1, 47, EQ_Y+6, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(52, EQ_Y+1, 74, EQ_Y+6, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	snprintf(buf, 80, "Playback Frequency: %dHz", audio_settings.sample_rate);
 	draw_text(buf, 2, 48, 0, 2);
@@ -118,33 +123,24 @@ static void preferences_draw_const(void)
 
 static void preferences_set_page(void)
 {
-	int i, j;
+	int j;
 	widgets_preferences[0].d.thumbbar.value = audio_settings.master.left;
 	widgets_preferences[1].d.thumbbar.value = audio_settings.master.right;
 
-	for (i = j = 0; interpolation_modes[i]; i++) {
-		if (i == audio_settings.interpolation_mode) {
-			widgets_preferences[i + 2].d.togglebutton.state=1;
-			j = 1;
-		} else {
-			widgets_preferences[i + 2].d.togglebutton.state=0;
-		}
-	}
-	if (!j) {
+	if (audio_settings.interpolation_mode < 0 || audio_settings.interpolation_mode >= interp_modes)
 		audio_settings.interpolation_mode = 0;
-		widgets_preferences[2].d.togglebutton.state=1;
-	}
+	widgets_preferences[2].d.listbox.focus = audio_settings.interpolation_mode;
 
 	for (j = 0; j < 4; j++) {
-		widgets_preferences[i+2+(j*2)].d.thumbbar.value
+		widgets_preferences[3+(j*2)].d.thumbbar.value
 						= audio_settings.eq_freq[j];
-		widgets_preferences[i+3+(j*2)].d.thumbbar.value
+		widgets_preferences[4+(j*2)].d.thumbbar.value
 						= audio_settings.eq_gain[j];
 	}
 
-	widgets_preferences[i+10].d.togglebutton.state
+	widgets_preferences[11].d.togglebutton.state
 				= audio_settings.no_ramping?0:1;
-	widgets_preferences[i+11].d.togglebutton.state
+	widgets_preferences[12].d.togglebutton.state
 				= audio_settings.no_ramping?1:0;
 }
 
@@ -160,11 +156,10 @@ static void change_volume(void)
 
 static void change_eq(void)
 {
-	int i,j;
-	for (i = 0; interpolation_modes[i]; i++);
+	int j;
 	for (j = 0; j < 4; j++) {
-		audio_settings.eq_freq[j] = widgets_preferences[i+2+(j*2)].d.thumbbar.value;
-		audio_settings.eq_gain[j] = widgets_preferences[i+3+(j*2)].d.thumbbar.value;
+		audio_settings.eq_freq[j] = widgets_preferences[3+(j*2)].d.thumbbar.value;
+		audio_settings.eq_gain[j] = widgets_preferences[4+(j*2)].d.thumbbar.value;
 	}
 	song_init_eq(1, current_song->mix_frequency);
 }
@@ -172,14 +167,43 @@ static void change_eq(void)
 
 static void change_mixer(void)
 {
-	int i;
-	for (i = 0; interpolation_modes[i]; i++) {
-		if (widgets_preferences[2+i].d.togglebutton.state) {
-			audio_settings.interpolation_mode = i;
-		}
-	}
-	audio_settings.no_ramping = widgets_preferences[i+11].d.togglebutton.state;
+	audio_settings.no_ramping = widgets_preferences[12].d.togglebutton.state;
 
+	song_init_modplug();
+	status_text_flash(SAVED_AT_EXIT);
+}
+
+/* --------------------------------------------------------------------- */
+
+/* interpolation mode listbox (replaces the old stack of toggle buttons) */
+
+/* one target widget per row; Tab/Left/Right from any row jumps to the device list */
+static const int interp_focus_offsets_[] = {14, 14, 14, 14, 14, 14};
+
+static uint32_t interp_list_size_(void)
+{
+	return interp_modes;
+}
+
+static char interp_list_buf_[64];
+
+static const char *interp_list_name_(uint32_t i)
+{
+	if (i >= (uint32_t)interp_modes)
+		return "";
+	snprintf(interp_list_buf_, sizeof(interp_list_buf_), "%d Bit, %s",
+		audio_settings.bits, interpolation_modes[i]);
+	return interp_list_buf_;
+}
+
+static int interp_list_toggled_(uint32_t i)
+{
+	return ((int)i == audio_settings.interpolation_mode);
+}
+
+static void interp_list_changed_(void)
+{
+	audio_settings.interpolation_mode = ACTIVE_WIDGET.d.listbox.focus;
 	song_init_modplug();
 	status_text_flash(SAVED_AT_EXIT);
 }
@@ -271,7 +295,8 @@ void preferences_audio_driver_changed(void)
 	if (!page_total_widgets)
 		return;
 
-	*page_total_widgets = 15 + interp_modes + audio_has_control_panel();
+	/* 16 fixed widgets (0..15), plus the optional control panel button (16) */
+	*page_total_widgets = 16 + audio_has_control_panel();
 
 	status.flags |= NEED_UPDATE;
 }
@@ -283,9 +308,7 @@ static void open_control_panel(void)
 
 void preferences_load_page(struct page *page)
 {
-	char buf[64];
-	char *ptr;
-	int i, j;
+	int j;
 
 	/* initialize total num of widgets */
 	page_total_widgets = &page->total_widgets;
@@ -303,94 +326,86 @@ void preferences_load_page(struct page *page)
 		widgets_preferences[0].next.tab = widgets_preferences[0].next.backtab =
 		widgets_preferences[1].next.left = widgets_preferences[1].next.right =
 		widgets_preferences[1].next.tab = widgets_preferences[1].next.backtab =
-			interp_modes + 13;
+			15;
 
 
-	for (i = 0; interpolation_modes[i]; i++) {
-		snprintf(buf, sizeof(buf), "%d Bit, %s", audio_settings.bits, interpolation_modes[i]);
-		ptr = str_dup(buf);
-		widget_create_togglebutton(widgets_preferences+i+2,
-					6, 20 + (i * 3), 26,
-					i+1, i+3, i+2, interp_modes+11, i+3,
-					change_mixer,
-					ptr,
-					2,
-					interp_group);
-		if (i < 1)
-			widgets_preferences[i+2].next.left = widgets_preferences[i+2].next.right =
-				interp_modes + 13;
-		else if (i < 4)
-			widgets_preferences[i+2].next.left = widgets_preferences[i+2].next.right =
-				interp_modes + 14;
-	}
+	/* widgets: 2=interp list, 3..10=EQ, 11/12=ramp, 13=save, 14=device, 15=driver, 16=ctrl */
+	widget_create_listbox(widgets_preferences + 2, interp_list_size_,
+		interp_list_toggled_, interp_list_name_, interp_list_changed_,
+		NULL, NULL, interp_focus_offsets_, interp_focus_offsets_,
+		1, 3);
+	widgets_preferences[2].x = INTERP_BOX_X;
+	widgets_preferences[2].y = INTERP_BOX_Y;
+	widgets_preferences[2].width = INTERP_BOX_WIDTH;
+	widgets_preferences[2].height = INTERP_BOX_HEIGHT;
+	widgets_preferences[2].next.left = widgets_preferences[2].next.right = 14;
 
 	for (j = 0; j < 4; j++) {
-		int n = i+(j*2);
-		if (j == 0) n = i+1;
-		widget_create_thumbbar(widgets_preferences+i+2+(j*2),
-						26, 23+(i*3)+j,
+		int n = (j == 0) ? 2 : 3+(j*2);
+		widget_create_thumbbar(widgets_preferences+3+(j*2),
+						26, EQ_Y+2+j,
 						21,
-						n, i+(j*2)+4, i+(j*2)+3,
+						n, 3+(j*2)+2, 3+(j*2)+1,
 						change_eq,
 						0, 127);
-		n = i+(j*2)+5;
+		n = 3+(j*2)+3;
 		if (j == 3) n--;
-		widget_create_thumbbar(widgets_preferences+i+3+(j*2),
-						53, 23+(i*3)+j,
+		widget_create_thumbbar(widgets_preferences+4+(j*2),
+						53, EQ_Y+2+j,
 						21,
-						i+(j*2)+1, n, i+(j*2)+4,
+						3+(j*2), n, 3+(j*2)+2,
 						change_eq,
 						0, 127);
 	}
 	/* default EQ setting */
-	widgets_preferences[i+2].d.thumbbar.value = 0;
-	widgets_preferences[i+4].d.thumbbar.value = 16;
-	widgets_preferences[i+6].d.thumbbar.value = 96;
-	widgets_preferences[i+8].d.thumbbar.value = 127;
+	widgets_preferences[3].d.thumbbar.value = 0;
+	widgets_preferences[5].d.thumbbar.value = 16;
+	widgets_preferences[7].d.thumbbar.value = 96;
+	widgets_preferences[9].d.thumbbar.value = 127;
 
-	ramp_group[0] = i+10;
-	ramp_group[1] = i+11;
-	widget_create_togglebutton(widgets_preferences+i+10,
-			33,29+i*3,9,
-			i+9,i+12,i+10,i+11,i+11,
+	ramp_group[0] = 11;
+	ramp_group[1] = 12;
+	widget_create_togglebutton(widgets_preferences+11,
+			33,EQ_Y+8,9,
+			10,13,11,12,12,
 			change_mixer,
 			"Enabled",2,
 			ramp_group);
 
-	widget_create_togglebutton(widgets_preferences+i+11,
-			46,29+i*3,9,
-			i+9,i+12,i+10,i+13,i+13,
+	widget_create_togglebutton(widgets_preferences+12,
+			46,EQ_Y+8,9,
+			10,13,11,14,14,
 			change_mixer,
 			"Disabled",1,
 			ramp_group);
 
-	widget_create_button(widgets_preferences+i+12,
+	widget_create_button(widgets_preferences+13,
 			2, 44, 27,
-			i+10, i+12, i+12, i+13, i+13,
+			11, 13, 13, 14, 14,
 			save_config_now,
 			"Save Output Configuration", 2);
 
-	widget_create_listbox(widgets_preferences+i+13, audio_device_list_size_,
+	widget_create_listbox(widgets_preferences+14, audio_device_list_size_,
 		audio_device_list_toggled_, audio_device_list_name_, NULL,
 		audio_device_list_activate_, NULL, audio_device_focus_offsets_,
-		audio_device_focus_offsets_, 0, i+14);
-	widgets_preferences[i+13].x = AUDIO_DEVICE_BOX_X;
-	widgets_preferences[i+13].y = AUDIO_DEVICE_BOX_Y;
-	widgets_preferences[i+13].width = AUDIO_DEVICE_BOX_WIDTH;
-	widgets_preferences[i+13].height = AUDIO_DEVICE_BOX_HEIGHT;
+		audio_device_focus_offsets_, 0, 15);
+	widgets_preferences[14].x = AUDIO_DEVICE_BOX_X;
+	widgets_preferences[14].y = AUDIO_DEVICE_BOX_Y;
+	widgets_preferences[14].width = AUDIO_DEVICE_BOX_WIDTH;
+	widgets_preferences[14].height = AUDIO_DEVICE_BOX_HEIGHT;
 
-	widget_create_listbox(widgets_preferences+i+14, audio_driver_list_size_,
+	widget_create_listbox(widgets_preferences+15, audio_driver_list_size_,
 		audio_driver_list_toggled_, audio_driver_list_name_, NULL,
 		audio_driver_list_activate_, NULL, audio_driver_focus_offsets_,
-		audio_driver_focus_offsets_, i+13, i+3);
-	widgets_preferences[i+14].x = AUDIO_DRIVER_BOX_X;
-	widgets_preferences[i+14].y = AUDIO_DRIVER_BOX_Y;
-	widgets_preferences[i+14].width = AUDIO_DRIVER_BOX_WIDTH;
-	widgets_preferences[i+14].height = AUDIO_DRIVER_BOX_HEIGHT;
+		audio_driver_focus_offsets_, 14, 3);
+	widgets_preferences[15].x = AUDIO_DRIVER_BOX_X;
+	widgets_preferences[15].y = AUDIO_DRIVER_BOX_Y;
+	widgets_preferences[15].width = AUDIO_DRIVER_BOX_WIDTH;
+	widgets_preferences[15].height = AUDIO_DRIVER_BOX_HEIGHT;
 
-	widget_create_button(widgets_preferences+i+15,
+	widget_create_button(widgets_preferences+16,
 		56, 44, 20,
-		i+10, i+12, i+12, i+13, i+13,
+		11, 13, 13, 14, 14,
 		open_control_panel,
 		"Open Control Panel", 2);
 }
