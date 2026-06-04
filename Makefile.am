@@ -690,6 +690,7 @@ schismtracker_SOURCES = \
 	schism/page_palette.c		\
 	schism/page_patedit.c		\
 	schism/patedit_record.c		\
+	schism/page_playlist.c		\
 	schism/page_preferences.c	\
 	schism/page_samples.c		\
 	schism/page_timeinfo.c		\
@@ -697,6 +698,7 @@ schismtracker_SOURCES = \
 	schism/page_waterfall.c		\
 	schism/palettes.c		\
 	schism/pattern-view.c		\
+	schism/playlist.c		\
 	schism/sample-edit.c		\
 	schism/slurp.c			\
 	schism/status.c			\

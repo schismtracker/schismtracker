@@ -401,6 +401,8 @@ enum page_numbers {
 
 	PAGE_WATERFALL,
 
+	PAGE_PLAYLIST,
+
 	PAGE_MAX
 };
 
@@ -436,6 +438,7 @@ void library_instrument_load_page(struct page *page);
 void config_load_page(struct page *page);
 void waterfall_load_page(struct page *page);
 void timeinfo_load_page(struct page *page);
+void playlist_load_page(struct page *page);
 
 /* --------------------------------------------------------------------- */
 

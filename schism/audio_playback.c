@@ -194,6 +194,12 @@ uint32_t s32_to_s24(void *ptr, const int32_t *buffer, uint32_t samples)
 	return samples * 3;
 }
 
+/* Set on the audio thread when the player reaches the natural end of a song
+   (csf_read returns 0), and consumed on the main thread by song_check_natural_end().
+   This lets the playlist distinguish a natural end from a user-initiated stop, which
+   both produce the same MODE_STOPPED state. */
+static int natural_end_pending = 0;
+
 static void audio_reallocate_buffer(uint32_t samples)
 {
 	if (samples != audio_buffer_samples)
@@ -236,6 +242,18 @@ static void audio_callback(uint8_t *stream, uint32_t len)
 		memset(audio_buffer, (audio_output_bits == 8) ? 0x80 : 0, audio_buffer_samples * audio_sample_size);
 	} else {
 		n = csf_read(current_song, audio_buffer, audio_buffer_samples * audio_sample_size);
+
+		/* If csf_read set SONG_ENDREACHED, the player just reached the natural
+		   end of the song. This happens whether the end lands on a buffer
+		   boundary (n == 0) or mid-buffer (n > 0, ENDREACHED set but the buffer
+		   still has trailing samples); the latter case never reaches the !n path
+		   below, so we must latch on the flag itself. A user stop sets
+		   SONG_ENDREACHED via song_stop() on the main thread, which leaves the
+		   song PAUSED so the callback takes the silence branch above and never
+		   re-enters here -- so this only catches genuine end-of-song. */
+		if (current_song->flags & SONG_ENDREACHED)
+			natural_end_pending = 1;
+
 		if (!n) {
 			if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT)
 				vis_work_8m(NULL, 0);
@@ -1013,6 +1031,19 @@ enum song_mode song_get_mode(void)
 	if (current_song->flags & SONG_PATTERNPLAYBACK)
 		return MODE_PATTERN_LOOP;
 	return MODE_PLAYING;
+}
+
+/* Returns (and clears) whether the player reached the natural end of the song
+   since the last call. Used by the playlist to auto-advance only on a real
+   end-of-song, not on a user-initiated stop. */
+int song_check_natural_end(void)
+{
+	int v;
+	song_lock_audio();
+	v = natural_end_pending;
+	natural_end_pending = 0;
+	song_unlock_audio();
+	return v;
 }
 
 // returned value is in seconds

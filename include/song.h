@@ -324,6 +324,10 @@ void song_single_step(int pattern, int row);
 /* see the enum above */
 enum song_mode song_get_mode(void);
 
+/* returns nonzero (once) if the player reached the natural end of the song
+   since the last call; used by the playlist for auto-advance */
+int song_check_natural_end(void);
+
 /* the time returned is in seconds */
 unsigned int song_get_current_time(void);
 
