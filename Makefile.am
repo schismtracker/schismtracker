@@ -549,6 +549,13 @@ endif
 
 endif
 
+if USE_GSTREAMER
+fmt/schismtracker-gstreamer.$(OBJEXT): CFLAGS += $(GSTREAMER_CFLAGS)
+
+files_gstreamer=fmt/gstreamer.c
+lib_gstreamer=$(GSTREAMER_LIBS)
+endif
+
 if USE_NETWORK
 cflags_network=
 libs_network=$(NETWORK_LIBS)
@@ -727,8 +734,9 @@ schismtracker_SOURCES = \
 	$(files_flac)			\
 	$(files_jack)			\
 	$(files_opl)			\
-	$(files_mediafoundation) \
-	$(files_wiiu)           \
+	$(files_mediafoundation)	\
+	$(files_gstreamer)		\
+	$(files_wiiu)			\
 	$(files_sdl3)			\
 	$(files_sdl2)			\
 	$(files_sdl12)			\
@@ -765,6 +773,7 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(libs_jack) $(libs_macosx) $(lib_asound) \
 	$(lib_win32) $(libs_network) $(libs_flac) \
 	$(lib_mediafoundation) $(UTF8PROC_LIBS) \
+	$(lib_gstreamer) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
 	$(libs_os2) $(libs_xbox) $(libs_avformat) \
 	$(libs_asio) $(libs_zlib) $(libs_bzip2) \
