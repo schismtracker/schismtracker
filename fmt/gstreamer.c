@@ -725,7 +725,7 @@ static void *lib_gstreamer = NULL;
 static void *lib_gstpbutils = NULL;
 static void *lib_gstaudio = NULL;
 
-static void gstreamer_unload()
+static void gstreamer_unload(void)
 {
 #define UNLOAD_LIBRARY(name) do { loadso_object_unload(name); name = NULL; } while (0)
 
@@ -738,7 +738,7 @@ static void gstreamer_unload()
 #undef UNLOAD_LIBRARY
 }
 
-static int gstreamer_load()
+static int gstreamer_load(void)
 {
 	int success = 1;
 
@@ -834,7 +834,7 @@ static int gstreamer_load()
 
 static int gstreamer_initialized = 0;
 
-static int gstreamer_init()
+static int gstreamer_init(void)
 {
 	if (gstreamer_initialized)
 		return 1;
