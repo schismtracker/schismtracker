@@ -133,6 +133,11 @@ AC_ARG_WITH([mediafoundation],
 	[],
 	[with_mediafoundation=check])
 
+AC_ARG_WITH([gstreamer],
+	[AS_HELP_STRING([--with-gstreamer],[Build with GStreamer support @<:@default=check@>@])],
+	[],
+	[with_gstreamer=check])
+
 AC_ARG_WITH([sdl12],
 	[AS_HELP_STRING([--with-sdl12],[Build with SDL 1.2 backend @<:@default=check@:>@])],
 	[],
@@ -876,6 +881,7 @@ AC_DEFUN([SCHISM_PKGCONFIG_CHECK], [
 
 SCHISM_PKGCONFIG_CHECK([USE_FLAC], [LINK_TO_FLAC], [$with_flac], [$FLAC_LINKING], [flac], [FLAC], [USE_FLAC], [FLAC_DYNAMIC_LOAD], [FLAC])
 SCHISM_PKGCONFIG_CHECK([USE_JACK], [LINK_TO_JACK], [$with_jack], [$JACK_LINKING], [jack], [JACK], [USE_JACK], [JACK_DYNAMIC_LOAD], [JACK MIDI])
+SCHISM_PKGCONFIG_CHECK([USE_GSTREAMER], [LINK_TO_GSTREAMER], [$with_gstreamer], [$GSTREAMER_LINKING], [gstreamer-1.0 gstreamer-pbutils-1.0 gstreamer-audio-1.0], [GSTREAMER], [USE_GSTREAMER], [GSTREAMER_DYNAMIC_LOAD], [GStreamer sample loading])
 SCHISM_PKGCONFIG_CHECK([USE_AVFORMAT], [LINK_TO_AVFORMAT], [$with_avformat], [$AVFORMAT_LINKING], [libavformat libavcodec libavutil], [AVFORMAT], [USE_AVFORMAT], [AVFORMAT_DYNAMIC_LOAD], [FFmpeg sample loading])
 SCHISM_PKGCONFIG_CHECK([USE_ZLIB], [LINK_TO_ZLIB], [$with_zlib], [$ZLIB_LINKING], [zlib], [ZLIB], [USE_ZLIB], [ZLIB_DYNAMIC_LOAD], [zlib])
 SCHISM_PKGCONFIG_CHECK([USE_BZIP2], [LINK_TO_BZIP2], [$with_bzip2], [$BZIP2_LINKING], [bzip2], [BZIP2], [USE_BZIP2], [BZIP2_DYNAMIC_LOAD], [bzip2])

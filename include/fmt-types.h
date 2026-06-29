@@ -175,6 +175,10 @@ READ_INFO(win32mf) LOAD_SAMPLE(win32mf)
 READ_INFO(macosxca) LOAD_SAMPLE(macosxca)
 #endif
 
+#ifdef USE_GSTREAMER
+READ_INFO(gstreamer) LOAD_SAMPLE(gstreamer)
+#endif
+
 /* 15-sample mods have literally no identifying information */
 LOAD_SONG(mod15)
 
