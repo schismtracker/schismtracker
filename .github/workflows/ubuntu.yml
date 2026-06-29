@@ -94,6 +94,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install --fix-missing libutf8proc-dev libjack-jackd2-dev build-essential automake autoconf autoconf-archive libxxf86vm-dev libsdl2-dev libsdl1.2-dev libasound2-dev libflac-dev git libtool zip wget libbz2-dev
 
+      - name: 'Install GStreamer'
+        uses: blinemedical/setup-gstreamer@v1
+        with:
+          version: 1.28.4
+
       - name: 'Checkout'
         uses: actions/checkout@v4
 
