@@ -54,10 +54,10 @@ jobs:
         if: steps.cache-universal-interfaces.outputs.cache-hit != 'true'
         run: |
           # make sure we have plenty of mirrors so we don't get bogus build fails
-          curl "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "https://web.archive.org/web/20131006071819if_/https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "http://old.mac.gdn/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "ftp://mirror:mirror@ftp.macintosh.garden/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin"
+          curl -f "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "https://web.archive.org/web/20131006071819if_/https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "http://old.mac.gdn/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "ftp://mirror:mirror@ftp.macintosh.garden/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin"
           /Retro68-build/bin/install-universal-interfaces.sh "$RUNNER_TEMP" "MPW-GM.img.bin"
 
       - name: 'Link Universal Interfaces'
@@ -82,7 +82,7 @@ jobs:
       - name: 'Downloads XZ utils sources'
         if: steps.cache-xz.outputs.cache-hit != 'true'
         run: |
-          curl -L -o "xz-$XZ_VERSION.tar.gz" "https://github.com/tukaani-project/xz/releases/download/v$XZ_VERSION/xz-$XZ_VERSION.tar.gz"
+          curl -f -L -o "xz-$XZ_VERSION.tar.gz" "https://github.com/tukaani-project/xz/releases/download/v$XZ_VERSION/xz-$XZ_VERSION.tar.gz"
           echo "$XZ_SHA256  xz-$XZ_VERSION.tar.gz" | shasum -a 256 -c -
           tar xvf "xz-$XZ_VERSION.tar.gz"
 
@@ -120,7 +120,7 @@ jobs:
       - name: 'Download SDL 1.2 sources (powerpc)'
         if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
-          curl -L -o "SDL-$SDL_VERSION.tar.gz" "https://www.libsdl.org/release/SDL-$SDL_VERSION.tar.gz"
+          curl -f -L -o "SDL-$SDL_VERSION.tar.gz" "https://www.libsdl.org/release/SDL-$SDL_VERSION.tar.gz"
           echo "$SDL_SHA256  SDL-$SDL_VERSION.tar.gz" | shasum -a 256 -c -
           tar xvf "SDL-$SDL_VERSION.tar.gz"
           cd "SDL-$SDL_VERSION"
@@ -162,7 +162,7 @@ jobs:
       - name: 'Download and prepare libogg sources'
         if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
-          curl -L -o libogg-$LIBOGG_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.xz" || curl -L -o libogg-$LIBOGG_VERSION.tar.xz "https://github.com/xiph/ogg/releases/download/v$LIBOGG_VERSION/libogg-$LIBOGG_VERSION.tar.xz"
+          curl -f -L -o libogg-$LIBOGG_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-$LIBOGG_VERSION.tar.xz" || curl -f -L -o libogg-$LIBOGG_VERSION.tar.xz "https://github.com/xiph/ogg/releases/download/v$LIBOGG_VERSION/libogg-$LIBOGG_VERSION.tar.xz"
           echo "$LIBOGG_SHA256  libogg-$LIBOGG_VERSION.tar.xz" | shasum -a 256 -c -
           LD_PRELOAD=/usr/local/lib/liblzma.so.5 tar xvf "libogg-$LIBOGG_VERSION.tar.xz"
 
@@ -181,7 +181,7 @@ jobs:
       - name: 'Download and prepare FLAC sources'
         if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
-          curl -L -o flac-$FLAC_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/flac/flac-$FLAC_VERSION.tar.xz" || curl -L -o flac-$FLAC_VERSION.tar.xz "https://github.com/xiph/flac/releases/download/$FLAC_VERSION/flac-$FLAC_VERSION.tar.xz"
+          curl -f -L -o flac-$FLAC_VERSION.tar.xz "https://ftp.osuosl.org/pub/xiph/releases/flac/flac-$FLAC_VERSION.tar.xz" || curl -f -L -o flac-$FLAC_VERSION.tar.xz "https://github.com/xiph/flac/releases/download/$FLAC_VERSION/flac-$FLAC_VERSION.tar.xz"
           echo "$FLAC_SHA256  flac-$FLAC_VERSION.tar.xz" | shasum -a 256 -c -
           LD_PRELOAD=/usr/local/lib/liblzma.so.5 tar xvf "flac-$FLAC_VERSION.tar.xz"
 
@@ -202,7 +202,7 @@ jobs:
       - name: 'Download utf8proc'
         if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
-          curl -L -o "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
+          curl -f -L -o "utf8proc-$UTF8PROC_VERSION.tar.gz" "https://github.com/JuliaStrings/utf8proc/releases/download/v$UTF8PROC_VERSION/utf8proc-$UTF8PROC_VERSION.tar.gz"
           echo "$UTF8PROC_SHA256  utf8proc-$UTF8PROC_VERSION.tar.gz" | shasum -a 256 -c -
           tar xvf "utf8proc-$UTF8PROC_VERSION.tar.gz"
 
@@ -229,7 +229,7 @@ jobs:
         run: |
           cd schism
           mkdir acinclude
-          curl -s "https://raw.githubusercontent.com/pkgconf/pkgconf/refs/tags/pkgconf-2.3.0/pkg.m4" -o "acinclude/pkg.m4"
+          curl -f -s "https://raw.githubusercontent.com/pkgconf/pkgconf/refs/tags/pkgconf-2.3.0/pkg.m4" -o "acinclude/pkg.m4"
           autoreconf -Iacinclude -i
           mkdir build_powerpc
           cd build_powerpc
@@ -243,7 +243,7 @@ jobs:
           cp schism/build_powerpc/schismtracker.bin .
           cp schism/docs/configuration.md .
           cp schism/README.md schism/COPYING .
-          curl -s "https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph" -o "COPYING.Xiph"
+          curl -f -s "https://raw.githubusercontent.com/xiph/flac/master/COPYING.Xiph" -o "COPYING.Xiph"
           zip -r schismtracker.zip configuration.md COPYING COPYING.Xiph README.md schismtracker.bin
 
       - name: 'Upload artifact'
