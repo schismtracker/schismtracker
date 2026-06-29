@@ -98,6 +98,11 @@ AC_ARG_ENABLE(alsa-linking,
 	ALSA_LINKING=$enableval,
 	ALSA_LINKING=check)
 
+AC_ARG_ENABLE(gstreamer-linking,
+	AS_HELP_STRING([--enable-gstreamer-linking], [Link to GStreamer rather than loading at runtime @<:default=check@:>@]),
+	GSTREAMER_LINKING=$enableval,
+	GSTREAMER_LINKING=check)
+
 AC_ARG_ENABLE(force-wii,
 	AS_HELP_STRING([--enable-force-wii], [Force target the Wii]),
 	FORCE_WII=$enableval,
