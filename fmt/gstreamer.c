@@ -368,7 +368,8 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* ---------------------------------------------------------------- */
 
-#define BUFFER_SIZE 4096
+/* Pull nice big chunks so the need-data signal doesn't need to fire too often. */
+#define BUFFER_SIZE 262144
 
 static void source__need_data(GstElement *source, guint unused_size, gpointer data)
 {
