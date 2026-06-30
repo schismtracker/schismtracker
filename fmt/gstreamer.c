@@ -228,7 +228,7 @@ void GST_TRAMPOLINE_gst_mini_object_unref(GstMiniObject *mini_object)
 
 /* ----------------------------------------------------------- */
 
-static int gstreamer_init();
+static int gstreamer_initialized = 0;
 
 /* ----------------------------------------------------------- */
 
@@ -249,7 +249,7 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 	int success = 0;
 
 	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
-	if (!gstreamer_init())
+	if (!gstreamer_initialized)
 		return 0;
 
 	/* Create the discoverer */
@@ -546,7 +546,7 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 	sample_buffer_chain_t buffer_chain = { 0 };
 
 	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
-	if (!gstreamer_init())
+	if (!gstreamer_initialized)
 		return 0;
 
 	/* Build the pipeline */
@@ -803,9 +803,7 @@ static int gstreamer_load(void)
 
 /* ----------------------------------------------------------- */
 
-static int gstreamer_initialized = 0;
-
-static int gstreamer_init(void)
+int gstreamer_init(void)
 {
 	if (gstreamer_initialized)
 		return 1;
