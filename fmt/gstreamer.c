@@ -446,7 +446,7 @@ static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
 			sample_buffer_chain_node_t *new_node = (sample_buffer_chain_node_t *)malloc(sizeof(sample_buffer_chain_node_t));
 
 			new_node->next = NULL;
-			new_node->sample_count = map.size / 2; /* the pipeline always converts to s16le */
+			new_node->sample_count = map.size / 2; /* the pipeline always converts to s16 */
 			new_node->sample_data = malloc(new_node->sample_count * buffer_chain->sample_bits / 8);
 
 			if (!new_node->sample_data) {
@@ -456,10 +456,10 @@ static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
 					memcpy(new_node->sample_data, map.data, new_node->sample_count * buffer_chain->sample_bits / 8);
 				} else {
 					/* Convert from S16 to U8 */
-					unsigned char *s16le_data = (unsigned char *)map.data;
+					unsigned short *s16_data = (unsigned short *)map.data;
 
-					for (int i = 0, j = 1; i < new_node->sample_count; i++, j += 2)
-						new_node->sample_data[i] = s16le_data[j] ^ 0x80;
+					for (int i = 0; i < new_node->sample_count; i++)
+						new_node->sample_data[i] = (s16_data[i] >> 8) ^ 0x80;
 				}
 
 				if (!buffer_chain->first) {
@@ -576,16 +576,23 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 
 	g_signal_connect(source, "need-data", G_CALLBACK(source__need_data), fp);
 
-	/* Set up conversion. Force format to S16LE and layout to interleaved. Allow 1 or 2 channels. */
+	/* Set up conversion. Force format to S16 (platform-endianness) and
+	 * layout to interleaved. Allow 1 or 2 channels. */
+#if WORDS_BIGENDIAN
+# define NATIVE_S16 "S16BE"
+#else
+# define NATIVE_S16 "S16LE"
+#endif
+
 	caps = gst_caps_new_empty();
 
 	caps_mono = gst_structure_new("audio/x-raw",
-		"format", G_TYPE_STRING, "S16LE",
+		"format", G_TYPE_STRING, NATIVE_S16,
 		"channels", G_TYPE_INT, 1,
 		NULL);
 
 	caps_stereo = gst_structure_new("audio/x-raw",
-		"format", G_TYPE_STRING, "S16LE",
+		"format", G_TYPE_STRING, NATIVE_S16,
 		"channels", G_TYPE_INT, 2,
 		"layout", G_TYPE_STRING, "interleaved",
 		NULL);
