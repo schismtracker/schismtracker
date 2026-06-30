@@ -821,17 +821,17 @@ int gstreamer_init(void)
 	if (gstreamer_initialized)
 		return 1;
 
-	#if GSTREAMER_DYNAMIC_LOAD
+#if GSTREAMER_DYNAMIC_LOAD
 	if (!gstreamer_load()) {
 		return 0;
 	}
-	#endif /* GSTREAMER_DYNAMIC_LOAD */
+#endif /* GSTREAMER_DYNAMIC_LOAD */
 
 	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
 	if (!gst_init_check(NULL, NULL, NULL)) {
-		#if GSTREAMER_DYNAMIC_LOAD
+#if GSTREAMER_DYNAMIC_LOAD
 		gstreamer_unload();
-		#endif /* GSTREAMER_DYNAMIC_LOAD */
+#endif /* GSTREAMER_DYNAMIC_LOAD */
 
 		return 0;
 	}
