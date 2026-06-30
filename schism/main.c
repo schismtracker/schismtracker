@@ -1354,6 +1354,9 @@ int schism_main(int argc, char **argv)
 #ifdef USE_ZSTD
 	zstd_init();
 #endif
+#ifdef USE_GSTREAMER
+	gstreamer_init();
+#endif
 
 #if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2) && !defined(SCHISM_XBOX)
 	/* XXX this is dumb, we should just send a SCHISM_QUIT event */

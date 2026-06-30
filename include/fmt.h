@@ -290,6 +290,10 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length);
 int win32mf_init(void);
 void win32mf_quit(void);
 
+int gstreamer_init(void);
+/* Once gstreamer has been deinitialized in a process, it can never
+ * be reinitialized. Therefore, there is no gstreamer_quit. */
+
 int flac_init(void);
 int flac_quit(void);
 void audio_enable_flac(int enabled); // should be called by flac_init()
