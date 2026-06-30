@@ -342,7 +342,7 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 							}
 
 							file->smp_speed = sample_rate;
-							file->smp_length = (duration / (double)GST_SECOND) * sample_rate;
+							file->smp_length = duration * sample_rate / GST_SECOND;
 
 							if (!display_name) {
 								display_name = file->base;
