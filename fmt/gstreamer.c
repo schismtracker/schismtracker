@@ -249,14 +249,16 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 	int success = 0;
 
 	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
-	if (!gstreamer_initialized)
+	if (!gstreamer_initialized) {
 		return 0;
+	}
 
 	/* Create the discoverer */
 	discoverer = gst_discoverer_new(5 * GST_SECOND, NULL);
 
-	if (!discoverer)
+	if (!discoverer) {
 		return 0;
+	}
 
 	/* Translate path to URI */
 	uri = gst_filename_to_uri(file->path, NULL);
@@ -324,23 +326,27 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 							file->type &= ~TYPE_INST_MASK;
 							file->type &= ~TYPE_SAMPLE_MASK;
 
-							if (is_raw_audio)
+							if (is_raw_audio) {
 								file->type |= TYPE_SAMPLE_PLAIN;
-							else
+							} else {
 								file->type |= TYPE_SAMPLE_COMPR;
+							}
 
 							file->smp_flags = 0;
 
-							if (channels > 1)
+							if (channels > 1) {
 								file->smp_flags |= CHN_STEREO;
-							if (bits > 8)
+							}
+							if (bits > 8) {
 								file->smp_flags |= CHN_16BIT;
+							}
 
 							file->smp_speed = sample_rate;
 							file->smp_length = (duration / (double)GST_SECOND) * sample_rate;
 
-							if (!display_name)
+							if (!display_name) {
 								display_name = file->base;
+							}
 
 							file->title = str_dup(display_name);
 							file->description = description;
@@ -427,8 +433,9 @@ static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
 
 	g_signal_emit_by_name(sink, "pull-sample", &sample);
 
-	if (!sample)
+	if (!sample) {
 		return GST_FLOW_EOS;
+	}
 
 	buffer = gst_sample_get_buffer(sample);
 	caps = gst_sample_get_caps(sample);
@@ -458,10 +465,11 @@ static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
 						new_node->sample_data[i] = s16le_data[j] ^ 0x80;
 				}
 
-				if (!buffer_chain->first)
+				if (!buffer_chain->first) {
 					buffer_chain->first = new_node;
-				else if (buffer_chain->last)
+				} else if (buffer_chain->last) {
 					buffer_chain->last->next = new_node;
+				}
 
 				buffer_chain->last = new_node;
 				buffer_chain->sample_count += new_node->sample_count;
@@ -484,8 +492,9 @@ static void decode__pad_added(GstElement *decode, GstPad *decode_output_pad, gpo
 
 	GstPad *convert_sink_pad = gst_element_get_static_pad(pipeline_data->convert, "sink");
 
-	if (!convert_sink_pad)
+	if (!convert_sink_pad) {
 		return;
+	}
 
 	if (!gst_pad_is_linked(convert_sink_pad)) {
 		GstCaps *caps = gst_pad_get_current_caps(decode_output_pad);
@@ -513,11 +522,13 @@ static void decode__pad_added(GstElement *decode, GstPad *decode_output_pad, gpo
 					if (gst_audio_info_from_caps(&info, caps)) {
 						pipeline_data->buffer_chain->sample_rate = GST_AUDIO_INFO_RATE(&info);
 
-						if (GST_AUDIO_INFO_DEPTH(&info) == 8)
+						if (GST_AUDIO_INFO_DEPTH(&info) == 8) {
 							pipeline_data->buffer_chain->sample_bits = 8;
+						}
 
-						if (GST_AUDIO_INFO_CHANNELS(&info) > 1)
+						if (GST_AUDIO_INFO_CHANNELS(&info) > 1) {
 							pipeline_data->buffer_chain->sample_channels = 2;
+						}
 					}
 				}
 
@@ -546,8 +557,9 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 	sample_buffer_chain_t buffer_chain = { 0 };
 
 	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
-	if (!gstreamer_initialized)
+	if (!gstreamer_initialized) {
 		return 0;
+	}
 
 	/* Build the pipeline */
 	pipeline = gst_pipeline_new("extract-audio");
@@ -649,11 +661,13 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 
 		smp->flags = 0;
 
-		if (buffer_chain.sample_bits == 16)
+		if (buffer_chain.sample_bits == 16) {
 			smp->flags |= CHN_16BIT;
+		}
 
-		if (buffer_chain.sample_channels == 2)
+		if (buffer_chain.sample_channels == 2) {
 			smp->flags |= CHN_STEREO;
+		}
 
 		smp->data = csf_allocate_sample(total_bytes);
 
@@ -719,8 +733,9 @@ static int gstreamer_load(void)
 #define LOAD_LIBRARY(lib, filename)     \
 	do if (success) {                     \
 		lib = loadso_object_load(filename); \
-		if (!lib)                           \
+		if (!lib) {                         \
 			success = 0;                      \
+		}                                   \
 	} while (0)
 
 	LOAD_LIBRARY(lib_glib, "libglib-2.0.so");
@@ -735,8 +750,9 @@ static int gstreamer_load(void)
 #define RESOLVE_ENDPOINT(lib, name)                                           \
 		do if (success) {                                                         \
 			GST_DYNAMIC_ ## name = (name ## _spec)loadso_function_load(lib, #name); \
-			if (!GST_DYNAMIC_ ## name)                                              \
+			if (!GST_DYNAMIC_ ## name) {                                            \
 				success = 0;                                                          \
+			}                                                                       \
 		} while (0)
 
 		RESOLVE_ENDPOINT(lib_glib, g_malloc);
@@ -793,8 +809,9 @@ static int gstreamer_load(void)
 #undef RESOLVE_ENDPOINT
 	}
 
-	if (!success)
+	if (!success) {
 		gstreamer_unload();
+	}
 
 	return success;
 }
@@ -809,8 +826,9 @@ int gstreamer_init(void)
 		return 1;
 
 	#if GSTREAMER_DYNAMIC_LOAD
-	if (!gstreamer_load())
+	if (!gstreamer_load()) {
 		return 0;
+	}
 	#endif /* GSTREAMER_DYNAMIC_LOAD */
 
 	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
