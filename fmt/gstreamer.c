@@ -445,7 +445,7 @@ static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
 			sample_buffer_chain_node_t *new_node = (sample_buffer_chain_node_t *)malloc(sizeof(sample_buffer_chain_node_t));
 
 			new_node->next = NULL;
-			new_node->sample_count = map.size / 2;
+			new_node->sample_count = map.size / 2; /* the pipeline always converts to s16le */
 			new_node->sample_data = malloc(new_node->sample_count * buffer_chain->sample_bits / 8);
 
 			if (!new_node->sample_data) {
