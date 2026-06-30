@@ -728,13 +728,11 @@ static void gstreamer_unload(void)
 
 static int gstreamer_load(void)
 {
-	int success = 1;
-
 #define LOAD_LIBRARY(lib, filename)     \
-	do if (success) {                     \
+	do {                                  \
 		lib = loadso_object_load(filename); \
 		if (!lib) {                         \
-			success = 0;                      \
+			goto fail;                        \
 		}                                   \
 	} while (0)
 
@@ -746,74 +744,72 @@ static int gstreamer_load(void)
 
 #undef LOAD_LIBRARY
 
-	if (success) {
-#define RESOLVE_ENDPOINT(lib, name)                                           \
-		do if (success) {                                                         \
-			GST_DYNAMIC_ ## name = (name ## _spec)loadso_function_load(lib, #name); \
-			if (!GST_DYNAMIC_ ## name) {                                            \
-				success = 0;                                                          \
-			}                                                                       \
-		} while (0)
+#define RESOLVE_ENDPOINT(lib, name)                                         \
+	do {                                                                      \
+		GST_DYNAMIC_ ## name = (name ## _spec)loadso_function_load(lib, #name); \
+		if (!GST_DYNAMIC_ ## name) {                                            \
+			goto fail;                                                            \
+		}                                                                       \
+	} while (0)
 
-		RESOLVE_ENDPOINT(lib_glib, g_malloc);
-		RESOLVE_ENDPOINT(lib_glib, g_free);
-		RESOLVE_ENDPOINT(lib_glib, g_free_sized);
-		RESOLVE_ENDPOINT(lib_glib, g_intern_string);
-		RESOLVE_ENDPOINT(lib_glib, g_strv_contains);
-		RESOLVE_ENDPOINT(lib_gobject, g_object_set);
-		RESOLVE_ENDPOINT(lib_gobject, g_object_unref);
-		RESOLVE_ENDPOINT(lib_gobject, g_signal_connect_data);
-		RESOLVE_ENDPOINT(lib_gobject, g_signal_emit_by_name);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_init_check);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_object_unref);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_mini_object_unref);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_structure_new);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_structure_get_name);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_filename_to_uri);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_new);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_discover_uri);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_info_get_result);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_info_get_duration);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_info_get_audio_streams);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_stream_info_get_stream_type_nick);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_stream_info_get_caps);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_stream_info_list_free);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_audio_info_get_sample_rate);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_audio_info_get_channels);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_audio_info_get_depth);
-		RESOLVE_ENDPOINT(lib_gstpbutils, gst_pb_utils_get_decoder_description);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_pipeline_new);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_element_factory_make);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_element_set_state);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_element_get_static_pad);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_element_link);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_element_get_bus);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_bus_timed_pop_filtered);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_bin_add_many);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_pad_get_current_caps);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_pad_is_linked);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_pad_link);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_new_empty);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_new_empty_simple);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_get_size);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_get_structure);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_append_structure);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_can_intersect);
-		RESOLVE_ENDPOINT(lib_gstaudio, gst_audio_info_from_caps);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_sample_get_buffer);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_sample_get_caps);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_buffer_new_wrapped);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_buffer_map);
-		RESOLVE_ENDPOINT(lib_gstreamer, gst_buffer_unmap);
+	RESOLVE_ENDPOINT(lib_glib, g_malloc);
+	RESOLVE_ENDPOINT(lib_glib, g_free);
+	RESOLVE_ENDPOINT(lib_glib, g_free_sized);
+	RESOLVE_ENDPOINT(lib_glib, g_intern_string);
+	RESOLVE_ENDPOINT(lib_glib, g_strv_contains);
+	RESOLVE_ENDPOINT(lib_gobject, g_object_set);
+	RESOLVE_ENDPOINT(lib_gobject, g_object_unref);
+	RESOLVE_ENDPOINT(lib_gobject, g_signal_connect_data);
+	RESOLVE_ENDPOINT(lib_gobject, g_signal_emit_by_name);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_init_check);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_object_unref);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_mini_object_unref);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_structure_new);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_structure_get_name);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_filename_to_uri);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_new);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_discover_uri);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_info_get_result);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_info_get_duration);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_info_get_audio_streams);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_stream_info_get_stream_type_nick);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_stream_info_get_caps);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_stream_info_list_free);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_audio_info_get_sample_rate);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_audio_info_get_channels);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_discoverer_audio_info_get_depth);
+	RESOLVE_ENDPOINT(lib_gstpbutils, gst_pb_utils_get_decoder_description);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_pipeline_new);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_element_factory_make);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_element_set_state);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_element_get_static_pad);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_element_link);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_element_get_bus);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_bus_timed_pop_filtered);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_bin_add_many);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_pad_get_current_caps);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_pad_is_linked);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_pad_link);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_new_empty);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_new_empty_simple);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_get_size);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_get_structure);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_append_structure);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_caps_can_intersect);
+	RESOLVE_ENDPOINT(lib_gstaudio, gst_audio_info_from_caps);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_sample_get_buffer);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_sample_get_caps);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_buffer_new_wrapped);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_buffer_map);
+	RESOLVE_ENDPOINT(lib_gstreamer, gst_buffer_unmap);
 
 #undef RESOLVE_ENDPOINT
-	}
 
-	if (!success) {
-		gstreamer_unload();
-	}
+	return 1;
 
-	return success;
+fail:
+	gstreamer_unload();
+	return 0;
 }
 
 #endif /* GSTREAMER_DYNAMIC_LOAD */
