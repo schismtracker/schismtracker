@@ -445,22 +445,22 @@ static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
 			if (capture_buffer->sample_bits == 16) {
 				disko_write(&capture_buffer->membuf, map.data, sample_count * 2);
 			} else {
-				/* Convert from S16 to U8 */
+				/* Convert from S16 to S8 */
 				unsigned short *s16_data = (unsigned short *)map.data;
-				unsigned char u8_buf[256];
+				unsigned char s8_buf[256];
 
 				for (int i=0; i < sample_count; i++) {
-					u8_buf[i] = (s16_data[i] >> 8) ^ 0x80;
+					s8_buf[i & 255] = s16_data[i] >> 8;
 
-					if (i & 255 == 255) {
-						disko_write(&capture_buffer->membuf, u8_buf, 256);
+					if ((i & 255) == 255) {
+						disko_write(&capture_buffer->membuf, s8_buf, 256);
 					}
 				}
 
 				int partial_buffer_byte_count = sample_count & 255;
 
 				if (partial_buffer_byte_count != 0) {
-					disko_write(&capture_buffer->membuf, u8_buf, partial_buffer_byte_count);
+					disko_write(&capture_buffer->membuf, s8_buf, partial_buffer_byte_count);
 				}
 			}
 
