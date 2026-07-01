@@ -206,13 +206,20 @@ static gst_buffer_unmap_spec GST_DYNAMIC_gst_buffer_unmap = NULL;
 #define gst_buffer_map GST_DYNAMIC_gst_buffer_map
 #define gst_buffer_unmap GST_DYNAMIC_gst_buffer_unmap
 
-/* g_free is a macro that calls g_free or g_free_sized */
+#if G_GNUC_CHECK_VERSION (4, 1) && GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_78 && defined(G_HAVE_FREE_SIZED)
+
+/* When the GCC version supports the intrinsic needed, GLib
+ * defines a macro g_free that calls g_free or g_free_sized.
+ * We lose functionality if we just blindly redefine it
+ * to GST_DYNAMIC_g_free. */
 
 #undef g_free
 #define g_free(mem)                                                \
   (__builtin_object_size((mem), 0) != ((size_t)-1))                \
 	? GST_DYNAMIC_g_free_sized(mem, __builtin_object_size((mem), 0)) \
 	: GST_DYNAMIC_g_free(mem)
+
+#endif /* G_GNUC_CHECK_VERSION (4, 1) && GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_78 && defined(G_HAVE_FREE_SIZED) */
 
 #endif /* GSTREAMER_DYNAMIC_LOAD && !LINK_TO_GSTREAMER */
 
