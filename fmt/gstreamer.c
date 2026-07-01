@@ -391,7 +391,7 @@ static void source__need_data(GstElement *source, guint unused_size, gpointer da
 	if (num_read == 0) {
 		g_signal_emit_by_name(source, "end-of-stream", &ret);
 	} else {
-		GstBuffer *buffer_obj = gst_buffer_new_wrapped(buffer, num_read);
+		GstBuffer *buffer_obj = gst_buffer_new_wrapped(buffer, num_read); /* takes ownership of buffer's lifetime */
 
 		g_signal_emit_by_name(source, "push-buffer", buffer_obj, &ret);
 		gst_buffer_unref(buffer_obj);
@@ -399,30 +399,22 @@ static void source__need_data(GstElement *source, guint unused_size, gpointer da
 }
 
 typedef struct pipeline_data pipeline_data_t;
-typedef struct sample_buffer_chain sample_buffer_chain_t;
-typedef struct sample_buffer_chain_node sample_buffer_chain_node_t;
+typedef struct sample_buffer sample_buffer_t;
 
 struct pipeline_data
 {
 	GstElement *convert;
-	sample_buffer_chain_t *buffer_chain;
+	sample_buffer_t *buffer;
 };
 
-struct sample_buffer_chain
+struct sample_buffer
 {
-	sample_buffer_chain_node_t *first;
-	sample_buffer_chain_node_t *last;
+	int is_populated;
+	disko_t membuf;
 	int sample_count;
 	int sample_rate;
 	int sample_bits;
 	int sample_channels;
-};
-
-struct sample_buffer_chain_node
-{
-	sample_buffer_chain_node_t *next;
-	int sample_count;
-	char *sample_data;
 };
 
 static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
@@ -446,38 +438,35 @@ static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
 		GstMapInfo map;
 
 		if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-			sample_buffer_chain_t *buffer_chain = (sample_buffer_chain_t *)data;
+			int sample_count = map.size / 2; /* the pipeline always converts to s16 */
 
-			sample_buffer_chain_node_t *new_node = (sample_buffer_chain_node_t *)malloc(sizeof(sample_buffer_chain_node_t));
+			sample_buffer_t *capture_buffer = (sample_buffer_t *)data;
 
-			new_node->next = NULL;
-			new_node->sample_count = map.size / 2; /* the pipeline always converts to s16 */
-			new_node->sample_data = malloc(new_node->sample_count * buffer_chain->sample_bits / 8);
-
-			if (!new_node->sample_data) {
-				free(new_node);
+			if (capture_buffer->sample_bits == 16) {
+				disko_write(&capture_buffer->membuf, map.data, sample_count * 2);
 			} else {
-				if (buffer_chain->sample_bits == 16) {
-					memcpy(new_node->sample_data, map.data, new_node->sample_count * buffer_chain->sample_bits / 8);
-				} else {
-					/* Convert from S16 to U8 */
-					unsigned short *s16_data = (unsigned short *)map.data;
+				/* Convert from S16 to U8 */
+				unsigned short *s16_data = (unsigned short *)map.data;
+				unsigned char u8_buf[256];
 
-					for (int i = 0; i < new_node->sample_count; i++)
-						new_node->sample_data[i] = (s16_data[i] >> 8) ^ 0x80;
+				for (int i=0; i < sample_count; i++) {
+					u8_buf[i] = (s16_data[i] >> 8) ^ 0x80;
+
+					if (i & 255 == 255) {
+						disko_write(&capture_buffer->membuf, u8_buf, 256);
+					}
 				}
 
-				if (!buffer_chain->first) {
-					buffer_chain->first = new_node;
-				} else if (buffer_chain->last) {
-					buffer_chain->last->next = new_node;
+				int partial_buffer_byte_count = sample_count & 255;
+
+				if (partial_buffer_byte_count != 0) {
+					disko_write(&capture_buffer->membuf, u8_buf, partial_buffer_byte_count);
 				}
-
-				buffer_chain->last = new_node;
-				buffer_chain->sample_count += new_node->sample_count;
-
-				result = GST_FLOW_OK;
 			}
+
+			capture_buffer->sample_count += sample_count;
+
+			result = GST_FLOW_OK;
 
 			gst_buffer_unmap(buffer, &map);
 		}
@@ -512,26 +501,30 @@ static void decode__pad_added(GstElement *decode, GstPad *decode_output_pad, gpo
 					gst_pad_link(decode_output_pad, convert_sink_pad);
 
 					/* Sane default that we hopefully won't have to use */
-					pipeline_data->buffer_chain->sample_rate = 44100;
+					pipeline_data->buffer->sample_rate = 44100;
 
 					/* Check if we're 8-bit or wider than 8-bit
-						* Check if we're mono or have 2 or more channels
-						* Set the output buffer format correspondingly
-						*/
-					pipeline_data->buffer_chain->sample_bits = 16;
-					pipeline_data->buffer_chain->sample_channels = 1;
+					 * Check if we're mono or have 2 or more channels
+					 * Set the output buffer format correspondingly
+					 */
+					pipeline_data->buffer->sample_bits = 16;
+					pipeline_data->buffer->sample_channels = 1;
 
 					if (gst_audio_info_from_caps(&info, caps)) {
-						pipeline_data->buffer_chain->sample_rate = GST_AUDIO_INFO_RATE(&info);
+						pipeline_data->buffer->sample_rate = GST_AUDIO_INFO_RATE(&info);
 
 						if (GST_AUDIO_INFO_DEPTH(&info) == 8) {
-							pipeline_data->buffer_chain->sample_bits = 8;
+							pipeline_data->buffer->sample_bits = 8;
 						}
 
 						if (GST_AUDIO_INFO_CHANNELS(&info) > 1) {
-							pipeline_data->buffer_chain->sample_channels = 2;
+							pipeline_data->buffer->sample_channels = 2;
 						}
 					}
+
+					disko_memopen(&pipeline_data->buffer->membuf);
+
+					pipeline_data->buffer->is_populated = 1;
 				}
 
 				gst_caps_unref(audio_caps_matcher);
@@ -556,7 +549,7 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 
 	pipeline_data_t pipeline_data = { 0 };
 
-	sample_buffer_chain_t buffer_chain = { 0 };
+	sample_buffer_t buffer = { 0 };
 
 	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
 	if (!gstreamer_initialized) {
@@ -619,7 +612,7 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 		"sync", FALSE,
 		NULL);
 
-	g_signal_connect(sink, "new-sample", G_CALLBACK(sink__new_sample), &buffer_chain);
+	g_signal_connect(sink, "new-sample", G_CALLBACK(sink__new_sample), &buffer);
 
 	/* Link up the pipeline */
 	gst_bin_add_many(
@@ -640,7 +633,7 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 	gst_element_link(format, sink);
 
 	pipeline_data.convert = convert;
-	pipeline_data.buffer_chain = &buffer_chain;
+	pipeline_data.buffer = &buffer;
 
 	g_signal_connect(decode, "pad-added", G_CALLBACK(decode__pad_added), &pipeline_data);
 
@@ -662,51 +655,38 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 	/* Translate captured data */
 	int success = (msg_type != GST_MESSAGE_ERROR);
 
-	if (success) {
-		int total_bytes = buffer_chain.sample_count * buffer_chain.sample_bits / 8;
+	if (success && buffer.is_populated) {
+		int64_t captured_bytes = disko_tell(&buffer.membuf);
 
-		smp->c5speed = buffer_chain.sample_rate;
-		smp->length = buffer_chain.sample_count / buffer_chain.sample_channels;
+		if (captured_bytes > INT32_MAX) {
+			captured_bytes = INT32_MAX;
+		}
+
+		smp->c5speed = buffer.sample_rate;
+		smp->length = buffer.sample_count / buffer.sample_channels;
 
 		smp->flags = 0;
 
-		if (buffer_chain.sample_bits == 16) {
+		if (buffer.sample_bits == 16) {
 			smp->flags |= CHN_16BIT;
 		}
 
-		if (buffer_chain.sample_channels == 2) {
+		if (buffer.sample_channels == 2) {
 			smp->flags |= CHN_STEREO;
 		}
 
-		smp->data = csf_allocate_sample(total_bytes);
+		int sample_data_bytes = buffer.sample_count * buffer.sample_bits / 8;
+
+		smp->data = csf_allocate_sample(sample_data_bytes);
 
 		if (!smp->data) {
 			smp->length = 0;
 			success = 0;
 		} else {
-			sample_buffer_chain_node_t *node = buffer_chain.first;
-			char *data_ptr = smp->data;
-
-			while (node) {
-				int buffer_bytes = node->sample_count * buffer_chain.sample_bits / 8;
-
-				memcpy(data_ptr, node->sample_data, buffer_bytes);
-
-				data_ptr += buffer_bytes;
-
-				node = node->next;
-			}
+			memcpy(smp->data, buffer.membuf.data, captured_bytes);
 		}
-	}
 
-	/* Release any allocated buffer chain nodes */
-	while (buffer_chain.first != NULL) {
-		sample_buffer_chain_node_t *node = buffer_chain.first;
-
-		buffer_chain.first = node->next;
-
-		free(node->sample_data);
-		free(node);
+		disko_memclose(&buffer.membuf, 1 /* free buffer */);
 	}
 
 	return success;
