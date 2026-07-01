@@ -381,7 +381,7 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 static void source__need_data(GstElement *source, guint unused_size, gpointer data)
 {
 	gpointer buffer;
-	int num_read;
+	size_t num_read;
 	GstFlowReturn ret;
 
 	slurp_t *fp = (slurp_t *)data;
@@ -390,7 +390,7 @@ static void source__need_data(GstElement *source, guint unused_size, gpointer da
 
 	num_read = slurp_read(fp, buffer, BUFFER_SIZE);
 
-	if (num_read <= 0) {
+	if (num_read == 0) {
 		g_signal_emit_by_name(source, "end-of-stream", &ret);
 	} else {
 		GstBuffer *buffer_obj = gst_buffer_new_wrapped(buffer, num_read);
