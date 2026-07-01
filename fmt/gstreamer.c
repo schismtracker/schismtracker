@@ -37,8 +37,6 @@
  */
 struct _GstMiniObject;
 
-typedef struct _GstMiniObject GstMiniObject;
-
 static void GST_TRAMPOLINE_gst_mini_object_unref(struct _GstMiniObject *mini_object);
 
 #define gst_mini_object_unref GST_TRAMPOLINE_gst_mini_object_unref
