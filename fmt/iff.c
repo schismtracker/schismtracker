@@ -43,13 +43,12 @@ int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags)
 	if (chunk->offset < 0)
 		return 0;
 
-	// align the offset on a word boundary if desired
-	slurp_seek(fp, (flags & IFF_CHUNK_ALIGNED) ? (chunk->size + (chunk->size & 1)) : (chunk->size), SEEK_CUR);
-
-	return slurp_available(fp, 0, SEEK_CUR); /* I have NO idea if this is right */
+	/* align the offset on a word boundary if desired */
+	return (slurp_seek(fp, (flags & IFF_CHUNK_ALIGNED) ? ((chunk->size + UINT32_C(1)) & ~UINT32_C(1)) : (chunk->size), SEEK_CUR) != 0);
 }
 
-/* returns the amount of bytes read or zero on error */
+/* returns the amount of bytes read or zero on error
+ * FIXME why does this not return a size_t */
 int iff_chunk_read(iff_chunk_t *chunk, slurp_t *fp, void *data, size_t size)
 {
 	int64_t pos = slurp_tell(fp);
