@@ -719,17 +719,17 @@ static int gstreamer_load(void)
 {
 #define LOAD_LIBRARY(lib, filename)     \
 	do {                                  \
-		lib = loadso_object_load(filename); \
+		lib = library_load(filename, 0, 0); \
 		if (!lib) {                         \
 			goto fail;                        \
 		}                                   \
 	} while (0)
 
-	LOAD_LIBRARY(lib_glib, "libglib-2.0.so");
-	LOAD_LIBRARY(lib_gobject, "libgobject-2.0.so");
-	LOAD_LIBRARY(lib_gstreamer, "libgstreamer-1.0.so.0");
-	LOAD_LIBRARY(lib_gstpbutils, "libgstpbutils-1.0.so");
-	LOAD_LIBRARY(lib_gstaudio, "libgstaudio-1.0.so");
+	LOAD_LIBRARY(lib_glib, "glib-2.0");
+	LOAD_LIBRARY(lib_gobject, "gobject-2.0");
+	LOAD_LIBRARY(lib_gstreamer, "gstreamer-1.0");
+	LOAD_LIBRARY(lib_gstpbutils, "gstpbutils-1.0");
+	LOAD_LIBRARY(lib_gstaudio, "gstaudio-1.0");
 
 #undef LOAD_LIBRARY
 
