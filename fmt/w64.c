@@ -42,6 +42,7 @@ struct w64_chunk {
 static int w64_chunk_peek(struct w64_chunk *chunk, slurp_t *fp)
 {
 	int64_t pos;
+	uint64_t chunk_data_size;
 
 	if (slurp_read(fp, chunk->id, sizeof(chunk->id)) != sizeof(chunk->id))
 		return 0;
@@ -62,13 +63,16 @@ static int w64_chunk_peek(struct w64_chunk *chunk, slurp_t *fp)
 		return 0;
 
 	/* w64 sizes are aligned to 64-bit boundaries */
-	slurp_seek(fp, (chunk->size + 7) & ~7, SEEK_CUR);
+	chunk_data_size = (chunk->size + 7) & ~7;
 
-	pos = slurp_tell(fp);
-	if (pos < 0)
+	if (slurp_available(fp, chunk_data_size, SEEK_CUR)) {
+		/* skip chunk data, return successfully peeked chunk */
+		slurp_seek(fp, chunk_data_size, SEEK_CUR);
+		return 1;
+	} else {
+		/* stop reading here, this chunk's data is incomplete */
 		return 0;
-
-	return slurp_available(fp, 1, SEEK_CUR);
+	}
 }
 
 static int w64_chunk_empty(struct w64_chunk *chunk)
