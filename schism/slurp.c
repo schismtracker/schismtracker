@@ -805,7 +805,7 @@ int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), siz
 	}
 }
 
-int slurp_is_valid_file_pointer(slurp_t *fp, ssize_t x, int whence)
+int slurp_is_valid_file_pointer(slurp_t *fp, int64_t x, int whence)
 {
 	if (!x)
 		return 1; /* ... */
