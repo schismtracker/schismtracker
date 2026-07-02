@@ -831,7 +831,7 @@ int slurp_is_valid_file_pointer(slurp_t *fp, int64_t x, int whence)
 	}
 }
 
-void slurp_fill_nonseek_buffer(slurp_t *t, size_t count)
+static void slurp_fill_nonseek_buffer(slurp_t *t, size_t count)
 {
 	/* If we are a nonseek slurp, then a custom available() has been
 	 * installed which reads forward and buffers bytes to ensure that
