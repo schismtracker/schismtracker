@@ -69,8 +69,7 @@ static int read_mmcmp_header(mm_header_t *hdr, slurp_t *fp)
 	    || hdr->blocks == 0
 	    || hdr->filesize < 16
 	    || hdr->filesize > 0x8000000
-	    || !slurp_available(fp, hdr->blktable, SEEK_SET)
-	    || !slurp_available(fp, hdr->blktable + 4 * hdr->blocks, SEEK_SET))
+	    || !slurp_is_valid_file_pointer(fp, hdr->blktable + 4 * hdr->blocks, SEEK_SET))
 		return 0;
 
 	return 1;
@@ -165,7 +164,7 @@ static uint32_t get_bits(mm_bit_buffer_t *bb, uint32_t bits)
 
 int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 {
-	if (!slurp_available(fp, 256, SEEK_CUR))
+	if (!slurp_is_valid_file_pointer(fp, 256, SEEK_CUR))
 		return 0;
 
 	mm_header_t hdr;

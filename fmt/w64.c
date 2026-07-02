@@ -62,7 +62,7 @@ static int w64_chunk_peek(struct w64_chunk *chunk, slurp_t *fp)
 		return 0;
 
 	/* w64 sizes are aligned to 64-bit boundaries */
-	return (slurp_seek(fp, (chunk->size + 7) & ~7, SEEK_CUR) != 0);
+	return !slurp_seek(fp, (chunk->size + 7) & ~7, SEEK_CUR);
 }
 
 static int w64_chunk_empty(struct w64_chunk *chunk)

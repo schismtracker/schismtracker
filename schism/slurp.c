@@ -654,6 +654,7 @@ int slurp_init_nonseek(slurp_t *fp,
 /* --------------------------------------------------------------------- */
 /* and now, the slurp interface */
 
+/* return: 0 on success, -1 on error */
 int slurp_seek(slurp_t *t, int64_t offset, int whence)
 {
 	int r;
@@ -675,7 +676,7 @@ int slurp_seek(slurp_t *t, int64_t offset, int whence)
 		break;
 	}
 
-	if (offcheck < 0 || !slurp_available(t, offcheck, SEEK_SET))
+	if (offcheck < 0 || !slurp_is_valid_file_pointer(t, offcheck, SEEK_SET))
 		return -1;
 
 	r = t->seek(t, offset, whence);
@@ -804,8 +805,7 @@ int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), siz
 	}
 }
 
-/* TODO actually test this function within slurp crap */
-int slurp_available(slurp_t *fp, size_t x, int whence)
+int slurp_is_valid_file_pointer(slurp_t *fp, ssize_t x, int whence)
 {
 	if (!x)
 		return 1; /* ... */
@@ -819,7 +819,7 @@ int slurp_available(slurp_t *fp, size_t x, int whence)
 		switch (whence) {
 		case SEEK_SET: break;
 		case SEEK_CUR: pos += slurp_tell(fp); break;
-		case SEEK_END: return 0; /* ??? */
+		case SEEK_END: return (x <= 0); /* file pointers past the end are not valid */
 		}
 
 		if (pos < 0)
@@ -828,6 +828,19 @@ int slurp_available(slurp_t *fp, size_t x, int whence)
 		return (pos + x) <= fp->length(fp);
 	} else {
 		SCHISM_RUNTIME_ASSERT(0, "slurp: available or length is required");
+	}
+}
+
+void slurp_fill_nonseek_buffer(slurp_t *t, size_t count)
+{
+	/* If we are a nonseek slurp, then a custom available() has been
+	 * installed which reads forward and buffers bytes to ensure that
+	 * they are available.
+	 *
+	 * If we are not a nonseek slurp, then there is no buffer to fill.
+	 */
+	if (t->available) {
+		t->available(t, count, SEEK_CUR);
 	}
 }
 
@@ -978,7 +991,7 @@ int slurp_decompress(slurp_t *fp, const struct slurp_decompress_vtable *vtbl)
 	/* read a bit to ensure we've actually got the right thing.
 	 * zlib won't complain if our file Isn't Correct, so we have
 	 * to do it ourselves. */
-	slurp_available(fp, 8096, SEEK_SET);
+	slurp_fill_nonseek_buffer(fp, 8096);
 
 	/* check the error flag. if it's set, we're toast.
 	 * if it was set twice, our whole lives are different than

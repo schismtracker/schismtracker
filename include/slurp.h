@@ -165,7 +165,7 @@ int slurp_mmap(slurp_t *useme, const char *filename, uint64_t st);
 #endif
 
 /* stdio-style file processing */
-int slurp_seek(slurp_t *t, int64_t offset, int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END */
+int slurp_seek(slurp_t *t, int64_t offset, int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END, return => 0 on success, -1 on error */
 int64_t slurp_tell(slurp_t *t);
 #define slurp_rewind(t) slurp_seek((t), 0, SEEK_SET)
 
@@ -221,7 +221,9 @@ int slurp_xz(slurp_t *src);
 int slurp_zstd(slurp_t *src);
 #endif
 
-int slurp_available(slurp_t *fp, size_t x, int whence);
+int slurp_is_valid_file_pointer(slurp_t *fp, ssize_t x, int whence);
+
+void slurp_fill_nonseek_buffer(slurp_t *t, size_t count);
 
 /* ------------------------------------------------------------------------ */
 

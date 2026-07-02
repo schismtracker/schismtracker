@@ -33,7 +33,7 @@
 
 int fmt_mt2_read_info(dmoz_file_t *file, slurp_t *fp)
 {
-	if (!slurp_available(fp, 106, SEEK_CUR))
+	if (!slurp_is_valid_file_pointer(fp, 106, SEEK_CUR))
 		return 0;
 
 	unsigned char magic[4];

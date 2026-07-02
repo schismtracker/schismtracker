@@ -66,7 +66,7 @@ static int brr_load(struct brr_info *brr, slurp_t *fp)
 	 * this should always be the case anyway, though */
 	slurp_rewind(fp);
 
-	if (!slurp_available(fp, 11, SEEK_SET) || slurp_available(fp, UINT16_MAX + 1, SEEK_SET))
+	if (!slurp_is_valid_file_pointer(fp, 11, SEEK_SET) || slurp_is_valid_file_pointer(fp, UINT16_MAX + 1, SEEK_SET))
 		return -1;
 
 	filesize = slurp_length(fp);
