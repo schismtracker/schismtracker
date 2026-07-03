@@ -334,7 +334,7 @@ SCHISM_STATIC_ASSERT(MAX_MIDI_MACRO == 32, "MIDI config reading code assumes mac
 int it_read_midi_config(midi_config_t *midi, slurp_t *fp)
 {
 	/* preserving this just for compat with old behavior  --paper */
-	if (!slurp_is_valid_file_pointer(fp, 4896, SEEK_CUR))
+	if (!slurp_could_seek(fp, 4896, SEEK_CUR))
 		return 0;
 
 #define READ_VALUE(x) \
@@ -545,7 +545,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			tid = "BeRoTracker";
 	}
 
-	if ((hdr.special & 1) && hdr.msglength && slurp_is_valid_file_pointer(fp, hdr.msgoffset + hdr.msglength, SEEK_SET)) {
+	if ((hdr.special & 1) && hdr.msglength && slurp_could_seek(fp, hdr.msgoffset + hdr.msglength, SEEK_SET)) {
 		int msg_len = MIN(MAX_MESSAGE, hdr.msglength);
 		slurp_seek(fp, hdr.msgoffset, SEEK_SET);
 		slurp_read(fp, song->message, msg_len);

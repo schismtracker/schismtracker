@@ -147,7 +147,7 @@ int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 	char tag[4], title[20];
 	int i = 0;
 
-	if (!slurp_is_valid_file_pointer(fp, 1085, SEEK_CUR))
+	if (!slurp_could_seek(fp, 1085, SEEK_CUR))
 		return 0;
 
 	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))

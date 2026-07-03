@@ -38,7 +38,7 @@ int fmt_ams_read_info(dmoz_file_t *file, slurp_t *fp)
 	unsigned char magic[7] = {0};
 	slurp_read(fp, &magic, sizeof(magic));
 
-	if (!(slurp_is_valid_file_pointer(fp, 38, SEEK_CUR) && memcmp(magic, "AMShdr\x1a", 7) == 0))
+	if (!(slurp_could_seek(fp, 38, SEEK_CUR) && memcmp(magic, "AMShdr\x1a", 7) == 0))
 		return 0;
 
 	slurp_seek(fp, 7, SEEK_SET);

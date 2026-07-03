@@ -221,7 +221,7 @@ int slurp_xz(slurp_t *src);
 int slurp_zstd(slurp_t *src);
 #endif
 
-int slurp_is_valid_file_pointer(slurp_t *fp, int64_t x, int whence);
+int slurp_could_seek(slurp_t *fp, int64_t x, int whence);
 
 /* ------------------------------------------------------------------------ */
 

@@ -160,10 +160,10 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	ASSERT(slurp_seek(fp, sizeof(buf) + 1, SEEK_SET) == -1);
 	ASSERT(slurp_tell(fp) == sizeof(buf));
 
-	/* slurp_is_valid_file_pointer */
+	/* slurp_could_seek */
 	ASSERT(slurp_seek(fp, 0, SEEK_SET) == 0);
-	ASSERT(slurp_is_valid_file_pointer(fp, sizeof(buf), SEEK_SET));
-	ASSERT(!slurp_is_valid_file_pointer(fp, sizeof(buf) + 1, SEEK_SET));
+	ASSERT(slurp_could_seek(fp, sizeof(buf), SEEK_SET));
+	ASSERT(!slurp_could_seek(fp, sizeof(buf) + 1, SEEK_SET));
 
 	/* verify state */
 	ASSERT(slurp_tell(fp) == 0);

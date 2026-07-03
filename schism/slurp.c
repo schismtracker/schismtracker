@@ -676,7 +676,7 @@ int slurp_seek(slurp_t *t, int64_t offset, int whence)
 		break;
 	}
 
-	if (offcheck < 0 || !slurp_is_valid_file_pointer(t, offcheck, SEEK_SET))
+	if (offcheck < 0 || !slurp_could_seek(t, offcheck, SEEK_SET))
 		return -1;
 
 	r = t->seek(t, offset, whence);
@@ -805,7 +805,7 @@ int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), siz
 	}
 }
 
-int slurp_is_valid_file_pointer(slurp_t *fp, int64_t x, int whence)
+int slurp_could_seek(slurp_t *fp, int64_t x, int whence)
 {
 	if (!x)
 		return 1; /* ... */

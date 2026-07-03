@@ -61,7 +61,7 @@ static int read_mus_header(struct mus_header *hdr, slurp_t *fp)
 	hdr->scorelen   = bswapLE16(hdr->scorelen);
 	hdr->scorestart = bswapLE16(hdr->scorestart);
 
-	if (!slurp_is_valid_file_pointer(fp, hdr->scorestart + hdr->scorelen, SEEK_SET))
+	if (!slurp_could_seek(fp, hdr->scorestart + hdr->scorelen, SEEK_SET))
 		return 0;
 
 	slurp_seek(fp, 8, SEEK_CUR); // skip
