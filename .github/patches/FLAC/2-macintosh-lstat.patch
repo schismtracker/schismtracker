@@ -1,0 +1,24 @@
+From 15c84e935a2b8eeec00ec43078442e1fd4230f12 Mon Sep 17 00:00:00 2001
+From: Paper <paper@tflc.us>
+Date: Fri, 3 Jul 2026 03:12:38 -0400
+Subject: [PATCH] libFLAC/metadata_iterators: add macintosh to lstat check
+---
+ src/libFLAC/metadata_iterators.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/libFLAC/metadata_iterators.c b/src/libFLAC/metadata_iterators.c
+index e229edae..8e976324 100644
+--- a/src/libFLAC/metadata_iterators.c
++++ b/src/libFLAC/metadata_iterators.c
+@@ -3529,7 +3529,7 @@ FLAC__bool transport_tempfile_(const char *filename, FILE **tempfile, char **tem
+ 	}
+ #endif
+ 
+-#ifndef _WIN32
++#if !defined(_WIN32) && !defined(macintosh)
+ 	/* Need to check whether filename refers to a symlink or not */
+ 	{
+ 		struct stat filestat;
+-- 
+2.54.0
+

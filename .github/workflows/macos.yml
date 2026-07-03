@@ -194,6 +194,7 @@ jobs:
         if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
           cd flac-$FLAC_VERSION
+          patch -p1 < ../schism/.github/patches/FLAC/2-macintosh-lstat.patch
           mkdir build_powerpc
           cd build_powerpc
           # hax: we need to patch out all calls to chmod, utimensat, and chown, because none of them
