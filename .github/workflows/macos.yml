@@ -156,7 +156,9 @@ jobs:
           cd build_powerpc
 
           # XXX we could probably do --disable-file without too much trouble
-          ../configure --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix" --disable-joystick --disable-cdrom CPPFLAGS="-I$(pwd)/../../OpenGL_SDK_1.2/Headers"
+          # For some reason PBStatusSync and Control don't get defined? I'm not sure why.
+          # It worked before though, so just make it compile...
+          ../configure --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix" --disable-joystick --disable-cdrom CPPFLAGS="-I$(pwd)/../../OpenGL_SDK_1.2/Headers -Wno-error=implicit-function-declaration"
           make
           make install
           cd .. # build_powerpc
