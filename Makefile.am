@@ -145,6 +145,7 @@ noinst_HEADERS = \
 	include/test-tempfile.h    \
 	include/tree.h			\
 	include/util.h			\
+	include/util-vec.h		\
 	include/version.h		\
 	include/vgamem.h      \
 	include/video.h			\
