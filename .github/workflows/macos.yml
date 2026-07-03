@@ -36,6 +36,7 @@ jobs:
       LIBOGG_SHA256: 5c8253428e181840cd20d41f3ca16557a9cc04bad4a3d04cce84808677fa1061
       UTF8PROC_VERSION: 2.10.0
       UTF8PROC_SHA256: 276a37dc4d1dd24d7896826a579f4439d1e5fe33603add786bb083cab802e23e
+      UNIVERSALINTERFACES_SHA256: 99bbfa95bb9800c8ffc572fce6d72e561f012331c5c623fa45f732502b6fa872
 
     steps:
       - name: 'Retrieve runner temp directory'
@@ -54,10 +55,12 @@ jobs:
         if: steps.cache-universal-interfaces.outputs.cache-hit != 'true'
         run: |
           # make sure we have plenty of mirrors so we don't get bogus build fails
-          curl "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "https://web.archive.org/web/20131006071819if_/https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "http://old.mac.gdn/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "ftp://mirror:mirror@ftp.macintosh.garden/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin"
+          curl -f "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "https://web.archive.org/web/20131006071819if_/https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "http://old.mac.gdn/apps/mpw-gm.img__0.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "ftp://mirror:mirror@ftp.macintosh.garden/apps/mpw-gm.img__0.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin"
+          # also make sure the file is what we expect
+          echo "$UNIVERSALINTERFACES_SHA256  $RUNNER_TEMP/MPW-GM.img.bin" | shasum -a 256 -c -
           /Retro68-build/bin/install-universal-interfaces.sh "$RUNNER_TEMP" "MPW-GM.img.bin"
 
       - name: 'Link Universal Interfaces'
