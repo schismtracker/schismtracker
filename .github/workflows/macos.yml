@@ -199,7 +199,7 @@ jobs:
           cd build_powerpc
           # hax: we need to patch out all calls to chmod, utimensat, and chown, because none of them
           # exist under retro68, and additionally we don't use anything that's likely to need them
-          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" ../configure --host=powerpc-apple-macos --disable-programs --disable-examples --disable-cpplibs --prefix="$RUNNER_TEMP/ppcprefix"
+          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" CFLAGS="-Wno-error=incompatible-pointer-types" ../configure --host=powerpc-apple-macos --disable-programs --disable-examples --disable-cpplibs --prefix="$RUNNER_TEMP/ppcprefix"
           make
           make install
           cd .. # build_powerpc
@@ -218,7 +218,7 @@ jobs:
           cd utf8proc-$UTF8PROC_VERSION
           mkdir build_powerpc
           cd build_powerpc
-          CMAKE_TOOLCHAIN_FILE=/Retro68-build/toolchain/powerpc-apple-macos/cmake/retroppc.toolchain.cmake cmake .. -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/ppcprefix"
+          CFLAGS="-Wno-error=incompatible-pointer-types" CMAKE_TOOLCHAIN_FILE=/Retro68-build/toolchain/powerpc-apple-macos/cmake/retroppc.toolchain.cmake cmake .. -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/ppcprefix"
           make
           make install
           cd .. # build_powerpc
