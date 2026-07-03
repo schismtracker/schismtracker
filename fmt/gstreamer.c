@@ -41,6 +41,11 @@ static void GST_TRAMPOLINE_gst_mini_object_unref(struct _GstMiniObject *mini_obj
 
 #define gst_mini_object_unref GST_TRAMPOLINE_gst_mini_object_unref
 
+#ifdef GSTREAMER_DYNAMIC_LOAD
+/* disable these :) */
+# define G_DISABLE_CAST_CHECKS 1
+#endif
+
 #include <gst/gst.h>
 #include <gst/pbutils/gstdiscoverer.h>
 #include <gst/pbutils/pbutils.h>
