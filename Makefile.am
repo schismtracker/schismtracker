@@ -145,6 +145,7 @@ noinst_HEADERS = \
 	include/test-tempfile.h    \
 	include/tree.h			\
 	include/util.h			\
+	include/util-vec.h		\
 	include/version.h		\
 	include/vgamem.h      \
 	include/video.h			\
@@ -297,6 +298,12 @@ if LINK_TO_X11
 libs_x11 = $(X_LIBS) -lX11
 endif
 
+endif
+
+if SCHISM_ALTIVEC
+files_altivec = schism/util-altivec.c
+
+schism/schismtracker-util-altivec.$(OBJEXT): CFLAGS += -maltivec
 endif
 
 if USE_WIN32
@@ -742,7 +749,8 @@ schismtracker_SOURCES = \
 	$(files_zlib)			\
 	$(files_bzip2)			\
 	$(files_lzma)			\
-	$(files_zstd)
+	$(files_zstd)			\
+	$(files_altivec)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtrackertest_OBJECTS)) $(HEADERS)

@@ -36,6 +36,7 @@ jobs:
       LIBOGG_SHA256: 5c8253428e181840cd20d41f3ca16557a9cc04bad4a3d04cce84808677fa1061
       UTF8PROC_VERSION: 2.10.0
       UTF8PROC_SHA256: 276a37dc4d1dd24d7896826a579f4439d1e5fe33603add786bb083cab802e23e
+      UNIVERSALINTERFACES_SHA256: 99bbfa95bb9800c8ffc572fce6d72e561f012331c5c623fa45f732502b6fa872
 
     steps:
       - name: 'Retrieve runner temp directory'
@@ -54,10 +55,12 @@ jobs:
         if: steps.cache-universal-interfaces.outputs.cache-hit != 'true'
         run: |
           # make sure we have plenty of mirrors so we don't get bogus build fails
-          curl "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "https://web.archive.org/web/20131006071819if_/https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "http://old.mac.gdn/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin" \
-            || curl "ftp://mirror:mirror@ftp.macintosh.garden/apps/mpw-gm.img__0.bin" > "$RUNNER_TEMP/MPW-GM.img.bin"
+          curl -f "https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "https://web.archive.org/web/20131006071819if_/https://staticky.com/mirrors/ftp.apple.com/developer/Tool_Chest/Core_Mac_OS_Tools/MPW_etc./MPW-GM_Images/MPW-GM.img.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "http://old.mac.gdn/apps/mpw-gm.img__0.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin" \
+            || curl -f "ftp://mirror:mirror@ftp.macintosh.garden/apps/mpw-gm.img__0.bin" -o "$RUNNER_TEMP/MPW-GM.img.bin"
+          # also make sure the file is what we expect
+          echo "$UNIVERSALINTERFACES_SHA256  $RUNNER_TEMP/MPW-GM.img.bin" | shasum -a 256 -c -
           /Retro68-build/bin/install-universal-interfaces.sh "$RUNNER_TEMP" "MPW-GM.img.bin"
 
       - name: 'Link Universal Interfaces'
@@ -153,7 +156,9 @@ jobs:
           cd build_powerpc
 
           # XXX we could probably do --disable-file without too much trouble
-          ../configure --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix" --disable-joystick --disable-cdrom CPPFLAGS="-I$(pwd)/../../OpenGL_SDK_1.2/Headers"
+          # For some reason PBStatusSync and Control don't get defined? I'm not sure why.
+          # It worked before though, so just make it compile...
+          ../configure --host=powerpc-apple-macos --prefix="$RUNNER_TEMP/ppcprefix" --disable-joystick --disable-cdrom CPPFLAGS="-I$(pwd)/../../OpenGL_SDK_1.2/Headers -Wno-error=implicit-function-declaration"
           make
           make install
           cd .. # build_powerpc
@@ -189,11 +194,12 @@ jobs:
         if: steps.cache-ppc-dependencies.outputs.cache-hit != 'true'
         run: |
           cd flac-$FLAC_VERSION
+          patch -p1 < ../schism/.github/patches/FLAC/2-macintosh-lstat.patch
           mkdir build_powerpc
           cd build_powerpc
           # hax: we need to patch out all calls to chmod, utimensat, and chown, because none of them
           # exist under retro68, and additionally we don't use anything that's likely to need them
-          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" ../configure --host=powerpc-apple-macos --disable-programs --disable-examples --disable-cpplibs --prefix="$RUNNER_TEMP/ppcprefix"
+          CPPFLAGS="-I$RUNNER_TEMP/ppcprefix/include" LDFLAGS="-L$RUNNER_TEMP/ppcprefix/lib" CFLAGS="-Wno-error=incompatible-pointer-types" ../configure --host=powerpc-apple-macos --disable-programs --disable-examples --disable-cpplibs --prefix="$RUNNER_TEMP/ppcprefix"
           make
           make install
           cd .. # build_powerpc
@@ -212,7 +218,7 @@ jobs:
           cd utf8proc-$UTF8PROC_VERSION
           mkdir build_powerpc
           cd build_powerpc
-          CMAKE_TOOLCHAIN_FILE=/Retro68-build/toolchain/powerpc-apple-macos/cmake/retroppc.toolchain.cmake cmake .. -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/ppcprefix"
+          CFLAGS="-Wno-error=incompatible-pointer-types" CMAKE_TOOLCHAIN_FILE=/Retro68-build/toolchain/powerpc-apple-macos/cmake/retroppc.toolchain.cmake cmake .. -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/ppcprefix"
           make
           make install
           cd .. # build_powerpc

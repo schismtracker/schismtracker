@@ -946,6 +946,7 @@ static int note_trans_handle_key(struct key_event * k)
 				return 0;
 			sample_set(ins->sample_map[note_trans_sel_line]);
 			get_page_widgets()->accept_text = (instrument_cursor_pos == 25 ? 0 : 1);
+			status.flags |= NEED_UPDATE;
 			return 1;
 		case SCHISM_KEYSYM_LESS:
 		case SCHISM_KEYSYM_SEMICOLON:
