@@ -217,6 +217,10 @@ static gst_buffer_unmap_spec GST_DYNAMIC_gst_buffer_unmap = NULL;
 	? GST_DYNAMIC_g_free_sized(mem, __builtin_object_size((mem), 0)) \
 	: GST_DYNAMIC_g_free(mem)
 
+#else
+
+#define g_free GST_DYNAMIC_g_free
+
 #endif /* G_GNUC_CHECK_VERSION (4, 1) && GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_78 && defined(G_HAVE_FREE_SIZED) */
 
 #endif /* GSTREAMER_DYNAMIC_LOAD && !LINK_TO_GSTREAMER */
