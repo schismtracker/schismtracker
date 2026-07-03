@@ -104,7 +104,7 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 
 		slurp_seek(fp, 80, SEEK_SET);
 
-		if (!slurp_available(fp, smp->length * bytes_per_sample, SEEK_CUR))
+		if (!slurp_could_seek(fp, smp->length * bytes_per_sample, SEEK_CUR))
 			return 0;
 
 		/* convert flags */

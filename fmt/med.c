@@ -82,7 +82,7 @@ int fmt_med_read_info(dmoz_file_t *file, slurp_t *fp)
 	struct MMD0 hdr;
 	struct MMD0exp exp;
 
-	if (!slurp_available(fp, 52, SEEK_CUR)) /* sizeof(hdr) */
+	if (!slurp_could_seek(fp, 52, SEEK_CUR)) /* sizeof(hdr) */
 		return 0;
 
 	if ((slurp_read(fp, hdr.id, 4) != 4)
@@ -95,7 +95,7 @@ int fmt_med_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	uint32_t exp_struct_ptr = bswapBE32(hdr.expdata_ptr);
 
-	if (!slurp_available(fp, exp_struct_ptr + 84 /* sizeof(struct MMD0exp) */, SEEK_SET)
+	if (!slurp_could_seek(fp, exp_struct_ptr + 84 /* sizeof(struct MMD0exp) */, SEEK_SET)
 			|| slurp_seek(fp, exp_struct_ptr + 44, SEEK_SET)
 			|| (slurp_read(fp, &exp.songname_ptr, sizeof(exp.songname_ptr)) != sizeof(exp.songname_ptr))
 			|| (slurp_read(fp, &exp.songnamelen, sizeof(exp.songnamelen)) != sizeof(exp.songnamelen)))
@@ -111,7 +111,7 @@ int fmt_med_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	name_buffer[name_len] = 0;
 
-	if (!slurp_available(fp, name_ptr + name_len, SEEK_SET)
+	if (!slurp_could_seek(fp, name_ptr + name_len, SEEK_SET)
 			|| slurp_seek(fp, name_ptr, SEEK_SET)
 			|| (slurp_read(fp, name_buffer, name_len) != name_len)) {
 		free(name_buffer);

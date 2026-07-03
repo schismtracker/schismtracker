@@ -80,7 +80,7 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 				return 0;
 
 			if (c1 == EOF || c2 == EOF
-				|| !slurp_available(fp, c1 | (c2 << 8), SEEK_CUR))
+				|| !slurp_could_seek(fp, c1 | (c2 << 8), SEEK_CUR))
 				return pos - startpos;
 		}
 		bitbuf = bitnum = 0;
@@ -182,7 +182,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 				return 0;
 
 			if (c1 == EOF || c2 == EOF
-				|| !slurp_available(fp, c1 | (c2 << 8), SEEK_CUR))
+				|| !slurp_could_seek(fp, c1 | (c2 << 8), SEEK_CUR))
 				return pos - startpos;
 		}
 

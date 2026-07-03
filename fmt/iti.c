@@ -156,7 +156,7 @@ int fmt_iti_read_info(dmoz_file_t *file, slurp_t *fp)
 	unsigned char impi[4];
 	unsigned char name[26];
 
-	if (!slurp_available(fp, 554, SEEK_CUR))
+	if (!slurp_could_seek(fp, 554, SEEK_CUR))
 		return 0;
 
 	if (slurp_read(fp, impi, sizeof(impi)) != sizeof(impi)
