@@ -237,13 +237,12 @@ static int gstreamer_initialized = 0;
 
 /* ----------------------------------------------------------- */
 
-const gchar *RAW_CODEC_NAMES[] =
-	{
-		"audio/x-wav",
-		"audio/x-flac",
-		"audio/x-alac",
-		NULL
-	};
+const gchar *RAW_CODEC_NAMES[] = {
+	"audio/x-wav",
+	"audio/x-flac",
+	"audio/x-alac",
+	NULL
+};
 
 int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 {
@@ -401,14 +400,12 @@ static void source__need_data(GstElement *source, guint unused_size, gpointer da
 typedef struct pipeline_data pipeline_data_t;
 typedef struct sample_buffer sample_buffer_t;
 
-struct pipeline_data
-{
+struct pipeline_data {
 	GstElement *convert;
 	sample_buffer_t *buffer;
 };
 
-struct sample_buffer
-{
+struct sample_buffer {
 	int is_populated;
 	disko_t membuf;
 	int sample_count;
