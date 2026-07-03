@@ -299,6 +299,12 @@ endif
 
 endif
 
+if SCHISM_ALTIVEC
+files_altivec = schism/util-altivec.c
+
+schism/schismtracker-util-altivec.$(OBJEXT): CFLAGS += -maltivec
+endif
+
 if USE_WIN32
 sys/win32/schismtracker-audio-dsound.$(OBJEXT): CFLAGS += $(DSOUND_CFLAGS)
 files_win32 = \
@@ -734,7 +740,8 @@ schismtracker_SOURCES = \
 	$(files_zlib)			\
 	$(files_bzip2)			\
 	$(files_lzma)			\
-	$(files_zstd)
+	$(files_zstd)			\
+	$(files_altivec)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtrackertest_OBJECTS)) $(HEADERS)

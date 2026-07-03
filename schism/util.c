@@ -311,7 +311,6 @@ void mem_xor(void *vbuf, size_t len, unsigned char c)
  * AVX2 is about twice as fast as SSE2. */
 
 #define MINMAX_C(BITS) \
-	static inline SCHISM_ALWAYS_INLINE \
 	void minmax_##BITS##_c(const int##BITS##_t *data, size_t len, \
 		int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
 	{ \
@@ -331,62 +330,7 @@ MINMAX_C(32)
 
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0)
 
-# define MINMAX_INTRINSICS(TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
-	__attribute__((__target__(#TARGET))) \
-	static void minmax_##BITS##_##NAME(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
-	{ \
-		size_t i; \
-	\
-		if (!len) return; /* wat */ \
-	\
-		if (len >= SIZE \
-				&& stride < SIZE /* stride cannot be over SIZE */ \
-				&& !(stride & (stride - 1))) /* stride must be a power of 2 */ \
-		{ \
-			size_t xlen; \
-			TYPE vmin; \
-			TYPE vmax; \
-			__attribute__((__aligned__(SIZE * (BITS / 8)))) int##BITS##_t amin[SIZE]; \
-			__attribute__((__aligned__(SIZE * (BITS / 8)))) int##BITS##_t amax[SIZE]; \
-			VARS \
-\
-			PREFIX \
-\
-			/* load the min and unsign it */ \
-			vmin = SET1(*min); \
-			vmax = SET1(*max); \
-\
-			/* kludge it in */ \
-			for (xlen = len / SIZE; xlen > 0; xlen--) { \
-				TYPE x; \
-\
-				x = LOADU((const TYPE *)buf); \
-				PREPROCESS \
-\
-				vmin = MIN(vmin, x); \
-				vmax = MAX(vmax, x); \
-\
-				buf += SIZE; \
-			} \
-\
-			len %= SIZE; \
-\
-			SUFFIX \
-\
-			/* TODO: do this in the actual vector so that \
-			 * we can just extract the first value */ \
-			STORE((TYPE *)amin, vmin); \
-			STORE((TYPE *)amax, vmax); \
-\
-			for (i = 0; i < SIZE; i += stride) { \
-				if (amin[i] < *min) *min = amin[i]; \
-				if (amax[i] > *max) *max = amax[i]; \
-			} \
-		} \
-\
-		/* process the rest */ \
-		minmax_##BITS##_c(buf, len, min, max, stride); \
-	}
+# include "util-vec.h"
 
 # if (defined(__x86_64__) || defined(__i386__)) && !defined(SCHISM_XBOX) /* XBOX is buggy for some reason */
 #  include <immintrin.h>
@@ -461,43 +405,8 @@ MINMAX_INTRINSICS(avx512bw, avx512bw, __m512i, 16, 32,
 #   define MINMAX_AVX512BW
 #  endif
 # elif (defined(__powerpc__) || defined(__ppc__) || defined(__ppc64__)) && defined(SCHISM_ALTIVEC)
-#  include <altivec.h>
-
-static inline SCHISM_ALWAYS_INLINE
-vector signed char altivec_set1_s8(signed char x)
-{
-	return (vector signed char){x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x};
-}
-
-static inline SCHISM_ALWAYS_INLINE
-vector signed short altivec_set1_s16(signed short x)
-{
-	return (vector signed short){x, x, x, x, x, x, x, x};
-}
-
-#define altivec_load_unaligned_(x) vec_perm(vec_ld(0, x), vec_ld(16, x), vec_lvsl(0, x))
-
-static inline SCHISM_ALWAYS_INLINE
-vector signed char altivec_loadu_s8(const signed char *x)
-{
-	return altivec_load_unaligned_(x);
-}
-
-static inline SCHISM_ALWAYS_INLINE
-vector signed short altivec_loadu_s16(const signed short *x)
-{
-	return altivec_load_unaligned_(x);
-}
-
-#define altivec_store(arr, x) (vec_st(x, 0, arr))
-
-MINMAX_INTRINSICS(altivec, altivec, __vector signed char, 8, 16,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	altivec_set1_s8, altivec_loadu_s8, vec_min, vec_max, altivec_store)
-
-MINMAX_INTRINSICS(altivec, altivec, __vector signed short, 16, 8,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	altivec_set1_s16, altivec_loadu_s16, vec_min, vec_max, altivec_store)
+/* defined in util-altivec.c */
+#   define MINMAX_ALTIVEC
 # endif
 #endif
 

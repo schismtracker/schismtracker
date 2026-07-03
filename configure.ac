@@ -1154,6 +1154,7 @@ extern vector signed char test(vector signed char a, vector signed char b)
 	return vec_min(a, b);
 }
 ]])
+AM_CONDITIONAL([SCHISM_ALTIVEC], [test "x$have_compile_flag" = "xyes"])
 
 dnl --------------------------------------------------------------------------
 dnl check for #pragma pack(push, 1) support
