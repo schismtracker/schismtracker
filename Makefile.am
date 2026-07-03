@@ -553,7 +553,11 @@ if USE_GSTREAMER
 fmt/schismtracker-gstreamer.$(OBJEXT): CFLAGS += $(GSTREAMER_CFLAGS)
 
 files_gstreamer=fmt/gstreamer.c
+
+if LINK_TO_GSTREAMER
 lib_gstreamer=$(GSTREAMER_LIBS)
+endif
+
 endif
 
 if USE_NETWORK
