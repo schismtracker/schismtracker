@@ -246,13 +246,13 @@ static int gstreamer_initialized = 0;
 
 /* ----------------------------------------------------------- */
 
-const gchar *RAW_CODEC_NAMES[] = {
-	"audio/x-wav",
-	"audio/x-flac",
-	"audio/x-alac",
-	NULL
-};
-
+/* XXX can we merge this code with the below?
+ * dealing with the file path as a URI is a stupid hack,
+ * we should only be dealing with `slurp_t` ideally.
+ *
+ * also doing it this way can probably lead to different results
+ * depending on whether we are reading info or loading it as a
+ * samples which is Bad */
 int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	GstDiscoverer *discoverer;
@@ -261,21 +261,16 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 	gchar *uri;
 	int success = 0;
 
-	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
-	if (!gstreamer_initialized) {
+	if (!gstreamer_initialized)
 		return 0;
-	}
 
 	/* Create the discoverer */
 	discoverer = gst_discoverer_new(5 * GST_SECOND, NULL);
-
-	if (!discoverer) {
+	if (!discoverer)
 		return 0;
-	}
 
 	/* Translate path to URI */
 	uri = gst_filename_to_uri(file->path, NULL);
-
 	if (!uri) {
 		g_object_unref(discoverer);
 		return 0;
@@ -324,6 +319,13 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 							}
 
 							if (gst_caps_get_size(caps)) {
+								static const gchar *RAW_CODEC_NAMES[] = {
+									"audio/x-wav",
+									"audio/x-flac",
+									"audio/x-alac",
+									NULL
+								};
+
 								GstStructure *structure = gst_caps_get_structure(caps, 0);
 
 								const gchar *codec_name = gst_structure_get_name(structure);
@@ -339,20 +341,15 @@ int fmt_gstreamer_read_info(dmoz_file_t *file, slurp_t *fp)
 							file->type &= ~TYPE_INST_MASK;
 							file->type &= ~TYPE_SAMPLE_MASK;
 
-							if (is_raw_audio) {
-								file->type |= TYPE_SAMPLE_PLAIN;
-							} else {
-								file->type |= TYPE_SAMPLE_COMPR;
-							}
+							file->type |= (is_raw_audio ? TYPE_SAMPLE_PLAIN : TYPE_SAMPLE_COMPR);
 
 							file->smp_flags = 0;
 
-							if (channels > 1) {
+							if (channels > 1)
 								file->smp_flags |= CHN_STEREO;
-							}
-							if (bits > 8) {
+
+							if (bits > 8)
 								file->smp_flags |= CHN_16BIT;
-							}
 
 							file->smp_speed = sample_rate;
 							file->smp_length = duration * sample_rate / GST_SECOND;
@@ -414,133 +411,113 @@ struct pipeline_data {
 	sample_buffer_t *buffer;
 };
 
+/* FIXME the way this is done is kind of disgusting.
+ * we should have constructors and destructors for this kind of thing
+ * so that they don't fall out of sync */
 struct sample_buffer {
+	/* whether membuf is a valid disko buffer.
+	 * this is a bit dumb, as really it should be initialized by
+	 * the caller instead. */
 	int is_populated;
 	disko_t membuf;
-	int sample_count;
 	int sample_rate;
-	int sample_bits;
+	int sample_bytes; /* bytes per sample, valid values are 2 (16bit) and 1(8bit) */
 	int sample_channels;
 };
 
 static GstFlowReturn sink__new_sample(GstElement *sink, gpointer data)
 {
-	GstSample *sample;
-	GstBuffer *buffer;
-	GstCaps *caps;
+	GstSample *sample = NULL;
+	GstBuffer *buffer = NULL;
+	GstCaps *caps = NULL;
+	GstMapInfo map;
+	sample_buffer_t *capture_buffer = (sample_buffer_t *)data;
 
 	GstFlowReturn result = GST_FLOW_ERROR;
 
 	g_signal_emit_by_name(sink, "pull-sample", &sample);
 
-	if (!sample) {
+	if (!sample)
 		return GST_FLOW_EOS;
-	}
 
 	buffer = gst_sample_get_buffer(sample);
 	caps = gst_sample_get_caps(sample);
 
-	if (buffer && caps) {
-		GstMapInfo map;
+	if (!buffer || !caps)
+		goto fail;
 
-		if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-			int sample_count = map.size / 2; /* the pipeline always converts to s16 */
+	if (!gst_buffer_map(buffer, &map, GST_MAP_READ))
+		goto fail;
 
-			sample_buffer_t *capture_buffer = (sample_buffer_t *)data;
+	disko_write(&capture_buffer->membuf, map.data, map.size);
 
-			if (capture_buffer->sample_bits == 16) {
-				disko_write(&capture_buffer->membuf, map.data, sample_count * 2);
-			} else {
-				/* Convert from S16 to S8 */
-				unsigned short *s16_data = (unsigned short *)map.data;
-				unsigned char s8_buf[256];
+	result = GST_FLOW_OK;
 
-				for (int i=0; i < sample_count; i++) {
-					s8_buf[i & 255] = s16_data[i] >> 8;
-
-					if ((i & 255) == 255) {
-						disko_write(&capture_buffer->membuf, s8_buf, 256);
-					}
-				}
-
-				int partial_buffer_byte_count = sample_count & 255;
-
-				if (partial_buffer_byte_count != 0) {
-					disko_write(&capture_buffer->membuf, s8_buf, partial_buffer_byte_count);
-				}
-			}
-
-			capture_buffer->sample_count += sample_count;
-
-			result = GST_FLOW_OK;
-
-			gst_buffer_unmap(buffer, &map);
-		}
-	}
-
+fail_mapped:
+	gst_buffer_unmap(buffer, &map);
+fail:
 	gst_sample_unref(sample);
-
 	return result;
 }
 
 static void decode__pad_added(GstElement *decode, GstPad *decode_output_pad, gpointer data)
 {
+	GstPad *convert_sink_pad = NULL;
+	GstCaps *caps = NULL;
+	GstCaps *audio_caps_matcher = NULL;
 	pipeline_data_t *pipeline_data = (pipeline_data_t *)data;
+	GstAudioInfo info;
 
-	GstPad *convert_sink_pad = gst_element_get_static_pad(pipeline_data->convert, "sink");
+	convert_sink_pad = gst_element_get_static_pad(pipeline_data->convert, "sink");
+	if (!convert_sink_pad)
+		goto fail;
 
-	if (!convert_sink_pad) {
-		return;
+	if (gst_pad_is_linked(convert_sink_pad))
+		goto fail;
+
+	caps = gst_pad_get_current_caps(decode_output_pad);
+	if (!caps)
+		goto fail;
+
+	audio_caps_matcher = gst_caps_new_empty_simple("audio/x-raw");
+	if (!audio_caps_matcher)
+		goto fail;
+
+	if (!gst_caps_can_intersect(caps, audio_caps_matcher))
+		goto fail;
+
+	/* Wire up this new audio output pad to the convert element */
+	gst_pad_link(decode_output_pad, convert_sink_pad);
+
+	/* Sane default that we hopefully won't have to use */
+	pipeline_data->buffer->sample_rate = 44100;
+
+	/* Check if we're 8-bit or wider than 8-bit
+	 * Check if we're mono or have 2 or more channels
+	 * Set the output buffer format correspondingly
+	 *
+	 * maybe should default to stereo instead of mono?  --paper
+	 */
+	pipeline_data->buffer->sample_bytes = 2;
+	pipeline_data->buffer->sample_channels = 1;
+
+	if (gst_audio_info_from_caps(&info, caps)) {
+		pipeline_data->buffer->sample_rate = GST_AUDIO_INFO_RATE(&info);
+
+		if (GST_AUDIO_INFO_DEPTH(&info) == 8)
+			pipeline_data->buffer->sample_bytes = 1;
+
+		if (GST_AUDIO_INFO_CHANNELS(&info) > 1)
+			pipeline_data->buffer->sample_channels = 2;
 	}
 
-	if (!gst_pad_is_linked(convert_sink_pad)) {
-		GstCaps *caps = gst_pad_get_current_caps(decode_output_pad);
+	disko_memopen(&pipeline_data->buffer->membuf);
+	pipeline_data->buffer->is_populated = 1;
 
-		if (caps) {
-			GstCaps *audio_caps_matcher = gst_caps_new_empty_simple("audio/x-raw");
-
-			if (audio_caps_matcher) {
-				if (gst_caps_can_intersect(caps, audio_caps_matcher)) {
-					GstAudioInfo info;
-
-					/* Wire up this new audio output pad to the convert element */
-					gst_pad_link(decode_output_pad, convert_sink_pad);
-
-					/* Sane default that we hopefully won't have to use */
-					pipeline_data->buffer->sample_rate = 44100;
-
-					/* Check if we're 8-bit or wider than 8-bit
-					 * Check if we're mono or have 2 or more channels
-					 * Set the output buffer format correspondingly
-					 */
-					pipeline_data->buffer->sample_bits = 16;
-					pipeline_data->buffer->sample_channels = 1;
-
-					if (gst_audio_info_from_caps(&info, caps)) {
-						pipeline_data->buffer->sample_rate = GST_AUDIO_INFO_RATE(&info);
-
-						if (GST_AUDIO_INFO_DEPTH(&info) == 8) {
-							pipeline_data->buffer->sample_bits = 8;
-						}
-
-						if (GST_AUDIO_INFO_CHANNELS(&info) > 1) {
-							pipeline_data->buffer->sample_channels = 2;
-						}
-					}
-
-					disko_memopen(&pipeline_data->buffer->membuf);
-
-					pipeline_data->buffer->is_populated = 1;
-				}
-
-				gst_caps_unref(audio_caps_matcher);
-			}
-
-			gst_caps_unref(caps);
-		}
-	}
-
-	gst_object_unref(convert_sink_pad);
+fail:
+	if (audio_caps_matcher) gst_caps_unref(audio_caps_matcher);
+	if (caps) gst_caps_unref(caps);
+	if (convert_sink_pad) gst_object_unref(convert_sink_pad);
 }
 
 int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
@@ -557,10 +534,9 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 
 	sample_buffer_t buffer = { 0 };
 
-	/* Initialize GStreamer -- do not call gst_deinit because it isn't subsequently possible to reinitialize in the same process */
-	if (!gstreamer_initialized) {
+	/* do nothing if gstreamer isn't initialized */
+	if (!gstreamer_initialized)
 		return 0;
-	}
 
 	/* Build the pipeline */
 	pipeline = gst_pipeline_new("extract-audio");
@@ -580,30 +556,31 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 
 	g_signal_connect(source, "need-data", G_CALLBACK(source__need_data), fp);
 
-	/* Set up conversion. Force format to S16 (platform-endianness) and
-	 * layout to interleaved. Allow 1 or 2 channels. */
-#if WORDS_BIGENDIAN
-# define NATIVE_S16 "S16BE"
-#else
-# define NATIVE_S16 "S16LE"
-#endif
-
 	caps = gst_caps_new_empty();
 
-	caps_mono = gst_structure_new("audio/x-raw",
-		"format", G_TYPE_STRING, NATIVE_S16,
-		"channels", G_TYPE_INT, 1,
-		NULL);
+#define ADD_CAPS(FORMAT) \
+do { \
+	gst_caps_append_structure(caps, gst_structure_new("audio/x-raw", \
+		"format", G_TYPE_STRING, FORMAT, \
+		"channels", G_TYPE_INT, 1, \
+		NULL)); \
+	\
+	gst_caps_append_structure(caps, gst_structure_new("audio/x-raw", \
+		"format", G_TYPE_STRING, FORMAT, \
+		"channels", G_TYPE_INT, 2, \
+		"layout", G_TYPE_STRING, "interleaved", \
+		NULL)); \
+} while (0)
 
-	caps_stereo = gst_structure_new("audio/x-raw",
-		"format", G_TYPE_STRING, NATIVE_S16,
-		"channels", G_TYPE_INT, 2,
-		"layout", G_TYPE_STRING, "interleaved",
-		NULL);
+	ADD_CAPS("S8");
+	/* Convert to native-endian */
+#ifdef WORDS_BIGENDIAN
+	ADD_CAPS("S16BE");
+#else
+	ADD_CAPS("S16BE");
+#endif
 
-	/* caps takes ownership of caps_mono and caps_stereo */
-	gst_caps_append_structure(caps, caps_mono);
-	gst_caps_append_structure(caps, caps_stereo);
+#undef ADD_CAPS
 
 	g_object_set(G_OBJECT(format),
 		"caps", caps,
@@ -659,43 +636,37 @@ int fmt_gstreamer_load_sample(slurp_t *fp, song_sample_t *smp)
 	gst_object_unref(pipeline);
 
 	/* Translate captured data */
-	int success = (msg_type != GST_MESSAGE_ERROR);
+	if (msg_type == GST_MESSAGE_ERROR || !buffer.is_populated)
+		return 0;
 
-	if (success && buffer.is_populated) {
-		int64_t captured_bytes = disko_tell(&buffer.membuf);
+	smp->c5speed = buffer.sample_rate;
 
-		if (captured_bytes > INT32_MAX) {
-			captured_bytes = INT32_MAX;
-		}
+	smp->length = buffer.membuf.length;
+	smp->flags = 0;
 
-		smp->c5speed = buffer.sample_rate;
-		smp->length = buffer.sample_count / buffer.sample_channels;
-
-		smp->flags = 0;
-
-		if (buffer.sample_bits == 16) {
-			smp->flags |= CHN_16BIT;
-		}
-
-		if (buffer.sample_channels == 2) {
-			smp->flags |= CHN_STEREO;
-		}
-
-		int sample_data_bytes = buffer.sample_count * buffer.sample_bits / 8;
-
-		smp->data = csf_allocate_sample(sample_data_bytes);
-
-		if (!smp->data) {
-			smp->length = 0;
-			success = 0;
-		} else {
-			memcpy(smp->data, buffer.membuf.data, captured_bytes);
-		}
-
-		disko_memclose(&buffer.membuf, 1 /* free buffer */);
+	if (buffer.sample_bytes == 2) {
+		smp->flags |= CHN_16BIT;
+		smp->length >>= 1;
 	}
 
-	return success;
+	if (buffer.sample_channels == 2) {
+		smp->flags |= CHN_STEREO;
+		smp->length >>= 1;
+	}
+
+	/* would be nice to have a csf disko api so we can write directly into
+	 * the sample buffer instead of having to copy it */
+	smp->data = csf_allocate_sample(buffer.membuf.length);
+
+	if (smp->data) {
+		memcpy(smp->data, buffer.membuf.data, buffer.membuf.length);
+	} else {
+		smp->length = 0;
+	}
+
+	disko_memclose(&buffer.membuf, 1 /* free buffer */);
+
+	return !!(smp->data);
 }
 
 /* ----------------------------------------------------------- */
