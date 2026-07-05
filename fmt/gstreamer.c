@@ -35,15 +35,14 @@
  * So, we redirect to a trampoline that will then call either the statically-linked gst_mini_object_unref or
  * call through the dynamically-resolved function pointer.
  */
-struct _GstMiniObject;
-
-static void GST_TRAMPOLINE_gst_mini_object_unref(struct _GstMiniObject *mini_object);
-
-#define gst_mini_object_unref GST_TRAMPOLINE_gst_mini_object_unref
 
 #ifdef GSTREAMER_DYNAMIC_LOAD
 /* disable these :) */
 # define G_DISABLE_CAST_CHECKS 1
+
+struct _GstMiniObject;
+static void GST_TRAMPOLINE_gst_mini_object_unref(struct _GstMiniObject *mini_object);
+# define gst_mini_object_unref GST_TRAMPOLINE_gst_mini_object_unref
 #endif
 
 #include <gst/gst.h>
@@ -51,8 +50,6 @@ static void GST_TRAMPOLINE_gst_mini_object_unref(struct _GstMiniObject *mini_obj
 #include <gst/pbutils/pbutils.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/audio/audio.h>
-
-#undef gst_mini_object_unref
 
 #define LIBS \
 	LIB(glib, "glib-2.0", 0, 0) \
@@ -82,7 +79,7 @@ static void GST_TRAMPOLINE_gst_mini_object_unref(struct _GstMiniObject *mini_obj
 	SYMBOL(gstpbutils, GstDiscovererResult, gst_discoverer_info_get_result, (const GstDiscovererInfo *info)) \
 	SYMBOL(gstpbutils, GstClockTime, gst_discoverer_info_get_duration, (const GstDiscovererInfo *info)) \
 	SYMBOL(gstpbutils, GList *, gst_discoverer_info_get_audio_streams, (GstDiscovererInfo *info)) \
-	SYMBOL(gstpbutils, gchar *, gst_discoverer_stream_info_get_stream_type_nick, (GstDiscovererStreamInfo *info)) \
+	SYMBOL(gstpbutils, const gchar *, gst_discoverer_stream_info_get_stream_type_nick, (GstDiscovererStreamInfo *info)) \
 	SYMBOL(gstpbutils, GstCaps *, gst_discoverer_stream_info_get_caps, (GstDiscovererStreamInfo *info)) \
 	SYMBOL(gstpbutils, void, gst_discoverer_stream_info_list_free, (GList *infos)) \
 	SYMBOL(gstpbutils, guint, gst_discoverer_audio_info_get_sample_rate, (const GstDiscovererAudioInfo *info)) \
@@ -176,6 +173,11 @@ fail:
 #define g_signal_connect(instance, detailed_signal, c_handler, data) \
 	GST_g_signal_connect_data ((instance), (detailed_signal), (c_handler), (data), NULL, (GConnectFlags) 0)
 
+static void GST_TRAMPOLINE_gst_mini_object_unref(GstMiniObject *mini_object)
+{
+	GST_gst_mini_object_unref(mini_object);
+}
+
 #else /* !defined(GSTREAMER_DYNAMIC_LOAD) */
 
 /* this is the easiest way to do this... */
@@ -184,16 +186,6 @@ SYMBOLS
 # undef SYMBOL
 
 #endif /* GSTREAMER_DYNAMIC_LOAD */
-
-/* See explanatory comment before the GStreamer header file inclusion. */
-#if !GSTREAMER_DYNAMIC_LOAD
-void gst_mini_object_unref(struct _GstMiniObject *mini_object);
-#endif /* !GSTREAMER_DYNAMIC_LOAD */
-
-static void GST_TRAMPOLINE_gst_mini_object_unref(GstMiniObject *mini_object)
-{
-	GST_gst_mini_object_unref(mini_object);
-}
 
 /* inline functions */
 #define GST_gst_caps_unref    gst_caps_unref
