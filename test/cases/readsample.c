@@ -43,8 +43,6 @@ testresult_t test_readsample_case(testcase_t *testcase);
 
 #include "readsample.cases.inc"
 
-#include <windows.h>
-
 testresult_t test_readsample_case(testcase_t *testcase)
 {
 	slurp_t fp;
