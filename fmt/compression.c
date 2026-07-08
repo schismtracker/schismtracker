@@ -313,7 +313,7 @@ uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
 
 	slurp_seek(fp, startpos + v, SEEK_SET);
 
-	return v;
+	return v + 4;
 }
 
 uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
@@ -361,7 +361,7 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
 
 	slurp_seek(fp, startpos + v, SEEK_SET);
 
-	return v;
+	return v + 4;
 }
 
 // ------------------------------------------------------------------------------------------------------------
