@@ -142,6 +142,7 @@ noinst_HEADERS = \
 	include/timer.h         \
 	include/test-assertions.h  \
 	include/test-funcs.h       \
+	include/test-funcs.readsample.inc \
 	include/test-tempfile.h    \
 	include/tree.h			\
 	include/util.h			\
@@ -806,6 +807,7 @@ schismtrackertest_SOURCES = \
 	test/cases/disko.c			\
 	test/cases/mplink.c         \
 	test/cases/readsample.c     \
+	test/cases/readsample.cases.inc   \
 	test/cases/sanity.c			\
 	test/cases/slurp.c          \
 	test/cases/str.c			\
