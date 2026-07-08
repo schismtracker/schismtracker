@@ -326,7 +326,7 @@ class Program
 
 		s_casesWriter.WriteLine(" }}, {0}, {1} }};", bytes.Length, expectationFlags);
 		s_casesWriter.WriteLine();
-		s_casesWriter.WriteLine("testresult_t {0}()", caseFunctionName);
+		s_casesWriter.WriteLine("testresult_t {0}(void)", caseFunctionName);
 		s_casesWriter.WriteLine("{");
 		s_casesWriter.WriteLine("\treturn test_readsample_case(&{0});", caseDataName);
 		s_casesWriter.WriteLine("}");

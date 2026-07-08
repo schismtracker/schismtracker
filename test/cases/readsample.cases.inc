@@ -44,13 +44,13 @@ short expected_16bit_stereo[] = {
 
 static testcase_t testcase_7_M_LE_PCMS =	{ SF(7,M,LE,PCMS), { 0, 1, 2, 3, 61, 62, 63, -1, -2, -3, -62, -63, -64 }, 13, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_7_M_LE_PCMS()
+testresult_t readsample_7_M_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_7_M_LE_PCMS);
 }
 static testcase_t testcase_7_M_BE_PCMS =	{ SF(7,M,BE,PCMS), { 0, 1, 2, 3, 61, 62, 63, -1, -2, -3, -62, -63, -64 }, 13, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_7_M_BE_PCMS()
+testresult_t readsample_7_M_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_7_M_BE_PCMS);
 }
@@ -59,37 +59,37 @@ testresult_t readsample_7_M_BE_PCMS()
 
 static testcase_t testcase_8_M_LE_PCMS =	{ SF(8,M,LE,PCMS), { 0, 2, 4, 6, 122, 124, 126, -2, -4, -6, -124, -126, -128 }, 13, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_LE_PCMS()
+testresult_t readsample_8_M_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_8_M_LE_PCMS);
 }
 static testcase_t testcase_8_M_BE_PCMS =	{ SF(8,M,BE,PCMS), { 0, 2, 4, 6, 122, 124, 126, -2, -4, -6, -124, -126, -128 }, 13, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_BE_PCMS()
+testresult_t readsample_8_M_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_8_M_BE_PCMS);
 }
 static testcase_t testcase_8_M_LE_PCMU =	{ SF(8,M,LE,PCMU), { 128, 130, 132, 134, 250, 252, 254, 126, 124, 122, 4, 2, 0 }, 13, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_LE_PCMU()
+testresult_t readsample_8_M_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_8_M_LE_PCMU);
 }
 static testcase_t testcase_8_M_BE_PCMU =	{ SF(8,M,BE,PCMU), { 128, 130, 132, 134, 250, 252, 254, 126, 124, 122, 4, 2, 0 }, 13, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_BE_PCMU()
+testresult_t readsample_8_M_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_8_M_BE_PCMU);
 }
 static testcase_t testcase_8_M_LE_PCMD =	{ SF(8,M,LE,PCMD), { 0, 2, 2, 2, 116, 2, 2, -128, -2, -2, -118, -2, -2 }, 13, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_LE_PCMD()
+testresult_t readsample_8_M_LE_PCMD(void)
 {
 	return test_readsample_case(&testcase_8_M_LE_PCMD);
 }
 static testcase_t testcase_8_M_BE_PCMD =	{ SF(8,M,BE,PCMD), { 0, 2, 2, 2, 116, 2, 2, -128, -2, -2, -118, -2, -2 }, 13, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_BE_PCMD()
+testresult_t readsample_8_M_BE_PCMD(void)
 {
 	return test_readsample_case(&testcase_8_M_BE_PCMD);
 }
@@ -100,7 +100,7 @@ static testcase_t testcase_8_SS_LE_PCMS =	{ SF(8,SS,LE,PCMS),
 		{ 0, 2, 4, 6, 122, 124, 126, -2, -4, -6, -124, -126, -128
 		, 76, 75, 74, 73, 72, 71, 70, -100, -90, -80, -70, -60, -50 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SS_LE_PCMS()
+testresult_t readsample_8_SS_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_8_SS_LE_PCMS);
 }
@@ -108,7 +108,7 @@ static testcase_t testcase_8_SS_BE_PCMS =	{ SF(8,SS,BE,PCMS),
 		{ 0, 2, 4, 6, 122, 124, 126, -2, -4, -6, -124, -126, -128
 		, 76, 75, 74, 73, 72, 71, 70, -100, -90, -80, -70, -60, -50 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SS_BE_PCMS()
+testresult_t readsample_8_SS_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_8_SS_BE_PCMS);
 }
@@ -116,7 +116,7 @@ static testcase_t testcase_8_SS_LE_PCMU =	{ SF(8,SS,LE,PCMU),
 		{ 128, 130, 132, 134, 250, 252, 254, 126, 124, 122, 4, 2, 0
 		, 204, 203, 202, 201, 200, 199, 198, 28, 38, 48, 58, 68, 78 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SS_LE_PCMU()
+testresult_t readsample_8_SS_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_8_SS_LE_PCMU);
 }
@@ -124,7 +124,7 @@ static testcase_t testcase_8_SS_BE_PCMU =	{ SF(8,SS,BE,PCMU),
 		{ 128, 130, 132, 134, 250, 252, 254, 126, 124, 122, 4, 2, 0
 		, 204, 203, 202, 201, 200, 199, 198, 28, 38, 48, 58, 68, 78 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SS_BE_PCMU()
+testresult_t readsample_8_SS_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_8_SS_BE_PCMU);
 }
@@ -132,7 +132,7 @@ static testcase_t testcase_8_SS_LE_PCMD =	{ SF(8,SS,LE,PCMD),
 		{ 0, 2, 2, 2, 116, 2, 2, -128, -2, -2, -118, -2, -2
 		, 76, -1, -1, -1, -1, -1, -1, 86, 10, 10, 10, 10, 10 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SS_LE_PCMD()
+testresult_t readsample_8_SS_LE_PCMD(void)
 {
 	return test_readsample_case(&testcase_8_SS_LE_PCMD);
 }
@@ -140,7 +140,7 @@ static testcase_t testcase_8_SS_BE_PCMD =	{ SF(8,SS,BE,PCMD),
 		{ 0, 2, 2, 2, 116, 2, 2, -128, -2, -2, -118, -2, -2
 		, 76, -1, -1, -1, -1, -1, -1, 86, 10, 10, 10, 10, 10 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SS_BE_PCMD()
+testresult_t readsample_8_SS_BE_PCMD(void)
 {
 	return test_readsample_case(&testcase_8_SS_BE_PCMD);
 }
@@ -162,7 +162,7 @@ static testcase_t testcase_8_SI_LE_PCMS =	{ SF(8,SI,LE,PCMS),
 		, -126,  -60
 		, -128,  -50 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SI_LE_PCMS()
+testresult_t readsample_8_SI_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_8_SI_LE_PCMS);
 }
@@ -181,7 +181,7 @@ static testcase_t testcase_8_SI_BE_PCMS =	{ SF(8,SI,BE,PCMS),
 		, -126,  -60
 		, -128,  -50 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SI_BE_PCMS()
+testresult_t readsample_8_SI_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_8_SI_BE_PCMS);
 }
@@ -200,7 +200,7 @@ static testcase_t testcase_8_SI_LE_PCMU =	{ SF(8,SI,LE,PCMU),
 		,    2,   68
 		,    0,   78 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SI_LE_PCMU()
+testresult_t readsample_8_SI_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_8_SI_LE_PCMU);
 }
@@ -219,7 +219,7 @@ static testcase_t testcase_8_SI_BE_PCMU =	{ SF(8,SI,BE,PCMU),
 		,    2,   68
 		,    0,   78 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SI_BE_PCMU()
+testresult_t readsample_8_SI_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_8_SI_BE_PCMU);
 }
@@ -238,7 +238,7 @@ static testcase_t testcase_8_SI_LE_PCMD =	{ SF(8,SI,LE,PCMD),
 		,   -2,   10
 		,   -2,   10 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SI_LE_PCMD()
+testresult_t readsample_8_SI_LE_PCMD(void)
 {
 	return test_readsample_case(&testcase_8_SI_LE_PCMD);
 }
@@ -257,7 +257,7 @@ static testcase_t testcase_8_SI_BE_PCMD =	{ SF(8,SI,BE,PCMD),
 		,   -2,   10
 		,   -2,   10 }, 26, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SI_BE_PCMD()
+testresult_t readsample_8_SI_BE_PCMD(void)
 {
 	return test_readsample_case(&testcase_8_SI_BE_PCMD);
 }
@@ -268,7 +268,7 @@ static testcase_t testcase_16_M_LE_PCMS =	{ SF(16,M,LE,PCMS),
 		{ 0x00,0x00, 0x00,0x01, 0x00,0x03, 0x00,0x06, 0x00,0x0A, 0x00,0x0F, 0xFF,0x1F, 0xFF,0x3F, 0xFF,0x7F
 		, 0x01,0x80, 0x08,0x80, 0x10,0x90, 0x00,0xA1, 0x00,0xC0, 0x00,0xE0, 0x00,0xF0, 0xFF,0xFF }, 34, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_LE_PCMS()
+testresult_t readsample_16_M_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_16_M_LE_PCMS);
 }
@@ -276,7 +276,7 @@ static testcase_t testcase_16_M_BE_PCMS =	{ SF(16,M,BE,PCMS),
 		{ 0x00,0x00, 0x01,0x00, 0x03,0x00, 0x06,0x00, 0x0A,0x00, 0x0F,0x00, 0x1F,0xFF, 0x3F,0xFF, 0x7F,0xFF
 		, 0x80,0x01, 0x80,0x08, 0x90,0x10, 0xA1,0x00, 0xC0,0x00, 0xE0,0x00, 0xF0,0x00, 0xFF,0xFF }, 34, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_BE_PCMS()
+testresult_t readsample_16_M_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_16_M_BE_PCMS);
 }
@@ -284,7 +284,7 @@ static testcase_t testcase_16_M_LE_PCMU =	{ SF(16,M,LE,PCMU),
 		{ 0x00,0x80, 0x00,0x81, 0x00,0x83, 0x00,0x86, 0x00,0x8A, 0x00,0x8F, 0xFF,0x9F, 0xFF,0xBF, 0xFF,0xFF
 		, 0x01,0x00, 0x08,0x00, 0x10,0x10, 0x00,0x21, 0x00,0x40, 0x00,0x60, 0x00,0x70, 0xFF,0x7F }, 34, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_LE_PCMU()
+testresult_t readsample_16_M_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_16_M_LE_PCMU);
 }
@@ -292,7 +292,7 @@ static testcase_t testcase_16_M_BE_PCMU =	{ SF(16,M,BE,PCMU),
 		{ 0x80,0x00, 0x81,0x00, 0x83,0x00, 0x86,0x00, 0x8A,0x00, 0x8F,0x00, 0x9F,0xFF, 0xBF,0xFF, 0xFF,0xFF
 		, 0x00,0x01, 0x00,0x08, 0x10,0x10, 0x21,0x00, 0x40,0x00, 0x60,0x00, 0x70,0x00, 0x7F,0xFF }, 34, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_BE_PCMU()
+testresult_t readsample_16_M_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_16_M_BE_PCMU);
 }
@@ -300,7 +300,7 @@ static testcase_t testcase_16_M_LE_PCMD =	{ SF(16,M,LE,PCMD),
 		{ 0x00,0x00, 0x00,0x01, 0x00,0x02, 0x00,0x03, 0x00,0x04, 0x00,0x05, 0xFF,0x10, 0x00,0x20, 0x00,0x40
 		, 0x02,0x00, 0x07,0x00, 0x08,0x10, 0xF0,0x10, 0x00,0x1F, 0x00,0x20, 0x00,0x10, 0xFF,0x0F }, 34, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_LE_PCMD()
+testresult_t readsample_16_M_LE_PCMD(void)
 {
 	return test_readsample_case(&testcase_16_M_LE_PCMD);
 }
@@ -308,7 +308,7 @@ static testcase_t testcase_16_M_BE_PCMD =	{ SF(16,M,BE,PCMD),
 		{ 0x00,0x00, 0x01,0x00, 0x02,0x00, 0x03,0x00, 0x04,0x00, 0x05,0x00, 0x10,0xFF, 0x20,0x00, 0x40,0x00
 		, 0x00,0x02, 0x00,0x07, 0x10,0x08, 0x10,0xF0, 0x1F,0x00, 0x20,0x00, 0x10,0x00, 0x0F,0xFF }, 34, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_BE_PCMD()
+testresult_t readsample_16_M_BE_PCMD(void)
 {
 	return test_readsample_case(&testcase_16_M_BE_PCMD);
 }
@@ -321,7 +321,7 @@ static testcase_t testcase_16_SS_LE_PCMS =	{ SF(16,SS,LE,PCMS),
 		, 0x00,0x08, 0x00,0x06, 0x00,0x04, 0x00,0x02, 0x00,0x01, 0x10,0x00, 0x01,0x00, 0x00,0x00, 0xFF,0xFF
 		, 0xF0,0xFF, 0x00,0xFF, 0x00,0xF0, 0x00,0xD0, 0x00,0xB0, 0x00,0x90, 0x00,0x88, 0x01,0x80 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SS_LE_PCMS()
+testresult_t readsample_16_SS_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_16_SS_LE_PCMS);
 }
@@ -331,7 +331,7 @@ static testcase_t testcase_16_SS_BE_PCMS =	{ SF(16,SS,BE,PCMS),
 		, 0x08,0x00, 0x06,0x00, 0x04,0x00, 0x02,0x00, 0x01,0x00, 0x00,0x10, 0x00,0x01, 0x00,0x00, 0xFF,0xFF
 		, 0xFF,0xF0, 0xFF,0x00, 0xF0,0x00, 0xD0,0x00, 0xB0,0x00, 0x90,0x00, 0x88,0x00, 0x80,0x01 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SS_BE_PCMS()
+testresult_t readsample_16_SS_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_16_SS_BE_PCMS);
 }
@@ -341,7 +341,7 @@ static testcase_t testcase_16_SS_LE_PCMU =	{ SF(16,SS,LE,PCMU),
 		, 0x00,0x88, 0x00,0x86, 0x00,0x84, 0x00,0x82, 0x00,0x81, 0x10,0x80, 0x01,0x80, 0x00,0x80, 0xFF,0x7F
 		, 0xF0,0x7F, 0x00,0x7F, 0x00,0x70, 0x00,0x50, 0x00,0x30, 0x00,0x10, 0x00,0x08, 0x01,0x00 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SS_LE_PCMU()
+testresult_t readsample_16_SS_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_16_SS_LE_PCMU);
 }
@@ -351,7 +351,7 @@ static testcase_t testcase_16_SS_BE_PCMU =	{ SF(16,SS,BE,PCMU),
 		, 0x88,0x00, 0x86,0x00, 0x84,0x00, 0x82,0x00, 0x81,0x00, 0x80,0x10, 0x80,0x01, 0x80,0x00, 0x7F,0xFF
 		, 0x7F,0xF0, 0x7F,0x00, 0x70,0x00, 0x50,0x00, 0x30,0x00, 0x10,0x00, 0x08,0x00, 0x00,0x01 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SS_BE_PCMU()
+testresult_t readsample_16_SS_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_16_SS_BE_PCMU);
 }
@@ -361,7 +361,7 @@ static testcase_t testcase_16_SS_LE_PCMD =	{ SF(16,SS,LE,PCMD),
 		, 0x00,0x08, 0x00,0xFE, 0x00,0xFE, 0x00,0xFE, 0x00,0xFF, 0x10,0xFF, 0xF1,0xFF, 0xFF,0xFF, 0xFF,0xFF
 		, 0xF1,0xFF, 0x10,0xFF, 0x00,0xF1, 0x00,0xE0, 0x00,0xE0, 0x00,0xE0, 0x00,0xF8, 0x01,0xF8 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SS_LE_PCMD()
+testresult_t readsample_16_SS_LE_PCMD(void)
 {
 	return test_readsample_case(&testcase_16_SS_LE_PCMD);
 }
@@ -371,7 +371,7 @@ static testcase_t testcase_16_SS_BE_PCMD =	{ SF(16,SS,BE,PCMD),
 		, 0x08,0x00, 0xFE,0x00, 0xFE,0x00, 0xFE,0x00, 0xFF,0x00, 0xFF,0x10, 0xFF,0xF1, 0xFF,0xFF, 0xFF,0xFF
 		, 0xFF,0xF1, 0xFF,0x10, 0xF1,0x00, 0xE0,0x00, 0xE0,0x00, 0xE0,0x00, 0xF8,0x00, 0xF8,0x01 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SS_BE_PCMD()
+testresult_t readsample_16_SS_BE_PCMD(void)
 {
 	return test_readsample_case(&testcase_16_SS_BE_PCMD);
 }
@@ -397,7 +397,7 @@ static testcase_t testcase_16_SI_LE_PCMS =	{ SF(16,SI,LE,PCMS),
 		, 0x00,0xF0, 0x00,0x88
 		, 0xFF,0xFF, 0x01,0x80 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SI_LE_PCMS()
+testresult_t readsample_16_SI_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_16_SI_LE_PCMS);
 }
@@ -420,7 +420,7 @@ static testcase_t testcase_16_SI_BE_PCMS =	{ SF(16,SI,BE,PCMS),
 		, 0xF0,0x00, 0x88,0x00
 		, 0xFF,0xFF, 0x80,0x01 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SI_BE_PCMS()
+testresult_t readsample_16_SI_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_16_SI_BE_PCMS);
 }
@@ -443,7 +443,7 @@ static testcase_t testcase_16_SI_LE_PCMU =	{ SF(16,SI,LE,PCMU),
 		, 0x00,0x70, 0x00,0x08
 		, 0xFF,0x7F, 0x01,0x00 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SI_LE_PCMU()
+testresult_t readsample_16_SI_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_16_SI_LE_PCMU);
 }
@@ -466,7 +466,7 @@ static testcase_t testcase_16_SI_BE_PCMU =	{ SF(16,SI,BE,PCMU),
 		, 0x70,0x00, 0x08,0x00
 		, 0x7F,0xFF, 0x00,0x01 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SI_BE_PCMU()
+testresult_t readsample_16_SI_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_16_SI_BE_PCMU);
 }
@@ -489,7 +489,7 @@ static testcase_t testcase_16_SI_LE_PCMD =	{ SF(16,SI,LE,PCMD),
 		, 0x00,0x10, 0x00,0xF8
 		, 0xFF,0x0F, 0x01,0xF8 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SI_LE_PCMD()
+testresult_t readsample_16_SI_LE_PCMD(void)
 {
 	return test_readsample_case(&testcase_16_SI_LE_PCMD);
 }
@@ -512,7 +512,7 @@ static testcase_t testcase_16_SI_BE_PCMD =	{ SF(16,SI,BE,PCMD),
 		, 0x10,0x00, 0xF8,0x00
 		, 0x0F,0xFF, 0xF8,0x01 }, 68, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SI_BE_PCMD()
+testresult_t readsample_16_SI_BE_PCMD(void)
 {
 	return test_readsample_case(&testcase_16_SI_BE_PCMD);
 }
@@ -524,7 +524,7 @@ static testcase_t testcase_24_M_LE_PCMS =	{ SF(24,M,LE,PCMS),
 		, 0x00,0xFF,0x1F, 0x00,0xFF,0x3F, 0x00,0xFF,0x7F, 0x00,0x01,0x80, 0x00,0x08,0x80, 0x00,0x10,0x90
 		, 0x00,0x00,0xA1, 0x00,0x00,0xC0, 0x00,0x00,0xE0, 0x00,0x00,0xF0, 0x00,0xFF,0xFF }, 51, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_24_M_LE_PCMS()
+testresult_t readsample_24_M_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_24_M_LE_PCMS);
 }
@@ -533,7 +533,7 @@ static testcase_t testcase_24_M_BE_PCMS =	{ SF(24,M,BE,PCMS),
 		, 0x1F,0xFF,0x00, 0x3F,0xFF,0x00, 0x7F,0xFF,0x00, 0x80,0x01,0x00, 0x80,0x08,0x00, 0x90,0x10,0x00
 		, 0xA1,0x00,0x00, 0xC0,0x00,0x00, 0xE0,0x00,0x00, 0xF0,0x00,0x00, 0xFF,0xFF,0x00 }, 51, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_24_M_BE_PCMS()
+testresult_t readsample_24_M_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_24_M_BE_PCMS);
 }
@@ -542,7 +542,7 @@ static testcase_t testcase_24_M_LE_PCMU =	{ SF(24,M,LE,PCMU),
 		, 0x00,0xFF,0x9F, 0x00,0xFF,0xBF, 0x00,0xFF,0xFF, 0x00,0x01,0x00, 0x00,0x08,0x00, 0x00,0x10,0x10
 		, 0x00,0x00,0x21, 0x00,0x00,0x40, 0x00,0x00,0x60, 0x00,0x00,0x70, 0x00,0xFF,0x7F }, 51, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_24_M_LE_PCMU()
+testresult_t readsample_24_M_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_24_M_LE_PCMU);
 }
@@ -551,7 +551,7 @@ static testcase_t testcase_24_M_BE_PCMU =	{ SF(24,M,BE,PCMU),
 		, 0x9F,0xFF,0x00, 0xBF,0xFF,0x00, 0xFF,0xFF,0x00, 0x00,0x01,0x00, 0x00,0x08,0x00, 0x10,0x10,0x00
 		, 0x21,0x00,0x00, 0x40,0x00,0x00, 0x60,0x00,0x00, 0x70,0x00,0x00, 0x7F,0xFF,0x00 }, 51, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_24_M_BE_PCMU()
+testresult_t readsample_24_M_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_24_M_BE_PCMU);
 }
@@ -577,7 +577,7 @@ static testcase_t testcase_24_SI_LE_PCMS =	{ SF(24,SI,LE,PCMS),
 		, 0x00,0x00,0xF0, 0x00,0x00,0x88
 		, 0x00,0xFF,0xFF, 0x00,0x01,0x80 }, 102, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_24_SI_LE_PCMS()
+testresult_t readsample_24_SI_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_24_SI_LE_PCMS);
 }
@@ -600,7 +600,7 @@ static testcase_t testcase_24_SI_BE_PCMS =	{ SF(24,SI,BE,PCMS),
 		, 0xF0,0x00,0x00, 0x88,0x00,0x00
 		, 0xFF,0xFF,0x00, 0x80,0x01,0x00 }, 102, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_24_SI_BE_PCMS()
+testresult_t readsample_24_SI_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_24_SI_BE_PCMS);
 }
@@ -623,7 +623,7 @@ static testcase_t testcase_24_SI_LE_PCMU =	{ SF(24,SI,LE,PCMU),
 		, 0x00,0x00,0x70, 0x00,0x00,0x08
 		, 0x00,0xFF,0x7F, 0x00,0x01,0x00 }, 102, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_24_SI_LE_PCMU()
+testresult_t readsample_24_SI_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_24_SI_LE_PCMU);
 }
@@ -646,7 +646,7 @@ static testcase_t testcase_24_SI_BE_PCMU =	{ SF(24,SI,BE,PCMU),
 		, 0x70,0x00,0x00, 0x08,0x00,0x00
 		, 0x7F,0xFF,0x00, 0x00,0x01,0x00 }, 102, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_24_SI_BE_PCMU()
+testresult_t readsample_24_SI_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_24_SI_BE_PCMU);
 }
@@ -660,7 +660,7 @@ static testcase_t testcase_32_M_LE_PCMS =	{ SF(32,M,LE,PCMS),
 		, 0x00,0x00,0x00,0xA1, 0x00,0x00,0x00,0xC0, 0x00,0x00,0x00,0xE0, 0x00,0x00,0x00,0xF0
 		, 0x00,0x00,0xFF,0xFF }, 68, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_32_M_LE_PCMS()
+testresult_t readsample_32_M_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_32_M_LE_PCMS);
 }
@@ -671,7 +671,7 @@ static testcase_t testcase_32_M_BE_PCMS =	{ SF(32,M,BE,PCMS),
 		, 0xA1,0x00,0x00,0x00, 0xC0,0x00,0x00,0x00, 0xE0,0x00,0x00,0x00, 0xF0,0x00,0x00,0x00
 		, 0xFF,0xFF,0x00,0x00 }, 68, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_32_M_BE_PCMS()
+testresult_t readsample_32_M_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_32_M_BE_PCMS);
 }
@@ -682,7 +682,7 @@ static testcase_t testcase_32_M_LE_PCMU =	{ SF(32,M,LE,PCMU),
 		, 0x00,0x00,0x00,0x21, 0x00,0x00,0x00,0x40, 0x00,0x00,0x00,0x60, 0x00,0x00,0x00,0x70
 		, 0x00,0x00,0xFF,0x7F }, 68, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_32_M_LE_PCMU()
+testresult_t readsample_32_M_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_32_M_LE_PCMU);
 }
@@ -693,7 +693,7 @@ static testcase_t testcase_32_M_BE_PCMU =	{ SF(32,M,BE,PCMU),
 		, 0x21,0x00,0x00,0x00, 0x40,0x00,0x00,0x00, 0x60,0x00,0x00,0x00, 0x70,0x00,0x00,0x00
 		, 0x7F,0xFF,0x00,0x00 }, 68, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_32_M_BE_PCMU()
+testresult_t readsample_32_M_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_32_M_BE_PCMU);
 }
@@ -719,7 +719,7 @@ static testcase_t testcase_32_SI_LE_PCMS =	{ SF(32,SI,LE,PCMS),
 		, 0x00,0x00,0x00,0xF0, 0x00,0x00,0x00,0x88
 		, 0x00,0x00,0xFF,0xFF, 0x00,0x00,0x01,0x80 }, 136, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_32_SI_LE_PCMS()
+testresult_t readsample_32_SI_LE_PCMS(void)
 {
 	return test_readsample_case(&testcase_32_SI_LE_PCMS);
 }
@@ -742,7 +742,7 @@ static testcase_t testcase_32_SI_BE_PCMS =	{ SF(32,SI,BE,PCMS),
 		, 0xF0,0x00,0x00,0x00, 0x88,0x00,0x00,0x00
 		, 0xFF,0xFF,0x00,0x00, 0x80,0x01,0x00,0x00 }, 136, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_32_SI_BE_PCMS()
+testresult_t readsample_32_SI_BE_PCMS(void)
 {
 	return test_readsample_case(&testcase_32_SI_BE_PCMS);
 }
@@ -765,7 +765,7 @@ static testcase_t testcase_32_SI_LE_PCMU =	{ SF(32,SI,LE,PCMU),
 		, 0x00,0x00,0x00,0x70, 0x00,0x00,0x00,0x08
 		, 0x00,0x00,0xFF,0x7F, 0x00,0x00,0x01,0x00 }, 136, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_32_SI_LE_PCMU()
+testresult_t readsample_32_SI_LE_PCMU(void)
 {
 	return test_readsample_case(&testcase_32_SI_LE_PCMU);
 }
@@ -788,7 +788,7 @@ static testcase_t testcase_32_SI_BE_PCMU =	{ SF(32,SI,BE,PCMU),
 		, 0x70,0x00,0x00,0x00, 0x08,0x00,0x00,0x00
 		, 0x7F,0xFF,0x00,0x00, 0x00,0x01,0x00,0x00 }, 136, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_32_SI_BE_PCMU()
+testresult_t readsample_32_SI_BE_PCMU(void)
 {
 	return test_readsample_case(&testcase_32_SI_BE_PCMU);
 }
@@ -804,7 +804,7 @@ static testcase_t testcase_32_M_LE_IEEE =	{ SF(32,M,LE,IEEE),
 		, 0x00,0x00,0x3E,0xBF, 0x00,0x00,0x00,0xBF, 0x00,0x00,0x80,0xBE, 0x00,0x00,0x00,0xBE
 		, 0x00,0x00,0x00,0xB8 }, 68, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_32_M_LE_IEEE()
+testresult_t readsample_32_M_LE_IEEE(void)
 {
 	return test_readsample_case(&testcase_32_M_LE_IEEE);
 }
@@ -815,7 +815,7 @@ static testcase_t testcase_32_M_BE_IEEE =	{ SF(32,M,BE,IEEE),
 		, 0xBF,0x3E,0x00,0x00, 0xBF,0x00,0x00,0x00, 0xBE,0x80,0x00,0x00, 0xBE,0x00,0x00,0x00
 		, 0xB8,0x00,0x00,0x00 }, 68, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_32_M_BE_IEEE()
+testresult_t readsample_32_M_BE_IEEE(void)
 {
 	return test_readsample_case(&testcase_32_M_BE_IEEE);
 }
@@ -834,7 +834,7 @@ static testcase_t testcase_32_SS_LE_IEEE =	{ SF(32,SS,LE,IEEE),
 		, 0x00,0x00,0xC0,0xBE, 0x00,0x00,0x20,0xBF, 0x00,0x00,0x60,0xBF, 0x00,0x00,0x70,0xBF
 		, 0x00,0xFE,0x7F,0xBF }, 136, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_32_SS_LE_IEEE()
+testresult_t readsample_32_SS_LE_IEEE(void)
 {
 	return test_readsample_case(&testcase_32_SS_LE_IEEE);
 }
@@ -850,7 +850,7 @@ static testcase_t testcase_32_SS_BE_IEEE =	{ SF(32,SS,BE,IEEE),
 		, 0xBE,0xC0,0x00,0x00, 0xBF,0x20,0x00,0x00, 0xBF,0x60,0x00,0x00, 0xBF,0x70,0x00,0x00
 		, 0xBF,0x7F,0xFE,0x00 }, 136, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_32_SS_BE_IEEE()
+testresult_t readsample_32_SS_BE_IEEE(void)
 {
 	return test_readsample_case(&testcase_32_SS_BE_IEEE);
 }
@@ -876,7 +876,7 @@ static testcase_t testcase_32_SI_LE_IEEE =	{ SF(32,SI,LE,IEEE),
 		, 0x00,0x00,0x00,0xBE, 0x00,0x00,0x70,0xBF
 		, 0x00,0x00,0x00,0xB8, 0x00,0xFE,0x7F,0xBF }, 136, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_32_SI_LE_IEEE()
+testresult_t readsample_32_SI_LE_IEEE(void)
 {
 	return test_readsample_case(&testcase_32_SI_LE_IEEE);
 }
@@ -899,7 +899,7 @@ static testcase_t testcase_32_SI_BE_IEEE =	{ SF(32,SI,BE,IEEE),
 		, 0xBE,0x00,0x00,0x00, 0xBF,0x70,0x00,0x00
 		, 0xB8,0x00,0x00,0x00, 0xBF,0x7F,0xFE,0x00 }, 136, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_32_SI_BE_IEEE()
+testresult_t readsample_32_SI_BE_IEEE(void)
 {
 	return test_readsample_case(&testcase_32_SI_BE_IEEE);
 }
@@ -910,7 +910,7 @@ static testcase_t testcase_64_M_LE_IEEE =	{ SF(64,M,LE,IEEE),
 		, 0x00,0x00,0x00,0x00,0x00,0xC0,0xE7,0xBF, 0x00,0x00,0x00,0x00,0x00,0x00,0xE0,0xBF, 0x00,0x00,0x00,0x00,0x00,0x00,0xD0,0xBF, 0x00,0x00,0x00,0x00,0x00,0x00,0xC0,0xBF
 		, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xBF }, 136, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_64_M_LE_IEEE()
+testresult_t readsample_64_M_LE_IEEE(void)
 {
 	return test_readsample_case(&testcase_64_M_LE_IEEE);
 }
@@ -921,7 +921,7 @@ static testcase_t testcase_64_M_BE_IEEE =	{ SF(64,M,BE,IEEE),
 		, 0xBF,0xE7,0xC0,0x00,0x00,0x00,0x00,0x00, 0xBF,0xE0,0x00,0x00,0x00,0x00,0x00,0x00, 0xBF,0xD0,0x00,0x00,0x00,0x00,0x00,0x00, 0xBF,0xC0,0x00,0x00,0x00,0x00,0x00,0x00
 		, 0xBF,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, 136, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_64_M_BE_IEEE()
+testresult_t readsample_64_M_BE_IEEE(void)
 {
 	return test_readsample_case(&testcase_64_M_BE_IEEE);
 }
@@ -940,7 +940,7 @@ static testcase_t testcase_64_SS_LE_IEEE =	{ SF(64,SS,LE,IEEE),
 		, 0x00,0x00,0x00,0x00,0x00,0x00,0xD8,0xBF, 0x00,0x00,0x00,0x00,0x00,0x00,0xE4,0xBF, 0x00,0x00,0x00,0x00,0x00,0x00,0xEC,0xBF, 0x00,0x00,0x00,0x00,0x00,0x00,0xEE,0xBF
 		, 0x00,0x00,0x00,0x00,0xC0,0xFF,0xEF,0xBF }, 272, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_64_SS_LE_IEEE()
+testresult_t readsample_64_SS_LE_IEEE(void)
 {
 	return test_readsample_case(&testcase_64_SS_LE_IEEE);
 }
@@ -956,7 +956,7 @@ static testcase_t testcase_64_SS_BE_IEEE =	{ SF(64,SS,BE,IEEE),
 		, 0xBF,0xD8,0x00,0x00,0x00,0x00,0x00,0x00, 0xBF,0xE4,0x00,0x00,0x00,0x00,0x00,0x00, 0xBF,0xEC,0x00,0x00,0x00,0x00,0x00,0x00, 0xBF,0xEE,0x00,0x00,0x00,0x00,0x00,0x00
 		, 0xBF,0xEF,0xFF,0xC0,0x00,0x00,0x00,0x00 }, 272, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_64_SS_BE_IEEE()
+testresult_t readsample_64_SS_BE_IEEE(void)
 {
 	return test_readsample_case(&testcase_64_SS_BE_IEEE);
 }
@@ -982,7 +982,7 @@ static testcase_t testcase_64_SI_LE_IEEE =	{ SF(64,SI,LE,IEEE),
 		, 0x00,0x00,0x00,0x00,0x00,0x00,0xC0,0xBF, 0x00,0x00,0x00,0x00,0x00,0x00,0xEE,0xBF
 		, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xBF, 0x00,0x00,0x00,0x00,0xC0,0xFF,0xEF,0xBF }, 272, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_64_SI_LE_IEEE()
+testresult_t readsample_64_SI_LE_IEEE(void)
 {
 	return test_readsample_case(&testcase_64_SI_LE_IEEE);
 }
@@ -1005,7 +1005,7 @@ static testcase_t testcase_64_SI_BE_IEEE =	{ SF(64,SI,BE,IEEE),
 		, 0xBF,0xC0,0x00,0x00,0x00,0x00,0x00,0x00, 0xBF,0xEE,0x00,0x00,0x00,0x00,0x00,0x00
 		, 0xBF,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0xBF,0xEF,0xFF,0xC0,0x00,0x00,0x00,0x00 }, 272, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_64_SI_BE_IEEE()
+testresult_t readsample_64_SI_BE_IEEE(void)
 {
 	return test_readsample_case(&testcase_64_SI_BE_IEEE);
 }
@@ -1017,14 +1017,14 @@ testresult_t readsample_64_SI_BE_IEEE()
 static testcase_t testcase_8_M_LE_IT214 =	{ SF(8,M,LE,IT214),
 		{ 0x0E, 0x00, 0x02, 0x21, 0x89, 0xA6, 0xF3, 0x93, 0x78, 0x40, 0x07, 0xFD, 0xFD, 0x15, 0xFD, 0x6C }, 16, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_LE_IT214()
+testresult_t readsample_8_M_LE_IT214(void)
 {
 	return test_readsample_case(&testcase_8_M_LE_IT214);
 }
 static testcase_t testcase_8_M_LE_IT215 =	{ SF(8,M,LE,IT215),
 		{ 0x0F, 0x00, 0x02, 0x21, 0x82, 0x96, 0x73, 0xE4, 0xF3, 0x7E, 0xFC, 0x1C, 0x04, 0x60, 0xA4, 0xE3, 0x03 }, 17, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_LE_IT215()
+testresult_t readsample_8_M_LE_IT215(void)
 {
 	return test_readsample_case(&testcase_8_M_LE_IT215);
 }
@@ -1032,7 +1032,7 @@ static testcase_t testcase_8_SS_LE_IT214 =	{ SF(8,SS,LE,IT214),
 		{ 0x0E, 0x00, 0x02, 0x21, 0x89, 0xA6, 0xF3, 0x93, 0x78, 0x40, 0x07, 0xFD, 0xFD, 0x15, 0xFD, 0x6C, 0x0B, 0x00, 0x07, 0x99
 		, 0xFA, 0xFE, 0x5F, 0x5B, 0x01, 0x2A, 0xA5, 0x94, 0x02 }, 29, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SS_LE_IT214()
+testresult_t readsample_8_SS_LE_IT214(void)
 {
 	return test_readsample_case(&testcase_8_SS_LE_IT214);
 }
@@ -1040,7 +1040,7 @@ static testcase_t testcase_8_SS_LE_IT215 =	{ SF(8,SS,LE,IT215),
 		{ 0x0F, 0x00, 0x02, 0x21, 0x82, 0x96, 0x73, 0xE4, 0xF3, 0x7E, 0xFC, 0x1C, 0x04, 0x60, 0xA4, 0xE3, 0x03, 0x09, 0x00, 0x07
 		, 0x99, 0x66, 0xF9, 0x40, 0x5F, 0xD1, 0xF2, 0x01 }, 28, EXPECT_8BIT | EXPECT_STEREO };
 
-testresult_t readsample_8_SS_LE_IT215()
+testresult_t readsample_8_SS_LE_IT215(void)
 {
 	return test_readsample_case(&testcase_8_SS_LE_IT215);
 }
@@ -1048,7 +1048,7 @@ static testcase_t testcase_16_M_LE_IT214 =	{ SF(16,M,LE,IT214),
 		{ 0x25, 0x00, 0x0B, 0x00, 0x01, 0x00, 0x20, 0x00, 0x04, 0x60, 0x00, 0x08, 0xA0, 0x0C, 0xF0, 0x1F, 0x02, 0x00, 0x04, 0x00
 		, 0x48, 0x00, 0xE0, 0x00, 0x00, 0x01, 0x02, 0x1E, 0x02, 0xE0, 0x03, 0x00, 0xA4, 0x00, 0x10, 0x00, 0xFA, 0x7F, 0x00 }, 39, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_LE_IT214()
+testresult_t readsample_16_M_LE_IT214(void)
 {
 	return test_readsample_case(&testcase_16_M_LE_IT214);
 }
@@ -1056,7 +1056,7 @@ static testcase_t testcase_16_M_LE_IT215 =	{ SF(16,M,LE,IT215),
 		{ 0x23, 0x00, 0x09, 0x00, 0x01, 0x00, 0x08, 0x20, 0x80, 0x00, 0x02, 0xC8, 0xC0, 0xFF, 0x85, 0x80, 0x07, 0x00, 0x10, 0x01
 		, 0xE0, 0x02, 0x80, 0x00, 0x08, 0x74, 0x00, 0x08, 0x07, 0x80, 0x80, 0x02, 0x40, 0x00, 0x38, 0xFF, 0x1B }, 37, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_LE_IT215()
+testresult_t readsample_16_M_LE_IT215(void)
 {
 	return test_readsample_case(&testcase_16_M_LE_IT215);
 }
@@ -1066,7 +1066,7 @@ static testcase_t testcase_16_SS_LE_IT214 =	{ SF(16,SS,LE,IT214),
 		, 0x00, 0x0C, 0x00, 0x01, 0x90, 0x00, 0x04, 0x30, 0x80, 0x01, 0x0C, 0x70, 0x88, 0xC7, 0x1F, 0x80, 0xFF, 0xFF, 0xC7, 0x87
 		, 0x58, 0x10, 0x20, 0x0E, 0x00, 0x06, 0x00, 0x03, 0x80, 0x09, 0x80, 0x00, 0x38, 0x00, 0x03 }, 75, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SS_LE_IT214()
+testresult_t readsample_16_SS_LE_IT214(void)
 {
 	return test_readsample_case(&testcase_16_SS_LE_IT214);
 }
@@ -1076,7 +1076,7 @@ static testcase_t testcase_16_SS_LE_IT215 =	{ SF(16,SS,LE,IT215),
 		, 0x00, 0x01, 0x10, 0x80, 0x0D, 0x80, 0x00, 0x00, 0x00, 0x10, 0x04, 0xE1, 0x38, 0x00, 0x80, 0xFC, 0x1F, 0x13, 0x08, 0x1F
 		, 0x03, 0xBC, 0xF8, 0x1F, 0x19, 0x00, 0xCB, 0xFF, 0x02 }, 69, EXPECT_16BIT | EXPECT_STEREO };
 
-testresult_t readsample_16_SS_LE_IT215()
+testresult_t readsample_16_SS_LE_IT215(void)
 {
 	return test_readsample_case(&testcase_16_SS_LE_IT215);
 }
@@ -1087,7 +1087,7 @@ static testcase_t testcase_16_M_LE_PTM =	{ SF(16,M,LE,PTM),
 		{ 0x00, 0x00, 0x00, 0x01, 0xFF, 0x03, 0xFD, 0x06, 0xFA, 0x0A, 0xF6, 0x0F, 0xF0, 0x20, 0xE0, 0x40, 0xC0, 0x80, 0x82, 0x7F
 		, 0x88, 0x78, 0x90, 0x80, 0x70, 0xA1, 0x5F, 0xC0, 0x40, 0xE0, 0x20, 0xF0, 0x0F, 0x00 }, 34, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_LE_PTM()
+testresult_t readsample_16_M_LE_PTM(void)
 {
 	return test_readsample_case(&testcase_16_M_LE_PTM);
 }
@@ -1097,7 +1097,7 @@ testresult_t readsample_16_M_LE_PTM()
 static testcase_t testcase_8_M_LE_MDL =	{ SF(8,M,LE,MDL),
 		{ 0x0C, 0x00, 0x00, 0x00, 0x42, 0x29, 0x05, 0x90, 0x95, 0x02, 0x10, 0xCF, 0x09, 0xD8, 0xE7, 0x00 }, 16, EXPECT_8BIT | EXPECT_MONO };
 
-testresult_t readsample_8_M_LE_MDL()
+testresult_t readsample_8_M_LE_MDL(void)
 {
 	return test_readsample_case(&testcase_8_M_LE_MDL);
 }
@@ -1105,7 +1105,7 @@ static testcase_t testcase_16_M_LE_MDL =	{ SF(16,M,LE,MDL),
 		{ 0x1F, 0x00, 0x00, 0x00, 0x00, 0x02, 0xC0, 0x00, 0x28, 0x00, 0x07, 0x20, 0x01, 0xEC, 0x3F, 0xF1, 0x1F, 0xF1, 0x1F, 0xC4
 		, 0x00, 0x83, 0x20, 0x20, 0x88, 0x00, 0x4C, 0x00, 0x3C, 0x00, 0x44, 0x00, 0xE2, 0x3F, 0x0F }, 35, EXPECT_16BIT | EXPECT_MONO };
 
-testresult_t readsample_16_M_LE_MDL()
+testresult_t readsample_16_M_LE_MDL(void)
 {
 	return test_readsample_case(&testcase_16_M_LE_MDL);
 }
