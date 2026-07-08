@@ -805,6 +805,7 @@ schismtrackertest_SOURCES = \
 	test/cases/config-parser.c  \
 	test/cases/disko.c			\
 	test/cases/mplink.c         \
+	test/cases/readsample.c     \
 	test/cases/sanity.c			\
 	test/cases/slurp.c          \
 	test/cases/str.c			\
@@ -812,6 +813,10 @@ schismtrackertest_SOURCES = \
 	test/cases/video.c			\
 	test/cases/version.c		\
 	test/cases/charset.c
+
+test/cases/readsample.c: test/cases/readsample.cases.inc
+
+include/test-funcs.h: include/test-funcs.readsample.inc
 
 # err, this is flaky, but okay for now i guess
 mains =									\

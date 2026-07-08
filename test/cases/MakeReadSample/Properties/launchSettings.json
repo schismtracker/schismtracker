@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MakeReadSample": {
+      "commandName": "Project",
+      "workingDirectory": "."
+    }
+  }
+}

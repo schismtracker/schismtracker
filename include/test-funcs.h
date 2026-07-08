@@ -238,4 +238,6 @@ TEST_FUNC(test_ver_parse_schism_version)
 TEST_FUNC(test_ver_parse_ctimestamp)
 TEST_FUNC(test_ver_parse_cdate)
 
+#include "test-funcs.readsample.inc"
+
 #undef TEST_FUNC
