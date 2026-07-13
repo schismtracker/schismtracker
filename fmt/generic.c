@@ -578,6 +578,7 @@ void fmt_fill_schism_quirks(song_t *csf, uint32_t ver)
 		{0x14e8, CSF_QUIRK_IT_OFFSET_WITH_INSTRUMENT_NUMBER  },  // https://github.com/schismtracker/schismtracker/commit/9237960d45079a54ad73f87bacfe5dd8ae82e273
 		{0x1573, CSF_QUIRK_IT_DOUBLE_PORTAMENTO_SLIDES       },  // https://github.com/schismtracker/schismtracker/commit/223e327d9448561931b8cac8a55180286b17276c
 		{0x15ca, CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF           },  // https://github.com/schismtracker/schismtracker/commit/ff7a817df327c8f13d97b8c6546a9329f59edff8
+		{0x17ca, CSF_QUIRK_IT_COMPAT_GXX_CARRY_PORTA_WITH_INS},  // https://github.com/schismtracker/schismtracker/commit/21bbd9a74df8266efe10c1c7c8aaccfc7512ede5
 	};
 	size_t i;
 
