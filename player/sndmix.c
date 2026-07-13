@@ -624,6 +624,12 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 	// Adding the channel in the channel list
 	csf->voice_mix[csf->num_voices++] = nchan;
 
+	// Stop NNA channel processing if the channel is effectively muted.
+	// Required for Carry Envelope quirk to stop processing envelopes of affected channels.
+	// OpenMPT test case CarryCompatGxxPortaWithIns.it
+	if (nchan >= MAX_CHANNELS && !(chan->volume && chan->global_volume && chan->instrument_volume))
+		chan->length = 0;
+
 	if (csf->num_voices >= MAX_VOICES)
 		return 0;
 
@@ -1109,14 +1115,6 @@ int32_t csf_read_note(song_t *csf)
 
 		chan->vu_meter = 0;
 
-		if ((chan->flags & CHN_NOTEFADE) &&
-		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
-			chan->length = 0;
-			chan->rofs = 0;
-			chan->lofs = 0;
-			continue;
-		}
-
 		// Check for unused channel
 		if (cn >= MAX_CHANNELS)
 			if (!chan->length && !(chan->flags & CHN_ADLIB))
@@ -1235,6 +1233,14 @@ int32_t csf_read_note(song_t *csf)
 				ninc = csf_smp_pos(0, 1);
 
 			chan->increment = ninc;
+		}
+
+		// This check used to be at the top of the loop but was moved here for OpenMPT test case CarryCompatGxxPortaWithIns.it
+		if ((chan->flags & CHN_NOTEFADE) &&
+		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
+			chan->length = 0;
+			chan->rofs = 0;
+			chan->lofs = 0;
 		}
 
 		chan->final_panning = CLAMP(chan->final_panning, 0, 256);

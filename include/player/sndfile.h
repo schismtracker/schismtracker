@@ -699,6 +699,7 @@ enum {
 	CSF_QUIRK_IT_OFFSET_WITH_INSTRUMENT_NUMBER,
 	CSF_QUIRK_IT_DOUBLE_PORTAMENTO_SLIDES,
 	CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF,
+	CSF_QUIRK_IT_COMPAT_GXX_CARRY_PORTA_WITH_INS,
 
 	/* bitarray size */
 	CSF_QUIRK_MAX_,
@@ -756,6 +757,7 @@ typedef struct song {
 	uint32_t pan_separation;
 	uint32_t num_voices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
 	uint32_t mix_stat; // number of channels being mixed (not really used)
+	uint32_t last_moved_channel; // Compat Gxx + carry + porta bug emulation
 	uint32_t buffer_count; // number of samples to mix per tick
 	uint32_t tick_count;
 	uint32_t frame_delay;

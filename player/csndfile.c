@@ -43,6 +43,7 @@ static void _csf_reset(song_t *csf)
 	csf->flags = 0;
 	csf->pan_separation = 128;
 	csf->num_voices = 0;
+	csf->last_moved_channel = MAX_VOICES;
 	csf->freq_factor = csf->tempo_factor = 128;
 	csf->initial_global_volume = 128;
 	csf->current_global_volume = 128;
@@ -529,6 +530,7 @@ void csf_set_current_order(song_t *csf, uint32_t position)
 	csf->tick_count = 1;
 	csf->row_count = 0;
 	csf->buffer_count = 0;
+	csf->last_moved_channel = MAX_VOICES;
 
 	csf->flags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 }

@@ -1238,7 +1238,7 @@ song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *penv, uint
 	return (n && n < MAX_SAMPLES) ? &csf->samples[n] : def;
 }
 
-static void env_reset(song_voice_t *chan, int always)
+static void csf_env_reset(song_t *csf, song_voice_t *chan, int porta, int always)
 {
 	if (chan->ptr_instrument) {
 		chan->flags |= CHN_FASTVOLRAMP;
@@ -1247,13 +1247,35 @@ static void env_reset(song_voice_t *chan, int always)
 			chan->pan_env_position = 0;
 			chan->pitch_env_position = 0;
 		} else {
+			/* In Compatible Gxx mode, Envelope Carry mode has a
+			 * really terrible quirk where, if a note has both an instrument number
+			 * and tone portamento, it does not resume envelopes where the previously
+			 * playing note left off:
+			 * Internally, IT keeps track of the last allocated NNA channel in a
+			 * global variable, which is then used to get the old envelope information
+			 * from.
+			 * However in this particular case (porta + instrument number), the last
+			 * NNA channel memory is not updated. Due to this, the 'last' channel may
+			 * actually be some earlier, already stopped note from the same channel, or
+			 * it might be a completely different pattern channel altogether. Nasty!
+			 * OpenMPT test case CarryCompatGxxPortaWithIns.it */
+			int compat_gxx_carry_reset = BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_COMPAT_GXX_CARRY_PORTA_WITH_INS)
+				&& porta && (csf->flags & SONG_COMPATGXX);
+			const song_voice_t *last_chan = (csf->last_moved_channel < MAX_VOICES) ? &csf->voices[csf->last_moved_channel] : NULL;
+
 			/* only reset envelopes with carry off */
 			if (!(chan->ptr_instrument->flags & ENV_VOLCARRY))
 				chan->vol_env_position = 0;
+			else if (compat_gxx_carry_reset)
+				chan->vol_env_position = last_chan ? last_chan->vol_env_position : 0;
 			if (!(chan->ptr_instrument->flags & ENV_PANCARRY))
 				chan->pan_env_position = 0;
+			else if (compat_gxx_carry_reset)
+				chan->pan_env_position = last_chan ? last_chan->pan_env_position : 0;
 			if (!(chan->ptr_instrument->flags & ENV_PITCHCARRY))
 				chan->pitch_env_position = 0;
+			else if (compat_gxx_carry_reset)
+				chan->pitch_env_position = last_chan ? last_chan->pitch_env_position : 0;
 		}
 	}
 
@@ -1358,7 +1380,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 
 	if (penv) {
 		if (reset_env) {
-			env_reset(chan, inst_changed
+			csf_env_reset(csf, chan, porta, inst_changed
 				|| (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF)
 					? (!chan->fadeout_volume || !NOTE_IS_NOTE(chan->row_note))
 					: (chan->flags & CHN_KEYOFF)));
@@ -1582,7 +1604,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 
 	if (!porta) {
 		if (penv) chan->nna = penv->nna;
-		env_reset(chan, 0);
+		csf_env_reset(csf, chan, porta, 0);
 		chan->flags &= ~CHN_NOTEFADE;
 	}
 
@@ -1675,6 +1697,8 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 		if (!chan->length || (chan->flags & CHN_MUTE) || (!chan->left_volume && !chan->right_volume))
 			return;
 		uint32_t n = csf_get_nna_channel(csf, nchan);
+		if (csf->last_moved_channel == nchan)
+			csf->last_moved_channel = n ? n : MAX_VOICES;
 		if (!n) return;
 		p = &csf->voices[n];
 		// Copy Channel
@@ -1713,7 +1737,6 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
         else if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT)) /* emptyslot.it */
         	return;
 	}
-	if (!penv) return;
 	p = chan;
 	for (uint32_t i=nchan; i<MAX_VOICES; p++, i++) {
 		if (!((i >= MAX_CHANNELS || p == chan)
@@ -1766,9 +1789,13 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 	if (chan->flags & CHN_MUTE)
 		return;
 
+	csf->last_moved_channel = MAX_VOICES;
+
 	// New Note Action
 	if (!csf_smp_pos_equals_zero(chan->increment) && chan->length) {
 		uint32_t n = csf_get_nna_channel(csf, nchan);
+		if (chan->ptr_instrument == ptr_instrument)
+			csf->last_moved_channel = n ? n : MAX_VOICES;
 		if (n) {
 			p = &csf->voices[n];
 			// Copy Channel
@@ -2240,7 +2267,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 			if (csf->flags & SONG_INSTRUMENTMODE && instr && !NOTE_IS_NOTE(note)) {
 				if ((porta && csf->flags & SONG_COMPATGXX)
 					|| (!porta && csf->flags & SONG_ITOLDEFFECTS)) {
-					env_reset(chan, 1);
+					csf_env_reset(csf, chan, porta, 1);
 				}
 			}
 
