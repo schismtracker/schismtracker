@@ -474,16 +474,25 @@ int song_get_current_instrument(void)
 
 void song_exchange_samples(int a, int b)
 {
+	song_sample_t tmp;
+
 	if (a == b)
 		return;
 
 	song_lock_audio();
-	song_sample_t tmp;
+
+	/* Need to stop the samples; otherwise the data in the voice structure
+	 * becomes outdated and everything is sad */
+	csf_stop_sample(current_song, current_song->samples + a);
+	csf_stop_sample(current_song, current_song->samples + b);
+
 	memcpy(&tmp, current_song->samples + a, sizeof(song_sample_t));
 	memcpy(current_song->samples + a, current_song->samples + b, sizeof(song_sample_t));
 	memcpy(current_song->samples + b, &tmp, sizeof(song_sample_t));
-	status.flags |= SONG_NEEDS_SAVE;
+
 	song_unlock_audio();
+
+	status.flags |= SONG_NEEDS_SAVE;
 }
 
 void song_copy_instrument(int dst, int src)
