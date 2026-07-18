@@ -238,4 +238,7 @@ TEST_FUNC(test_ver_parse_schism_version)
 TEST_FUNC(test_ver_parse_ctimestamp)
 TEST_FUNC(test_ver_parse_cdate)
 
+TEST_FUNC(test_iff_chunk_peek_ex_middle)
+TEST_FUNC(test_iff_chunk_peek_ex_end_of_file)
+
 #undef TEST_FUNC
