@@ -24,10 +24,9 @@
 #include "test.h"
 #include "test-assertions.h"
 
+#include "headers.h"
 #include "slurp.h"
 #include "fmt.h"
-
-#include <stdio.h>
 
 #define IFFID_fmt  UINT32_C(0x666D7420)
 
@@ -35,7 +34,7 @@ testresult_t test_iff_chunk_peek_ex_middle(void)
 {
 	// Arrange
 
-	char input_data[] = {
+	static const char input_data[] = {
 		'W', 'A', 'V', 'E', // Tail of the RIFF header
 		'f', 'm', 't', ' ', // Actual fmt chunk from a real WAV file
 		0x10, 0x00, 0x00, 0x00, // length: 16 bytes
@@ -51,7 +50,11 @@ testresult_t test_iff_chunk_peek_ex_middle(void)
 
 	int fmt_start = 4;
 	int fmt_content_start = fmt_start + 8;
-	int fmt_length = bswapLE32(((int *)&input_data[fmt_start])[1]);
+	uint32_t fmt_length;
+
+	memcpy(&fmt_length, &input_data[fmt_start + 4], sizeof(fmt_length));
+
+	fmt_length = bswapLE32(fmt_length);
 
 	int data_start = fmt_content_start + fmt_length;
 
@@ -87,7 +90,7 @@ testresult_t test_iff_chunk_peek_ex_end_of_file(void)
 {
 	// Arrange
 
-	char input_data[] = {
+	static const char input_data[] = {
 		'W', 'A', 'V', 'E', // Tail of the RIFF header
 		'f', 'm', 't', ' ', // Actual fmt chunk from a real WAV file
 		0x10, 0x00, 0x00, 0x00, // length: 16 bytes
@@ -101,7 +104,11 @@ testresult_t test_iff_chunk_peek_ex_end_of_file(void)
 
 	int fmt_start = 4;
 	int fmt_content_start = fmt_start + 8;
-	int fmt_length = bswapLE32(((int *)&input_data[fmt_start])[1]);
+	uint32_t fmt_length;
+
+	memcpy(&fmt_length, &input_data[fmt_start + 4], sizeof(fmt_length));
+
+	fmt_length = bswapLE32(fmt_length);
 
 	slurp_t fp;
 
