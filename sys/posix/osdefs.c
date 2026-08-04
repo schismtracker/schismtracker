@@ -42,6 +42,16 @@
 # define posix_spawn_file_actions_addchdir posix_spawn_file_actions_addchdir_np
 #endif
 
+/* On Apple platforms the un-suffixed name is only available from macOS 26
+ * onwards, but it is weak-linked: configure finds the declaration in a newer
+ * SDK, and then running on an older OS leaves the symbol NULL, so the call
+ * jumps to address zero and takes the process with it. The "np" spelling has
+ * been there since 10.15, so always prefer that one here. */
+#if defined(__APPLE__) && defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP)
+# undef posix_spawn_file_actions_addchdir
+# define posix_spawn_file_actions_addchdir posix_spawn_file_actions_addchdir_np
+#endif
+
 /* ugh */
 extern char **environ;
 
