@@ -81,7 +81,10 @@
 |   S7B Turn off pitch envelope
 |   S7C Turn on pitch envelope
 |   S8x Set panning position
-|   S91 Set surround sound
+|   S90 Disable surround sound
+|   S91 Enable surround sound
+|   S9E Play sample forwards
+|   S9F Play sample backwards
 |   SAy Set high value of sample offset yxx00h
 |   SB0 Set loopback point
 |   SBx Loop x times to loopback point
