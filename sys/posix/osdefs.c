@@ -34,11 +34,13 @@
 # include <spawn.h>
 #endif
 
-/* This is an older name for the same function. The "np" suffix
- * was removed after it was added to POSIX, but implementations
- * haven't caught up yet */
-#if !defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR) && defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP)
-# define HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR
+/* This is an older name for the same function. Since most
+ * implementations just have this as a stub that calls _np,
+ * or vice versa, and the latter is older, prefer it over the
+ * standard version. */
+#if defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP)
+# undef HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR
+# define HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR 1
 # define posix_spawn_file_actions_addchdir posix_spawn_file_actions_addchdir_np
 #endif
 
