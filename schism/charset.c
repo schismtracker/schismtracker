@@ -1068,6 +1068,14 @@ static const size_t charset_size_estimate_divisor[] = {
 #  define kTECOutputBufferFullStatus (-8785)
 # endif
 #elif defined(SCHISM_OS2)
+# define _ULS_UCONVP
+/* OS/2 headers define this as a void *.
+ * This is evil for a number of reasons, mostly because
+ * it makes type-safety impossible.
+ *
+ * So, override the definition, and make it a struct
+ * that doesn't actually exist. */
+typedef struct UconvObject_notouchy_typesafety_ *UconvObject;
 # include <uconv.h>
 # define INCL_DOS
 # include <os2.h>
@@ -1083,34 +1091,6 @@ static inline SCHISM_ALWAYS_INLINE int charset_iconv_get_system_encoding_(TextEn
 	*penc = CreateTextEncoding(kTextEncodingMacRoman, kTextEncodingDefaultVariant, kTextEncodingDefaultFormat);
 
 	return 1;
-}
-#elif defined(SCHISM_OS2)
-static inline int charset_os2_get_sys_cp(ULONG *pcp)
-{
-	ULONG aulCP[3];
-	ULONG cCP;
-
-	if (DosQueryCp(sizeof(aulCP), aulCP, &cCP))
-		return 0;
-
-	*pcp = aulCP[0];
-
-	return 1;
-}
-
-static inline int charset_os2_uconv_build(ULONG cp, UconvObject *puconv)
-{
-	UniChar cpname[16];
-	{
-		/* stupid */
-		char buf[16];
-
-		snprintf(buf, 16, "IBM-%lu", cp);
-
-		for (size_t i = 0; i < 16; i++) cpname[i] = buf[i];
-	}
-
-	return !UniCreateUconvObject(cpname, puconv);
 }
 #endif
 
@@ -1213,6 +1193,7 @@ struct charset_iconv_v2 *charset_iconv_v2_open(charset_t inset, charset_t outset
 	x->outset = outset;
 
 #ifdef CHARSET_HAVE_UNIBUF
+	/* XXX move this to another function */
 	if (CHARSET_NEEDS_UNIBUF(inset) || CHARSET_NEEDS_UNIBUF(outset)) {
 #ifdef SCHISM_MACOS
 		TextEncoding hfsenc, utf16enc, inenc, outenc;
@@ -1242,7 +1223,7 @@ struct charset_iconv_v2 *charset_iconv_v2_open(charset_t inset, charset_t outset
 #elif defined(SCHISM_OS2)
 		ULONG cp;
 
-		if (!charset_os2_get_sys_cp(&cp) || !charset_os2_uconv_build(cp, &x->uc))
+		if (UniCreateUconvObject((UniChar *)L"@path=yes", &x->uc) != ULS_SUCCESS)
 			return NULL;
 #elif defined(SCHISM_WIN32)
 		x->cp = GetACP();
@@ -1261,7 +1242,7 @@ struct charset_iconv_v2 *charset_iconv_v2_open(charset_t inset, charset_t outset
 
 	if (!x->inconv || !x->outconv) {
 		/* Invalid selector */
-		free(x);
+		charset_iconv_v2_close(x);
 		return NULL;
 	}
 
@@ -1332,11 +1313,11 @@ int charset_to_unicode(struct charset_iconv_v2 *x, char **inbuf, size_t *insize)
 
 #if defined(SCHISM_OS2)
 	UniChar *u = x->uniconv;
-	size_t outlen = ARRAY_SIZE(x->uniconv), nonidentical;
+	size_t outlen = ARRAY_SIZE(x->uniconv), nonidentical = 0;
 	int rc;
 
-	rc = UniUconvToUcs(&x->uc, (void **)inbuf, insize, &u, &outlen, &nonidentical);
-	if (rc < 0)
+	rc = UniUconvToUcs(x->uc, (void **)inbuf, insize, &u, &outlen, &nonidentical);
+	if (rc != ULS_SUCCESS)
 		return -1;
 
 	/* whatever */
@@ -1458,18 +1439,18 @@ static charset_error_t charset_from_unicode(struct charset_iconv_v2 *x)
 		s = r;
 #elif defined(SCHISM_OS2)
 		int rc;
-		size_t nonidentical;
+		size_t nonidentical = 0;
 		UniChar *uniptr = x->uniconv;
 		size_t unisize = x->uniconvlen >> 1;
 		char *outptr = (char *)x->outbuf;
 		size_t outsize = sizeof(x->outbuf);
 
 		/* TODO maybe should error on nonidentical ?? */
-		rc = UniUconvFromUcs(&x->uc, &uniptr, &unisize, (void **)&outptr, &outsize, &nonidentical);
-		if (rc != 0 || rc != ULS_BUFFERFULL)
+		rc = UniUconvFromUcs(x->uc, &uniptr, &unisize, (void **)&outptr, &outsize, &nonidentical);
+		if (rc != 0 && rc != ULS_BUFFERFULL)
 			return CHARSET_ERROR_ENCODE;
 
-		s = (outptr - (char *)x->uniconv);
+		s = (outptr - (char *)x->outbuf);
 #elif defined(SCHISM_MACOS)
 		OSStatus err;
 		ByteCount bytes_consumed; // I love consuming media!
@@ -1617,6 +1598,8 @@ void charset_iconv_v2_close(struct charset_iconv_v2 *x)
 	if (CHARSET_NEEDS_UNIBUF(x->inset) || CHARSET_NEEDS_UNIBUF(x->outset)) {
 #ifdef SCHISM_MACOS
 		TECDisposeConverter(x->tec);
+#elif defined(SCHISM_OS2)
+		UniFreeUconvObject(x->uc);
 #endif
 	}
 #endif
@@ -1632,8 +1615,40 @@ static size_t charset_nulterm_string_size(const void *in, charset_t set)
 	charset_decode_t decoder;
 	charset_conv_to_ucs4_func to_ucs4;
 
-	/* otherwise use this */
+	/* many charsets can simply use strlen or wcslen */
+	switch (set) {
+#ifdef SCHISM_WIN32
+	case CHARSET_ANSI:
+#endif
+#ifdef SCHISM_OS2
+	case CHARSET_DOSCP:
+#endif
+#ifdef SCHISM_MACOS
+	case CHARSET_SYSTEMSCRIPT:
+#endif
+	case CHARSET_WINDOWS1252:
+	case CHARSET_CP437:
+	case CHARSET_ITF:
+	case CHARSET_CHAR:
+	case CHARSET_UTF8:
+		return strlen(in);
 
+	case CHARSET_WCHAR_T:
+#if WCHAR_MAX == 0xFFFF
+	/* Windows and OS/2 */
+	case CHARSET_UTF16LE:
+	case CHARSET_UTF16BE:
+	case CHARSET_UCS2LE:
+	case CHARSET_UCS2BE:
+#elif WCHAR_MAX == 0xFFFFFFFF
+	/* Linux, Mac OS X, etc */
+	case CHARSET_UCS4LE:
+	case CHARSET_UCS4BE:
+#endif
+		return wcslen(in) * sizeof(wchar_t);
+	}
+
+	/* otherwise ... */
 	to_ucs4 = charset_iconv_lookup_conv_to_ucs4(set);
 	if (!to_ucs4) {
 		return strlen(in); /* Might explode */
