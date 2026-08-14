@@ -64,9 +64,11 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 
 		va_start(ap, name);
 
-		argv[0] = name;
+		/* the cast is okay here -- this only gets passed to
+		 * posix_spawn or execv, both of which treat this as const */
+		argv[0] = (char *)name;
 		for (i = 1; i < (ARRAY_SIZE(argv) - 1); i++) {
-			char *arg = va_arg(ap, const char *);
+			char *arg = va_arg(ap, char *);
 			if (!arg)
 				break;
 
