@@ -172,6 +172,23 @@ static testresult_t test_slurp_common(slurp_t *fp)
 	RETURN_PASS;
 }
 
+testresult_t test_slurp(void)
+{
+	slurp_t fp;
+	char tmp[TEST_TEMP_FILE_NAME_LENGTH];
+	testresult_t r;
+
+	REQUIRE(test_temp_file(tmp, expected_result, ARRAY_SIZE(expected_result) - 1));
+
+	REQUIRE(slurp(&fp, tmp, NULL, 0) == 0);
+
+	r = test_slurp_common(&fp);
+
+	unslurp(&fp);
+
+	return r;
+}
+
 testresult_t test_slurp_memstream(void)
 {
 	slurp_t fp;

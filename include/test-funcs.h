@@ -131,6 +131,7 @@ TEST_FUNC(test_str_concat_123ok67)
 TEST_FUNC(test_str_dup)
 TEST_FUNC(test_str_trim)
 
+TEST_FUNC(test_slurp)
 TEST_FUNC(test_slurp_memstream)
 TEST_FUNC(test_slurp_2memstream)
 TEST_FUNC(test_slurp_sf2)
