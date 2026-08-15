@@ -33,6 +33,11 @@
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename, uint64_t size);
 
+#ifdef SLURP_BUFFERED
+/* wraps a slurp_t in a buffer */
+static void slurp_buffer(slurp_t *t, size_t bufsz);
+#endif
+
 int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 {
 	static int (*const init_funcs[])(slurp_t *t, const char *filename, uint64_t size) = {
@@ -47,8 +52,9 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 #endif
 		slurp_stdio_open_,
 	};
-	struct stat st;
-	size_t i;
+#ifdef SLURP_BUFFERED
+	size_t bufsz = 4096;
+#endif
 
 	if (!t)
 		return -1;
@@ -58,15 +64,21 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 	if (!strcmp(filename, "-")) {
 		slurp_stdio(t, stdin);
 	} else {
-		if (buf) {
-			st = *buf;
-		} else {
+		size_t i;
+		struct stat st;
+
+		if (!buf) {
 			if (os_stat(filename, &st) < 0)
 				return -1;
+
+			buf = &st;
 		}
 
-		if (!size)
-			size = st.st_size;
+#if defined(HAVE_STRUCT_STAT_ST_BLKSIZE) && defined(SLURP_BUFFERED)
+		/* Adjust buffer size according to stat hints */
+		bufsz = buf->st_blksize;
+#endif
+		size = buf->st_size;
 
 		for (i = 0; i < ARRAY_SIZE(init_funcs); i++) {
 			switch (init_funcs[i](t, filename, size)) {
@@ -112,19 +124,24 @@ finished: ; /* this semicolon is important because C */
 	slurp_rewind(t);
 #endif
 
-	uint8_t *mmdata;
-	size_t mmlen;
+	{
+		uint8_t *mmdata;
+		size_t mmlen;
 
-	if (mmcmp_unpack(t, &mmdata, &mmlen)) {
-		// clean up the existing data
-		if (t->closure)
-			t->closure(t);
+		if (mmcmp_unpack(t, &mmdata, &mmlen)) {
+			// clean up the existing data
+			unslurp(t);
 
-		// and put the new stuff in
-		slurp_memstream_free(t, mmdata, mmlen);
+			// and put the new stuff in
+			slurp_memstream_free(t, mmdata, mmlen);
+		}
 	}
 
 	slurp_rewind(t);
+
+#ifdef SLURP_BUFFERED
+	slurp_buffer(t, bufsz);
+#endif
 
 	// TODO re-add PP20 unpacker, possibly also handle other formats?
 
@@ -249,6 +266,11 @@ static int slurp_stdio_open_(slurp_t *t, const char *filename, SCHISM_UNUSED uin
 	fp = os_fopen(filename, "rb");
 	if (!fp)
 		return SLURP_OPEN_FAIL;
+
+#ifdef SLURP_BUFFERED
+	/* it's dumb to have two layers of buffering */
+	setbuf(fp, NULL);
+#endif
 
 	r = slurp_stdio(t, fp);
 	if (r != SLURP_OPEN_SUCCESS)
@@ -760,6 +782,7 @@ size_t slurp_read(slurp_t *t, void *ptr, size_t count)
 	return read_bytes;
 }
 
+
 uint64_t slurp_length(slurp_t *t)
 {
 	return t->length(t);
@@ -1015,6 +1038,124 @@ int slurp_decompress(slurp_t *fp, const struct slurp_decompress_vtable *vtbl)
 
 	return 0;
 }
+
+/* ------------------------------------------------------------------------ */
+/* buffered slurp() */
+
+#ifdef SLURP_BUFFERED
+/* optimize allocations: only one here */
+struct buffer_alloc {
+	slurp_t fp;
+	char buf[];
+};
+
+static int slurp_buffered_seek(slurp_t *t, int64_t off, int whence)
+{
+	/* Reset */
+	t->internal.buffered.bufptr = NULL;
+	t->internal.buffered.bufcnt = 0;
+
+	return slurp_seek(t->internal.buffered.fp, off, whence);
+}
+
+static int64_t slurp_buffered_tell(slurp_t *t)
+{
+	int64_t s;
+
+	s = slurp_tell(t->internal.buffered.fp);
+	if (s < 0) return s;
+
+	if (!t->internal.buffered.bufptr) return s;
+
+	/* ok */
+	return s;
+}
+
+static size_t slurp_buffered_read(slurp_t *t, void *ptr, size_t sz)
+{
+	/* fill up the buffer */
+	size_t tocpy = 0;
+
+	if (!t->internal.buffered.bufcnt) {
+		/* don't care to handle this case */
+		if (sz >= t->internal.buffered.bufsz)
+			goto ee;
+
+		t->internal.buffered.bufcnt = slurp_peek(t->internal.buffered.fp, t->internal.buffered.buf, t->internal.buffered.bufsz);
+		if (!t->internal.buffered.bufcnt)
+			return 0; /* nah */
+
+		t->internal.buffered.bufptr = t->internal.buffered.buf;
+	}
+
+	tocpy = MIN(sz, t->internal.buffered.bufcnt);
+	memcpy(ptr, t->internal.buffered.bufptr, tocpy);
+	t->internal.buffered.bufcnt -= tocpy;
+	t->internal.buffered.bufptr += tocpy;
+	slurp_seek(t->internal.buffered.fp, tocpy, SEEK_CUR);
+
+	/* already covered the whole buffer? */
+	if (sz == tocpy)
+		return tocpy;
+
+ee:
+	return tocpy + slurp_read(t->internal.buffered.fp, (char *)ptr + tocpy, sz - tocpy);
+}
+
+static uint64_t slurp_buffered_length(slurp_t *t)
+{
+	return slurp_length(t->internal.buffered.fp);
+}
+
+static int slurp_buffered_eof(slurp_t *t)
+{
+	return slurp_eof(t->internal.buffered.fp);
+}
+
+/* this really should not take a size_t */
+static int slurp_buffered_available(slurp_t *t, size_t x, int whence)
+{
+	/* could be better */
+	return slurp_could_seek(t->internal.buffered.fp, x, whence);
+}
+
+static void slurp_buffered_closure(slurp_t *t)
+{
+	unslurp(t->internal.buffered.fp);
+	/* also frees the buffer */
+	free(t->internal.buffered.fp);
+}
+
+/* wraps a slurp_t in a buffer */
+static void slurp_buffer(slurp_t *t, size_t bufsz)
+{
+	struct buffer_alloc *a;
+
+	if (!bufsz) return; /* ok */
+
+	a = malloc(sizeof(*a) + bufsz);
+	if (!a)
+		return;
+
+	memcpy(&a->fp, t, sizeof(slurp_t));
+	memset(t, 0, sizeof(slurp_t));
+
+	t->seek = slurp_buffered_seek;
+	t->tell = slurp_buffered_tell;
+	t->read = slurp_buffered_read;
+	t->length = slurp_buffered_length;
+	t->closure = slurp_buffered_closure;
+	//t->eof = slurp_buffered_eof;
+	t->available = slurp_buffered_available;
+
+	t->internal.buffered.bufptr = NULL;
+	t->internal.buffered.buf = a->buf;
+	t->internal.buffered.bufcnt = 0;
+	t->internal.buffered.bufsz = bufsz;
+
+	t->internal.buffered.fp = &a->fp;
+}
+#endif
 
 /* ------------------------------------------------------------------------ */
 
