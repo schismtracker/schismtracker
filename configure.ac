@@ -387,6 +387,7 @@ AC_TYPE_SIZE_T
 AC_TYPE_MODE_T
 AC_TYPE_SSIZE_T
 AC_STRUCT_TM
+AC_STRUCT_ST_BLKSIZE
 
 dnl need size of void pointer
 AC_CHECK_SIZEOF([void *])
