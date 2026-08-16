@@ -138,6 +138,8 @@ struct slurp_struct_ {
 			char *buf;
 			size_t bufsz;
 
+			int64_t off;
+
 			slurp_t *fp;
 		} buffered;
 #endif

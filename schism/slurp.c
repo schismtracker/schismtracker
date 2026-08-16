@@ -764,18 +764,25 @@ size_t slurp_peek(slurp_t *t, void *ptr, size_t count)
 	return read_bytes;
 }
 
-size_t slurp_read(slurp_t *t, void *ptr, size_t count)
+static size_t slurp_read_nozero(slurp_t *t, void *ptr, size_t count)
 {
-	size_t read_bytes = slurp_limit_count(t, count);
+	count = slurp_limit_count(t, count);
 
-	if (read_bytes > 0) {
+	if (count > 0) {
 		if (t->read) {
-			read_bytes = t->read(t, ptr, read_bytes);
+			count = t->read(t, ptr, count);
 		} else {
-			read_bytes = t->peek(t, ptr, read_bytes);
-			slurp_seek(t, read_bytes, SEEK_CUR);
+			count = t->peek(t, ptr, count);
+			slurp_seek(t, count, SEEK_CUR);
 		}
 	}
+
+	return count;
+}
+
+size_t slurp_read(slurp_t *t, void *ptr, size_t count)
+{
+	size_t read_bytes = slurp_read_nozero(t, ptr, count);
 
 	slurp_fill_remaining(t, ptr, read_bytes, count);
 
@@ -1043,6 +1050,12 @@ int slurp_decompress(slurp_t *fp, const struct slurp_decompress_vtable *vtbl)
 /* buffered slurp() */
 
 #ifdef SLURP_BUFFERED
+# define SLURP_SEEK_PRESERVE_BUFFER 1
+
+#if 0 /* This is for testing */
+# define SLURP_BUFFER_OVERRIDE 2048
+#endif
+
 /* optimize allocations: only one here */
 struct buffer_alloc {
 	slurp_t fp;
@@ -1051,55 +1064,172 @@ struct buffer_alloc {
 
 static int slurp_buffered_seek(slurp_t *t, int64_t off, int whence)
 {
-	/* Reset */
+	int64_t n;
+	uint64_t len;
+	int64_t newbufferedoff;
+
+	len = slurp_length(t->internal.buffered.fp);
+
+	switch (whence) {
+	case SEEK_SET: n = 0; break;
+	case SEEK_CUR: n = t->internal.buffered.off; break;
+	case SEEK_END: n = len; break;
+	default: {
+		t->internal.buffered.bufptr = NULL;
+		t->internal.buffered.bufcnt = 0;
+		return -1;
+	}
+	}
+
+	n += off;
+
+	if (n > len) {
+		t->internal.buffered.bufptr = NULL;
+		t->internal.buffered.bufcnt = 0;
+		return -1;
+	}
+
+	newbufferedoff = n;
+
+#ifdef SLURP_SEEK_PRESERVE_BUFFER
+	/* okay, now check if we can keep the same buffer
+	 *
+	 * bufcnt == 0 means that there is nothing left in the buffer, BUT
+	 * bufptr == NULL means there is no buffer in the first place
+	 *
+	 * this is an important distinction here -- if we have a valid buffer
+	 * even at bufcnt == 0 we ought to use it
+	 *
+	 * TODO: the crux of this logic should really be in read(), as we
+	 * could seek twice, the first being outside of the buffer, and
+	 * the second being inside of it, and we'll lose our buffer. */
+	if (t->internal.buffered.bufptr) {
+		int64_t bufstart;
+		size_t bufcnt;
+		ptrdiff_t ptroff;
+
+		/* how far were we? */
+		ptroff = t->internal.buffered.bufptr - t->internal.buffered.buf;
+
+		/* the initial value of bufcnt (may be smaller than bufsz) */
+		bufcnt = t->internal.buffered.bufcnt + ptroff;
+
+		/* where the file position is relative to the buffer start */
+		bufstart = n - (t->internal.buffered.off - ptroff);
+
+		/* <= is not an off-by-one -- the bufptr will just point at the end */
+		if (bufstart >= 0 && bufstart <= bufcnt) {
+			t->internal.buffered.bufptr = t->internal.buffered.buf + bufstart;
+			t->internal.buffered.bufcnt = bufcnt - bufstart;
+
+			/* :3 */
+			n += bufcnt - bufstart;
+		} else {
+			/* invalidate */
+			t->internal.buffered.bufptr = NULL;
+			t->internal.buffered.bufcnt = 0;
+		}
+	} /* else we don't even HAVE a buffer (never read?) */
+#else
+	/* kill it */
 	t->internal.buffered.bufptr = NULL;
 	t->internal.buffered.bufcnt = 0;
+#endif
 
-	return slurp_seek(t->internal.buffered.fp, off, whence);
+	t->internal.buffered.off = newbufferedoff;
+
+	return slurp_seek(t->internal.buffered.fp, n, SEEK_SET);
 }
 
 static int64_t slurp_buffered_tell(slurp_t *t)
 {
-	int64_t s;
+	return t->internal.buffered.off;
+}
 
-	s = slurp_tell(t->internal.buffered.fp);
-	if (s < 0) return s;
+static size_t slurp_buffered_empty_buffer(slurp_t *t, void **ptr, size_t *sz)
+{
+	size_t tocpy;
 
-	if (!t->internal.buffered.bufptr) return s;
+	/* do nothing */
+	if (!t->internal.buffered.bufcnt)
+		return 0;
 
-	/* ok */
-	return s;
+	/* handle the buffer */
+	tocpy = MIN(*sz, t->internal.buffered.bufcnt);
+	memcpy(*ptr, t->internal.buffered.bufptr, tocpy);
+	t->internal.buffered.bufcnt -= tocpy;
+	t->internal.buffered.bufptr += tocpy;
+	*sz -= tocpy;
+	*ptr = (char *)*ptr + tocpy;
+
+	return tocpy;
+}
+
+static size_t slurp_buffered_fill_buffer(slurp_t *t)
+{
+	if (t->internal.buffered.bufcnt)
+		return 0;
+
+	/* fill the buffer with next bufsz bytes
+	 * we do actually need to use the nozero implementation, as if
+	 * this returns 0, the data still in there will remain valid
+	 * and can be useful later */
+	t->internal.buffered.bufcnt = slurp_read_nozero(t->internal.buffered.fp,
+			t->internal.buffered.buf, t->internal.buffered.bufsz);
+	if (!t->internal.buffered.bufcnt)
+		return 0;
+
+	t->internal.buffered.bufptr = t->internal.buffered.buf;
+
+	return t->internal.buffered.bufcnt;
 }
 
 static size_t slurp_buffered_read(slurp_t *t, void *ptr, size_t sz)
 {
 	/* fill up the buffer */
-	size_t tocpy = 0;
+	size_t r, szunbuffered;
 
-	if (!t->internal.buffered.bufcnt) {
-		/* don't care to handle this case */
-		if (sz >= t->internal.buffered.bufsz)
-			goto ee;
+	/* this holds the return value */
+	r = 0;
 
-		t->internal.buffered.bufcnt = slurp_peek(t->internal.buffered.fp, t->internal.buffered.buf, t->internal.buffered.bufsz);
-		if (!t->internal.buffered.bufcnt)
-			return 0; /* nah */
+	if (!sz)
+		goto done;
 
-		t->internal.buffered.bufptr = t->internal.buffered.buf;
+	/* empty anything thats left over in the buffer */
+	r += slurp_buffered_empty_buffer(t, &ptr, &sz);
+	if (!sz)
+		goto done;
+
+	/* if sz is large enough, bypass the buffer and fill it directly.
+	 * we fill enough to where the last N bytes that are less than the
+	 * buffer size are filled in the buffer. */
+	szunbuffered = sz - (sz % t->internal.buffered.bufsz);
+	if (szunbuffered > 0) {
+		size_t re;
+
+		/* go! */
+		re = slurp_read(t->internal.buffered.fp, ptr, szunbuffered);
+
+		r += re;
+		ptr = (char *)ptr + re;
+		sz -= re;
+
+		/* we don't need to invalidate the buffer here -- it's already
+		 * empty if we had space left over after the first call */
+
+		if (!sz) /* already finished? */
+			goto done;
 	}
 
-	tocpy = MIN(sz, t->internal.buffered.bufcnt);
-	memcpy(ptr, t->internal.buffered.bufptr, tocpy);
-	t->internal.buffered.bufcnt -= tocpy;
-	t->internal.buffered.bufptr += tocpy;
-	slurp_seek(t->internal.buffered.fp, tocpy, SEEK_CUR);
+	/* refill the buffer */
+	slurp_buffered_fill_buffer(t);
 
-	/* already covered the whole buffer? */
-	if (sz == tocpy)
-		return tocpy;
+	/* ... and empty what we need */
+	r += slurp_buffered_empty_buffer(t, &ptr, &sz);
 
-ee:
-	return tocpy + slurp_read(t->internal.buffered.fp, (char *)ptr + tocpy, sz - tocpy);
+done:
+	t->internal.buffered.off += r;
+	return r;
 }
 
 static uint64_t slurp_buffered_length(slurp_t *t)
@@ -1107,16 +1237,18 @@ static uint64_t slurp_buffered_length(slurp_t *t)
 	return slurp_length(t->internal.buffered.fp);
 }
 
-static int slurp_buffered_eof(slurp_t *t)
-{
-	return slurp_eof(t->internal.buffered.fp);
-}
-
 /* this really should not take a size_t */
 static int slurp_buffered_available(slurp_t *t, size_t x, int whence)
 {
-	/* could be better */
-	return slurp_could_seek(t->internal.buffered.fp, x, whence);
+	/* fake it til u make it */
+	switch (whence) {
+	case SEEK_CUR:
+		x += t->internal.buffered.off;
+		whence = SEEK_SET;
+		break;
+	}
+
+	return slurp_could_seek(t->internal.buffered.fp, x, SEEK_SET);
 }
 
 static void slurp_buffered_closure(slurp_t *t)
@@ -1126,12 +1258,27 @@ static void slurp_buffered_closure(slurp_t *t)
 	free(t->internal.buffered.fp);
 }
 
+/* forward to fp implementation
+ *
+ * note that because this is optional this pointer is only filled if
+ * the child pointer is not NULL
+ *
+ * otherwise, we just malloc a buffer and send it off */
+static int slurp_buffered_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t length, void *userdata)
+{
+	return t->internal.buffered.fp->receive(t, callback, length, userdata);
+}
+
 /* wraps a slurp_t in a buffer */
 static void slurp_buffer(slurp_t *t, size_t bufsz)
 {
 	struct buffer_alloc *a;
 
 	if (!bufsz) return; /* ok */
+
+#ifdef SLURP_BUFFER_OVERRIDE
+	bufsz = SLURP_BUFFER_OVERRIDE;
+#endif
 
 	a = malloc(sizeof(*a) + bufsz);
 	if (!a)
@@ -1145,8 +1292,9 @@ static void slurp_buffer(slurp_t *t, size_t bufsz)
 	t->read = slurp_buffered_read;
 	t->length = slurp_buffered_length;
 	t->closure = slurp_buffered_closure;
-	//t->eof = slurp_buffered_eof;
 	t->available = slurp_buffered_available;
+	if (a->fp.receive)
+		t->receive = slurp_buffered_receive;
 
 	t->internal.buffered.bufptr = NULL;
 	t->internal.buffered.buf = a->buf;
@@ -1154,6 +1302,9 @@ static void slurp_buffer(slurp_t *t, size_t bufsz)
 	t->internal.buffered.bufsz = bufsz;
 
 	t->internal.buffered.fp = &a->fp;
+
+	/* WHAT'LL IT BE FELLAS? */
+	slurp_buffered_fill_buffer(t);
 }
 #endif
 
