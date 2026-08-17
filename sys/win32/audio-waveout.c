@@ -325,7 +325,7 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 		dev->wavehdr[i].dwUser = WAVEHDR_DWUSER_PREPARED;
 	}
 
-	if (audio_simple_init(dev, &waveout_vtbl, desired->callback))
+	if (audio_simple_init(dev, &waveout_vtbl, desired->callback, AUDIO_SPEC_SILENCE(*desired)))
 		goto fail;
 
 	obtained->freq = format.nSamplesPerSec;
@@ -408,4 +408,6 @@ const schism_audio_backend_t schism_audio_backend_waveout = {
 	.lock_device = audio_simple_device_lock,
 	.unlock_device = audio_simple_device_unlock,
 	.pause_device = audio_simple_device_pause,
+
+	.worker = audio_simple_device_worker,
 };
