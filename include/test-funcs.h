@@ -245,5 +245,6 @@ TEST_FUNC(test_ver_parse_cdate)
 
 TEST_FUNC(test_iff_chunk_peek_ex_middle)
 TEST_FUNC(test_iff_chunk_peek_ex_end_of_file)
+TEST_FUNC(test_iff_chunk_peek_ex_truncated)
 
 #undef TEST_FUNC

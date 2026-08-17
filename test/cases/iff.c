@@ -30,25 +30,34 @@
 
 #define IFFID_fmt  UINT32_C(0x666D7420)
 
+/* All of the data is still technically separated still;
+ * but they are based on a common ancestor */
+
+#define WAVE_hdr \
+	"WAVE" /* Tail of the RIFF header */
+
+#define WAVE_CHUNK_fmt \
+	"fmt " /* chunk identifier */ \
+	"\x10\x00\x00\x00" /* length: 16 bytes */ \
+	"\x01\x00" /* format: uncompressed PCM (1) */ \
+	"\x02\x00" /* channel count */ \
+	"\xDC\x9B\x00\x00" /* sample rate (0x9BDC == 39,900 Hz) */ \
+	"\x70\x6F\x02\x00" /* "byte rate" (bytes per sample * sample rate) */ \
+	"\x04\x00" /* bytes per sample (stereo 16-bit) */ \
+	"\x10\x00" /* bits per sample */
+
+/* doesn't actually contain anything */
+#define WAVE_CHUNK_data \
+	"data" /* chunk identifier */ \
+	"\x80\x61\x01\x00" /* random size (??) */
+
 testresult_t test_iff_chunk_peek_ex_middle(void)
 {
 	// Arrange
 
-	static const char input_data[] = {
-		'W', 'A', 'V', 'E', // Tail of the RIFF header
-		'f', 'm', 't', ' ', // Actual fmt chunk from a real WAV file
-		0x10, 0x00, 0x00, 0x00, // length: 16 bytes
-		0x01, 0x00, // format: uncompressed PCM (1)
-		0x02, 0x00, // channel count
-		0xDC, 0x9B, 0x00, 0x00, // sample rate (0x9BDC == 39,900 Hz)
-		0x70, 0x6F, 0x02, 0x00, // average byte rate (samples x 2 bytes per sample x 2 channels = 0x26F70 == 159,600)
-		0x04, 0x00, // frame alignment (4 bytes)
-		0x10, 0x00, // bits per sample (16)
-		'd', 'a', 't', 'a', // Lead in to the following chunk
-		0x80, 0x61, 0x01, 0x00, // etc.
-	};
+	static const char input_data[sizeof(WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data) - 1] = WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data;
 
-	int fmt_start = 4;
+	int fmt_start = sizeof(WAVE_hdr) - 1;
 	int fmt_content_start = fmt_start + 8;
 	uint32_t fmt_length;
 
@@ -89,18 +98,7 @@ testresult_t test_iff_chunk_peek_ex_middle(void)
 testresult_t test_iff_chunk_peek_ex_end_of_file(void)
 {
 	// Arrange
-
-	static const char input_data[] = {
-		'W', 'A', 'V', 'E', // Tail of the RIFF header
-		'f', 'm', 't', ' ', // Actual fmt chunk from a real WAV file
-		0x10, 0x00, 0x00, 0x00, // length: 16 bytes
-		0x01, 0x00, // format: uncompressed PCM (1)
-		0x02, 0x00, // channel count
-		0xDC, 0x9B, 0x00, 0x00, // sample rate (0x9BDC == 39,900 Hz)
-		0x70, 0x6F, 0x02, 0x00, // average byte rate (samples x 2 bytes per sample x 2 channels = 0x26F70 == 159,600)
-		0x04, 0x00, // frame alignment (4 bytes)
-		0x10, 0x00, // bits per sample (16)
-	};
+	static const char input_data[sizeof(WAVE_hdr WAVE_CHUNK_fmt) - 1] = WAVE_hdr WAVE_CHUNK_fmt;
 
 	int fmt_start = 4;
 	int fmt_content_start = fmt_start + 8;
@@ -130,6 +128,48 @@ testresult_t test_iff_chunk_peek_ex_end_of_file(void)
 	ASSERT(chunk.id == IFFID_fmt);
 	ASSERT(chunk.size == 16);
 	ASSERT(chunk.offset == fmt_content_start);
+
+	RETURN_PASS;
+}
+
+testresult_t test_iff_chunk_peek_ex_truncated(void)
+{
+	// Arrange
+	static const char input_data[sizeof(WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data) - 1] = WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data;
+
+	int fmt_start = 4;
+	int fmt_content_start = fmt_start + 8;
+	uint32_t fmt_length;
+
+	memcpy(&fmt_length, &input_data[fmt_start + 4], sizeof(fmt_length));
+
+	fmt_length = bswapLE32(fmt_length);
+
+	slurp_t fp;
+
+	iff_chunk_t chunk = { 0 };
+
+	int success;
+
+	slurp_memstream(&fp, input_data, sizeof(input_data));
+
+	slurp_seek(&fp, fmt_start, SEEK_SET);
+
+	// Act
+	success = iff_chunk_peek_ex(&chunk, &fp, IFF_CHUNK_ALIGNED | IFF_CHUNK_SIZE_LE);
+
+	// Assert
+	ASSERT(success);
+	ASSERT(slurp_tell(&fp) == (sizeof(WAVE_hdr WAVE_CHUNK_fmt) - 1));
+
+	ASSERT(chunk.id == IFFID_fmt);
+	ASSERT(chunk.size == 16);
+	ASSERT(chunk.offset == fmt_content_start);
+
+	success = iff_chunk_peek_ex(&chunk, &fp, IFF_CHUNK_ALIGNED | IFF_CHUNK_SIZE_LE);
+
+	ASSERT(!success);
+	/* where is the file pointer supposed to be? */
 
 	RETURN_PASS;
 }
