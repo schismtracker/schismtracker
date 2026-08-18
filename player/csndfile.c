@@ -749,6 +749,8 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 
 CSF_DECODE_DELTA(8, 1) /* csf_decode_delta_8bit_1chn */
 CSF_DECODE_DELTA(8, 2) /* csf_decode_delta_8bit_2chn */
+CSF_DECODE_DELTA(16, 1) /* csf_decode_delta_16bit_1chn */
+CSF_DECODE_DELTA(16, 2) /* csf_decode_delta_16bit_2chn */
 
 #undef CSF_DECODE_DELTA
 
@@ -821,8 +823,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(7,M,LE,PCMS):
 		len = sample->length;
 
-		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
-
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
@@ -859,9 +859,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			/* use fast 8-bit XOR function */
 			mem_xor(sample->data, len, 0x80);
 			break;
-		default:
-			/* nottin */
-			break;
 		}
 
 		break;
@@ -896,9 +893,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			/* use fast 8-bit XOR function */
 			mem_xor(sample->data, len, 0x80);
 			break;
-		default:
-			/* nottin */
-			break;
 		}
 
 		break;
@@ -927,9 +921,6 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			/* use fast 8-bit XOR function */
 			mem_xor(sample->data, len, 0x80);
 			break;
-		default:
-			/* nottin */
-			break;
 		}
 
 		break;
@@ -942,7 +933,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,M,BE,PCMD):
 	case SF(16,M,BE,PCMS):
 	case SF(16,M,BE,PCMU): {
-		uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x8000 : 0;
+		uint32_t j;
+		uint16_t iadd;
 
 		len = sample->length;
 
@@ -954,10 +946,25 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 		// process
 		uint16_t *data = (uint16_t *)sample->data;
-		for (uint32_t j = 0; j < len; j++) {
-			data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
-			if ((flags & SF_ENC_MASK) == SF_PCMD)
-				iadd = data[j];
+
+		switch (flags & SF_END_MASK) {
+#ifdef WORDS_BIGENDIAN
+		case SF_LE:
+#else
+		case SF_BE:
+#endif
+			for (j = 0; j < len; j++)
+				data[j] = bswap_16(data[j]);
+			break;
+		}
+
+		switch (flags & SF_ENC_MASK) {
+		case SF_PCMD:
+			csf_decode_delta_16bit_1chn(data, sample->length);
+			break;
+		case SF_PCMU:
+			mem_xor_16(data, len, 0x8000);
+			break;
 		}
 
 		len *= 2;
@@ -972,21 +979,40 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,SS,BE,PCMD):
 	case SF(16,SS,BE,PCMS):
 	case SF(16,SS,BE,PCMU): {
+		uint32_t j;
+		uint16_t *data;
+		int c;
+
 		len = sample->length * 2;
 
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
-		for (int c = 0; c < 2; c++) {
-			uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x8000 : 0;
-
-			uint16_t *data = (uint16_t *)sample->data + c;
-			for (uint32_t j = 0; j < len; j += 2) {
+		for (c = 0; c < 2; c++) {
+			data = (uint16_t *)sample->data + c;
+			for (j = 0; j < len; j += 2)
 				slurp_read(fp, &data[j], 2);
-				data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
-				if ((flags & SF_ENC_MASK) == SF_PCMD)
-					iadd = data[j];
-			}
+		}
+
+		switch (flags & SF_END_MASK) {
+#ifdef WORDS_BIGENDIAN
+		case SF_LE:
+#else
+		case SF_BE:
+#endif
+			/* Byteswap if necessary */
+			for (j = 0; j < len; j++)
+				data[j] = bswap_16(data[j]);
+			break;
+		}
+
+		switch (flags & SF_ENC_MASK) {
+		case SF_PCMD:
+			csf_decode_delta_16bit_2chn(data, sample->length);
+			break;
+		case SF_PCMU:
+			mem_xor_16(data, len, 0x8000);
+			break;
 		}
 
 		len *= 2;
@@ -1001,6 +1027,9 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,SI,BE,PCMS):
 	case SF(16,SI,BE,PCMU):
 	case SF(16,SI,BE,PCMD): {
+		uint16_t *data;
+		uint32_t j;
+
 		len = sample->length * 2;
 
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
@@ -1008,15 +1037,27 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 		slurp_read(fp, sample->data, len * 2);
 
-		for (int c = 0; c < 2; c++) {
-			uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x8000 : 0;
+		data = (uint16_t *)sample->data;
 
-			uint16_t *data = (uint16_t *)sample->data + c;
-			for (uint32_t j = 0; j < len; j += 2) {
-				data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
-				if ((flags & SF_ENC_MASK) == SF_PCMD)
-					iadd = data[j];
-			}
+		switch (flags & SF_END_MASK) {
+#ifdef WORDS_BIGENDIAN
+		case SF_LE:
+#else
+		case SF_BE:
+#endif
+			/* Byteswap if necessary */
+			for (j = 0; j < len; j++)
+				data[j] = bswap_16(data[j]);
+			break;
+		}
+
+		switch (flags & SF_ENC_MASK) {
+		case SF_PCMD:
+			csf_decode_delta_16bit_2chn(data, sample->length);
+			break;
+		case SF_PCMU:
+			mem_xor_16(data, len, 0x8000);
+			break;
 		}
 
 		len *= 2;
