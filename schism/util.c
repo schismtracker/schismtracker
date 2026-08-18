@@ -211,19 +211,27 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 /* mem_xor: XORs all of the bytes in vbuf.
  * uses SIMD-enhanced versions if possible. */
 
-#define MEM_XOR(attributes, name) \
-	attributes static void mem_xor_##name(void *vbuf, size_t len, unsigned char c) \
+#ifdef __GNUC__
+# define MAY_ALIAS __attribute__((__may_alias__))
+#else
+# define MAY_ALIAS
+#endif
+
+#define MEM_XOR(attributes, name, type) \
+	attributes static void mem_xor_##name(void *vbuf, size_t len, type c) \
 	{ \
-		unsigned char *buf = vbuf; \
+		type *buf = vbuf; \
 	\
-		if (len >= 4) { \
+		if (len >= sizeof(uint32_t) / sizeof(type)) { \
 			size_t len8; \
 			uint32_t cccc; \
 	\
 			/* expand to all bytes */ \
 			cccc = c; \
-			cccc |= (cccc << 8); \
-			cccc |= (cccc << 16); \
+			if (sizeof(c) <= 1) \
+				cccc |= (cccc << 8); \
+			if (sizeof(c) <= 2) \
+				cccc |= (cccc << 16); \
 	\
 			/* align the pointer */ \
 			for (; (uintptr_t)buf % sizeof(uint32_t); len--) \
@@ -231,21 +239,21 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 	\
 			/* process in chunks of 8 32-bit integers */ \
 			for (len8 = (len / (sizeof(uint32_t) * 8)); len8 > 0; len8--) { \
-				((uint32_t *)buf)[0] ^= cccc; \
-				((uint32_t *)buf)[1] ^= cccc; \
-				((uint32_t *)buf)[2] ^= cccc; \
-				((uint32_t *)buf)[3] ^= cccc; \
-				((uint32_t *)buf)[4] ^= cccc; \
-				((uint32_t *)buf)[5] ^= cccc; \
-				((uint32_t *)buf)[6] ^= cccc; \
-				((uint32_t *)buf)[7] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[0] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[1] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[2] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[3] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[4] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[5] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[6] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[7] ^= cccc; \
 				buf += (8 * sizeof(uint32_t)); \
 			} \
 			len %= (sizeof(uint32_t) * 8); \
 	\
 			/* process in chunks of 32-bit integers */ \
 			for (len8 = len / sizeof(uint32_t); len8 > 0; len8--) { \
-				((uint32_t *)buf)[0] ^= cccc; \
+				((uint32_t MAY_ALIAS *)buf)[0] ^= cccc; \
 				buf += sizeof(uint32_t); \
 			} \
 			len %= sizeof(uint32_t); \
@@ -258,20 +266,24 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0)
 # ifdef SCHISM_SSE2
-MEM_XOR(__attribute__((__target__("sse2"))), sse2)
+MEM_XOR(__attribute__((__target__("sse2"))), sse2, unsigned char)
+MEM_XOR(__attribute__((__target__("sse2"))), 16_sse2, uint16_t)
 #  define MEM_XOR_SSE2
 # endif
 # ifdef SCHISM_AVX2
-MEM_XOR(__attribute__((__target__("avx2"))), avx2)
+MEM_XOR(__attribute__((__target__("avx2"))), avx2, unsigned char)
+MEM_XOR(__attribute__((__target__("avx2"))), 16_avx2, uint16_t)
 #  define MEM_XOR_AVX2
 # endif
 # ifdef SCHISM_ALTIVEC
-MEM_XOR(__attribute__((__target__("altivec"))), altivec)
+MEM_XOR(__attribute__((__target__("altivec"))), altivec, unsigned char)
+MEM_XOR(__attribute__((__target__("altivec"))), 16_altivec, uint16_t)
 #  define MEM_XOR_ALTIVEC
 # endif
 #endif
 
-MEM_XOR(/* nothing */, c)
+MEM_XOR(/* nothing */, c, unsigned char)
+MEM_XOR(/* nothing */, 16_c, uint16_t)
 
 #undef MEM_XOR
 
@@ -297,6 +309,30 @@ void mem_xor(void *vbuf, size_t len, unsigned char c)
 #endif
 
 	/* fallback to plain C implementation */
+	mem_xor_c(vbuf, len, c);
+}
+
+void mem_xor_16(void *vbuf, size_t len, uint16_t c)
+{
+#ifdef MEM_XOR_AVX2
+	if (cpu_has_feature(CPU_FEATURE_AVX2)) {
+		mem_xor_16_avx2(vbuf, len, c);
+		return;
+	}
+#endif
+#ifdef MEM_XOR_SSE2
+	if (cpu_has_feature(CPU_FEATURE_SSE2)) {
+		mem_xor_16_sse2(vbuf, len, c);
+		return;
+	}
+#endif
+#ifdef MEM_XOR_ALTIVEC
+	if (cpu_has_feature(CPU_FEATURE_ALTIVEC)) {
+		mem_xor_16_altivec(vbuf, len, c);
+		return;
+	}
+#endif
+
 	mem_xor_c(vbuf, len, c);
 }
 

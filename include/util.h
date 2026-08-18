@@ -122,6 +122,8 @@ int msgbox(int style, const char *title, const char *fmt, ...);
 
 /* fast XOR with a byte value */
 void mem_xor(void *vbuf, size_t len, unsigned char c);
+/* fast XOR with a word value -- len is in uint16_ts, so num of bytes / 2 */
+void mem_xor_16(void *vbuf, size_t len, uint16_t c);
 
 void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
 	size_t stride);
