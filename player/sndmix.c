@@ -1212,7 +1212,7 @@ int32_t csf_read_note(song_t *csf)
 			if (!(chan->flags & CHN_NOTEFADE))
 				rn_gen_key(csf, chan, cn, frequency, vol);
 
-			if (chan->flags & CHN_NEWNOTE) {
+			if ((chan->flags & CHN_NEWNOTE) && !(chan->flags & CHN_SKIPFILTER)) {
 				setup_channel_filter(chan, 1, 256, csf->mix_frequency);
 			}
 

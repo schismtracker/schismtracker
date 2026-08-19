@@ -775,31 +775,31 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 
 		switch (param & 0x0F) {
 
-		case 0x00: /* S90: Surround Off (modplug extension) */
+		case 0x00: /* S90: Surround off (ModPlug extension) */
 			chan->flags &= ~CHN_SURROUND;
 			chan->channel_panning = 0; // cs: wtf does ts do???
 			break;
 
-		case 0x01: /* S91: Surround On */
+		case 0x01: /* S91: Surround on */
 			chan->flags |= CHN_SURROUND;
 			chan->panbrello_delta = 0;
 			chan->panning = 128;
 			chan->channel_panning = 0;
 			break;
 
-		/* ---- ModPlug extensions ----
-		 *
-		 * S98: Reverb Off
-		 * S99: Reverb On
-		 * S9A: 2-Channels Surround Mode (??)
-		 * S9B: 4-Channels Surround Mode (??)
-		 * S9C: IT filter mode
-		 * S9D: MPT filter mode (??) */
+		case 0x0C: /* S9C: Global filters (ModPlug extension) */
+			csf->flags &= ~SONG_MPTFILTERMODE;
+			break;
 
-		case 0x0E: /* S9E: Go forward */
+		case 0x0D: /* S9D: Local filters (ModPlug extension) */
+			csf->flags |= SONG_MPTFILTERMODE;
+			break;
+
+		case 0x0E: /* S9E: Go forward (Modplug extension) */
 			chan->flags &= ~(CHN_PINGPONGFLAG);
 			break;
-		case 0x0F: /* S9F: Go backward */
+
+		case 0x0F: /* S9F: Go backward (ModPlug extension) */
 			/* Set playback position to the end if the sample has just started */
 			if (csf_smp_pos_equals_zero(chan->position)
 					&& chan->length
@@ -807,6 +807,12 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 				chan->position = csf_smp_pos(chan->length - 1, 0xFFFFFFFF);
 			chan->flags |= CHN_PINGPONGFLAG;
 			break;
+
+		/* ModPlug extensions not implemented yet:
+		 * S98: Reverb off
+		 * S99: Reverb on
+		 * S9A: Center surround mode
+		 * S9B: Quad (pannable) surround mode */
 		}
 		break;
 	// SAx: Set 64k Offset
@@ -1625,14 +1631,23 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		}
 		chan->left_volume = chan->right_volume = 0;
 		// Setup Initial Filter for this note
+		int use_filter = !(csf->flags & SONG_MPTFILTERMODE);
 		if (penv) {
-			if (penv->ifr & 0x80)
+			if (penv->ifr & 0x80) {
 				chan->resonance = penv->ifr & 0x7F;
-			if (penv->ifc & 0x80)
+				use_filter = 1;
+			}
+			if (penv->ifc & 0x80) {
 				chan->cutoff = penv->ifc & 0x7F;
+				use_filter = 1;
+			}
 		} else {
 			chan->vol_swing = chan->pan_swing = 0;
 		}
+		if (use_filter)
+			chan->flags &= ~CHN_SKIPFILTER;
+		else
+			chan->flags |= CHN_SKIPFILTER;
 	}
 }
 

@@ -75,6 +75,7 @@
 #define CHN_NNAMUTE             0x10000000 // turn off mute, but have it reset later
 #define CHN_ADLIB               0x20000000 // OPL mode
 #define CHN_LOOP_WRAPPED        0x40000000 // loop has just wrapped to the beginning
+#define CHN_SKIPFILTER          0x80000000 // skip setting up filter on notes (local filter mode)
 
 #define CHN_SAMPLE_FLAGS (CHN_16BIT | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP \
 	| CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO | CHN_PINGPONGFLAG | CHN_ADLIB)
@@ -213,7 +214,7 @@
 //#define SONG_GLOBALFADE       0x0400
 //#define SONG_CPUVERYHIGH      0x0800
 #define SONG_FIRSTTICK          0x1000 // Current tick is the first tick of the row (dopey flow-control flag)
-//#define SONG_MPTFILTERMODE    0x2000
+#define SONG_MPTFILTERMODE      0x2000
 //#define SONG_SURROUNDPAN      0x4000
 //#define SONG_EXFILTERRANGE    0x8000
 //#define SONG_AMIGALIMITS      0x10000
