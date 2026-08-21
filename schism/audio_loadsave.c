@@ -23,27 +23,27 @@
 
 #include "headers.h"
 
+#include "dialog.h"
+#include "it.h"
+#include "page.h"
+#include "song.h"
 #include "bits.h"
 #include "charset.h"
-#include "dialog.h"
 #include "fakemem.h"
-#include "it.h"
-#include "song.h"
-#include "slurp.h"
-#include "page.h"
-#include "version.h"
-#include "osdefs.h"
 #include "mem.h"
+#include "osdefs.h"
+#include "slurp.h"
 #include "str.h"
+#include "version.h"
 
-#include "fmt.h"
 #include "dmoz.h"
+#include "fmt.h"
 
-#include "player/sndfile.h"
 #include "player/snd_gm.h"
+#include "player/sndfile.h"
 
-#include "midi.h"
 #include "disko.h"
+#include "midi.h"
 
 // ------------------------------------------------------------------------
 
@@ -54,8 +54,7 @@ char song_basename[SCHISM_NAME_MAX + 1];
 // replace any '\0' chars with spaces, mostly to make the string handling
 // much easier.
 
-static inline SCHISM_ALWAYS_INLINE void _fix_name(char *buf, size_t max,
-	size_t realsize)
+static inline SCHISM_ALWAYS_INLINE void _fix_name(char *buf, size_t max, size_t realsize)
 {
 	size_t c;
 
@@ -191,7 +190,6 @@ static fmt_load_song_func load_song_funcs[] = {
 	NULL,
 };
 
-
 const char *fmt_strerror(int n)
 {
 	switch (n) {
@@ -205,7 +203,8 @@ const char *fmt_strerror(int n)
 }
 
 // IT uses \r in song messages; replace errant \n's
-static void message_convert_newlines(song_t *song) {
+static void message_convert_newlines(song_t *song)
+{
 	int i = 0, len = strlen(song->message);
 	for (i = 0; i < len; i++) {
 		if (song->message[i] == '\n') {
@@ -227,9 +226,7 @@ song_t *song_create_load(const char *file)
 
 	if (current_song) {
 		newsong->mix_flags = current_song->mix_flags;
-		csf_set_wave_config(newsong,
-			current_song->mix_frequency,
-			current_song->mix_bits_per_sample,
+		csf_set_wave_config(newsong, current_song->mix_frequency, current_song->mix_bits_per_sample,
 			current_song->mix_channels);
 
 		// loaders might override these
@@ -368,11 +365,10 @@ const struct save_format song_save_formats[] = {
 	{"IT", "Impulse Tracker", ".it", {.save_song = fmt_it_save_song}, NULL},
 	{"S3M", "Scream Tracker 3", ".s3m", {.save_song = fmt_s3m_save_song}, NULL},
 	{"MOD", "Amiga ProTracker", ".mod", {.save_song = fmt_mod_save_song}, NULL},
-	{.label = NULL}
+        {.label = NULL}
 };
 
-#define EXPORT_FUNCS(t) \
-	fmt_##t##_export_head, fmt_##t##_export_silence, fmt_##t##_export_body, fmt_##t##_export_tail
+#define EXPORT_FUNCS(t) fmt_##t##_export_head, fmt_##t##_export_silence, fmt_##t##_export_body, fmt_##t##_export_tail
 
 const struct save_format song_export_formats[] = {
 	{"WAV", "WAV", ".wav", {.export = {EXPORT_FUNCS(wav), 0}}, NULL},
@@ -381,7 +377,8 @@ const struct save_format song_export_formats[] = {
 	{"MAIFF", "Audio IFF multi-write", ".aiff", {.export = {EXPORT_FUNCS(aiff), 1}}, NULL},
 #ifdef USE_FLAC
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.export = {EXPORT_FUNCS(flac), 0}}, flac_enabled_cb},
-	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac), 1}}, flac_enabled_cb},
+	{"MFLAC", "Free Lossless Audio Codec multi-write", ".flac", {.export = {EXPORT_FUNCS(flac), 1}},
+         flac_enabled_cb},
 #endif
 	{.label = NULL}
 };
@@ -399,13 +396,13 @@ const struct save_format sample_save_formats[] = {
 	{"FLAC", "Free Lossless Audio Codec", ".flac", {.save_sample = fmt_flac_save_sample}, flac_enabled_cb},
 #endif
 	{"RAW", "Raw", ".raw", {.save_sample = fmt_raw_save_sample}, NULL},
-	{.label = NULL}
+        {.label = NULL}
 };
 
 const struct save_format instrument_save_formats[] = {
 	{"ITI", "Impulse Tracker", ".iti", {.save_instrument = fmt_iti_save_instrument}, NULL},
 	{"XI", "Fasttracker II", ".xi", {.save_instrument = fmt_xi_save_instrument}, NULL},
-	{.label = NULL}
+        {.label = NULL}
 };
 
 static const struct save_format *get_save_format(const struct save_format *formats, const char *label)
@@ -425,7 +422,6 @@ static const struct save_format *get_save_format(const struct save_format *forma
 	log_appendf(4, "Unknown save format %s", label);
 	return NULL;
 }
-
 
 static char *mangle_filename(const char *in, const char *mid, const char *ext)
 {
@@ -481,7 +477,6 @@ int song_export(const char *filename, const char *type)
 	}
 }
 
-
 int song_save(const char *filename, const char *type)
 {
 	disko_t fp;
@@ -500,28 +495,27 @@ int song_save(const char *filename, const char *type)
 
 /* TODO: add or replace file extension as appropriate
 
-From IT 2.10 update:
-	- Automatic filename extension replacement on Ctrl-S, so that if you press
-		Ctrl-S after loading a .MOD, .669, .MTM or .XM, the filename will be
-		automatically modified to have a .IT extension.
+			From IT 2.10 update:
+				- Automatic filename extension replacement on Ctrl-S, so that if you press
+					Ctrl-S after loading a .MOD, .669, .MTM or .XM, the filename will be
+					automatically modified to have a .IT extension.
 
-In IT, if the filename given has no extension ("basename"), then the extension for the proper file type
-(IT/S3M) will be appended to the name.
-A filename with an extension is not modified, even if the extension is blank. (as in "basename.")
+			In IT, if the filename given has no extension ("basename"), then the extension for the proper
+	   file type (IT/S3M) will be appended to the name. A filename with an extension is not modified, even if the
+	   extension is blank. (as in "basename.")
 
-This brings up a rather odd bit of behavior: what happens when saving a file with the deliberately wrong
-extension? Selecting the IT type and saving as "test.s3m" works just as one would expect: an IT file is
-written, with the name "test.s3m". No surprises yet, but as soon as Ctrl-S is used, the filename is "fixed",
-producing a second file called "test.it". The reverse happens when trying to save an S3M named "test.it" --
-it's rewritten to "test.s3m".
-Note that in these scenarios, Impulse Tracker *DOES NOT* check if an existing file by that name exists; it
-will GLADLY overwrite the old "test.s3m" (or .it) with the renamed file that's being saved. Presumably this
-is NOT intentional behavior.
+			This brings up a rather odd bit of behavior: what happens when saving a file with the
+	   deliberately wrong extension? Selecting the IT type and saving as "test.s3m" works just as one would expect:
+	   an IT file is written, with the name "test.s3m". No surprises yet, but as soon as Ctrl-S is used, the
+	   filename is "fixed", producing a second file called "test.it". The reverse happens when trying to save an S3M
+	   named "test.it" -- it's rewritten to "test.s3m". Note that in these scenarios, Impulse Tracker *DOES NOT*
+	   check if an existing file by that name exists; it will GLADLY overwrite the old "test.s3m" (or .it) with the
+	   renamed file that's being saved. Presumably this is NOT intentional behavior.
 
-Another note: if the file could not be saved for some reason or another, Impulse Tracker pops up a dialog
-saying "Could not save file". This can be seen rather easily by trying to save a file with a malformed name,
-such as "abc|def.it". This dialog is presented both when saving from F10 and Ctrl-S.
-*/
+			Another note: if the file could not be saved for some reason or another, Impulse Tracker pops up
+	   a dialog saying "Could not save file". This can be seen rather easily by trying to save a file with a
+	   malformed name, such as "abc|def.it". This dialog is presented both when saving from F10 and Ctrl-S.
+			*/
 
 	if (disko_open(&fp, mangle) < 0) {
 		log_perror(mangle);
@@ -533,9 +527,7 @@ such as "abc|def.it". This dialog is presented both when saving from F10 and Ctr
 	if (ret != SAVE_SUCCESS)
 		disko_seterror(&fp, EINVAL);
 
-	backup = ((status.flags & MAKE_BACKUPS)
-			? (status.flags & NUMBERED_BACKUPS)
-			? 65536 : 1 : 0);
+	backup = ((status.flags & MAKE_BACKUPS) ? (status.flags & NUMBERED_BACKUPS) ? 65536 : 1 : 0);
 
 	// this was not as successful as originally claimed!
 	if (disko_close(&fp, backup) == DW_ERROR && ret == SAVE_SUCCESS)
@@ -631,7 +623,6 @@ static fmt_load_instrument_func load_instrument_funcs[] = {
 	NULL,
 };
 
-
 void song_clear_sample(int n)
 {
 	song_lock_audio();
@@ -684,8 +675,10 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		}
 		/* mark... */
 		for (unsigned int q = 0; q < MAX_INSTRUMENTS; q++) {
-			if ((int) q == target) continue;
-			if (!current_song->instruments[q]) continue;
+			if ((int)q == target)
+				continue;
+			if (!current_song->instruments[q])
+				continue;
 			for (unsigned int j = 0; j < 128; j++) {
 				x = current_song->instruments[q]->sample_map[j];
 				sampmap[x] = 0;
@@ -693,14 +686,16 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 		}
 		/* sweep! */
 		for (int j = 1; j < MAX_SAMPLES; j++) {
-			if (!sampmap[j]) continue;
+			if (!sampmap[j])
+				continue;
 
 			csf_destroy_sample(current_song, j);
 			memset(current_song->samples + j, 0, sizeof(current_song->samples[j]));
 		}
 		/* now clear everything "empty" so we have extra slots */
 		for (int j = 1; j < MAX_SAMPLES; j++) {
-			if (csf_sample_is_empty(current_song->samples + j)) sampmap[j] = 0;
+			if (csf_sample_is_empty(current_song->samples + j))
+				sampmap[j] = 0;
 		}
 	}
 
@@ -720,7 +715,8 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 			if (!sampmap[x]) {
 				if (x > 0 && x < MAX_SAMPLES) {
 					for (int k = 1; k < MAX_SAMPLES; k++) {
-						if (current_song->samples[k].length) continue;
+						if (current_song->samples[k].length)
+							continue;
 						sampmap[x] = k;
 						//song_sample *smp = (song_sample *)song_get_sample(k);
 
@@ -743,9 +739,8 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 
 		/* and rewrite! */
 		for (unsigned int k = 0; k < 128; k++) {
-			current_song->instruments[target]->sample_map[k] = sampmap[
-					current_song->instruments[target]->sample_map[k]
-			];
+			current_song->instruments[target]->sample_map[k]
+				= sampmap[current_song->instruments[target]->sample_map[k]];
 		}
 
 		song_unlock_audio();
@@ -763,7 +758,8 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	for (x = 0; load_instrument_funcs[x]; x++) {
 		slurp_rewind(&s);
 		r = load_instrument_funcs[x](&s, target);
-		if (r) break;
+		if (r)
+			break;
 	}
 
 	unslurp(&s);
@@ -772,12 +768,12 @@ int song_load_instrument_ex(int target, const char *file, const char *libf, int 
 	return r;
 }
 
-int song_load_instrument(int n, const char* file)
+int song_load_instrument(int n, const char *file)
 {
-	return song_load_instrument_ex(n,file,NULL,-1);
+	return song_load_instrument_ex(n, file, NULL, -1);
 }
 
-static void do_enable_inst(SCHISM_UNUSED void* d)
+static void do_enable_inst(SCHISM_UNUSED void *d)
 {
 	song_set_instrument_mode(1);
 	main_song_changed_cb();
@@ -785,20 +781,17 @@ static void do_enable_inst(SCHISM_UNUSED void* d)
 	memused_songchanged();
 }
 
-static void dont_enable_inst(SCHISM_UNUSED void* d)
+static void dont_enable_inst(SCHISM_UNUSED void *d)
 {
 	set_page(PAGE_INSTRUMENT_LIST);
 }
 
-int song_load_instrument_with_prompt(int n, const char* file)
+int song_load_instrument_with_prompt(int n, const char *file)
 {
 	int retval = song_load_instrument_ex(n, file, NULL, -1);
 	if (!song_is_instrument_mode()) {
-		dialog_create(DIALOG_YES_NO,
-			"Enable instrument mode?",
-			do_enable_inst, dont_enable_inst, 0, NULL);
-	}
-	else {
+		dialog_create(DIALOG_YES_NO, "Enable instrument mode?", do_enable_inst, dont_enable_inst, 0, NULL);
+	} else {
 		set_page(PAGE_INSTRUMENT_LIST);
 	}
 	return retval;
@@ -970,7 +963,6 @@ const char *song_get_basename(void)
 // FIXME: unload the module when leaving the library 'directory'
 static song_t *library = NULL;
 
-
 // TODO: stat the file?
 int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHISM_UNUSED dmoz_dirlist_t *dlist)
 {
@@ -1000,8 +992,7 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHIS
 		if (!library->instruments[n])
 			continue;
 
-		dmoz_file_t *file = dmoz_add_file(flist,
-			str_dup(path), str_dup(base), NULL, n);
+		dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 		file->title = str_dup(library->instruments[n]->name);
 
 		int count[128] = {0};
@@ -1029,7 +1020,6 @@ int dmoz_read_instrument_library(const char *path, dmoz_filelist_t *flist, SCHIS
 	return 0;
 }
 
-
 int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UNUSED dmoz_dirlist_t *dlist)
 {
 	csf_stop_sample(current_song, current_song->samples + 0);
@@ -1055,8 +1045,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UN
 	dmoz_fill_ext_data(&info_file);
 
 	/* free extra data we don't need */
-	if (info_file.smp_filename != info_file.base &&
-			info_file.smp_filename != info_file.title) {
+	if (info_file.smp_filename != info_file.base && info_file.smp_filename != info_file.title) {
 		free(info_file.smp_filename);
 	}
 
@@ -1099,7 +1088,8 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UN
 			dmoz_file_t *file = dmoz_add_file(flist, str_dup(path), str_dup(base), NULL, n);
 			file->type = TYPE_SAMPLE_EXTD;
 			file->description = "Impulse Tracker Sample"; /* FIXME: this lies for XI and PAT */
-			file->filesize = library->samples[n].length*((library->samples[n].flags & CHN_STEREO) + 1)*((library->samples[n].flags & CHN_16BIT) + 1);
+			file->filesize = library->samples[n].length * ((library->samples[n].flags & CHN_STEREO) + 1)
+					 * ((library->samples[n].flags & CHN_16BIT) + 1);
 			file->smp_speed = library->samples[n].c5speed;
 			file->smp_loop_start = library->samples[n].loop_start;
 			file->smp_loop_end = library->samples[n].loop_end;
@@ -1107,7 +1097,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UN
 			file->smp_sustain_end = library->samples[n].sustain_end;
 			file->smp_length = library->samples[n].length;
 			file->smp_flags = library->samples[n].flags;
-			file->smp_defvol = library->samples[n].volume>>2;
+			file->smp_defvol = library->samples[n].volume >> 2;
 			file->smp_gblvol = library->samples[n].global_volume;
 			file->smp_vibrato_speed = library->samples[n].vib_speed;
 			file->smp_vibrato_depth = library->samples[n].vib_depth;
@@ -1117,7 +1107,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UN
 				library->samples[n].name[23] = ' ';
 			}
 			file->title = str_dup(library->samples[n].name);
-			file->sample = (song_sample_t *) library->samples + n;
+			file->sample = (song_sample_t *)library->samples + n;
 		}
 	}
 
@@ -1143,7 +1133,7 @@ int instrument_loader_abort(struct instrumentloader *ii)
 	song_wipe_instrument(ii->slot);
 	for (n = 0; n < MAX_SAMPLES; n++) {
 		if (ii->sample_map[n]) {
-			song_clear_sample(ii->sample_map[n]-1);
+			song_clear_sample(ii->sample_map[n] - 1);
 			ii->sample_map[n] = 0;
 		}
 	}
@@ -1154,8 +1144,10 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
 {
 	int x;
 
-	if (!slot) return 0;
-	if (ii->sample_map[slot]) return ii->sample_map[slot];
+	if (!slot)
+		return 0;
+	if (ii->sample_map[slot])
+		return ii->sample_map[slot];
 	for (x = ii->basex; x < MAX_SAMPLES; x++) {
 		song_sample_t *cur = (current_song->samples + x);
 		if (cur->data != NULL)
@@ -1169,4 +1161,3 @@ int instrument_loader_sample(struct instrumentloader *ii, int slot)
 	status_text_flash("Too many samples");
 	return 0;
 }
-

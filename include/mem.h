@@ -26,10 +26,14 @@
 
 #include "headers.h"
 
-extern void *mem_alloc(size_t) SCHISM_MALLOC SCHISM_ALLOC_SIZE(1);
-extern void *mem_calloc(size_t, size_t) SCHISM_MALLOC SCHISM_ALLOC_SIZE_EX(1, 2);
+extern void *mem_alloc(size_t)
+SCHISM_MALLOC SCHISM_ALLOC_SIZE(1);
+extern void *mem_calloc(size_t, size_t)
+SCHISM_MALLOC SCHISM_ALLOC_SIZE_EX(1, 2);
 extern char *str_dup(const char *) SCHISM_MALLOC;
-extern char *strn_dup(const char *, size_t) SCHISM_MALLOC SCHISM_ALLOC_SIZE(2);
-extern void *mem_realloc(void *,size_t) SCHISM_MALLOC SCHISM_ALLOC_SIZE(2);
+extern char *strn_dup(const char *, size_t)
+SCHISM_MALLOC SCHISM_ALLOC_SIZE(2);
+extern void *mem_realloc(void *, size_t)
+SCHISM_MALLOC SCHISM_ALLOC_SIZE(2);
 
 #endif

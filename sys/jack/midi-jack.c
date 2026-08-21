@@ -26,9 +26,9 @@
 #include "it.h"
 #include "midi.h"
 
-#include "util.h"
-#include "timer.h"
 #include "mem.h"
+#include "timer.h"
+#include "util.h"
 
 #include <jack/jack.h>
 #include <jack/midiport.h>
@@ -49,25 +49,26 @@ static int (*JACK_jack_client_close)(jack_client_t *);
 static int (*JACK_jack_activate)(jack_client_t *);
 static void *(*JACK_jack_port_get_buffer)(jack_port_t *, jack_nframes_t);
 static int (*JACK_jack_port_unregister)(jack_client_t *, jack_port_t *);
-static jack_port_t *(*JACK_jack_port_register)(jack_client_t *, const char *, const char *, unsigned long, unsigned long);
+static jack_port_t *(*JACK_jack_port_register)(
+	jack_client_t *, const char *, const char *, unsigned long, unsigned long);
 static int (*JACK_jack_connect)(jack_client_t *, const char *, const char *);
 static int (*JACK_jack_set_process_callback)(jack_client_t *, JackProcessCallback, void *);
 static jack_nframes_t (*JACK_jack_midi_get_event_count)(void *);
 static int (*JACK_jack_midi_event_get)(jack_midi_event_t *, void *, uint32_t);
-static jack_port_t* (*JACK_jack_port_by_name)(jack_client_t *, const char*);
-static jack_ringbuffer_t* (*JACK_jack_ringbuffer_create)(size_t);
+static jack_port_t *(*JACK_jack_port_by_name)(jack_client_t *, const char *);
+static jack_ringbuffer_t *(*JACK_jack_ringbuffer_create)(size_t);
 static size_t (*JACK_jack_ringbuffer_write_space)(const jack_ringbuffer_t *);
 static size_t (*JACK_jack_ringbuffer_write)(jack_ringbuffer_t *, const char *, size_t);
 static size_t (*JACK_jack_ringbuffer_peek)(jack_ringbuffer_t *, char *, size_t);
 static size_t (*JACK_jack_ringbuffer_read_space)(const jack_ringbuffer_t *);
 static void (*JACK_jack_ringbuffer_read_advance)(jack_ringbuffer_t *, size_t);
 static size_t (*JACK_jack_ringbuffer_read)(jack_ringbuffer_t *, char *, size_t);
-static jack_midi_data_t * (*JACK_jack_midi_event_reserve)(void *, jack_nframes_t, size_t);
+static jack_midi_data_t *(*JACK_jack_midi_event_reserve)(void *, jack_nframes_t, size_t);
 static void (*JACK_jack_ringbuffer_free)(jack_ringbuffer_t *);
-static const char * (*JACK_jack_port_name)(const jack_port_t *);
+static const char *(*JACK_jack_port_name)(const jack_port_t *);
 static int (*JACK_jack_connect)(jack_client_t *, const char *, const char *);
 static int (*JACK_jack_disconnect)(jack_client_t *, const char *, const char *);
-static const char ** (*JACK_jack_get_ports)(jack_client_t *, const char *, const char *, unsigned long);
+static const char **(*JACK_jack_get_ports)(jack_client_t *, const char *, const char *, unsigned long);
 static int (*JACK_jack_port_is_mine)(const jack_client_t *, const jack_port_t *);
 static void (*JACK_jack_midi_clear_buffer)(void *);
 static jack_time_t (*JACK_jack_frames_to_time)(const jack_client_t *client, jack_nframes_t);
@@ -79,7 +80,7 @@ static int load_jack_syms(void);
 
 #ifdef JACK_DYNAMIC_LOAD
 
-#include "loadso.h"
+# include "loadso.h"
 
 void *jack_dltrick_handle_ = NULL;
 
@@ -109,7 +110,8 @@ static int jack_dlinit(void)
 }
 
 // FIXME this is repeated in many places
-SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+SCHISM_STATIC_ASSERT(sizeof(void(*)) == sizeof(void *),
+	"dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 static int load_jack_sym(const char *fn, void *addr)
 {
@@ -122,12 +124,13 @@ static int load_jack_sym(const char *fn, void *addr)
 	return 1;
 }
 
-#define SCHISM_JACK_SYM(x) \
-	if (!load_jack_sym(#x, &JACK_##x)) return -1
+# define SCHISM_JACK_SYM(x) \
+	 if (!load_jack_sym(#x, &JACK_##x)) \
+	 return -1
 
 #else
 
-#define SCHISM_JACK_SYM(x) JACK_##x = x
+# define SCHISM_JACK_SYM(x) JACK_##x = x
 
 static int jack_dlinit(void)
 {
@@ -191,7 +194,7 @@ struct jack_midi_provider {
 };
 
 struct jack_midi {
-	jack_port_t* port;
+	jack_port_t *port;
 };
 
 static void _jack_send(struct midi_port *p, const unsigned char *data, uint32_t len, uint32_t delay)
@@ -214,8 +217,8 @@ static void _jack_send(struct midi_port *p, const unsigned char *data, uint32_t 
 		while (JACK_jack_ringbuffer_write_space(jmp->ringbuffer_out) < real_len + sizeof(real_len))
 			sched_yield();
 
-		JACK_jack_ringbuffer_write(jmp->ringbuffer_out, (const char*)&real_len, sizeof(real_len));
-		JACK_jack_ringbuffer_write(jmp->ringbuffer_out, (const char*)data, real_len);
+		JACK_jack_ringbuffer_write(jmp->ringbuffer_out, (const char *)&real_len, sizeof(real_len));
+		JACK_jack_ringbuffer_write(jmp->ringbuffer_out, (const char *)data, real_len);
 
 		data += real_len;
 		len -= real_len;
@@ -230,9 +233,11 @@ static int _jack_start(struct midi_port *p)
 	struct jack_midi_provider *jmp = p->provider->userdata;
 
 	if (p->io & MIDI_INPUT)
-		return !JACK_jack_connect(jmp->client, JACK_jack_port_name(m->port), JACK_jack_port_name(jmp->midi_in_port));
+		return !JACK_jack_connect(
+			jmp->client, JACK_jack_port_name(m->port), JACK_jack_port_name(jmp->midi_in_port));
 	else if (p->io & MIDI_OUTPUT)
-		return !JACK_jack_connect(jmp->client, JACK_jack_port_name(jmp->midi_out_port), JACK_jack_port_name(m->port));
+		return !JACK_jack_connect(
+			jmp->client, JACK_jack_port_name(jmp->midi_out_port), JACK_jack_port_name(m->port));
 
 	return 1;
 }
@@ -243,9 +248,11 @@ static int _jack_stop(struct midi_port *p)
 	struct jack_midi_provider *jmp = p->provider->userdata;
 
 	if (p->io & MIDI_INPUT)
-		return !JACK_jack_disconnect(jmp->client, JACK_jack_port_name(m->port), JACK_jack_port_name(jmp->midi_in_port));
+		return !JACK_jack_disconnect(
+			jmp->client, JACK_jack_port_name(m->port), JACK_jack_port_name(jmp->midi_in_port));
 	else if (p->io & MIDI_OUTPUT)
-		return !JACK_jack_disconnect(jmp->client, JACK_jack_port_name(jmp->midi_out_port), JACK_jack_port_name(m->port));
+		return !JACK_jack_disconnect(
+			jmp->client, JACK_jack_port_name(jmp->midi_out_port), JACK_jack_port_name(m->port));
 
 	return 1;
 }
@@ -276,8 +283,8 @@ static int _jack_process(jack_nframes_t nframes, void *user_data)
 		if (JACK_jack_ringbuffer_write_space(jmp->ringbuffer_in) < len + sizeof(len))
 			break; /* give up */
 
-		JACK_jack_ringbuffer_write(jmp->ringbuffer_in, (const char*)&len, sizeof(len));
-		JACK_jack_ringbuffer_write(jmp->ringbuffer_in, (const char*)event.buffer, len);
+		JACK_jack_ringbuffer_write(jmp->ringbuffer_in, (const char *)&len, sizeof(len));
+		JACK_jack_ringbuffer_write(jmp->ringbuffer_in, (const char *)event.buffer, len);
 	}
 
 	/* handle midi out */
@@ -287,14 +294,14 @@ static int _jack_process(jack_nframes_t nframes, void *user_data)
 
 	uint32_t size;
 
-	while (JACK_jack_ringbuffer_peek(jmp->ringbuffer_out, (char*)&size, sizeof(size)) == sizeof(size)
-	       && JACK_jack_ringbuffer_read_space(jmp->ringbuffer_out) >= sizeof(size) + size) {
+	while (JACK_jack_ringbuffer_peek(jmp->ringbuffer_out, (char *)&size, sizeof(size)) == sizeof(size)
+		&& JACK_jack_ringbuffer_read_space(jmp->ringbuffer_out) >= sizeof(size) + size) {
 		JACK_jack_ringbuffer_read_advance(jmp->ringbuffer_out, sizeof(size));
 
 		jack_midi_data_t *data = JACK_jack_midi_event_reserve(midi_out_buffer, 0, size);
 
 		if (data)
-			JACK_jack_ringbuffer_read(jmp->ringbuffer_out, (char*)data, size);
+			JACK_jack_ringbuffer_read(jmp->ringbuffer_out, (char *)data, size);
 		else
 			JACK_jack_ringbuffer_read_advance(jmp->ringbuffer_out, size);
 	}
@@ -304,7 +311,8 @@ static int _jack_process(jack_nframes_t nframes, void *user_data)
 
 static void _jack_disconnect(struct jack_midi_provider *jmp)
 {
-	if (!jmp) return;
+	if (!jmp)
+		return;
 
 	if (jmp->client) {
 		if (jmp->midi_in_port) {
@@ -327,8 +335,8 @@ static int _jack_work(struct midi_provider *p)
 	struct jack_midi_provider *jmp = p->userdata;
 	uint32_t size;
 
-	while (JACK_jack_ringbuffer_peek(jmp->ringbuffer_in, (char*)&size, sizeof(size)) == sizeof(size)
-			&& JACK_jack_ringbuffer_read_space(jmp->ringbuffer_in) >= sizeof(size) + size) {
+	while (JACK_jack_ringbuffer_peek(jmp->ringbuffer_in, (char *)&size, sizeof(size)) == sizeof(size)
+		&& JACK_jack_ringbuffer_read_space(jmp->ringbuffer_in) >= sizeof(size) + size) {
 		JACK_jack_ringbuffer_read_advance(jmp->ringbuffer_in, sizeof(size));
 
 		unsigned char *event = malloc(size);
@@ -347,7 +355,8 @@ static int _jack_work(struct midi_provider *p)
 
 /* inout for these functions should be EITHER MIDI_INPUT or MIDI_OUTPUT, never both.
  * jack has no concept of duplex ports */
-static void _jack_enumerate_ports(const char **port_names, struct midi_provider *p, int inout) {
+static void _jack_enumerate_ports(const char **port_names, struct midi_provider *p, int inout)
+{
 	struct jack_midi_provider *jmp = p->userdata;
 
 	/* search for new ports to insert */
@@ -355,7 +364,7 @@ static void _jack_enumerate_ports(const char **port_names, struct midi_provider 
 	for (port_name = port_names; *port_name; port_name++) {
 		struct midi_port *ptr;
 		struct jack_midi *m;
-		jack_port_t* port = JACK_jack_port_by_name(jmp->client, *port_name);
+		jack_port_t *port = JACK_jack_port_by_name(jmp->client, *port_name);
 		int ok;
 
 		if (JACK_jack_port_is_mine(jmp->client, port))
@@ -385,7 +394,7 @@ static void _jack_enumerate_ports(const char **port_names, struct midi_provider 
 	}
 }
 
-static int _jack_attempt_connect(struct midi_provider* jack_provider_)
+static int _jack_attempt_connect(struct midi_provider *jack_provider_)
 {
 	struct jack_midi_provider *jmp = jack_provider_->userdata;
 
@@ -402,12 +411,13 @@ static int _jack_attempt_connect(struct midi_provider* jack_provider_)
 	if (!jmp->midi_in_port)
 		goto fail;
 
-	jmp->midi_out_port = JACK_jack_port_register(jmp->client, "MIDI Out", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+	jmp->midi_out_port
+		= JACK_jack_port_register(jmp->client, "MIDI Out", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 	if (!jmp->midi_out_port)
 		goto fail;
 
 	/* hand this over to JACK */
-	if (JACK_jack_set_process_callback(jmp->client, _jack_process, (void*)jack_provider_))
+	if (JACK_jack_set_process_callback(jmp->client, _jack_process, (void *)jack_provider_))
 		goto fail;
 
 	if (JACK_jack_activate(jmp->client))
@@ -421,10 +431,10 @@ fail:
 	return 0;
 }
 
-static void _jack_poll(struct midi_provider* jack_provider_)
+static void _jack_poll(struct midi_provider *jack_provider_)
 {
 	struct jack_midi_provider *jmp;
-	const char** ports;
+	const char **ports;
 
 	jmp = jack_provider_->userdata;
 
@@ -491,7 +501,7 @@ int jack_midi_setup(void)
 	jmp->ringbuffer_in_max_write = JACK_jack_ringbuffer_write_space(jmp->ringbuffer_in);
 	jmp->ringbuffer_out_max_write = JACK_jack_ringbuffer_write_space(jmp->ringbuffer_out);
 
-	struct midi_provider* p = midi_provider_register("JACK-MIDI", &jack_driver, jmp);
+	struct midi_provider *p = midi_provider_register("JACK-MIDI", &jack_driver, jmp);
 	if (!p) /* how? can this check be removed? */
 		goto fail;
 

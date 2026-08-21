@@ -29,8 +29,7 @@
 #include "song.h"
 #include "player/sndfile.h"
 
-static inline SCHISM_ALWAYS_INLINE
-int sbi_load_data(slurp_t *fp, unsigned char data[47])
+static inline SCHISM_ALWAYS_INLINE int sbi_load_data(slurp_t *fp, unsigned char data[47])
 {
 	if (slurp_read(fp, data, 47) != 47)
 		return 0;

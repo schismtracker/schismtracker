@@ -31,8 +31,8 @@
 
 #include "player/sndfile.h"
 
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* --------------------------------------------------------------------- */
 
@@ -75,7 +75,12 @@ struct xi_file_header {
 
 static int xm_sample_header_read(struct xm_sample_header *shdr, slurp_t *fp)
 {
-#define READ_VALUE(name) do { if (slurp_read(fp, &shdr->name, sizeof(shdr->name)) != sizeof(shdr->name)) { return 0; } } while (0)
+#define READ_VALUE(name) \
+	do { \
+		if (slurp_read(fp, &shdr->name, sizeof(shdr->name)) != sizeof(shdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(samplen);
 	READ_VALUE(loopstart);
@@ -95,7 +100,10 @@ static int xm_sample_header_read(struct xm_sample_header *shdr, slurp_t *fp)
 
 static int xi_file_header_write(struct xi_file_header *hdr, disko_t *fp)
 {
-#define WRITE_VALUE(name) do { disko_write(fp, &hdr->name, sizeof(hdr->name)); } while (0)
+#define WRITE_VALUE(name) \
+	do { \
+		disko_write(fp, &hdr->name, sizeof(hdr->name)); \
+	} while (0)
 
 	WRITE_VALUE(header);
 	WRITE_VALUE(name);
@@ -136,7 +144,10 @@ static int xi_file_header_write(struct xi_file_header *hdr, disko_t *fp)
 
 static int xm_sample_header_write(struct xm_sample_header *shdr, disko_t *fp)
 {
-#define WRITE_VALUE(name) do { disko_write(fp, &shdr->name, sizeof(shdr->name)); } while (0)
+#define WRITE_VALUE(name) \
+	do { \
+		disko_write(fp, &shdr->name, sizeof(shdr->name)); \
+	} while (0)
 
 	WRITE_VALUE(samplen);
 	WRITE_VALUE(loopstart);
@@ -156,7 +167,12 @@ static int xm_sample_header_write(struct xm_sample_header *shdr, disko_t *fp)
 
 static int xi_file_header_read(struct xi_file_header *hdr, slurp_t *fp)
 {
-#define READ_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+#define READ_VALUE(name) \
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(header);
 	READ_VALUE(name);
@@ -269,12 +285,18 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 	}
 
 	// Set up envelope types in instrument
-	if (xi.xish.vtype & XI_ENV_ENABLED) g->flags |= ENV_VOLUME;
-	if (xi.xish.vtype & XI_ENV_SUSTAIN) g->flags |= ENV_VOLSUSTAIN;
-	if (xi.xish.vtype & XI_ENV_LOOP)    g->flags |= ENV_VOLLOOP;
-	if (xi.xish.ptype & XI_ENV_ENABLED) g->flags |= ENV_PANNING;
-	if (xi.xish.ptype & XI_ENV_SUSTAIN) g->flags |= ENV_PANSUSTAIN;
-	if (xi.xish.ptype & XI_ENV_LOOP)    g->flags |= ENV_PANLOOP;
+	if (xi.xish.vtype & XI_ENV_ENABLED)
+		g->flags |= ENV_VOLUME;
+	if (xi.xish.vtype & XI_ENV_SUSTAIN)
+		g->flags |= ENV_VOLSUSTAIN;
+	if (xi.xish.vtype & XI_ENV_LOOP)
+		g->flags |= ENV_VOLLOOP;
+	if (xi.xish.ptype & XI_ENV_ENABLED)
+		g->flags |= ENV_PANNING;
+	if (xi.xish.ptype & XI_ENV_SUSTAIN)
+		g->flags |= ENV_PANSUSTAIN;
+	if (xi.xish.ptype & XI_ENV_LOOP)
+		g->flags |= ENV_PANLOOP;
 
 	prevtick = -1;
 	// Copy envelopes into instrument
@@ -362,8 +384,13 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 		if (smp->loop_start >= smp->loop_end)
 			smp->loop_start = smp->loop_end = 0;
 		switch (xmss.type & 3) {
-			case 3: case 2: smp->flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
-			case 1: smp->flags |= CHN_LOOP; break;
+		case 3:
+		case 2:
+			smp->flags |= CHN_PINGPONGLOOP;
+			SCHISM_FALLTHROUGH;
+		case 1:
+			smp->flags |= CHN_LOOP;
+			break;
 		}
 		smp->volume = xmss.vol << 2;
 		if (smp->volume > 256)
@@ -385,7 +412,7 @@ int fmt_xi_load_instrument(slurp_t *fp, int slot)
 
 		smp->c5speed = transpose_to_frequency(xmss.relnote, xmss.finetune);
 
-		if(smp->length) {
+		if (smp->length) {
 			// Save our spot, read the sample data, then jump back.
 			uint64_t smpheaderoffset;
 
@@ -438,12 +465,18 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 	xi.version = bswapLE16(0x0102);
 
 	/* envelope type */
-	if (ins->flags & ENV_VOLUME)     xi.xish.vtype |= XI_ENV_ENABLED;
-	if (ins->flags & ENV_VOLSUSTAIN) xi.xish.vtype |= XI_ENV_SUSTAIN;
-	if (ins->flags & ENV_VOLLOOP)    xi.xish.vtype |= XI_ENV_LOOP;
-	if (ins->flags & ENV_PANNING)    xi.xish.ptype |= XI_ENV_ENABLED;
-	if (ins->flags & ENV_PANSUSTAIN) xi.xish.ptype |= XI_ENV_SUSTAIN;
-	if (ins->flags & ENV_PANLOOP)    xi.xish.ptype |= XI_ENV_LOOP;
+	if (ins->flags & ENV_VOLUME)
+		xi.xish.vtype |= XI_ENV_ENABLED;
+	if (ins->flags & ENV_VOLSUSTAIN)
+		xi.xish.vtype |= XI_ENV_SUSTAIN;
+	if (ins->flags & ENV_VOLLOOP)
+		xi.xish.vtype |= XI_ENV_LOOP;
+	if (ins->flags & ENV_PANNING)
+		xi.xish.ptype |= XI_ENV_ENABLED;
+	if (ins->flags & ENV_PANSUSTAIN)
+		xi.xish.ptype |= XI_ENV_SUSTAIN;
+	if (ins->flags & ENV_PANLOOP)
+		xi.xish.ptype |= XI_ENV_LOOP;
 
 	xi.xish.vloops = ins->vol_env.loop_start;
 	xi.xish.vloope = ins->vol_env.loop_end;
@@ -541,9 +574,9 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 
 		xmss.vol = smp->volume >> 2;
 
-		if(ins->flags & ENV_SETPANNING) {
+		if (ins->flags & ENV_SETPANNING) {
 			xmss.pan = ins->panning;
-		} else if(smp->flags & CHN_PANNING) {
+		} else if (smp->flags & CHN_PANNING) {
 			xmss.pan = smp->panning;
 		} else {
 			// Default panning enabled for instrument and sample--pan to center.
@@ -561,12 +594,11 @@ int fmt_xi_save_instrument(disko_t *fp, song_t *song, song_instrument_t *ins)
 	for (k = 0; k < xi_nalloc; k++) {
 		int o = xi_invmap[k];
 		smp = song->samples + o;
-		csf_write_sample(fp, smp, SF_LE | SF_PCMD
-							| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
-							| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
-							UINT32_MAX);
+		csf_write_sample(fp, smp,
+			SF_LE | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+				| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
+			UINT32_MAX);
 	}
 
 	return SAVE_SUCCESS;
 }
-

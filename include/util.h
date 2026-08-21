@@ -29,30 +29,26 @@
 /*Conversion*/
 /* linear -> deciBell*/
 /* amplitude normalized to 1.0f.*/
-SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
-float dB(float amplitude)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline float dB(float amplitude)
 {
 	return 20.0f * log10(amplitude);
 }
 
 /// deciBell -> linear*/
-SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
-float dB2_amp(float db)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline float dB2_amp(float db)
 {
 	return pow(10.0f, db / 20.0f);
 }
 
 /* linear -> deciBell*/
 /* power normalized to 1.0f.*/
-SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
-float pdB(float power)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline float pdB(float power)
 {
 	return 10.0f * log10(power);
 }
 
 /* deciBell -> linear*/
-SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
-float dB2_power(float db)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline float dB2_power(float db)
 {
 	return pow(10.0f, db / 10.0f);
 }
@@ -62,8 +58,7 @@ float dB2_power(float db)
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
-short dB_s(int noisefloor, float amplitude, float correction_dBs)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline short dB_s(int noisefloor, float amplitude, float correction_dBs)
 {
 	const float db = dB(amplitude) + correction_dBs;
 	const int x = (int)(128.0f * (db + noisefloor)) / noisefloor;
@@ -75,8 +70,7 @@ short dB_s(int noisefloor, float amplitude, float correction_dBs)
 /* ([0..128] = [-noisefloor..0dB])*/
 /* amplitude normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
-short dB2_amp_s(int noisefloor, int db, float correction_dBs)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline short dB2_amp_s(int noisefloor, int db, float correction_dBs)
 {
 	return dB2_amp((db * noisefloor / 128.0f) - noisefloor - correction_dBs);
 }
@@ -86,8 +80,7 @@ short dB2_amp_s(int noisefloor, int db, float correction_dBs)
 /* Output scaled (and clipped) to 128 lines with noisefloor range.*/
 /* ([0..128] = [-noisefloor..0dB])*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
-short pdB_s(int noisefloor, float power, float correction_dBs)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline short pdB_s(int noisefloor, float power, float correction_dBs)
 {
 	const float db = pdB(power) + correction_dBs;
 	const int x = (int)(128.0f * (db + noisefloor)) / noisefloor;
@@ -99,8 +92,7 @@ short pdB_s(int noisefloor, float power, float correction_dBs)
 /* ([0..128] = [-noisefloor..0dB])*/
 /* power normalized to 1.0f.*/
 /* correction_dBs corrects the dB after converted, but before scaling.*/
-SCHISM_ALWAYS_INLINE SCHISM_CONST static inline
-short dB2_power_s(int noisefloor, int db, float correction_dBs)
+SCHISM_ALWAYS_INLINE SCHISM_CONST static inline short dB2_power_s(int noisefloor, int db, float correction_dBs)
 {
 	return dB2_power((db * noisefloor / 128.0f) - noisefloor - correction_dBs);
 }
@@ -123,11 +115,8 @@ int msgbox(int style, const char *title, const char *fmt, ...);
 /* fast XOR with a byte value */
 void mem_xor(void *vbuf, size_t len, unsigned char c);
 
-void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
-	size_t stride);
-void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
-	size_t stride);
-void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
-	size_t stride);
+void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max, size_t stride);
+void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max, size_t stride);
+void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max, size_t stride);
 
 #endif /* SCHISM_UTIL_H_ */

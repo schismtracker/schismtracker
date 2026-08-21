@@ -29,9 +29,9 @@
 /* --------------------------------------------------------------------- */
 
 enum {
-	SLURP_OPEN_IGNORE  = -1,
-	SLURP_OPEN_FAIL    =  0,
-	SLURP_OPEN_SUCCESS =  1,
+	SLURP_OPEN_IGNORE = -1,
+	SLURP_OPEN_FAIL = 0,
+	SLURP_OPEN_SUCCESS = 1,
 };
 
 struct slurp_nonseek;
@@ -154,8 +154,7 @@ int slurp_sf2v2(slurp_t *s, slurp_t *in, size_t num, int64_t off1, int64_t len1,
 
 /* Binds two separate parts of an existing stream together.
  * unslurp() should be called here. */
-void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
-	int64_t off2, size_t len2);
+void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1, int64_t off2, size_t len2);
 
 void unslurp(slurp_t *t);
 
@@ -169,7 +168,8 @@ int slurp_mmap(slurp_t *useme, const char *filename, uint64_t st);
 #endif
 
 /* stdio-style file processing */
-int slurp_seek(slurp_t *t, int64_t offset, int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END, return => 0 on success, -1 on error */
+int slurp_seek(slurp_t *t, int64_t offset,
+	int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END, return => 0 on success, -1 on error */
 int64_t slurp_tell(slurp_t *t);
 #define slurp_rewind(t) slurp_seek((t), 0, SEEK_SET)
 
@@ -200,10 +200,8 @@ int slurp_skip_until_chars(slurp_t *fp, const char *str);
 struct disko;
 
 /* stupid nonseek hack */
-int slurp_init_nonseek(slurp_t *fp,
-	size_t (*read_func)(void *opaque, struct disko *ds, size_t count),
-	void (*closure)(void *opaque),
-	void *opaque);
+int slurp_init_nonseek(slurp_t *fp, size_t (*read_func)(void *opaque, struct disko *ds, size_t count),
+	void (*closure)(void *opaque), void *opaque);
 
 #ifdef USE_ZLIB
 /* in fmt/gzip.c  .... */
@@ -229,14 +227,14 @@ int slurp_could_seek(slurp_t *fp, int64_t x, int whence);
 
 /* ------------------------------------------------------------------------ */
 
-#define SLURP_DEC_OK (0)
+#define SLURP_DEC_OK   (0)
 #define SLURP_DEC_DONE (1)
 /* might be either... */
 #define SLURP_DEC_OK_OR_DONE (2)
 
 struct slurp_decompress_vtable {
 	/* returns an opaque pointer that represents the inflate */
-	void * (*start)(void);
+	void *(*start)(void);
 	/* negative return value = error */
 	int (*inflate)(void *opaque);
 	/* kills the opaque pointer off */

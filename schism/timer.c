@@ -22,10 +22,10 @@
  */
 
 #include "headers.h"
+#include "atomic.h"
 #include "loadso.h"
 #include "mem.h"
 #include "mt.h"
-#include "atomic.h"
 
 #include "backend/timer.h"
 
@@ -54,7 +54,8 @@ void timer_usleep(uint64_t usec)
 		.tv_nsec = (usec % 1000000) * 1000,
 	};
 
-	while (nanosleep(&s, &s) == -1);
+	while (nanosleep(&s, &s) == -1)
+		;
 #elif defined(HAVE_USLEEP) && !defined(SCHISM_WIN32)
 	while (usec) {
 		/* usleep is only guaranteed to succeed on 0-999999 */
@@ -75,7 +76,7 @@ void timer_msleep(uint32_t ms)
 #ifdef USE_THREADS
 /* XXX: these pointers ought to be atomic too. */
 static mt_thread_t *timer_oneshot_thread = NULL;
-static struct atm timer_oneshot_thread_cancelled = { 0 };
+static struct atm timer_oneshot_thread_cancelled = {0};
 
 /* this protects the oneshot PENDING list, not the actual
  * list itself (important!) */
@@ -164,7 +165,8 @@ static timer_ticks_t timer_oneshot_work_(void)
 		}
 	}
 
-	if (wait < 1000) wait = 1000;
+	if (wait < 1000)
+		wait = 1000;
 
 	return wait / 1000;
 }
@@ -247,8 +249,7 @@ static void timer_setup_oneshot(void) SCHISM_THREAD_SAFE
 	timer_oneshot_sem = mt_sem_create();
 
 	atm_store(&timer_oneshot_thread_cancelled, 0);
-	timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func,
-		"Timer oneshot thread", NULL);
+	timer_oneshot_thread = mt_thread_create(timer_oneshot_thread_func, "Timer oneshot thread", NULL);
 #endif
 }
 

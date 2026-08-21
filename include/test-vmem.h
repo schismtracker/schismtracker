@@ -31,7 +31,7 @@
  * For example x86 machines imply VMEM_READ when VMEM_WRITE is set.
  * There is no exec ;) */
 
-#define VMEM_READ 0x01
+#define VMEM_READ  0x01
 #define VMEM_WRITE 0x02
 
 int vmem_protect(void *chunk, uint32_t flags);

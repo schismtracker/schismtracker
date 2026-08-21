@@ -31,8 +31,7 @@ int fmt_ntk_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char magic[8], title[15];
 
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "TWNNSNG2", sizeof(magic)))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "TWNNSNG2", sizeof(magic)))
 		return 0;
 
 	slurp_seek(fp, 9, SEEK_SET);

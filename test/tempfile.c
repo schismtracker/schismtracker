@@ -22,13 +22,13 @@
  */
 
 #include "headers.h"
-#include "util.h"
 #include "dmoz.h" /* dmoz_path_remove */
+#include "util.h"
 
 #include "test-tempfile.h"
 
 #ifdef SCHISM_WIN32
-#define unlink _unlink
+# define unlink _unlink
 #endif
 
 #define TEST_LIST_FILENAME TEST_TEMP_FILE_NAME_PREFIX ".lst"
@@ -101,7 +101,8 @@ void test_temp_files_cleanup(void)
 
 		for (;;) {
 			/* read in the filename */
-			if (fread(temp_file, 1, TEST_TEMP_FILE_NAME_LENGTH - 1, log) != (TEST_TEMP_FILE_NAME_LENGTH - 1))
+			if (fread(temp_file, 1, TEST_TEMP_FILE_NAME_LENGTH - 1, log)
+				!= (TEST_TEMP_FILE_NAME_LENGTH - 1))
 				break;
 			/* we should always have a newline next */
 			if (fgetc(log) != '\n')

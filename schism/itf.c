@@ -26,74 +26,296 @@
 */
 #include "headers.h"
 
-#include "it.h"
-#include "vgamem.h"
 #include "dialog.h"
+#include "it.h"
+#include "page.h"
 #include "widget.h"
 #include "config.h"
 #include "dmoz.h"
-#include "page.h"
-#include "version.h"
-#include "log.h"
-#include "util.h"
-#include "palettes.h"
 #include "fonts.h"
-#include "osdefs.h"
+#include "log.h"
 #include "mem.h"
+#include "osdefs.h"
+#include "palettes.h"
+#include "util.h"
+#include "version.h"
+#include "vgamem.h"
 
 #include <string.h>
 
 static const uint8_t itfmap_chars[] = {
-128, 129, 130, ' ', 128, 129, 141, ' ', 142, 143, 144, ' ', 168, 'C', '-', '0',
-131, ' ', 132, ' ', 131, ' ', 132, ' ', 145, ' ', 146, ' ', 168, 'D', '-', '1',
-133, 134, 135, ' ', 140, 134, 135, ' ', 147, 148, 149, ' ', 168, 'E', '-', '2',
-' ', ' ', ' ', ' ', ' ', 139, 134, 138, 153, 148, 152, ' ', 168, 'F', '-', '3',
-174, ' ', ' ', ' ', 155, 132, ' ', 131, 146, ' ', 145, ' ', 168, 'G', '-', '4',
-175, ' ', ' ', ' ', 156, 137, 129, 136, 151, 143, 150, ' ', 168, 'A', '-', '5',
-176, ' ', ' ', ' ', 157, ' ', 184, 184, 191, '6', '4', 192, 168, 'B', '-', '6',
-176, 177, ' ', ' ', 158, 163, 250, 250, 250, 250, 250, ' ', 168, 'C', '#', '7',
-176, 178, ' ', ' ', 159, 164, ' ', ' ', ' ', 185, 186, ' ', 168, 'D', '#', '8',
-176, 179, 180, ' ', 160, 165, ' ', ' ', ' ', 189, 190, ' ', 168, 'E', '#', '9',
-176, 179, 181, ' ', 161, 166, ' ', ' ', ' ', 187, 188, ' ', 168, 'F', '#', '1',
-176, 179, 182, ' ', 162, 167, 126, 126, 126, ' ', ' ', ' ', 168, 'G', '#', '2',
-154, 154, 154, 154, ' ', ' ', 205, 205, 205, ' ', 183, ' ', 168, 'A', '#', '3',
-169, 170, 171, 172, ' ', ' ', '^', '^', '^', ' ', 173, ' ', 168, 'B', '#', '4',
-193, 194, 195, 196, 197, 198, 199, 200, 201, ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+	128,
+	129,
+	130,
+	' ',
+	128,
+	129,
+	141,
+	' ',
+	142,
+	143,
+	144,
+	' ',
+	168,
+	'C',
+	'-',
+	'0',
+	131,
+	' ',
+	132,
+	' ',
+	131,
+	' ',
+	132,
+	' ',
+	145,
+	' ',
+	146,
+	' ',
+	168,
+	'D',
+	'-',
+	'1',
+	133,
+	134,
+	135,
+	' ',
+	140,
+	134,
+	135,
+	' ',
+	147,
+	148,
+	149,
+	' ',
+	168,
+	'E',
+	'-',
+	'2',
+	' ',
+	' ',
+	' ',
+	' ',
+	' ',
+	139,
+	134,
+	138,
+	153,
+	148,
+	152,
+	' ',
+	168,
+	'F',
+	'-',
+	'3',
+	174,
+	' ',
+	' ',
+	' ',
+	155,
+	132,
+	' ',
+	131,
+	146,
+	' ',
+	145,
+	' ',
+	168,
+	'G',
+	'-',
+	'4',
+	175,
+	' ',
+	' ',
+	' ',
+	156,
+	137,
+	129,
+	136,
+	151,
+	143,
+	150,
+	' ',
+	168,
+	'A',
+	'-',
+	'5',
+	176,
+	' ',
+	' ',
+	' ',
+	157,
+	' ',
+	184,
+	184,
+	191,
+	'6',
+	'4',
+	192,
+	168,
+	'B',
+	'-',
+	'6',
+	176,
+	177,
+	' ',
+	' ',
+	158,
+	163,
+	250,
+	250,
+	250,
+	250,
+	250,
+	' ',
+	168,
+	'C',
+	'#',
+	'7',
+	176,
+	178,
+	' ',
+	' ',
+	159,
+	164,
+	' ',
+	' ',
+	' ',
+	185,
+	186,
+	' ',
+	168,
+	'D',
+	'#',
+	'8',
+	176,
+	179,
+	180,
+	' ',
+	160,
+	165,
+	' ',
+	' ',
+	' ',
+	189,
+	190,
+	' ',
+	168,
+	'E',
+	'#',
+	'9',
+	176,
+	179,
+	181,
+	' ',
+	161,
+	166,
+	' ',
+	' ',
+	' ',
+	187,
+	188,
+	' ',
+	168,
+	'F',
+	'#',
+	'1',
+	176,
+	179,
+	182,
+	' ',
+	162,
+	167,
+	126,
+	126,
+	126,
+	' ',
+	' ',
+	' ',
+	168,
+	'G',
+	'#',
+	'2',
+	154,
+	154,
+	154,
+	154,
+	' ',
+	' ',
+	205,
+	205,
+	205,
+	' ',
+	183,
+	' ',
+	168,
+	'A',
+	'#',
+	'3',
+	169,
+	170,
+	171,
+	172,
+	' ',
+	' ',
+	'^',
+	'^',
+	'^',
+	' ',
+	173,
+	' ',
+	168,
+	'B',
+	'#',
+	'4',
+	193,
+	194,
+	195,
+	196,
+	197,
+	198,
+	199,
+	200,
+	201,
+	' ',
+	' ',
+	' ',
+	' ',
+	' ',
+	' ',
+	' ',
 };
-static const uint8_t helptext_gen[] =
-	"Tab         Next box   \xa8 Alt-C  Copy\n"
-	"Shift-Tab   Prev. box  \xa8 Alt-P  Paste\n"
-	"F2-F4       Switch box \xa8 Alt-M  Mix paste\n"
-	"\x18\x19\x1a\x1b        Dump core  \xa8 Alt-Z  Clear\n"
-	"Ctrl-S/F10  Save font  \xa8 Alt-H  Flip horiz\n"
-	"Ctrl-R/F9   Load font  \xa8 Alt-V  Flip vert\n"
-	"Backspace   Reset font \xa8 Alt-I  Invert\n"
-	"Ctrl-Bksp   BIOS font  \xa8 Alt-Bk Reset text\n"
-	"                       \xa8 0-9    Palette\n"
-	"Ctrl-Q      Exit       \xa8  (+10 with shift)\n";
+static const uint8_t helptext_gen[] = "Tab         Next box   \xa8 Alt-C  Copy\n"
+				      "Shift-Tab   Prev. box  \xa8 Alt-P  Paste\n"
+				      "F2-F4       Switch box \xa8 Alt-M  Mix paste\n"
+				      "\x18\x19\x1a\x1b        Dump core  \xa8 Alt-Z  Clear\n"
+				      "Ctrl-S/F10  Save font  \xa8 Alt-H  Flip horiz\n"
+				      "Ctrl-R/F9   Load font  \xa8 Alt-V  Flip vert\n"
+				      "Backspace   Reset font \xa8 Alt-I  Invert\n"
+				      "Ctrl-Bksp   BIOS font  \xa8 Alt-Bk Reset text\n"
+				      "                       \xa8 0-9    Palette\n"
+				      "Ctrl-Q      Exit       \xa8  (+10 with shift)\n";
 
-static const uint8_t helptext_editbox[] =
-"Space       Plot/clear point\n"
-"Ins/Del     Fill/clear horiz.\n"
-"...w/Shift  Fill/clear vert.\n"
-"\n"
-"+/-         Next/prev. char.\n"
-"PgUp/PgDn   Next/previous row\n"
-"Home/End    Top/bottom corner\n"
-"\n" "Shift-\x18\x19\x1a\x1b  Shift character\n"
-"[/]         Rotate 90\xf8\n";
+static const uint8_t helptext_editbox[] = "Space       Plot/clear point\n"
+					  "Ins/Del     Fill/clear horiz.\n"
+					  "...w/Shift  Fill/clear vert.\n"
+					  "\n"
+					  "+/-         Next/prev. char.\n"
+					  "PgUp/PgDn   Next/previous row\n"
+					  "Home/End    Top/bottom corner\n"
+					  "\n"
+					  "Shift-\x18\x19\x1a\x1b  Shift character\n"
+					  "[/]         Rotate 90\xf8\n";
 
-static const uint8_t helptext_charmap[] =
-"Home/End    First/last char.\n";
+static const uint8_t helptext_charmap[] = "Home/End    First/last char.\n";
 
-static const uint8_t helptext_fontlist[] =
-"Home/End    First/last font\n"
-"Enter       Load/save file\n"
-"Escape      Hide font list\n"
-"\n\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
-"\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\n\n"
-"Remember to save as font.cfg\n"
-"to change the default font!\n";
+static const uint8_t helptext_fontlist[] = "Home/End    First/last font\n"
+					   "Enter       Load/save file\n"
+					   "Escape      Hide font list\n"
+					   "\n\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
+					   "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\n\n"
+					   "Remember to save as font.cfg\n"
+					   "to change the default font!\n";
 
 /* --------------------------------------------------------------------- */
 /* statics & local constants
@@ -114,8 +336,8 @@ note: x/y are for the top left corner of the frame, but w/h define the size of i
 #define ITFMAP_W 16
 #define ITFMAP_H 15
 
-#define FONTLIST_X 65
-#define FONTLIST_Y 0
+#define FONTLIST_X    65
+#define FONTLIST_Y    0
 #define VISIBLE_FONTS 22 /* this should be called FONTLIST_H... */
 
 #define HELPTEXT_X 0
@@ -125,32 +347,36 @@ note: x/y are for the top left corner of the frame, but w/h define the size of i
 #define INNER_X(x) ((x) + 3)
 #define INNER_Y(y) ((y) + 4)
 
-#define FRAME_RIGHT 3
+#define FRAME_RIGHT  3
 #define FRAME_BOTTOM 3
 
-#define WITHIN(n,l,u) ((n) >= (l) && (n) < (u))
-#define POINT_IN(x,y,item) \
+#define WITHIN(n, l, u) ((n) >= (l) && (n) < (u))
+#define POINT_IN(x, y, item) \
 	(WITHIN((x), INNER_X(item##_X), INNER_X(item##_X) + item##_W) \
-	&& WITHIN((y), INNER_Y(item##_Y), INNER_Y(item##_Y) + item##_H))
-#define POINT_IN_FRAME(x,y,item) \
+		&& WITHIN((y), INNER_Y(item##_Y), INNER_Y(item##_Y) + item##_H))
+#define POINT_IN_FRAME(x, y, item) \
 	(WITHIN((x), item##_X, INNER_X(item##_X) + item##_W + FRAME_RIGHT) \
-	&& WITHIN((y), item##_Y, INNER_Y(item##_Y) + item##_H + FRAME_BOTTOM))
+		&& WITHIN((y), item##_Y, INNER_Y(item##_Y) + item##_H + FRAME_BOTTOM))
 
 static int edit_x = 3, edit_y = 3;
 static uint8_t current_char = 'A';
 static int itfmap_pos = -1;
 
 static enum {
-	EDITBOX, CHARMAP, ITFMAP, FONTLIST
+	EDITBOX,
+	CHARMAP,
+	ITFMAP,
+	FONTLIST
 } selected_item = EDITBOX;
 
 static enum {
-	MODE_OFF, MODE_LOAD, MODE_SAVE
+	MODE_OFF,
+	MODE_LOAD,
+	MODE_SAVE
 } fontlist_mode = MODE_OFF;
 
 static dmoz_filelist_t flist;
 static int top_font = 0, cur_font = 0;
-
 
 static void fontlist_reposition(void)
 {
@@ -191,22 +417,21 @@ static void load_fontlist(void)
 		log_perror(font_dir);
 	free(font_dir);
 	dmoz_filter_filelist(&flist, fontgrep, &cur_font, NULL);
-	while (dmoz_worker());
+	while (dmoz_worker())
+		;
 	fontlist_reposition();
 
 	/* p is freed by dmoz_free */
 }
 
-
-
-static uint8_t clipboard[8] = { 0 };
+static uint8_t clipboard[8] = {0};
 
 #define INCR_WRAPPED(n) (((n) & 0xf0) | (((n) + 1) & 0xf))
 #define DECR_WRAPPED(n) (((n) & 0xf0) | (((n) - 1) & 0xf))
 
 /* if this is nonzero, the screen will be redrawn. none of the functions
  * except main should call draw_anything -- set this instead. */
-static void draw_frame(const char* name, int x, int y, int inner_width, int inner_height, int active)
+static void draw_frame(const char *name, int x, int y, int inner_width, int inner_height, int active)
 {
 	int n, c;
 	int len = strlen(name);
@@ -215,10 +440,8 @@ static void draw_frame(const char* name, int x, int y, int inner_width, int inne
 		len = inner_width + 2;
 	c = (status.flags & INVERTED_PALETTE) ? 1 : 3;
 
-	draw_box(x, y + 1, x + inner_width + 5,
-			  y + inner_height + 6, BOX_THIN | BOX_CORNER | BOX_OUTSET);
-	draw_box(x + 1, y + 2, x + inner_width + 4,
-			  y + inner_height + 5, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(x, y + 1, x + inner_width + 5, y + inner_height + 6, BOX_THIN | BOX_CORNER | BOX_OUTSET);
+	draw_box(x + 1, y + 2, x + inner_width + 4, y + inner_height + 5, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	draw_char(128, x, y, c, 2);
 	for (n = 0; n < len + 1; n++)
@@ -228,13 +451,13 @@ static void draw_frame(const char* name, int x, int y, int inner_width, int inne
 	draw_char(137, x + len + 1, y + 1, c, 2);
 
 	switch (active) {
-	case 0:                 /* inactive */
+	case 0:   /* inactive */
 		n = 0;
 		break;
-	case -1:                        /* disabled */
+	case -1:   /* disabled */
 		n = 1;
 		break;
-	default:                        /* active */
+	default:   /* active */
 		n = 3;
 		break;
 	}
@@ -250,10 +473,8 @@ static inline void draw_editbox(void)
 	int ci = current_char << 3, i, j, fg;
 
 	for (i = 0; i < 8; i++) {
-		draw_char('1' + i, INNER_X(EDITBOX_X) + i + 1,
-				   INNER_Y(EDITBOX_Y) + 2, (i == edit_x ? 3 : 1), 0);
-		draw_char('1' + i, INNER_X(EDITBOX_X),
-				   INNER_Y(EDITBOX_Y) + i + 3, (i == edit_y ? 3 : 1), 0);
+		draw_char('1' + i, INNER_X(EDITBOX_X) + i + 1, INNER_Y(EDITBOX_Y) + 2, (i == edit_x ? 3 : 1), 0);
+		draw_char('1' + i, INNER_X(EDITBOX_X), INNER_Y(EDITBOX_Y) + i + 3, (i == edit_y ? 3 : 1), 0);
 
 		for (j = 0; j < 8; j++) {
 			if (font_data[ci + j] & (128 >> i)) {
@@ -264,11 +485,9 @@ static inline void draw_editbox(void)
 				fg = 1;
 			}
 			if (selected_item == EDITBOX && i == edit_x && j == edit_y)
-				draw_char(c, INNER_X(EDITBOX_X) + 1 + i,
-						   INNER_Y(EDITBOX_Y) + 3 + j, 0, 3);
+				draw_char(c, INNER_X(EDITBOX_X) + 1 + i, INNER_Y(EDITBOX_Y) + 3 + j, 0, 3);
 			else
-				draw_char(c, INNER_X(EDITBOX_X) + 1 + i,
-						   INNER_Y(EDITBOX_Y) + 3 + j, fg, 0);
+				draw_char(c, INNER_X(EDITBOX_X) + 1 + i, INNER_Y(EDITBOX_Y) + 3 + j, fg, 0);
 		}
 	}
 	draw_char(current_char, INNER_X(EDITBOX_X), INNER_Y(EDITBOX_Y), 5, 0);
@@ -285,13 +504,13 @@ static inline void draw_charmap(void)
 		while (n) {
 			n--;
 			draw_char(n, INNER_X(CHARMAP_X) + n % 16, INNER_Y(CHARMAP_Y) + n / 16,
-					   (n == current_char ? 0 : 1), (n == current_char ? 3 : 0));
+				(n == current_char ? 0 : 1), (n == current_char ? 3 : 0));
 		}
 	} else {
 		while (n) {
 			n--;
 			draw_char(n, INNER_X(CHARMAP_X) + n % 16, INNER_Y(CHARMAP_Y) + n / 16,
-					   (n == current_char ? 3 : 1), 0);
+				(n == current_char ? 3 : 1), 0);
 		}
 	}
 }
@@ -303,7 +522,7 @@ static inline void draw_itfmap(void)
 	uint8_t highlight_char = 0xFF;
 
 	if (itfmap_pos < 0 || itfmap_chars[itfmap_pos] != current_char) {
-		ptr = (unsigned char *) memchr((char *) itfmap_chars, current_char, sizeof(itfmap_chars));
+		ptr = (unsigned char *)memchr((char *)itfmap_chars, current_char, sizeof(itfmap_chars));
 		if (ptr == NULL)
 			itfmap_pos = -1;
 		else
@@ -324,8 +543,7 @@ static inline void draw_itfmap(void)
 				fg = 3;
 			}
 		}
-		draw_char(itfmap_chars[n],
-				   INNER_X(ITFMAP_X) + n % 16, INNER_Y(ITFMAP_Y) + n / 16, fg, bg);
+		draw_char(itfmap_chars[n], INNER_X(ITFMAP_X) + n % 16, INNER_Y(ITFMAP_Y) + n / 16, fg, bg);
 	}
 }
 
@@ -343,34 +561,32 @@ static inline void draw_fontlist(void)
 		cbg = 0;
 	}
 
-	if (top_font < 0) top_font = 0;
-	if (n < 0) n = 0;
+	if (top_font < 0)
+		top_font = 0;
+	if (n < 0)
+		n = 0;
 
 	while (n < flist.num_files && pos < VISIBLE_FONTS) {
 		x = 1;
 		f = flist.files[n];
-		if (!f) break;
+		if (!f)
+			break;
 		ptr = f->base;
 		if (n == cur_font) {
 			draw_char(183, INNER_X(FONTLIST_X), INNER_Y(FONTLIST_Y) + pos, cfg, cbg);
 			while (x < 9 && *ptr && (n == 0 || *ptr != '.')) {
-				draw_char(*ptr,
-						   INNER_X(FONTLIST_X) + x,
-						   INNER_Y(FONTLIST_Y) + pos, cfg, cbg);
+				draw_char(*ptr, INNER_X(FONTLIST_X) + x, INNER_Y(FONTLIST_Y) + pos, cfg, cbg);
 				x++;
 				ptr++;
 			}
 			while (x < 9) {
-				draw_char(0,
-						   INNER_X(FONTLIST_X) + x,
-						   INNER_Y(FONTLIST_Y) + pos, cfg, cbg);
+				draw_char(0, INNER_X(FONTLIST_X) + x, INNER_Y(FONTLIST_Y) + pos, cfg, cbg);
 				x++;
 			}
 		} else {
 			draw_char(173, INNER_X(FONTLIST_X), INNER_Y(FONTLIST_Y) + pos, 2, 0);
 			while (x < 9 && *ptr && (n == 0 || *ptr != '.')) {
-				draw_char(*ptr,
-						   INNER_X(FONTLIST_X) + x, INNER_Y(FONTLIST_Y) + pos, 5, 0);
+				draw_char(*ptr, INNER_X(FONTLIST_X) + x, INNER_Y(FONTLIST_Y) + pos, 5, 0);
 				x++;
 				ptr++;
 			}
@@ -392,9 +608,9 @@ static inline void draw_helptext(void)
 	int column;
 
 	for (line = INNER_Y(HELPTEXT_Y); *ptr; line++) {
-		eol = (unsigned char *) strchr((char *) ptr, '\n');
+		eol = (unsigned char *)strchr((char *)ptr, '\n');
 		if (!eol)
-			eol = (unsigned char *) strchr((char *) ptr, '\0');
+			eol = (unsigned char *)strchr((char *)ptr, '\0');
 		for (column = INNER_X(HELPTEXT_X); ptr < eol; ptr++, column++)
 			draw_char(*ptr, column, line, 12, 0);
 		ptr++;
@@ -416,9 +632,9 @@ static inline void draw_helptext(void)
 		break;
 	}
 	for (line = INNER_Y(HELPTEXT_Y); *ptr; line++) {
-		eol = (unsigned char *) strchr((char *) ptr, '\n');
+		eol = (unsigned char *)strchr((char *)ptr, '\n');
 		if (!eol)
-			eol = (unsigned char *) strchr((char *) ptr, '\0');
+			eol = (unsigned char *)strchr((char *)ptr, '\0');
 		draw_char(168, INNER_X(HELPTEXT_X) + 43, line, 12, 0);
 		for (column = INNER_X(HELPTEXT_X) + 45; ptr < eol; ptr++, column++)
 			draw_char(*ptr, column, line, 12, 0);
@@ -438,7 +654,7 @@ extern unsigned int color_set[16];
 
 static void draw_screen(void)
 {
-	draw_fill_chars(0,0,79,49,DEFAULT_FG,0);
+	draw_fill_chars(0, 0, 79, 49, DEFAULT_FG, 0);
 	draw_frame("Edit Box", EDITBOX_X, EDITBOX_Y, 9, 11, !!(selected_item == EDITBOX));
 	draw_editbox();
 
@@ -452,10 +668,10 @@ static void draw_screen(void)
 	case MODE_LOAD:
 	case MODE_SAVE:
 		draw_frame((fontlist_mode == MODE_LOAD) ? "Load/Browse" : "Save As...", FONTLIST_X, FONTLIST_Y, 9,
-			   VISIBLE_FONTS, !!(selected_item == FONTLIST));
+			VISIBLE_FONTS, !!(selected_item == FONTLIST));
 		draw_fontlist();
 		break;
-	default:                        /* Off? (I sure hope so!) */
+	default:   /* Off? (I sure hope so!) */
 		break;
 	}
 
@@ -464,9 +680,9 @@ static void draw_screen(void)
 
 	draw_time();
 }
-static void handle_key_editbox(struct key_event * k)
+static void handle_key_editbox(struct key_event *k)
 {
-	uint8_t tmp[8] = { 0 };
+	uint8_t tmp[8] = {0};
 	int ci = current_char << 3;
 	int n, bit;
 	uint8_t *ptr = font_data + ci;
@@ -570,7 +786,7 @@ static void handle_key_editbox(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-static void handle_key_charmap(struct key_event * k)
+static void handle_key_charmap(struct key_event *k)
 {
 	switch (k->sym) {
 	case SCHISM_KEYSYM_UP:
@@ -597,7 +813,7 @@ static void handle_key_charmap(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-static void handle_key_itfmap(struct key_event * k)
+static void handle_key_itfmap(struct key_event *k)
 {
 	switch (k->sym) {
 	case SCHISM_KEYSYM_UP:
@@ -653,7 +869,7 @@ static void confirm_font_save_ok(void *vf)
 	selected_item = EDITBOX;
 }
 
-static void handle_key_fontlist(struct key_event * k)
+static void handle_key_fontlist(struct key_event *k)
 {
 	int new_font = cur_font;
 
@@ -685,16 +901,15 @@ static void handle_key_fontlist(struct key_event * k)
 			return;
 		switch (fontlist_mode) {
 		case MODE_LOAD:
-			if (cur_font < flist.num_files
-			&& flist.files[cur_font]
-			&& font_load(flist.files[cur_font]->base) != 0)
+			if (cur_font < flist.num_files && flist.files[cur_font]
+				&& font_load(flist.files[cur_font]->base) != 0)
 				font_reset();
 			break;
 		case MODE_SAVE:
 			if (cur_font < flist.num_files && flist.files[cur_font]) {
-				if (strcasecmp(flist.files[cur_font]->base,"font.cfg") != 0) {
-					dialog_create(DIALOG_OK_CANCEL, "Overwrite font file?",
-						confirm_font_save_ok, NULL, 1, flist.files[cur_font]->base);
+				if (strcasecmp(flist.files[cur_font]->base, "font.cfg") != 0) {
+					dialog_create(DIALOG_OK_CANCEL, "Overwrite font file?", confirm_font_save_ok,
+						NULL, 1, flist.files[cur_font]->base);
 					return;
 				}
 				confirm_font_save_ok(flist.files[cur_font]->base);
@@ -804,19 +1019,21 @@ static void handle_mouse_editbox(struct key_event *k)
 static void handle_mouse_charmap(struct key_event *k)
 {
 	int xrel = k->x - INNER_X(CHARMAP_X), yrel = k->y - INNER_Y(CHARMAP_Y);
-	if (!k->mouse) return;
+	if (!k->mouse)
+		return;
 	current_char = 16 * yrel + xrel;
 }
 
 static void handle_mouse_itfmap(struct key_event *k)
 {
 	int xrel = k->x - INNER_X(ITFMAP_X), yrel = k->y - INNER_Y(ITFMAP_Y);
-	if (!k->mouse) return;
+	if (!k->mouse)
+		return;
 	itfmap_pos = 16 * yrel + xrel;
 	current_char = itfmap_chars[itfmap_pos];
 }
 
-static void handle_mouse(struct key_event * k)
+static void handle_mouse(struct key_event *k)
 {
 	int x = k->x, y = k->y;
 	if (POINT_IN_FRAME(x, y, EDITBOX)) {
@@ -838,7 +1055,7 @@ static void handle_mouse(struct key_event * k)
 	status.flags |= NEED_UPDATE;
 }
 
-static int fontedit_handle_key(struct key_event * k)
+static int fontedit_handle_key(struct key_event *k)
 {
 	int n, ci = current_char << 3;
 	uint8_t *ptr = font_data + ci;
@@ -860,9 +1077,15 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		k->sym += 10;
 		/* fall through */
-	case SCHISM_KEYSYM_KP_1: case SCHISM_KEYSYM_KP_2: case SCHISM_KEYSYM_KP_3:
-	case SCHISM_KEYSYM_KP_4: case SCHISM_KEYSYM_KP_5: case SCHISM_KEYSYM_KP_6:
-	case SCHISM_KEYSYM_KP_7: case SCHISM_KEYSYM_KP_8: case SCHISM_KEYSYM_KP_9:
+	case SCHISM_KEYSYM_KP_1:
+	case SCHISM_KEYSYM_KP_2:
+	case SCHISM_KEYSYM_KP_3:
+	case SCHISM_KEYSYM_KP_4:
+	case SCHISM_KEYSYM_KP_5:
+	case SCHISM_KEYSYM_KP_6:
+	case SCHISM_KEYSYM_KP_7:
+	case SCHISM_KEYSYM_KP_8:
+	case SCHISM_KEYSYM_KP_9:
 		if (k->state == KEY_RELEASE)
 			return 1;
 		n = k->sym - SCHISM_KEYSYM_KP_1;
@@ -882,9 +1105,15 @@ static int fontedit_handle_key(struct key_event * k)
 			return 1;
 		k->sym += 10;
 		/* fall through */
-	case '1': case '2': case '3':
-	case '4': case '5': case '6':
-	case '7': case '8': case '9':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
 		if (k->state == KEY_RELEASE)
 			return 1;
 		n = k->sym - '1';
@@ -1009,7 +1238,8 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_r:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (!(k->mod & SCHISM_KEYMOD_CTRL)) break;
+		if (!(k->mod & SCHISM_KEYMOD_CTRL))
+			break;
 		/* fall through */
 	case SCHISM_KEYSYM_F9:
 		if (k->state == KEY_RELEASE)
@@ -1022,7 +1252,8 @@ static int fontedit_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_s:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (!(k->mod & SCHISM_KEYMOD_CTRL)) break;
+		if (!(k->mod & SCHISM_KEYMOD_CTRL))
+			break;
 		/* fall through */
 	case SCHISM_KEYSYM_F10:
 		/* a bit weird, but this ensures that font.cfg
@@ -1082,23 +1313,39 @@ static int fontedit_handle_key(struct key_event * k)
 	return 1;
 }
 
-
 static struct widget fontedit_widget_hack[1];
 
 static int fontedit_key_hack(struct key_event *k)
 {
 	switch (k->sym) {
-	case SCHISM_KEYSYM_r: case SCHISM_KEYSYM_l: case SCHISM_KEYSYM_s:
-	case SCHISM_KEYSYM_c: case SCHISM_KEYSYM_p: case SCHISM_KEYSYM_m:
-	case SCHISM_KEYSYM_z: case SCHISM_KEYSYM_v: case SCHISM_KEYSYM_h:
-	case SCHISM_KEYSYM_i: case SCHISM_KEYSYM_q: case SCHISM_KEYSYM_w:
-	case SCHISM_KEYSYM_F1: case SCHISM_KEYSYM_F2: case SCHISM_KEYSYM_F3:
-	case SCHISM_KEYSYM_F4: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F6:
-	case SCHISM_KEYSYM_F7: case SCHISM_KEYSYM_F8: case SCHISM_KEYSYM_F9:
-	case SCHISM_KEYSYM_F10: case SCHISM_KEYSYM_F11: case SCHISM_KEYSYM_F12:
+	case SCHISM_KEYSYM_r:
+	case SCHISM_KEYSYM_l:
+	case SCHISM_KEYSYM_s:
+	case SCHISM_KEYSYM_c:
+	case SCHISM_KEYSYM_p:
+	case SCHISM_KEYSYM_m:
+	case SCHISM_KEYSYM_z:
+	case SCHISM_KEYSYM_v:
+	case SCHISM_KEYSYM_h:
+	case SCHISM_KEYSYM_i:
+	case SCHISM_KEYSYM_q:
+	case SCHISM_KEYSYM_w:
+	case SCHISM_KEYSYM_F1:
+	case SCHISM_KEYSYM_F2:
+	case SCHISM_KEYSYM_F3:
+	case SCHISM_KEYSYM_F4:
+	case SCHISM_KEYSYM_F5:
+	case SCHISM_KEYSYM_F6:
+	case SCHISM_KEYSYM_F7:
+	case SCHISM_KEYSYM_F8:
+	case SCHISM_KEYSYM_F9:
+	case SCHISM_KEYSYM_F10:
+	case SCHISM_KEYSYM_F11:
+	case SCHISM_KEYSYM_F12:
 		return fontedit_handle_key(k);
 	case SCHISM_KEYSYM_RETURN:
-		if (status.dialog_type & (DIALOG_MENU|DIALOG_BOX)) return 0;
+		if (status.dialog_type & (DIALOG_MENU | DIALOG_BOX))
+			return 0;
 		if (selected_item == FONTLIST) {
 			handle_key_fontlist(k);
 			return 1;
@@ -1109,7 +1356,9 @@ static int fontedit_key_hack(struct key_event *k)
 	return 0;
 }
 
-static void do_nil(void) {}
+static void do_nil(void)
+{
+}
 void fontedit_load_page(struct page *page)
 {
 	page->title = "";

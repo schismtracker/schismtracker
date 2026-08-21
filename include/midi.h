@@ -29,7 +29,7 @@
 struct midi_provider;
 struct midi_port;
 
-#define MIDI_PORT_CAN_SCHEDULE  1
+#define MIDI_PORT_CAN_SCHEDULE 1
 struct midi_driver {
 	uint32_t flags;
 
@@ -50,8 +50,7 @@ struct midi_driver {
 	int (*enable)(struct midi_port *d);
 	int (*disable)(struct midi_port *d);
 
-	void (*send)(struct midi_port *d,
-			const unsigned char *seq, uint32_t len, uint32_t delay);
+	void (*send)(struct midi_port *d, const unsigned char *seq, uint32_t len, uint32_t delay);
 	void (*drain)(struct midi_port *d);
 
 	/* Function to destroy the userdata given to midi_provider_register */
@@ -75,10 +74,8 @@ struct midi_provider {
 	int (*enable)(struct midi_port *d);
 	int (*disable)(struct midi_port *d);
 
-	void (*send_now)(struct midi_port *d,
-			const unsigned char *seq, uint32_t len, uint32_t delay);
-	void (*send_later)(struct midi_port *d,
-			const unsigned char *seq, uint32_t len, uint32_t delay);
+	void (*send_now)(struct midi_port *d, const unsigned char *seq, uint32_t len, uint32_t delay);
+	void (*send_later)(struct midi_port *d, const unsigned char *seq, uint32_t len, uint32_t delay);
 	void (*drain)(struct midi_port *d);
 
 	void *userdata;
@@ -113,15 +110,12 @@ struct midi_port {
 
 	int (*enable)(struct midi_port *d);
 	int (*disable)(struct midi_port *d);
-	void (*send_now)(struct midi_port *d,
-			const unsigned char *seq, uint32_t len, uint32_t delay);
-	void (*send_later)(struct midi_port *d,
-			const unsigned char *seq, uint32_t len, uint32_t delay);
+	void (*send_now)(struct midi_port *d, const unsigned char *seq, uint32_t len, uint32_t delay);
+	void (*send_later)(struct midi_port *d, const unsigned char *seq, uint32_t len, uint32_t delay);
 	void (*drain)(struct midi_port *d);
 
 	struct midi_provider *provider;
 };
-
 
 /* schism calls these directly */
 int midi_engine_start(void);
@@ -150,12 +144,11 @@ void midi_engine_port_lock(void);
 void midi_engine_port_unlock(void);
 
 /* midi engines register a provider (one each!) */
-struct midi_provider *midi_provider_register(const char *name, const struct midi_driver *f,
-	void *userdata);
+struct midi_provider *midi_provider_register(const char *name, const struct midi_driver *f, void *userdata);
 
 /* midi engines list ports this way */
-uint32_t midi_port_register(struct midi_provider *p,
-	uint8_t inout, const char *name, void *userdata, void (*destroy_userdata)(void *));
+uint32_t midi_port_register(
+	struct midi_provider *p, uint8_t inout, const char *name, void *userdata, void (*destroy_userdata)(void *));
 
 int midi_port_foreach(struct midi_provider *p, struct midi_port **cursor);
 void midi_port_unregister(uint32_t num);
@@ -213,14 +206,14 @@ int midimgr_midi_setup(void);   // SCHISM_MACOS
 void midi_queue_alloc(int buffer_size, int channels, int samples_per_second);
 
 /* MIDI_PITCH_BEND is defined by OSS -- maybe these need more specific names? */
-#define MIDI_TICK_QUANTIZE      0x00000001
-#define MIDI_BASE_PROGRAM1      0x00000002
-#define MIDI_RECORD_NOTEOFF     0x00000004
-#define MIDI_RECORD_VELOCITY    0x00000008
-#define MIDI_RECORD_AFTERTOUCH  0x00000010
-#define MIDI_CUT_NOTE_OFF       0x00000020
-#define MIDI_PITCHBEND          0x00000040
-#define MIDI_DISABLE_RECORD     0x00010000
+#define MIDI_TICK_QUANTIZE     0x00000001
+#define MIDI_BASE_PROGRAM1     0x00000002
+#define MIDI_RECORD_NOTEOFF    0x00000004
+#define MIDI_RECORD_VELOCITY   0x00000008
+#define MIDI_RECORD_AFTERTOUCH 0x00000010
+#define MIDI_CUT_NOTE_OFF      0x00000020
+#define MIDI_PITCHBEND         0x00000040
+#define MIDI_DISABLE_RECORD    0x00010000
 
 extern int midi_flags, midi_pitch_depth, midi_amplification, midi_c5note;
 

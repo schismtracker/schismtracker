@@ -24,8 +24,8 @@
 /* Routines to portably operate on IEEE floating point numbers. */
 
 #include "headers.h"
-#include "bits.h"
 #include "ieee-float.h"
+#include "bits.h"
 #include "log.h"
 
 /* These are used for hardware encoding/decoding of floating point numbers.
@@ -37,64 +37,64 @@
  * other could not! But this is exceptionally rare. */
 #if (SIZEOF__FLOAT32 == 4)
 typedef _Float32 float32;
-# define F32_C(x) x ## f32
+# define F32_C(x) x##f32
 #elif (SIZEOF_FLOAT == 4)
 typedef float float32;
-# define F32_C(x) x ## f
+# define F32_C(x) x##f
 #elif (SIZEOF_DOUBLE == 4)
 typedef double float32;
 # define F32_C(x) x
 #elif (SIZEOF_LONG_DOUBLE == 4)
 typedef long double float32;
-# define F32_C() x ## l
+# define F32_C() x##l
 #endif
 
 #if (SIZEOF__FLOAT64 == 8)
 typedef _Float64 float64;
-# define F64_C(x) x ## f64
+# define F64_C(x) x##f64
 #elif (SIZEOF_FLOAT == 8)
 typedef float float64;
-# define F64_C(x) x ## f
+# define F64_C(x) x##f
 #elif (SIZEOF_DOUBLE == 8)
 typedef double float64;
 # define F64_C(x) x
 #elif (SIZEOF_LONG_DOUBLE == 8)
 typedef long double float64;
-# define F64_C() x ## l
+# define F64_C() x##l
 #endif
 
 #if (SIZEOF___FLOAT80 == 12)
 typedef __float80 float96;
-# define F96_C(x) x ## w
+# define F96_C(x) x##w
 #elif (SIZEOF__FLOAT64X == 12)
 typedef _Float64x float96;
-# define F96_C(x) x ## f64x
+# define F96_C(x) x##f64x
 #elif (SIZEOF_FLOAT == 12)
 typedef float float96;
-# define F96_C(x) x ## f
+# define F96_C(x) x##f
 #elif (SIZEOF_DOUBLE == 12)
 typedef double float96;
 # define F96_C(x) x
 #elif (SIZEOF_LONG_DOUBLE == 12)
 typedef long double float96;
-# define F96_C(x) x ## l
+# define F96_C(x) x##l
 #endif
 
 #if (SIZEOF___FLOAT80 == 16)
 typedef __float80 float128;
-# define F128_C(x) x ## w
+# define F128_C(x) x##w
 #elif (SIZEOF__FLOAT64X == 16)
 typedef _Float64x float128;
-# define F128_C(x) x ## f64x
+# define F128_C(x) x##f64x
 #elif (SIZEOF_FLOAT == 16)
 typedef float float128;
-# define F128_C(x) x ## f
+# define F128_C(x) x##f
 #elif (SIZEOF_DOUBLE == 16)
 typedef double float128;
 # define F128_C(x) x
 #elif (SIZEOF_LONG_DOUBLE == 16)
 typedef long double float128;
-# define F128_C(x) x ## l
+# define F128_C(x) x##l
 #endif
 
 #ifdef F32_C
@@ -178,18 +178,17 @@ enum {
 # define HUGE_VAL HUGE
 #endif /* HUGE_VAL */
 
-#define FloatToUnsigned(f) ((uint32_t) (((int32_t) (f - 2147483648.0)) + 2147483647L + 1))
-#define UnsignedToFloat(u) (((double) ((int32_t) (u - 2147483647L - 1))) + 2147483648.0)
+#define FloatToUnsigned(f) ((uint32_t)(((int32_t)(f - 2147483648.0)) + 2147483647L + 1))
+#define UnsignedToFloat(u) (((double)((int32_t)(u - 2147483647L - 1))) + 2147483648.0)
 
 /****************************************************************
  * Single precision IEEE floating-point conversion routines
  ****************************************************************/
 
-#define SEXP_MAX		255
-#define SEXP_OFFSET		127
-#define SEXP_SIZE		8
-#define SEXP_POSITION	(32-SEXP_SIZE-1)
-
+#define SEXP_MAX      255
+#define SEXP_OFFSET   127
+#define SEXP_SIZE     8
+#define SEXP_POSITION (32 - SEXP_SIZE - 1)
 
 double float_decode_ieee_32(const unsigned char bytes[4])
 {
@@ -200,7 +199,10 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 #ifdef HAVE_FLOAT32
 	switch (f32_format) {
 	case F32_INTEL: {
-		union { float32 f; uint32_t u; } x;
+		union {
+			float32 f;
+			uint32_t u;
+		} x;
 		memcpy(&x, bytes, 4);
 		x.u = bswap_32(x.u);
 		return x.f;
@@ -215,10 +217,8 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 	/* Fallback to generic implementation */
 #endif
 
-	bits =	((uint32_t)(bytes[0] & 0xFF) << 24)
-		|	((uint32_t)(bytes[1] & 0xFF) << 16)
-		|	((uint32_t)(bytes[2] & 0xFF) << 8)
-		|	 (uint32_t)(bytes[3] & 0xFF); /* Assemble bytes into a long */
+	bits = ((uint32_t)(bytes[0] & 0xFF) << 24) | ((uint32_t)(bytes[1] & 0xFF) << 16)
+	       | ((uint32_t)(bytes[2] & 0xFF) << 8) | (uint32_t)(bytes[3] & 0xFF); /* Assemble bytes into a long */
 
 	if ((bits & 0x7FFFFFFF) == 0) {
 		f = 0;
@@ -226,14 +226,12 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 		expon = (bits & 0x7F800000) >> SEXP_POSITION;
 		if (expon == SEXP_MAX) { /* Infinity or NaN */
 			f = HUGE_VAL; /* Map NaN's to infinity */
-		}
-		else {
+		} else {
 			if (expon == 0) {
 				/* Denormalized number */
 				mantissa = (bits & 0x7fffff);
 				f = ldexp((double)mantissa, expon - SEXP_OFFSET - SEXP_POSITION + 1);
-			}
-			else {
+			} else {
 				/* Normalized number */
 				mantissa = (bits & 0x7fffff) + 0x800000; /* Insert hidden bit */
 				f = ldexp((double)mantissa, expon - SEXP_OFFSET - SEXP_POSITION);
@@ -244,9 +242,7 @@ double float_decode_ieee_32(const unsigned char bytes[4])
 	return (bits & 0x80000000) ? -f : f;
 }
 
-
 /****************************************************************/
-
 
 void float_encode_ieee_32(double num, unsigned char bytes[4])
 {
@@ -256,7 +252,10 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 #ifdef HAVE_FLOAT32
 	switch (f32_format) {
 	case F32_INTEL: {
-		union { uint32_t u; float32 f; } x;
+		union {
+			uint32_t u;
+			float32 f;
+		} x;
 
 		x.f = num;
 		x.u = bswap_32(x.u);
@@ -274,7 +273,7 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 	/* Fallback to generic implementation */
 #endif
 
-	if (num < 0) {	/* Can't distinguish a negative zero */
+	if (num < 0) { /* Can't distinguish a negative zero */
 		sign = 0x80000000;
 		num *= -1;
 	} else {
@@ -289,14 +288,14 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 
 		fMant = frexp(num, &expon);
 
-		if ((expon > (SEXP_MAX-SEXP_OFFSET+1)) || !(fMant < 1)) {
+		if ((expon > (SEXP_MAX - SEXP_OFFSET + 1)) || !(fMant < 1)) {
 			/* NaN's and infinities fail second test */
 			bits = sign | 0x7F800000; /* +/- infinity */
 		} else {
 			long mantissa;
 
-			if (expon < -(SEXP_OFFSET-2)) { /* Smaller than normalized */
-				int shift = (SEXP_POSITION+1) + (SEXP_OFFSET-2) + expon;
+			if (expon < -(SEXP_OFFSET - 2)) { /* Smaller than normalized */
+				int shift = (SEXP_POSITION + 1) + (SEXP_OFFSET - 2) + expon;
 				if (shift < 0) { /* Way too small: flush to zero */
 					bits = sign;
 				} else { /* Nonzero denormalized number */
@@ -304,8 +303,8 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 					bits = sign | mantissa;
 				}
 			} else { /* Normalized number */
-				mantissa = (long)floor(fMant * (1L << (SEXP_POSITION+1)));
-				mantissa -= (1L << SEXP_POSITION);			/* Hide MSB */
+				mantissa = (long)floor(fMant * (1L << (SEXP_POSITION + 1)));
+				mantissa -= (1L << SEXP_POSITION);   /* Hide MSB */
 				bits = sign | ((long)((expon + SEXP_OFFSET - 1)) << SEXP_POSITION) | mantissa;
 			}
 		}
@@ -317,15 +316,14 @@ void float_encode_ieee_32(double num, unsigned char bytes[4])
 	bytes[3] = bits;
 }
 
-
 /****************************************************************
  * Double precision IEEE floating-point conversion routines
  ****************************************************************/
 
-#define DEXP_MAX		2047
-#define DEXP_OFFSET		1023
-#define DEXP_SIZE		11
-#define DEXP_POSITION	(32-DEXP_SIZE-1)
+#define DEXP_MAX      2047
+#define DEXP_OFFSET   1023
+#define DEXP_SIZE     11
+#define DEXP_POSITION (32 - DEXP_SIZE - 1)
 
 double float_decode_ieee_64(const unsigned char bytes[8])
 {
@@ -336,7 +334,10 @@ double float_decode_ieee_64(const unsigned char bytes[8])
 #ifdef HAVE_FLOAT64
 	switch (f64_format) {
 	case F64_INTEL: {
-		union { float64 f; uint64_t u; } x;
+		union {
+			float64 f;
+			uint64_t u;
+		} x;
 
 		memcpy(&x.u, bytes, 8);
 		x.u = bswap_64(x.u);
@@ -353,29 +354,23 @@ double float_decode_ieee_64(const unsigned char bytes[8])
 	/* Fallback to generic implementation */
 #endif
 
-	first = ((uint32_t)(bytes[0] & 0xFF) << 24)
-		|	((uint32_t)(bytes[1] & 0xFF) << 16)
-		|	((uint32_t)(bytes[2] & 0xFF) << 8)
-		|	 (uint32_t)(bytes[3] & 0xFF);
-	second =((uint32_t)(bytes[4] & 0xFF) << 24)
-		|	((uint32_t)(bytes[5] & 0xFF) << 16)
-		|	((uint32_t)(bytes[6] & 0xFF) << 8)
-		|	 (uint32_t)(bytes[7] & 0xFF);
-	
+	first = ((uint32_t)(bytes[0] & 0xFF) << 24) | ((uint32_t)(bytes[1] & 0xFF) << 16)
+		| ((uint32_t)(bytes[2] & 0xFF) << 8) | (uint32_t)(bytes[3] & 0xFF);
+	second = ((uint32_t)(bytes[4] & 0xFF) << 24) | ((uint32_t)(bytes[5] & 0xFF) << 16)
+		 | ((uint32_t)(bytes[6] & 0xFF) << 8) | (uint32_t)(bytes[7] & 0xFF);
+
 	if (first == 0 && second == 0) {
 		f = 0;
 	} else {
 		expon = (first & 0x7FF00000) >> DEXP_POSITION;
 		if (expon == DEXP_MAX) { /* Infinity or NaN */
 			f = HUGE_VAL; /* Map NaN's to infinity */
-		}
-		else {
+		} else {
 			if (expon == 0) { /* Denormalized number */
 				mantissa = (first & 0x000FFFFF);
 				f = ldexp((double)mantissa, expon - DEXP_OFFSET - DEXP_POSITION + 1);
 				f += ldexp(UnsignedToFloat(second), expon - DEXP_OFFSET - DEXP_POSITION + 1 - 32);
-			}
-			else { /* Normalized number */
+			} else { /* Normalized number */
 				mantissa = (first & 0x000FFFFF) + 0x00100000; /* Insert hidden bit */
 				f = ldexp((double)mantissa, expon - DEXP_OFFSET - DEXP_POSITION);
 				f += ldexp(UnsignedToFloat(second), expon - DEXP_OFFSET - DEXP_POSITION - 32);
@@ -386,9 +381,7 @@ double float_decode_ieee_64(const unsigned char bytes[8])
 	return (first & 0x80000000) ? -f : f;
 }
 
-
 /****************************************************************/
-
 
 void float_encode_ieee_64(double num, unsigned char bytes[8])
 {
@@ -398,7 +391,10 @@ void float_encode_ieee_64(double num, unsigned char bytes[8])
 #ifdef HAVE_FLOAT64
 	switch (f64_format) {
 	case F64_INTEL: {
-		union { uint64_t u; float64 f; } x;
+		union {
+			uint64_t u;
+			float64 f;
+		} x;
 
 		x.f = num;
 		x.u = bswap_64(x.u);
@@ -416,7 +412,7 @@ void float_encode_ieee_64(double num, unsigned char bytes[8])
 	/* Fallback to generic implementation */
 #endif
 
-	if (num < 0) {	/* Can't distinguish a negative zero */
+	if (num < 0) { /* Can't distinguish a negative zero */
 		sign = 0x80000000;
 		num *= -1;
 	} else {
@@ -432,7 +428,7 @@ void float_encode_ieee_64(double num, unsigned char bytes[8])
 
 		fMant = frexp(num, &expon);
 
-		if ((expon > (DEXP_MAX-DEXP_OFFSET+1)) || !(fMant < 1)) {
+		if ((expon > (DEXP_MAX - DEXP_OFFSET + 1)) || !(fMant < 1)) {
 			/* NaN's and infinities fail second test */
 			first = sign | 0x7FF00000; /* +/- infinity */
 			second = 0;
@@ -441,8 +437,8 @@ void float_encode_ieee_64(double num, unsigned char bytes[8])
 		else {
 			uint32_t mantissa;
 
-			if (expon < -(DEXP_OFFSET-2)) { /* Smaller than normalized */
-				int shift = (DEXP_POSITION+1) + (DEXP_OFFSET-2) + expon;
+			if (expon < -(DEXP_OFFSET - 2)) { /* Smaller than normalized */
+				int shift = (DEXP_POSITION + 1) + (DEXP_OFFSET - 2) + expon;
 				if (shift < 0) { /* Too small for something in the MS word */
 					first = sign;
 					shift += 32;
@@ -458,7 +454,7 @@ void float_encode_ieee_64(double num, unsigned char bytes[8])
 					second = FloatToUnsigned(floor(ldexp(fsMant - mantissa, 32)));
 				}
 			} else { /* Normalized number */
-				fsMant = ldexp(fMant, DEXP_POSITION+1);
+				fsMant = ldexp(fMant, DEXP_POSITION + 1);
 				mantissa = (uint32_t)floor(fsMant);
 				mantissa -= (1L << DEXP_POSITION); /* Hide MSB */
 				fsMant -= (1L << DEXP_POSITION);
@@ -467,7 +463,7 @@ void float_encode_ieee_64(double num, unsigned char bytes[8])
 			}
 		}
 	}
-	
+
 	bytes[0] = first >> 24;
 	bytes[1] = first >> 16;
 	bytes[2] = first >> 8;
@@ -485,7 +481,12 @@ static void swap_u80(unsigned char u[10])
 {
 	unsigned char tmp;
 
-#define SWAP(x,y) do { tmp = u[x]; u[x] = u[y]; u[y] = tmp; } while (0)
+#define SWAP(x, y) \
+	do { \
+		tmp = u[x]; \
+		u[x] = u[y]; \
+		u[y] = tmp; \
+	} while (0)
 	SWAP(0, 9);
 	SWAP(1, 8);
 	SWAP(2, 7);
@@ -533,14 +534,10 @@ double float_decode_ieee_80(const unsigned char bytes[10])
 #endif
 
 	expon = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
-	hiMant = ((uint32_t) (bytes[2] & 0xFF) << 24)
-		| ((uint32_t) (bytes[3] & 0xFF) << 16)
-		| ((uint32_t) (bytes[4] & 0xFF) << 8)
-		| ((uint32_t) (bytes[5] & 0xFF));
-	loMant = ((uint32_t) (bytes[6] & 0xFF) << 24)
-		| ((uint32_t) (bytes[7] & 0xFF) << 16)
-		| ((uint32_t) (bytes[8] & 0xFF) << 8)
-		| ((uint32_t) (bytes[9] & 0xFF));
+	hiMant = ((uint32_t)(bytes[2] & 0xFF) << 24) | ((uint32_t)(bytes[3] & 0xFF) << 16)
+		 | ((uint32_t)(bytes[4] & 0xFF) << 8) | ((uint32_t)(bytes[5] & 0xFF));
+	loMant = ((uint32_t)(bytes[6] & 0xFF) << 24) | ((uint32_t)(bytes[7] & 0xFF) << 16)
+		 | ((uint32_t)(bytes[8] & 0xFF) << 8) | ((uint32_t)(bytes[9] & 0xFF));
 
 	if (expon == 0 && hiMant == 0 && loMant == 0) {
 		f = 0;

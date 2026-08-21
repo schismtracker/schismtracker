@@ -29,10 +29,10 @@
 #include "it.h"
 #include "page.h"
 #include "widget.h"
-#include "vgamem.h"
 #include "keyboard.h"
 #include "mem.h"
 #include "str.h"
+#include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -49,11 +49,11 @@ enum {
 };
 
 /* Types that should be hidden from view in classic/non-classic mode */
-#define LINE_SCHISM_HIDDEN(p) (0[p] == LTYPE_CLASSIC)
-#define LINE_CLASSIC_HIDDEN(p) (0[p] == LTYPE_SCHISM || 0[p] == LTYPE_SCHISM_BIOS)
+#define LINE_SCHISM_HIDDEN(p)  (0 [p] == LTYPE_CLASSIC)
+#define LINE_CLASSIC_HIDDEN(p) (0 [p] == LTYPE_SCHISM || 0 [p] == LTYPE_SCHISM_BIOS)
 
 /* Types that should be rendered with the standard font */
-#define LINE_BIOS(p) (0[p] == LTYPE_BIOS || 0[p] == LTYPE_SCHISM_BIOS)
+#define LINE_BIOS(p) (0 [p] == LTYPE_BIOS || 0 [p] == LTYPE_SCHISM_BIOS)
 
 static struct widget widgets_help[2];
 
@@ -98,7 +98,8 @@ static void help_draw_const(void)
 {
 	draw_box(1, 12, 78, 45, BOX_THICK | BOX_INNER | BOX_INSET);
 
-	if (status.dialog_type == DIALOG_NONE) widget_change_focus_to(1);
+	if (status.dialog_type == DIALOG_NONE)
+		widget_change_focus_to(1);
 }
 
 static void help_redraw(void)
@@ -115,7 +116,7 @@ static void help_redraw(void)
 	for (pos = 13, n = top_line; pos < 45; pos++, n++) {
 		switch (**ptr) {
 		default:
-			lp = strcspn(*ptr+1, "\015\012");
+			lp = strcspn(*ptr + 1, "\015\012");
 			if (LINE_BIOS(*ptr)) {
 				draw_text_bios_len(*ptr + 1, lp, 2, pos, 6, 0);
 			} else {
@@ -147,11 +148,12 @@ static void _help_close(void)
 	set_page(status.previous_page);
 }
 
-static int help_handle_key(struct key_event * k)
+static int help_handle_key(struct key_event *k)
 {
 	int new_line = top_line;
 
-	if (status.dialog_type != DIALOG_NONE) return 0;
+	if (status.dialog_type != DIALOG_NONE)
+		return 0;
 
 	if (k->mouse == MOUSE_SCROLL_UP) {
 		new_line -= MOUSE_SCROLL_LINES;
@@ -304,7 +306,5 @@ void help_load_page(struct page *page)
 	page->pre_handle_key = help_handle_key;
 
 	widget_create_other(widgets_help + 0, 0, help_handle_key, NULL, help_redraw);
-	widget_create_button(widgets_help + 1, 35,47,8, 0, 1, 1,1, 0,
-			_help_close, "Done", 3);
+	widget_create_button(widgets_help + 1, 35, 47, 8, 0, 1, 1, 1, 0, _help_close, "Done", 3);
 }
-

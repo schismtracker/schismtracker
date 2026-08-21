@@ -26,10 +26,10 @@
 #include "it.h"
 #include "config.h"
 #include "keyboard.h"
-#include "util.h"
 #include "mem.h"
-#include "str.h"
 #include "palettes.h"
+#include "str.h"
+#include "util.h"
 #include "video.h"
 
 #include "config-parser.h"
@@ -42,8 +42,8 @@
 // cfg_dir_modules, cfg_dir_samples, and cfg_dir_instruments all are only
 // allocated here because otherwise we'd need to refactor the entire text
 // entry widget stuff to be able to use dynamic buffers.
-char cfg_dir_modules[SCHISM_PATH_MAX + 1], cfg_dir_samples[SCHISM_PATH_MAX + 1], cfg_dir_instruments[SCHISM_PATH_MAX + 1],
-	*cfg_dir_dotschism = NULL, *cfg_font = NULL;
+char cfg_dir_modules[SCHISM_PATH_MAX + 1], cfg_dir_samples[SCHISM_PATH_MAX + 1],
+	cfg_dir_instruments[SCHISM_PATH_MAX + 1], *cfg_dir_dotschism = NULL, *cfg_font = NULL;
 int cfg_video_interpolation = VIDEO_INTERPOLATION_NEAREST;
 char cfg_video_format[9];
 int cfg_video_fullscreen = 0;
@@ -184,25 +184,25 @@ void cfg_load(void)
 
 #ifdef SCHISM_XBOX
 /* This should be adapted to other consoles :) */
-# define WIDTH_DEFAULT 640
-# define HEIGHT_DEFAULT 480
-# define WANT_FIXED_DEFAULT 1
-# define WANT_FIXED_WIDTH_DEFAULT 8
+# define WIDTH_DEFAULT             640
+# define HEIGHT_DEFAULT            480
+# define WANT_FIXED_DEFAULT        1
+# define WANT_FIXED_WIDTH_DEFAULT  8
 # define WANT_FIXED_HEIGHT_DEFAULT 5
 #elif defined(SCHISM_WII)
 /* This is really dumb
  * NOTE: we should probably be letterboxing; scaling looks like crap */
-# define WIDTH_DEFAULT 0
-# define HEIGHT_DEFAULT 0
-# define WANT_FIXED_DEFAULT 1
-# define WANT_FIXED_WIDTH_DEFAULT 8
+# define WIDTH_DEFAULT             0
+# define HEIGHT_DEFAULT            0
+# define WANT_FIXED_DEFAULT        1
+# define WANT_FIXED_WIDTH_DEFAULT  8
 # define WANT_FIXED_HEIGHT_DEFAULT 5
 #else
-# define WIDTH_DEFAULT 640
-# define HEIGHT_DEFAULT 400
-# define WANT_FIXED_DEFAULT 0
+# define WIDTH_DEFAULT             640
+# define HEIGHT_DEFAULT            400
+# define WANT_FIXED_DEFAULT        0
 /* 4:3 */
-# define WANT_FIXED_WIDTH_DEFAULT 4
+# define WANT_FIXED_WIDTH_DEFAULT  4
 # define WANT_FIXED_HEIGHT_DEFAULT 3
 #endif
 
@@ -550,4 +550,3 @@ void cfg_atexit_save(void)
 	cfg_write(&cfg);
 	cfg_free(&cfg);
 }
-

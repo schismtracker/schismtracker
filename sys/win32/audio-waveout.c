@@ -26,11 +26,11 @@
  *  - paper */
 
 #include "headers.h"
-#include "charset.h"
-#include "mt.h"
-#include "mem.h"
-#include "osdefs.h"
 #include "backend/audio.h"
+#include "charset.h"
+#include "mem.h"
+#include "mt.h"
+#include "osdefs.h"
 
 #include <windows.h>
 
@@ -83,8 +83,10 @@ static int waveout_audio_driver_count(void)
 static const char *waveout_audio_driver_name(int i)
 {
 	switch (i) {
-	case 0: return "waveout";
-	default: return NULL;
+	case 0:
+		return "waveout";
+	default:
+		return NULL;
 	}
 }
 
@@ -135,29 +137,37 @@ static uint32_t waveout_audio_device_count(uint32_t flags)
 			struct waveoutcaps2w w2;
 		} caps = {0};
 
-		SCHISM_ANSI_UNICODE({
-			if (waveOutGetDevCapsA(i, &caps.a, sizeof(caps.a)) != MMSYSERR_NOERROR)
-				continue;
+		SCHISM_ANSI_UNICODE(
+			{
+				if (waveOutGetDevCapsA(i, &caps.a, sizeof(caps.a)) != MMSYSERR_NOERROR)
+					continue;
 
-			/* Try receiving based on the name GUID. Otherwise, fall back to the short name. */
-			if (!win32_audio_lookup_device_name(NULL, &i, &devices[devices_size].name)
-				&& charset_iconv(caps.a.szPname, &devices[devices_size].name, CHARSET_ANSI, CHARSET_UTF8, sizeof(caps.a.szPname)))
-				continue;
-		}, {
-			/* Try WAVEOUTCAPS2 before WAVEOUTCAPS */
-			if (waveOutGetDevCapsW(i, (LPWAVEOUTCAPSW)&caps.w2, sizeof(caps.w2)) == MMSYSERR_NOERROR) {
 				/* Try receiving based on the name GUID. Otherwise, fall back to the short name. */
-				if (!win32_audio_lookup_device_name(&caps.w2.NameGuid, &i, &devices[devices_size].name)
-					&& charset_iconv(caps.w2.szPname, &devices[devices_size].name, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w2.szPname)))
-					continue;
-			} else if (waveOutGetDevCapsW(i, &caps.w, sizeof(caps.w)) == MMSYSERR_NOERROR) {
 				if (!win32_audio_lookup_device_name(NULL, &i, &devices[devices_size].name)
-					&& charset_iconv(caps.w.szPname, &devices[devices_size].name, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w.szPname)))
+					&& charset_iconv(caps.a.szPname, &devices[devices_size].name, CHARSET_ANSI,
+						CHARSET_UTF8, sizeof(caps.a.szPname)))
 					continue;
-			} else {
-				continue;
-			}
-		})
+			},
+			{
+				/* Try WAVEOUTCAPS2 before WAVEOUTCAPS */
+				if (waveOutGetDevCapsW(i, (LPWAVEOUTCAPSW)&caps.w2, sizeof(caps.w2))
+					== MMSYSERR_NOERROR) {
+					/* Try receiving based on the name GUID. Otherwise, fall back to the short name.
+					 */
+					if (!win32_audio_lookup_device_name(
+						    &caps.w2.NameGuid, &i, &devices[devices_size].name)
+						&& charset_iconv(caps.w2.szPname, &devices[devices_size].name,
+							CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w2.szPname)))
+						continue;
+				} else if (waveOutGetDevCapsW(i, &caps.w, sizeof(caps.w)) == MMSYSERR_NOERROR) {
+					if (!win32_audio_lookup_device_name(NULL, &i, &devices[devices_size].name)
+						&& charset_iconv(caps.w.szPname, &devices[devices_size].name,
+							CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(caps.w.szPname)))
+						continue;
+				} else {
+					continue;
+				}
+			})
 
 		devices[devices_size].id = i;
 
@@ -243,7 +253,8 @@ static const struct schism_audio_device_simple_vtable waveout_vtbl = {
 
 /* ------------------------------------------------------------------------ */
 
-static void CALLBACK waveout_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD dwParam1, DWORD dwParam2)
+static void CALLBACK waveout_audio_callback(
+	HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD dwParam1, DWORD dwParam2)
 {
 	schism_audio_device_t *dev = (schism_audio_device_t *)dwInstance;
 
@@ -260,7 +271,8 @@ static void CALLBACK waveout_audio_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR d
 static void waveout_audio_close_device(schism_audio_device_t *dev);
 
 /* nonzero on success */
-static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *waveout_audio_open_device(
+	uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	/* Default to some device that can handle our output */
 	UINT device_id = (id == AUDIO_BACKEND_DEFAULT || id < devices_size) ? (WAVE_MAPPER) : devices[id].id;
@@ -274,10 +286,16 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 
 	/* filter invalid bps values (should never happen, but eh...) */
 	switch (desired->bits) {
-	case 8: format.wBitsPerSample = 8; break;
+	case 8:
+		format.wBitsPerSample = 8;
+		break;
 	default:
-	case 16: format.wBitsPerSample = 16; break;
-	case 32: format.wBitsPerSample = 32; break;
+	case 16:
+		format.wBitsPerSample = 16;
+		break;
+	case 32:
+		format.wBitsPerSample = 32;
+		break;
 	}
 
 	/* ok, now we can allocate the device */
@@ -288,7 +306,8 @@ static schism_audio_device_t *waveout_audio_open_device(uint32_t id, const schis
 		format.nBlockAlign = format.nChannels * (format.wBitsPerSample / 8);
 		format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
 
-		MMRESULT err = waveOutOpen(&dev->hwaveout, device_id, &format, (UINT_PTR)waveout_audio_callback, (UINT_PTR)dev, CALLBACK_FUNCTION | WAVE_ALLOWSYNC);
+		MMRESULT err = waveOutOpen(&dev->hwaveout, device_id, &format, (UINT_PTR)waveout_audio_callback,
+			(UINT_PTR)dev, CALLBACK_FUNCTION | WAVE_ALLOWSYNC);
 		if (err == MMSYSERR_NOERROR) {
 			/* We're done here */
 			break;

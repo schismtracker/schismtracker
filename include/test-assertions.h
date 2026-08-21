@@ -32,10 +32,10 @@ void test_assert(const char *file, long line, const char *cond, const char *msg,
 
 /* this doesn't belong here, but oh well */
 #define TEST_CASE_STUB(name, tocall, ...) \
-    testresult_t test_##name(void) \
-    { \
-        return tocall(__VA_ARGS__); \
-    }
+	testresult_t test_##name(void) \
+	{ \
+		return tocall(__VA_ARGS__); \
+	}
 
 /* TODO prefix these with TEST_ */
 #define REQUIRE_PRINTF(cond, fmt, ...) \
@@ -54,15 +54,13 @@ void test_assert(const char *file, long line, const char *cond, const char *msg,
 		} \
 	} while (0)
 
-#define REQUIRE(init_cond) \
-	REQUIRE_PRINTF(init_cond, "", NULL)
-#define ASSERT(init_cond) \
-	ASSERT_PRINTF(init_cond, "", NULL)
+#define REQUIRE(init_cond) REQUIRE_PRINTF(init_cond, "", NULL)
+#define ASSERT(init_cond)  ASSERT_PRINTF(init_cond, "", NULL)
 
 /* these are dumb */
-#define RETURN_PASS return SCHISM_TESTRESULT_PASS
-#define RETURN_FAIL return SCHISM_TESTRESULT_FAIL
+#define RETURN_PASS         return SCHISM_TESTRESULT_PASS
+#define RETURN_FAIL         return SCHISM_TESTRESULT_FAIL
 #define RETURN_INCONCLUSIVE return SCHISM_TESTRESULT_INCONCLUSIVE
-#define RETURN_SKIP return SCHISM_TESTRESULT_SKIP
+#define RETURN_SKIP         return SCHISM_TESTRESULT_SKIP
 
 #endif /* SCHISM_TEST_ASSERTIONS_H_ */

@@ -30,10 +30,10 @@
 #include "player/snd_gm.h"
 #include "player/tables.h"
 
+#include "bits.h" /* [l/r]shift_signed */
+#include "mem.h"
 #include "midi.h" /* midi_event_length */
 #include "util.h" /* for clamp/min */
-#include "mem.h"
-#include "bits.h" /* [l/r]shift_signed */
 
 #include "it.h" // needed for status.flags (UGH)
 
@@ -62,15 +62,14 @@ int32_t get_frequency_from_note(int32_t note, uint32_t c5speed)
 	return _muldiv(c5speed, linear_slide_up_table[(note % 12) * 16] << (note / 12), 65536 << 5);
 }
 
-
 uint32_t transpose_to_frequency(int32_t transp, int32_t ftune)
 {
-	return (uint32_t) (8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
+	return (uint32_t)(8363.0 * pow(2, (transp * 128.0 + ftune) / 1536.0));
 }
 
 int32_t frequency_to_transpose(uint32_t freq)
 {
-	return (int32_t) (1536.0 * (log(freq / 8363.0) / log(2)));
+	return (int32_t)(1536.0 * (log(freq / 8363.0) / log(2)));
 }
 
 uint32_t calc_halftone(uint32_t hz, int32_t rel)
@@ -80,7 +79,6 @@ uint32_t calc_halftone(uint32_t hz, int32_t rel)
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* the full content of snd_fx.cpp follows. */
-
 
 ////////////////////////////////////////////////////////////
 // Channels effects
@@ -101,7 +99,7 @@ void fx_note_cut(song_t *csf, uint32_t nchan, SCHISM_UNUSED int clear_note)
 	chan->flags |= CHN_NOTEFADE | CHN_FASTVOLRAMP;
 	//if (chan->ptr_instrument) chan->volume = 0;
 	//chan->frequency = 0;
-	chan->increment = csf_smp_pos(0,0);
+	chan->increment = csf_smp_pos(0, 0);
 	chan->fadeout_volume = 0;
 	//chan->length = 0;
 
@@ -151,16 +149,19 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 			if (psmp->flags & CHN_PINGPONGLOOP)
 				chan->flags |= CHN_PINGPONGLOOP;
 			else
-				chan->flags &= ~(CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
+				chan->flags &= ~(CHN_PINGPONGLOOP | CHN_PINGPONGFLAG);
 			chan->flags |= CHN_LOOP;
 			chan->length = psmp->length;
 			chan->loop_start = psmp->loop_start;
 			chan->loop_end = psmp->loop_end;
-			if (chan->length > chan->loop_end) chan->length = chan->loop_end;
+			if (chan->length > chan->loop_end)
+				chan->length = chan->loop_end;
 			if (csf_smp_pos_ge(chan->position, csf_smp_pos(chan->length, 0)))
-				chan->position = csf_smp_pos_add(csf_smp_pos_sub(chan->position, csf_smp_pos(chan->length, 0)), csf_smp_pos(chan->loop_start, 0));
+				chan->position
+					= csf_smp_pos_add(csf_smp_pos_sub(chan->position, csf_smp_pos(chan->length, 0)),
+						csf_smp_pos(chan->loop_start, 0));
 		} else {
-			chan->flags &= ~(CHN_LOOP|CHN_PINGPONGLOOP|CHN_PINGPONGFLAG);
+			chan->flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP | CHN_PINGPONGFLAG);
 			chan->length = psmp->length;
 		}
 	}
@@ -170,16 +171,13 @@ void fx_key_off(song_t *csf, uint32_t nchan)
 
 void fx_midi_zxx(song_t *csf, song_voice_t *chan)
 {
-	const uint32_t vel = chan->ptr_sample
-		? _muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume,
-				chan->global_volume * chan->instrument_volume,
-				INT32_C(1) << 20)
-		: 0;
+	const uint32_t vel = chan->ptr_sample ? _muldiv((chan->volume + chan->vol_swing) * csf->current_global_volume,
+							chan->global_volume * chan->instrument_volume, INT32_C(1) << 20)
+					      : 0;
 
 	csf_process_midi_macro(csf, chan - csf->voices,
-		(chan->row_param < 0x80)
-			? csf->midi_config.sfx[chan->active_macro]
-			: csf->midi_config.zxx[chan->row_param & 0x7F],
+		(chan->row_param < 0x80) ? csf->midi_config.sfx[chan->active_macro]
+					 : csf->midi_config.zxx[chan->row_param & 0x7F],
 		chan->row_param, chan->note, vel, 0);
 }
 
@@ -187,11 +185,13 @@ void fx_midi_zxx(song_t *csf, song_voice_t *chan)
 int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, int is_tone_portamento)
 {
 	// IT Linear slides
-	if (!frequency) return 0;
+	if (!frequency)
+		return 0;
 	if (flags & SONG_LINEARSLIDES) {
 		int32_t old_frequency = frequency;
 		uint32_t n = abs(slide);
-		if (n > 255 * 4) n = 255 * 4;
+		if (n > 255 * 4)
+			n = 255 * 4;
 
 		if (slide > 0) {
 			if (n < 16)
@@ -210,9 +210,10 @@ int32_t csf_fx_do_freq_slide(uint32_t flags, int32_t frequency, int32_t slide, i
 		}
 	} else {
 		if (slide < 0) {
-			frequency = (int32_t)((1712 * 8363 * (int64_t)frequency) / (((int64_t)(frequency) * -slide) + 1712 * 8363));
+			frequency = (int32_t)((1712 * 8363 * (int64_t)frequency)
+					      / (((int64_t)(frequency) * -slide) + 1712 * 8363));
 		} else if (slide > 0) {
-			int32_t frequency_div = 1712 * 8363 - ((int64_t)(frequency) * slide);
+			int32_t frequency_div = 1712 * 8363 - ((int64_t)(frequency)*slide);
 			if (frequency_div <= 0) {
 				if (is_tone_portamento)
 					frequency_div = 1;
@@ -244,8 +245,7 @@ static void set_instrument_panning_ex(song_t *csf, song_voice_t *chan, int32_t p
 }
 
 /* penv can be NULL here, but pins cannot */
-void csf_set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrument_t *penv,
-	song_sample_t *pins)
+void csf_set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrument_t *penv, song_sample_t *pins)
 {
 	if (penv && (penv->flags & ENV_SETPANNING)) {
 		set_instrument_panning_ex(csf, chan, penv->panning);
@@ -297,7 +297,6 @@ static void fx_reg_portamento_down(uint32_t flags, song_voice_t *chan, uint32_t 
 		chan->frequency = csf_fx_do_freq_slide(flags, chan->frequency, -(int)(param * 4), 0);
 }
 
-
 static void fx_portamento_up(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	if (!param)
@@ -338,8 +337,7 @@ static void fx_tone_portamento(uint32_t flags, song_voice_t *chan, uint32_t para
 {
 	chan->flags |= CHN_PORTAMENTO;
 	if (chan->frequency && chan->portamento_target && !(flags & SONG_FIRSTTICK)) {
-		if (!param && chan->row_effect == FX_TONEPORTAVOL)
-		{
+		if (!param && chan->row_effect == FX_TONEPORTAVOL) {
 			if (chan->frequency > 1 && (flags & SONG_LINEARSLIDES))
 				chan->frequency--;
 			if (chan->frequency < chan->portamento_target) {
@@ -379,14 +377,12 @@ static void fx_note_slide(uint32_t flags, song_voice_t *chan, uint32_t param, in
 		if (--chan->note_slide_counter == 0) {
 			chan->note_slide_counter = chan->note_slide_speed;
 			// update it
-			chan->frequency = get_frequency_from_note
-				(sign * chan->note_slide_step + get_note_from_frequency(chan->frequency, chan->c5speed),
-					chan->c5speed);
+			chan->frequency = get_frequency_from_note(
+				sign * chan->note_slide_step + get_note_from_frequency(chan->frequency, chan->c5speed),
+				chan->c5speed);
 		}
 	}
 }
-
-
 
 static void fx_vibrato(song_voice_t *p, uint32_t param)
 {
@@ -405,7 +401,6 @@ static void fx_fine_vibrato(song_voice_t *p, uint32_t param)
 		p->vibrato_speed = (param >> 4) & 0x0F;
 	p->flags |= CHN_VIBRATO;
 }
-
 
 static void fx_panbrello(song_voice_t *chan, uint32_t param)
 {
@@ -446,7 +441,6 @@ static void fx_panbrello(song_voice_t *chan, uint32_t param)
 
 	chan->panbrello_delta = pdelta;
 }
-
 
 static void fx_volume_up(song_voice_t *chan, uint32_t param)
 {
@@ -499,7 +493,6 @@ static void fx_volume_slide(uint32_t flags, song_voice_t *chan, uint32_t param)
 	}
 }
 
-
 static void fx_panning_slide(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
 	int32_t slide = 0;
@@ -510,7 +503,7 @@ static void fx_panning_slide(uint32_t flags, song_voice_t *chan, uint32_t param)
 	if ((param & 0x0F) == 0x0F && (param & 0xF0)) {
 		if (flags & SONG_FIRSTTICK) {
 			param = (param & 0xF0) >> 2;
-			slide = - (int)param;
+			slide = -(int)param;
 		}
 	} else if ((param & 0xF0) == 0xF0 && (param & 0x0F)) {
 		if (flags & SONG_FIRSTTICK) {
@@ -532,7 +525,6 @@ static void fx_panning_slide(uint32_t flags, song_voice_t *chan, uint32_t param)
 	chan->flags &= ~CHN_SURROUND;
 	chan->panbrello_delta = 0;
 }
-
 
 static void fx_tremolo(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
@@ -562,7 +554,7 @@ static void fx_tremolo(uint32_t flags, song_voice_t *chan, uint32_t param)
 		tdelta = square_table[trempos];
 		break;
 	case VIB_RANDOM:
-		tdelta = 128 * ((double) rand() / RAND_MAX) - 64;
+		tdelta = 128 * ((double)rand() / RAND_MAX) - 64;
 		break;
 	}
 
@@ -570,7 +562,6 @@ static void fx_tremolo(uint32_t flags, song_voice_t *chan, uint32_t param)
 	tdelta = (tdelta * (int)chan->tremolo_depth) >> 5;
 	chan->tremolo_delta = tdelta;
 }
-
 
 static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
 {
@@ -581,9 +572,10 @@ static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
 		chan->cd_retrig = param & 0xf;
 	} else if (--chan->cd_retrig <= 0) {
 		// in Impulse Tracker, retrig only works if a sample is currently playing in the channel
-		if (csf_smp_pos_equals_zero(chan->position) && BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG))
+		if (csf_smp_pos_equals_zero(chan->position)
+			&& BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG))
 			return;
-		
+
 		chan->cd_retrig = param & 0xf;
 		param >>= 4;
 		if (param) {
@@ -603,10 +595,9 @@ static void fx_retrig_note(song_t *csf, uint32_t nchan, uint32_t param)
 		csf_note_change(csf, nchan, note, 1, 1, 0);
 		if (frequency && chan->row_note == NOTE_NONE)
 			chan->frequency = frequency;
-		chan->position = csf_smp_pos(0,0);
+		chan->position = csf_smp_pos(0, 0);
 	}
 }
-
 
 static void fx_channel_vol_slide(uint32_t flags, song_voice_t *chan, uint32_t param)
 {
@@ -620,7 +611,7 @@ static void fx_channel_vol_slide(uint32_t flags, song_voice_t *chan, uint32_t pa
 			slide = param >> 4;
 	} else if ((param & 0xF0) == 0xF0 && (param & 0x0F)) {
 		if (flags & SONG_FIRSTTICK)
-			slide = - (int)(param & 0x0F);
+			slide = -(int)(param & 0x0F);
 	} else {
 		if (!(flags & SONG_FIRSTTICK)) {
 			if (param & 0x0F)
@@ -634,7 +625,6 @@ static void fx_channel_vol_slide(uint32_t flags, song_voice_t *chan, uint32_t pa
 		chan->global_volume = CLAMP(slide, 0, 64);
 	}
 }
-
 
 static void fx_global_vol_slide(song_t *csf, song_voice_t *chan, uint32_t param)
 {
@@ -663,7 +653,6 @@ static void fx_global_vol_slide(song_t *csf, song_voice_t *chan, uint32_t param)
 	}
 }
 
-
 static void fx_pattern_loop(song_t *csf, song_voice_t *chan, uint32_t param)
 {
 	if (param) {
@@ -686,18 +675,18 @@ static void fx_pattern_loop(song_t *csf, song_voice_t *chan, uint32_t param)
 	}
 }
 
-
 static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 	uint32_t command = param & 0xF0;
 	param &= 0x0F;
-	switch(command) {
+	switch (command) {
 	// S0x: Set Filter
 	// S1x: Set Glissando Control
 	case 0x10:
 		chan->flags &= ~CHN_GLISSANDO;
-		if (param) chan->flags |= CHN_GLISSANDO;
+		if (param)
+			chan->flags |= CHN_GLISSANDO;
 		break;
 	// S2x: Set FineTune (no longer implemented)
 	// S3x: Set Vibrato WaveForm
@@ -725,36 +714,54 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 	case 0x70:
 		if (!(csf->flags & SONG_FIRSTTICK))
 			break;
-		switch(param) {
+		switch (param) {
 		case 0:
 		case 1:
-		case 2:
-			{
-				song_voice_t *bkp = &csf->voices[MAX_CHANNELS];
-				for (uint32_t i=MAX_CHANNELS; i<MAX_VOICES; i++, bkp++) {
-					if (bkp->master_channel == nchan+1) {
-						if (param == 1) {
-							fx_key_off(csf, i);
-						} else if (param == 2) {
-							bkp->flags |= CHN_NOTEFADE;
-						} else {
-							bkp->flags |= CHN_NOTEFADE;
-							bkp->fadeout_volume = 0;
-						}
+		case 2: {
+			song_voice_t *bkp = &csf->voices[MAX_CHANNELS];
+			for (uint32_t i = MAX_CHANNELS; i < MAX_VOICES; i++, bkp++) {
+				if (bkp->master_channel == nchan + 1) {
+					if (param == 1) {
+						fx_key_off(csf, i);
+					} else if (param == 2) {
+						bkp->flags |= CHN_NOTEFADE;
+					} else {
+						bkp->flags |= CHN_NOTEFADE;
+						bkp->fadeout_volume = 0;
 					}
 				}
 			}
+		} break;
+		case 3:
+			chan->nna = NNA_NOTECUT;
 			break;
-		case  3:        chan->nna = NNA_NOTECUT; break;
-		case  4:        chan->nna = NNA_CONTINUE; break;
-		case  5:        chan->nna = NNA_NOTEOFF; break;
-		case  6:        chan->nna = NNA_NOTEFADE; break;
-		case  7:        chan->flags &= ~CHN_VOLENV; break;
-		case  8:        chan->flags |= CHN_VOLENV; break;
-		case  9:        chan->flags &= ~CHN_PANENV; break;
-		case 10:        chan->flags |= CHN_PANENV; break;
-		case 11:        chan->flags &= ~CHN_PITCHENV; break;
-		case 12:        chan->flags |= CHN_PITCHENV; break;
+		case 4:
+			chan->nna = NNA_CONTINUE;
+			break;
+		case 5:
+			chan->nna = NNA_NOTEOFF;
+			break;
+		case 6:
+			chan->nna = NNA_NOTEFADE;
+			break;
+		case 7:
+			chan->flags &= ~CHN_VOLENV;
+			break;
+		case 8:
+			chan->flags |= CHN_VOLENV;
+			break;
+		case 9:
+			chan->flags &= ~CHN_PANENV;
+			break;
+		case 10:
+			chan->flags |= CHN_PANENV;
+			break;
+		case 11:
+			chan->flags &= ~CHN_PITCHENV;
+			break;
+		case 12:
+			chan->flags |= CHN_PITCHENV;
+			break;
 		}
 		break;
 	// S8x: Set 4-bit Panning
@@ -787,23 +794,22 @@ static void fx_special(song_t *csf, uint32_t nchan, uint32_t param)
 			chan->channel_panning = 0;
 			break;
 
-		/* ---- ModPlug extensions ----
-		 *
-		 * S98: Reverb Off
-		 * S99: Reverb On
-		 * S9A: 2-Channels Surround Mode (??)
-		 * S9B: 4-Channels Surround Mode (??)
-		 * S9C: IT filter mode
-		 * S9D: MPT filter mode (??) */
+                /* ---- ModPlug extensions ----
+			 *
+			 * S98: Reverb Off
+			 * S99: Reverb On
+			 * S9A: 2-Channels Surround Mode (??)
+			 * S9B: 4-Channels Surround Mode (??)
+			 * S9C: IT filter mode
+			 * S9D: MPT filter mode (??) */
 
 		case 0x0E: /* S9E: Go forward */
 			chan->flags &= ~(CHN_PINGPONGFLAG);
 			break;
 		case 0x0F: /* S9F: Go backward */
 			/* Set playback position to the end if the sample has just started */
-			if (csf_smp_pos_equals_zero(chan->position)
-					&& chan->length
-					&& (NOTE_IS_NOTE(chan->row_note) || !(chan->flags & CHN_LOOP)))
+			if (csf_smp_pos_equals_zero(chan->position) && chan->length
+				&& (NOTE_IS_NOTE(chan->row_note) || !(chan->flags & CHN_LOOP)))
 				chan->position = csf_smp_pos(chan->length - 1, 0xFFFFFFFF);
 			chan->flags |= CHN_PINGPONGFLAG;
 			break;
@@ -912,9 +918,11 @@ void csf_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note)
 	chan %= MAX_CHANNELS;
 
 	if (!m) {
-		if (csf->midi_last_row_number != (signed)csf->row) return;
+		if (csf->midi_last_row_number != (signed)csf->row)
+			return;
 		m = csf->midi_last_row[chan];
-		if (!m) return;
+		if (!m)
+			return;
 	} else {
 		csf->midi_last_row[chan] = m;
 		csf->midi_last_row_number = csf->row;
@@ -931,8 +939,8 @@ void csf_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note)
 		mc = chan % 16;
 	} else {
 		mc = 0;
-		if(csf->instruments[ins]->midi_channel_mask > 0)
-			while(!(csf->instruments[ins]->midi_channel_mask & (1 << mc)))
+		if (csf->instruments[ins]->midi_channel_mask > 0)
+			while (!(csf->instruments[ins]->midi_channel_mask & (1 << mc)))
 				++mc;
 	}
 
@@ -946,24 +954,28 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 		case 0xC0: /* note cut */
 			if (tc == (((unsigned)m->param) & 15)) {
 				m_note = NOTE_CUT;
-			} else if (tc != 0) return;
+			} else if (tc != 0)
+				return;
 			break;
 
 		case 0xD0: /* note delay */
-			if (tc != (((unsigned)m->param) & 15)) return;
+			if (tc != (((unsigned)m->param) & 15))
+				return;
 			break;
 		default:
-			if (tc != 0) return;
+			if (tc != 0)
+				return;
 		};
 	} else {
-		if (tc != 0 && !starting_note) return;
+		if (tc != 0 && !starting_note)
+			return;
 	}
 
 	need_note = need_velocity = -1;
 	if (m_note > NOTE_LAST) {
 		if (csf->midi_note_tracker[chan] != 0) {
-			csf_process_midi_macro(csf, chan, csf->midi_config.note_off,
-				0, csf->midi_note_tracker[chan], 0, csf->midi_ins_tracker[chan]);
+			csf_process_midi_macro(csf, chan, csf->midi_config.note_off, 0, csf->midi_note_tracker[chan], 0,
+				csf->midi_ins_tracker[chan]);
 		}
 
 		csf->midi_note_tracker[chan] = 0;
@@ -973,8 +985,8 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 		need_velocity = csf->midi_vol_tracker[chan];
 	} else if (m->note) {
 		if (csf->midi_note_tracker[chan] != 0) {
-			csf_process_midi_macro(csf, chan, csf->midi_config.note_off,
-				0, csf->midi_note_tracker[chan], 0, csf->midi_ins_tracker[chan]);
+			csf_process_midi_macro(csf, chan, csf->midi_config.note_off, 0, csf->midi_note_tracker[chan], 0,
+				csf->midi_ins_tracker[chan]);
 		}
 		/* this is all stupid */
 		csf->midi_note_tracker[chan] = m_note;
@@ -987,8 +999,7 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 		csf->midi_ins_tracker[chan] = ins;
 	}
 
-	mg = (csf->instruments[ins]->midi_program)
-		+ ((midi_flags & MIDI_BASE_PROGRAM1) ? 1 : 0);
+	mg = (csf->instruments[ins]->midi_program) + ((midi_flags & MIDI_BASE_PROGRAM1) ? 1 : 0);
 	mbl = csf->instruments[ins]->midi_bank;
 	mbh = (csf->instruments[ins]->midi_bank >> 7) & 127;
 
@@ -1008,32 +1019,30 @@ printf("channel = %d note=%d starting_note=%p\n",chan,m_note,starting_note);
 	}
 	if (mg > -1 && csf->midi_was_program[mc] != mg) {
 		csf->midi_was_program[mc] = mg;
-		csf_process_midi_macro(csf, chan, csf->midi_config.set_program,
-			mg, 0, 0, ins); // program change
+		csf_process_midi_macro(csf, chan, csf->midi_config.set_program, mg, 0, 0, ins); // program change
 	}
 	if (c->flags & CHN_MUTE) {
 		// don't send noteon events when muted
 	} else if (need_note > 0) {
-		if (need_velocity == -1) need_velocity = 64; // eh?
-		need_velocity = CLAMP(need_velocity*2,0,127);
-		csf_process_midi_macro(csf, chan, csf->midi_config.note_on,
-			0, need_note, need_velocity, ins); // noteon
+		if (need_velocity == -1)
+			need_velocity = 64; // eh?
+		need_velocity = CLAMP(need_velocity * 2, 0, 127);
+		csf_process_midi_macro(csf, chan, csf->midi_config.note_on, 0, need_note, need_velocity, ins); // noteon
 	} else if (need_velocity > -1 && csf->midi_note_tracker[chan] > 0) {
-		need_velocity = CLAMP(need_velocity*2,0,127);
-		csf_process_midi_macro(csf, chan, csf->midi_config.set_volume,
-			need_velocity, csf->midi_note_tracker[chan], need_velocity, ins); // volume-set
+		need_velocity = CLAMP(need_velocity * 2, 0, 127);
+		csf_process_midi_macro(csf, chan, csf->midi_config.set_volume, need_velocity,
+			csf->midi_note_tracker[chan], need_velocity, ins); // volume-set
 	}
 }
 
-void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uint32_t param,
-			uint32_t note, uint32_t velocity, uint32_t use_instr)
+void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char *macro, uint32_t param, uint32_t note,
+	uint32_t velocity, uint32_t use_instr)
 {
-/* this was all wrong. -mrsb */
+	/* this was all wrong. -mrsb */
 	song_voice_t *chan = &csf->voices[nchan];
-	song_instrument_t *penv = ((csf->flags & SONG_INSTRUMENTMODE)
-				   && chan->last_instrument < MAX_INSTRUMENTS)
-			? csf->instruments[use_instr ? use_instr : chan->last_instrument]
-			: NULL;
+	song_instrument_t *penv = ((csf->flags & SONG_INSTRUMENTMODE) && chan->last_instrument < MAX_INSTRUMENTS)
+					  ? csf->instruments[use_instr ? use_instr : chan->last_instrument]
+					  : NULL;
 	unsigned char outbuffer[MAX_MIDI_MACRO * 2];
 	int32_t midi_channel, fake_midi_channel = 0;
 	int32_t saw_c;
@@ -1046,112 +1055,122 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 		midi_channel = 15;
 		fake_midi_channel = 1;
 	} else if (penv->midi_channel_mask >= 0x10000) {
-		midi_channel = (nchan-1) % 16;
+		midi_channel = (nchan - 1) % 16;
 	} else {
 		midi_channel = 0;
-		while(!(penv->midi_channel_mask & (1 << midi_channel))) ++midi_channel;
+		while (!(penv->midi_channel_mask & (1 << midi_channel)))
+			++midi_channel;
 	}
 
 	for (int read_pos = 0; read_pos <= MAX_MIDI_MACRO && macro[read_pos]; read_pos++) {
 		unsigned char data = 0;
 		int is_nibble = 0;
 		switch (macro[read_pos]) {
-			case '0': case '1': case '2':
-			case '3': case '4': case '5':
-			case '6': case '7': case '8':
-			case '9':
-				data = (unsigned char)(macro[read_pos] - '0');
-				is_nibble = 1;
-				break;
-			case 'A': case 'B': case 'C':
-			case 'D': case 'E': case 'F':
-				data = (unsigned char)((macro[read_pos] - 'A') + 0x0A);
-				is_nibble = 1;
-				break;
-			case 'c':
-				/* Channel */
-				data = (unsigned char)midi_channel;
-				is_nibble = 1;
-				saw_c = 1;
-				break;
-			case 'n':
-				/* Note */
-				data = (note - 1);
-				break;
-			case 'v': {
-				data = (unsigned char)CLAMP(velocity, 0x01, 0x7F);
-				break;
-			}
-			case 'u': {
-				/* Volume */
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			data = (unsigned char)(macro[read_pos] - '0');
+			is_nibble = 1;
+			break;
+		case 'A':
+		case 'B':
+		case 'C':
+		case 'D':
+		case 'E':
+		case 'F':
+			data = (unsigned char)((macro[read_pos] - 'A') + 0x0A);
+			is_nibble = 1;
+			break;
+		case 'c':
+			/* Channel */
+			data = (unsigned char)midi_channel;
+			is_nibble = 1;
+			saw_c = 1;
+			break;
+		case 'n':
+			/* Note */
+			data = (note - 1);
+			break;
+		case 'v': {
+			data = (unsigned char)CLAMP(velocity, 0x01, 0x7F);
+			break;
+		}
+		case 'u': {
+			/* Volume */
 
-				/* FIXME: This is still wrong.
-				 *
-				 * Notable suspects:
-				 *  flt-macro.it; second note doesn't play right
-				 *     (filter value is half than it should be)
-				 *  GlobalVolume-Macro.it; row 9's filter value should
-				 *     be much less than it actually is
-				 *
-				 * I have no idea about whats up with either of them.
-				 * I'm just saving that for another day though  ;) */
-				int32_t vol = _muldiv(chan->calc_volume * csf->last_global_volume,
-					chan->global_volume * chan->last_instrument_volume,
-					1l << 26);
+			/* FIXME: This is still wrong.
+			 *
+			 * Notable suspects:
+			 *  flt-macro.it; second note doesn't play right
+			 *     (filter value is half than it should be)
+			 *  GlobalVolume-Macro.it; row 9's filter value should
+			 *     be much less than it actually is
+			 *
+			 * I have no idea about whats up with either of them.
+			 * I'm just saving that for another day though  ;) */
+			int32_t vol = _muldiv(chan->calc_volume * csf->last_global_volume,
+				chan->global_volume * chan->last_instrument_volume, 1l << 26);
 
-				/*
-				printf("%d = (%d * %d) * (%d * %d) / 1l << 26\n", vol,
-					chan->calc_volume, csf->last_global_volume,
-					chan->global_volume, chan->last_instrument_volume);
-				*/
+			/*
+			printf("%d = (%d * %d) * (%d * %d) / 1l << 26\n", vol,
+				chan->calc_volume, csf->last_global_volume,
+				chan->global_volume, chan->last_instrument_volume);
+			*/
 
-				data = (unsigned char)CLAMP(vol, 0x01, 0x7F);
-				//printf("%u\n", data);
-				break;
-			}
-			case 'x':
-				/* Panning */
-				data = (unsigned char)MIN(chan->panning, 0x7F);
-				break;
-			case 'y':
-				/* Final Panning */
-				data = (unsigned char)MIN(chan->final_panning, 0x7F);
-				break;
-			case 'a':
-				/* MIDI Bank (high byte) */
-				if (penv && penv->midi_bank != -1)
-					data = (unsigned char)((penv->midi_bank >> 7) & 0x7F);
-				break;
-			case 'b':
-				/* MIDI Bank (low byte) */
-				if (penv && penv->midi_bank != -1)
-					data = (unsigned char)(penv->midi_bank & 0x7F);
-				break;
-			case 'p':
-				/* MIDI Program */
-				if (penv && penv->midi_program != -1)
-					data = (unsigned char)(penv->midi_program & 0x7F);
-				break;
-			case 'z':
-				/* Zxx Param */
-				data = (unsigned char)(param);
-				break;
-			case 'h':
-				/* Host channel */
-				data = (unsigned char)(nchan & 0x7F);
-				break;
-			case 'm':
-				/* Loop direction (judging from the macro letter, this was supposed to be
-				   loop mode instead, but a wrong offset into the channel structure was used in IT.) */
-				data = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
-				break;
-			case 'o':
-				/* OpenMPT test case ZxxSecrets.it:
-				   offsets are NOT clamped! also SAx doesn't count :) */
-				data = (unsigned char)((chan->mem_offset >> 8) & 0xFF);
-				break;
-			default:
-				continue;
+			data = (unsigned char)CLAMP(vol, 0x01, 0x7F);
+			//printf("%u\n", data);
+			break;
+		}
+		case 'x':
+			/* Panning */
+			data = (unsigned char)MIN(chan->panning, 0x7F);
+			break;
+		case 'y':
+			/* Final Panning */
+			data = (unsigned char)MIN(chan->final_panning, 0x7F);
+			break;
+		case 'a':
+			/* MIDI Bank (high byte) */
+			if (penv && penv->midi_bank != -1)
+				data = (unsigned char)((penv->midi_bank >> 7) & 0x7F);
+			break;
+		case 'b':
+			/* MIDI Bank (low byte) */
+			if (penv && penv->midi_bank != -1)
+				data = (unsigned char)(penv->midi_bank & 0x7F);
+			break;
+		case 'p':
+			/* MIDI Program */
+			if (penv && penv->midi_program != -1)
+				data = (unsigned char)(penv->midi_program & 0x7F);
+			break;
+		case 'z':
+			/* Zxx Param */
+			data = (unsigned char)(param);
+			break;
+		case 'h':
+			/* Host channel */
+			data = (unsigned char)(nchan & 0x7F);
+			break;
+		case 'm':
+			/* Loop direction (judging from the macro letter, this was supposed to be
+			   loop mode instead, but a wrong offset into the channel structure was used in IT.) */
+			data = (chan->flags & CHN_PINGPONGFLAG) ? 1 : 0;
+			break;
+		case 'o':
+			/* OpenMPT test case ZxxSecrets.it:
+			   offsets are NOT clamped! also SAx doesn't count :) */
+			data = (unsigned char)((chan->mem_offset >> 8) & 0xFF);
+			break;
+		default:
+			continue;
 		}
 
 		if (is_nibble == 1) {
@@ -1212,8 +1231,7 @@ void csf_process_midi_macro(song_t *csf, uint32_t nchan, const char * macro, uin
 				send_pos++;
 			}
 			continue;
-		} else
-		{
+		} else {
 			// Other MIDI messages
 			send_length = MIN(midi_event_length(outbuffer[send_pos]), write_pos - send_pos);
 		}
@@ -1259,9 +1277,11 @@ static void csf_env_reset(song_t *csf, song_voice_t *chan, int porta, int always
 			 * actually be some earlier, already stopped note from the same channel, or
 			 * it might be a completely different pattern channel altogether. Nasty!
 			 * OpenMPT test case CarryCompatGxxPortaWithIns.it */
-			int compat_gxx_carry_reset = BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_COMPAT_GXX_CARRY_PORTA_WITH_INS)
-				&& porta && (csf->flags & SONG_COMPATGXX);
-			const song_voice_t *last_chan = (csf->last_moved_channel < MAX_VOICES) ? &csf->voices[csf->last_moved_channel] : NULL;
+			int compat_gxx_carry_reset
+				= BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_COMPAT_GXX_CARRY_PORTA_WITH_INS) && porta
+				  && (csf->flags & SONG_COMPATGXX);
+			const song_voice_t *last_chan
+				= (csf->last_moved_channel < MAX_VOICES) ? &csf->voices[csf->last_moved_channel] : NULL;
 
 			/* only reset envelopes with carry off */
 			if (!(chan->ptr_instrument->flags & ENV_VOLCARRY))
@@ -1288,7 +1308,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	int inst_changed = 0;
 	int reset_env = 0;
 
-	if (instr >= MAX_INSTRUMENTS) return;
+	if (instr >= MAX_INSTRUMENTS)
+		return;
 	song_instrument_t *penv = (csf->flags & SONG_INSTRUMENTMODE) ? csf->instruments[instr] : NULL;
 	song_sample_t *psmp = &csf->samples[instr];
 	const song_sample_t *oldsmp = chan->ptr_sample;
@@ -1300,12 +1321,14 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 
 	if (penv && NOTE_IS_NOTE(note)) {
 		/* OpenMPT test case emptyslot.it */
-		if (!penv->sample_map[note - NOTE_FIRST] && BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT)) {
+		if (!penv->sample_map[note - NOTE_FIRST]
+			&& BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT)) {
 			chan->ptr_instrument = penv;
 			return;
 		}
 
-		if (penv->note_map[note - NOTE_FIRST] > NOTE_LAST) return;
+		if (penv->note_map[note - NOTE_FIRST] > NOTE_LAST)
+			return;
 		//uint32_t n = penv->sample_map[note - NOTE_FIRST];
 		psmp = csf_translate_keyboard(csf, penv, note, NULL);
 	} else if (csf->flags & SONG_INSTRUMENTMODE) {
@@ -1321,7 +1344,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	}
 
 	// Update Volume
-	if (inst_column && psmp) chan->volume = psmp->volume;
+	if (inst_column && psmp)
+		chan->volume = psmp->volume;
 
 	// inst_changed is used for IT carry-on env option
 	if (penv != chan->ptr_instrument || !chan->current_sample_data) {
@@ -1349,7 +1373,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	 *
 	 * OpenMPT test cases:
 	 * PortaInsNumCompat.it, PortaSampleCompat.it, PortaCutCompat.it */
-	if (chan->ptr_sample && psmp != chan->ptr_sample && porta && !csf_smp_pos_equals_zero(chan->increment) && csf->flags & SONG_COMPATGXX)
+	if (chan->ptr_sample && psmp != chan->ptr_sample && porta && !csf_smp_pos_equals_zero(chan->increment)
+		&& csf->flags & SONG_COMPATGXX)
 		psmp = chan->ptr_sample;
 
 	/* OpenMPT test case InstrAfterMultisamplePorta.it:
@@ -1357,8 +1382,8 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	   C-5 .. G02 <- maps to sample 2
 	   ... 01 ... <- plays sample 1 with the volume and panning attributes of sample 2
 	*/
-	if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER)
-		&& penv && !inst_changed && psmp != oldsmp && chan->ptr_sample && !NOTE_IS_NOTE(chan->row_note))
+	if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER) && penv && !inst_changed
+		&& psmp != oldsmp && chan->ptr_sample && !NOTE_IS_NOTE(chan->row_note))
 		return;
 
 	if (!penv && psmp != oldsmp && porta) {
@@ -1374,16 +1399,17 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	// - instrument number given, no portamento, after keyoff, old effects enabled
 	// If someone can enlighten me to what the logic really is here, I'd appreciate it.
 	// Seems like it's just a total mess though, probably to get XMs to play right.
-	reset_env = (!chan->length)
-		|| (inst_column && porta && (csf->flags & SONG_COMPATGXX))
-		|| (inst_column && !porta && (chan->flags & (CHN_NOTEFADE|CHN_KEYOFF)) && (csf->flags & SONG_ITOLDEFFECTS));
+	reset_env = (!chan->length) || (inst_column && porta && (csf->flags & SONG_COMPATGXX))
+		    || (inst_column && !porta && (chan->flags & (CHN_NOTEFADE | CHN_KEYOFF))
+			    && (csf->flags & SONG_ITOLDEFFECTS));
 
 	if (penv) {
 		if (reset_env) {
-			csf_env_reset(csf, chan, porta, inst_changed
-				|| (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF)
-					? (!chan->fadeout_volume || !NOTE_IS_NOTE(chan->row_note))
-					: (chan->flags & CHN_KEYOFF)));
+			csf_env_reset(csf, chan, porta,
+				inst_changed
+					|| (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF)
+							? (!chan->fadeout_volume || !NOTE_IS_NOTE(chan->row_note))
+							: (chan->flags & CHN_KEYOFF)));
 		} else if (!(penv->flags & ENV_VOLUME)) {
 			// XXX why is this being done?
 			// I'm pretty sure this is just some stupid IT thing with portamentos
@@ -1395,13 +1421,13 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 			if (penv->vol_swing) {
 				/* this was wrong, and then it was still wrong.
 				(possibly it continues to be wrong even now?) */
-				double d = 2 * (((double) rand()) / RAND_MAX) - 1;
+				double d = 2 * (((double)rand()) / RAND_MAX) - 1;
 				// floor() is applied to get exactly the same volume levels as in IT. -- Saga
 				chan->vol_swing = floor(d * penv->vol_swing / 100.0 * chan->instrument_volume);
 			}
 			if (penv->pan_swing) {
 				/* this was also wrong, and even more so */
-				double d = 2 * (((double) rand()) / RAND_MAX) - 1;
+				double d = 2 * (((double)rand()) / RAND_MAX) - 1;
 				chan->pan_swing = d * penv->pan_swing * 4;
 			}
 		}
@@ -1428,10 +1454,9 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	}
 
 	if (porta && !chan->length)
-		chan->increment = csf_smp_pos(0,0);
+		chan->increment = csf_smp_pos(0, 0);
 
-	chan->flags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE
-			   | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
+	chan->flags &= ~(CHN_SAMPLE_FLAGS | CHN_KEYOFF | CHN_NOTEFADE | CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
 	if (penv) {
 		if (penv->flags & ENV_VOLUME)
 			chan->flags |= CHN_VOLENV;
@@ -1452,7 +1477,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 			chan->panning = psmp->panning;
 		chan->instrument_volume = old_instrument_volume;
 		chan->volume = psmp->volume;
-		chan->position = csf_smp_pos(0,0);
+		chan->position = csf_smp_pos(0, 0);
 		return;
 	}
 
@@ -1472,7 +1497,7 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	chan->loop_end = psmp->loop_end;
 	chan->c5speed = psmp->c5speed;
 	chan->current_sample_data = psmp->data;
-	chan->position = csf_smp_pos(0,0);
+	chan->position = csf_smp_pos(0, 0);
 
 	if ((chan->flags & CHN_SUSTAINLOOP) && (!porta || (penv && !was_key_off))) {
 		chan->loop_start = psmp->sustain_start;
@@ -1487,7 +1512,6 @@ void csf_instrument_change(song_t *csf, song_voice_t *chan, uint32_t instr, int 
 	    (int)chan->length,
 	    (int)psmp->length, chan->flags, psmp->flags);*/
 }
-
 
 // have_inst is a hack to ignore the note-sample map when no instrument number is present
 void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retrig, int have_inst)
@@ -1536,7 +1560,7 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	if (!pins)
 		return;
 
-	if(!porta && pins)
+	if (!porta && pins)
 		chan->c5speed = pins->c5speed;
 
 	if (porta && csf_smp_pos_equals_zero(chan->increment))
@@ -1567,14 +1591,17 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 				chan->loop_end = pins->sustain_end;
 				chan->flags &= ~CHN_PINGPONGLOOP;
 				chan->flags |= CHN_LOOP;
-				if (chan->flags & CHN_PINGPONGSUSTAIN) chan->flags |= CHN_PINGPONGLOOP;
-				if (chan->length > chan->loop_end) chan->length = chan->loop_end;
+				if (chan->flags & CHN_PINGPONGSUSTAIN)
+					chan->flags |= CHN_PINGPONGLOOP;
+				if (chan->length > chan->loop_end)
+					chan->length = chan->loop_end;
 			} else if (chan->flags & CHN_LOOP) {
 				chan->loop_start = pins->loop_start;
 				chan->loop_end = pins->loop_end;
-				if (chan->length > chan->loop_end) chan->length = chan->loop_end;
+				if (chan->length > chan->loop_end)
+					chan->length = chan->loop_end;
 			}
-			chan->position = csf_smp_pos(0,0);
+			chan->position = csf_smp_pos(0, 0);
 		}
 		if (csf_smp_pos_ge(chan->position, csf_smp_pos(chan->length, 0)))
 			chan->position = csf_smp_pos(chan->loop_start, 0);
@@ -1594,7 +1621,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 
 			// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
 			// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
-			int delta = (int)(chan->note - penv->pitch_pan_center - NOTE_FIRST) * penv->pitch_pan_separation / 2;
+			int delta = (int)(chan->note - penv->pitch_pan_center - NOTE_FIRST) * penv->pitch_pan_separation
+				    / 2;
 			chan->panning = CLAMP(chan->panning + delta, 0, 256);
 		}
 	}
@@ -1603,7 +1631,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 		chan->nna = penv->nna;
 
 	if (!porta) {
-		if (penv) chan->nna = penv->nna;
+		if (penv)
+			chan->nna = penv->nna;
 		csf_env_reset(csf, chan, porta, 0);
 		chan->flags &= ~CHN_NOTEFADE;
 	}
@@ -1615,7 +1644,8 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	// Enable Ramping
 	if (!porta) {
 		//chan->vu_meter = 0x0;
-		chan->strike = 4; /* this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows) */
+		chan->strike = 4; /* this affects how long the initial hit on the playback marks lasts (bigger dot in
+				     instrument and sample list windows) */
 		chan->flags &= ~CHN_FILTER;
 		chan->flags |= CHN_FASTVOLRAMP | CHN_NEWNOTE;
 		if (!retrig) {
@@ -1636,17 +1666,16 @@ void csf_note_change(song_t *csf, uint32_t nchan, int note, int porta, int retri
 	}
 }
 
-
 uint32_t csf_get_nna_channel(song_t *csf, uint32_t nchan)
 {
 	song_voice_t *chan = &csf->voices[nchan];
 	// Check for empty channel
 	song_voice_t *pi = &csf->voices[MAX_CHANNELS];
-	for (uint32_t i=MAX_CHANNELS; i<MAX_VOICES; i++, pi++) {
+	for (uint32_t i = MAX_CHANNELS; i < MAX_VOICES; i++, pi++) {
 		if (!pi->length) {
 			if (pi->flags & CHN_MUTE) {
 				if (pi->flags & CHN_NNAMUTE) {
-					pi->flags &= ~(CHN_NNAMUTE|CHN_MUTE);
+					pi->flags &= ~(CHN_NNAMUTE | CHN_MUTE);
 				} else {
 					/* this channel is muted; skip */
 					continue;
@@ -1655,20 +1684,23 @@ uint32_t csf_get_nna_channel(song_t *csf, uint32_t nchan)
 			return i;
 		}
 	}
-	if (!chan->fadeout_volume) return 0;
+	if (!chan->fadeout_volume)
+		return 0;
 	// All channels are used: check for lowest volume
 	uint32_t result = 0;
-	uint32_t vol = 64*65536;        // 25%
+	uint32_t vol = 64 * 65536; // 25%
 	int envpos = 0xFFFFFF;
 	const song_voice_t *pj = &csf->voices[MAX_CHANNELS];
-	for (uint32_t j=MAX_CHANNELS; j<MAX_VOICES; j++, pj++) {
-		if (!pj->fadeout_volume) return j;
+	for (uint32_t j = MAX_CHANNELS; j < MAX_VOICES; j++, pj++) {
+		if (!pj->fadeout_volume)
+			return j;
 		uint32_t v = pj->volume;
 		if (pj->flags & CHN_NOTEFADE)
 			v = v * pj->fadeout_volume;
 		else
 			v <<= 16;
-		if (pj->flags & CHN_LOOP) v >>= 1;
+		if (pj->flags & CHN_LOOP)
+			v >>= 1;
 		if (v < vol || (v == vol && pj->vol_env_position > envpos)) {
 			envpos = pj->vol_env_position;
 			vol = v;
@@ -1677,11 +1709,10 @@ uint32_t csf_get_nna_channel(song_t *csf, uint32_t nchan)
 	}
 	if (result) {
 		/* unmute new nna channel */
-		csf->voices[result].flags &= ~(CHN_MUTE|CHN_NNAMUTE);
+		csf->voices[result].flags &= ~(CHN_MUTE | CHN_NNAMUTE);
 	}
 	return result;
 }
-
 
 void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int force_cut)
 {
@@ -1699,21 +1730,22 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 		uint32_t n = csf_get_nna_channel(csf, nchan);
 		if (csf->last_moved_channel == nchan)
 			csf->last_moved_channel = n ? n : MAX_VOICES;
-		if (!n) return;
+		if (!n)
+			return;
 		p = &csf->voices[n];
 		// Copy Channel
 		*p = *chan;
-		p->flags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PORTAMENTO);
+		p->flags &= ~(CHN_VIBRATO | CHN_TREMOLO | CHN_PORTAMENTO);
 		p->panbrello_delta = 0;
 		p->tremolo_delta = 0;
-		p->master_channel = nchan+1;
+		p->master_channel = nchan + 1;
 		p->n_command = 0;
 		// Cut the note
 		p->fadeout_volume = 0;
-		p->flags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
+		p->flags |= (CHN_NOTEFADE | CHN_FASTVOLRAMP);
 		// Stop this channel
 		chan->length = 0;
-		chan->position = csf_smp_pos(0,0);
+		chan->position = csf_smp_pos(0, 0);
 		chan->rofs = chan->lofs = 0;
 		chan->left_volume = chan->right_volume = 0;
 		if (chan->flags & CHN_ADLIB) {
@@ -1725,29 +1757,29 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 		GM_Touch(csf, nchan, 0);
 		return;
 	}
-	if (instr >= MAX_INSTRUMENTS) instr = 0;
+	if (instr >= MAX_INSTRUMENTS)
+		instr = 0;
 	data = chan->current_sample_data;
 	/* OpenMPT test case DNA-NoInstr.it */
 	ptr_instrument = instr > 0 ? csf->instruments[instr] : chan->ptr_instrument;
 	if (ptr_instrument != NULL) {
-        uint32_t n = ptr_instrument->sample_map[note - 1];
-        /* MPT test case dct_smp_note_test.it */
-        if (n > 0 && n < MAX_SAMPLES)
-        	data = csf->samples[n].data;
-        else if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT)) /* emptyslot.it */
-        	return;
+		uint32_t n = ptr_instrument->sample_map[note - 1];
+		/* MPT test case dct_smp_note_test.it */
+		if (n > 0 && n < MAX_SAMPLES)
+			data = csf->samples[n].data;
+		else if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT)) /* emptyslot.it */
+			return;
 	}
 	p = chan;
-	for (uint32_t i=nchan; i<MAX_VOICES; p++, i++) {
+	for (uint32_t i = nchan; i < MAX_VOICES; p++, i++) {
 		if (!((i >= MAX_CHANNELS || p == chan)
-		      && ((p->master_channel == nchan + 1 || p == chan)
-			  && p->ptr_instrument)))
+			    && ((p->master_channel == nchan + 1 || p == chan) && p->ptr_instrument)))
 			continue;
 		int apply_dna = 0;
 		// Duplicate Check Type
 		switch (p->ptr_instrument->dct) {
 		case DCT_NOTE:
-			apply_dna = (NOTE_IS_NOTE(note) && (int) p->note == note && ptr_instrument == p->ptr_instrument);
+			apply_dna = (NOTE_IS_NOTE(note) && (int)p->note == note && ptr_instrument == p->ptr_instrument);
 			break;
 		case DCT_SAMPLE:
 			apply_dna = (data && data == p->current_sample_data && ptr_instrument == p->ptr_instrument);
@@ -1759,7 +1791,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 
 		// Duplicate Note Action
 		if (apply_dna) {
-			switch(p->ptr_instrument->dca) {
+			switch (p->ptr_instrument->dca) {
 			case DCA_NOTECUT:
 				fx_key_off(csf, i);
 				p->volume = 0;
@@ -1781,7 +1813,7 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 			}
 			if (!p->volume) {
 				p->fadeout_volume = 0;
-				p->flags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
+				p->flags |= (CHN_NOTEFADE | CHN_FASTVOLRAMP);
 			}
 		}
 	}
@@ -1800,13 +1832,13 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 			p = &csf->voices[n];
 			// Copy Channel
 			*p = *chan;
-			p->flags &= ~(CHN_VIBRATO|CHN_TREMOLO|CHN_PORTAMENTO);
+			p->flags &= ~(CHN_VIBRATO | CHN_TREMOLO | CHN_PORTAMENTO);
 			p->panbrello_delta = 0;
 			p->tremolo_delta = 0;
-			p->master_channel = nchan+1;
+			p->master_channel = nchan + 1;
 			p->n_command = 0;
 			// Key Off the note
-			switch(chan->nna) {
+			switch (chan->nna) {
 			case NNA_NOTEOFF:
 				fx_key_off(csf, n);
 				break;
@@ -1819,19 +1851,19 @@ void csf_check_nna(song_t *csf, uint32_t nchan, uint32_t instr, int note, int fo
 			}
 			if (!p->volume) {
 				p->fadeout_volume = 0;
-				p->flags |= (CHN_NOTEFADE|CHN_FASTVOLRAMP);
+				p->flags |= (CHN_NOTEFADE | CHN_FASTVOLRAMP);
 			}
 			// Stop this channel
 			chan->length = 0;
-			chan->position = csf_smp_pos(0,0);
+			chan->position = csf_smp_pos(0, 0);
 			chan->rofs = chan->lofs = 0;
 		}
 	}
 }
 
 // XXX why is `porta` here, and what was it used for?
-static inline SCHISM_ALWAYS_INLINE
-void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SCHISM_UNUSED int porta, int firsttick)
+static inline SCHISM_ALWAYS_INLINE void handle_effect(
+	song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SCHISM_UNUSED int porta, int firsttick)
 {
 	song_voice_t *chan = csf->voices + nchan;
 
@@ -1843,7 +1875,7 @@ void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SC
 	case FX_VOLUME:
 		if (!(csf->flags & SONG_FIRSTTICK))
 			break;
-		chan->volume = (param < 64) ? param*4 : 256;
+		chan->volume = (param < 64) ? param * 4 : 256;
 		chan->flags |= CHN_FASTVOLRAMP;
 		break;
 
@@ -1943,8 +1975,10 @@ void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SC
 			if (!param)
 				param = chan->mem_tremor;
 			else if (!(csf->flags & SONG_ITOLDEFFECTS)) {
-				if (param & 0xf0) param -= 0x10;
-				if (param & 0x0f) param -= 0x01;
+				if (param & 0xf0)
+					param -= 0x10;
+				if (param & 0x0f)
+					param -= 0x01;
 			}
 			chan->mem_tremor = param;
 			chan->cd_tremor |= 128;
@@ -2023,9 +2057,8 @@ void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SC
 		chan->pitch_env_position = param;
 		if ((csf->flags & SONG_INSTRUMENTMODE) && chan->ptr_instrument) {
 			song_instrument_t *penv = chan->ptr_instrument;
-			if ((chan->flags & CHN_PANENV)
-			    && (penv->pan_env.nodes)
-			    && ((int)param > penv->pan_env.ticks[penv->pan_env.nodes-1])) {
+			if ((chan->flags & CHN_PANENV) && (penv->pan_env.nodes)
+				&& ((int)param > penv->pan_env.ticks[penv->pan_env.nodes - 1])) {
 				chan->flags &= ~CHN_PANENV;
 			}
 		}
@@ -2041,7 +2074,7 @@ void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SC
 		csf->process_row = PROCESS_NEXT_ORDER;
 		break;
 
-#if 0  // this is handled later
+#if 0 // this is handled later
 	case FX_PATTERNBREAK:
 		csf->break_row = param;
 		csf->process_row = PROCESS_NEXT_ORDER;
@@ -2063,9 +2096,8 @@ void handle_effect(song_t *csf, uint32_t nchan, uint32_t cmd, uint32_t param, SC
 	}
 }
 
-static inline SCHISM_ALWAYS_INLINE
-void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t vol,
-	int firsttick, int start_note)
+static inline SCHISM_ALWAYS_INLINE void handle_voleffect(
+	song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t vol, int firsttick, int start_note)
 {
 	/* A few notes, paraphrased from ITTECH.TXT:
 		Ex/Fx/Gx are shared with Exx/Fxx/Gxx; Ex/Fx are 4x the 'normal' slide value
@@ -2085,7 +2117,8 @@ void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t
 
 	case VOLFX_VOLUME:
 		if (start_note) {
-			if (vol > 64) vol = 64;
+			if (vol > 64)
+				vol = 64;
 			chan->volume = vol << 2;
 			chan->flags |= CHN_FASTVOLRAMP;
 		}
@@ -2093,7 +2126,8 @@ void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t
 
 	case VOLFX_PANNING:
 		if (start_note) {
-			if (vol > 64) vol = 64;
+			if (vol > 64)
+				vol = 64;
 			chan->panning = vol << 2;
 			chan->channel_panning = 0;
 			chan->pan_swing = 0;
@@ -2111,7 +2145,8 @@ void handle_voleffect(song_t *csf, song_voice_t *chan, uint32_t volcmd, uint32_t
 
 	case VOLFX_PORTADOWN: // Ex
 		if (!start_note) {
-			fx_reg_portamento_down(csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_pitchslide);
+			fx_reg_portamento_down(
+				csf->flags | (firsttick ? SONG_FIRSTTICK : 0), chan, chan->mem_pitchslide);
 		}
 		break;
 
@@ -2196,20 +2231,22 @@ void csf_process_effects(song_t *csf, int firsttick)
 		uint32_t vol = chan->row_volparam;
 		uint32_t cmd = chan->row_effect;
 		uint32_t param = chan->row_param;
-		int porta = (cmd == FX_TONEPORTAMENTO
-			       || cmd == FX_TONEPORTAVOL
-			       || volcmd == VOLFX_TONEPORTAMENTO);
+		int porta = (cmd == FX_TONEPORTAMENTO || cmd == FX_TONEPORTAVOL || volcmd == VOLFX_TONEPORTAMENTO);
 		int start_note = csf->flags & SONG_FIRSTTICK;
 
 		chan->flags &= ~(CHN_FASTVOLRAMP | CHN_NEWNOTE);
 
 		// set instrument before doing anything else
-		if (instr && start_note) chan->new_instrument = instr;
+		if (instr && start_note)
+			chan->new_instrument = instr;
 
 		// This is probably the single biggest WTF replayer bug in Impulse Tracker.
-		// In instrument mode, when an note + instrument is triggered that does not map to any sample, the entire cell (including potentially present global effects!)
-		// is ignored. Even better, if on a following row another instrument number (this time without a note) is encountered, we end up in the same situation!
-		if (csf->flags & SONG_INSTRUMENTMODE && instr > 0 && instr < MAX_INSTRUMENTS && csf->instruments[instr] != NULL) {
+		// In instrument mode, when an note + instrument is triggered that does not map to any sample, the
+		// entire cell (including potentially present global effects!) is ignored. Even better, if on a
+		// following row another instrument number (this time without a note) is encountered, we end up in the
+		// same situation!
+		if (csf->flags & SONG_INSTRUMENTMODE && instr > 0 && instr < MAX_INSTRUMENTS
+			&& csf->instruments[instr] != NULL) {
 			uint8_t note = (chan->row_note != NOTE_NONE) ? chan->row_note : chan->new_note;
 			if (NOTE_IS_NOTE(note) && csf->instruments[instr]->sample_map[note - NOTE_FIRST] == 0) {
 				chan->new_note = note;
@@ -2259,7 +2296,9 @@ void csf_process_effects(song_t *csf, int firsttick)
 			/* MPT test case InstrumentNumberChange.it */
 			if (csf->flags & SONG_INSTRUMENTMODE && (NOTE_IS_NOTE(note) || note == NOTE_NONE)) {
 				int instrcheck = instr ? instr : chan->last_instrument;
-				if (instrcheck && (instrcheck < 0 || instrcheck > MAX_INSTRUMENTS || csf->instruments[instrcheck] == NULL)) {
+				if (instrcheck
+					&& (instrcheck < 0 || instrcheck > MAX_INSTRUMENTS
+						|| csf->instruments[instrcheck] == NULL)) {
 					note = NOTE_NONE;
 					instr = 0;
 				}
@@ -2273,7 +2312,9 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 			if (instr && note == NOTE_NONE) { //Case: instrument with no note data
 				//IT compatibility: Instrument with no note.
-				int trigger_after_sample_end = BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER) && !chan->current_sample_data;
+				int trigger_after_sample_end
+					= BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER)
+					  && !chan->current_sample_data;
 
 				if (csf->flags & SONG_INSTRUMENTMODE) {
 					if (chan->ptr_sample)
@@ -2283,10 +2324,14 @@ void csf_process_effects(song_t *csf, int firsttick)
 				}
 
 				if (csf->flags & SONG_INSTRUMENTMODE) {
-					if (instr < MAX_INSTRUMENTS && (chan->ptr_instrument != csf->instruments[instr] || trigger_after_sample_end))
+					if (instr < MAX_INSTRUMENTS
+						&& (chan->ptr_instrument != csf->instruments[instr]
+							|| trigger_after_sample_end))
 						note = chan->new_note;
 				} else {
-					if (instr < MAX_SAMPLES && (chan->ptr_sample != &csf->samples[instr] || trigger_after_sample_end))
+					if (instr < MAX_SAMPLES
+						&& (chan->ptr_sample != &csf->samples[instr]
+							|| trigger_after_sample_end))
 						note = chan->new_note;
 				}
 			}
@@ -2347,7 +2392,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 					OPL_Patch(csf, nchan, csf->samples[instr].adlib_bytes);
 				}
 
-				if((csf->flags & SONG_INSTRUMENTMODE) && csf->instruments[instr])
+				if ((csf->flags & SONG_INSTRUMENTMODE) && csf->instruments[instr])
 					GM_DPatch(csf, nchan, csf->instruments[instr]->midi_program,
 						csf->instruments[instr]->midi_bank,
 						csf->instruments[instr]->midi_channel_mask);
@@ -2357,7 +2402,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 
 				if (BITARRAY_ISSET(csf->quirks, CSF_QUIRK_IT_PORTAMENTO_SWAP_RESETS_POSITION)) {
 					if (NOTE_IS_NOTE(note) && psmp != chan->ptr_sample)
-						chan->position = csf_smp_pos(0,0);
+						chan->position = csf_smp_pos(0, 0);
 				} else if (psmp != chan->ptr_sample && NOTE_IS_NOTE(note)) {
 					// Special IT case: portamento+note causes sample change -> ignore portamento
 					porta = 0;
@@ -2370,13 +2415,14 @@ void csf_process_effects(song_t *csf, int firsttick)
 						chan->new_note = previous_new_note;
 
 					csf_instrument_change(csf, chan, chan->new_instrument, porta, 0);
-					if ((csf->flags & SONG_INSTRUMENTMODE)
-					    && chan->new_instrument < MAX_INSTRUMENTS
-					    && csf->instruments[chan->new_instrument]) {
+					if ((csf->flags & SONG_INSTRUMENTMODE) && chan->new_instrument < MAX_INSTRUMENTS
+						&& csf->instruments[chan->new_instrument]) {
 						if (csf->samples[chan->new_instrument].flags & CHN_ADLIB) {
-							OPL_Patch(csf, nchan, csf->samples[chan->new_instrument].adlib_bytes);
+							OPL_Patch(csf, nchan,
+								csf->samples[chan->new_instrument].adlib_bytes);
 						}
-						GM_DPatch(csf, nchan, csf->instruments[chan->new_instrument]->midi_program,
+						GM_DPatch(csf, nchan,
+							csf->instruments[chan->new_instrument]->midi_program,
 							csf->instruments[chan->new_instrument]->midi_bank,
 							csf->instruments[chan->new_instrument]->midi_channel_mask);
 					}
@@ -2394,7 +2440,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 				uint32_t toneporta_param = (cmd != FX_TONEPORTAVOL ? param : 0);
 				if (toneporta_param)
 					chan->mem_portanote = toneporta_param;
-				else if(!toneporta_param && !(csf->flags & SONG_COMPATGXX))
+				else if (!toneporta_param && !(csf->flags & SONG_COMPATGXX))
 					chan->mem_portanote = chan->mem_pitchslide;
 				if (!(csf->flags & SONG_COMPATGXX))
 					chan->mem_pitchslide = chan->mem_portanote;
@@ -2429,7 +2475,7 @@ void csf_process_effects(song_t *csf, int firsttick)
 		 * overwrite the memory after the fact with the correct parameters.
 		 *   --paper */
 		if (volcmd == VOLFX_VIBRATODEPTH
-			&& (cmd == FX_VIBRATO/* || cmd == FX_VIBRATOVOL -- do we also need this? */))
+			&& (cmd == FX_VIBRATO /* || cmd == FX_VIBRATOVOL -- do we also need this? */))
 			fx_vibrato(chan, vol);
 
 		/* If there is any pattern loop, save the state for Cxx handling */

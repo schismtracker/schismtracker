@@ -23,17 +23,17 @@
 
 #include "headers.h"
 #include "osdefs.h"
-#include "mem.h"
 #include "dmoz.h"
+#include "mem.h"
 
-#include <whb/proc.h>
-#include <sysapp/launch.h>
-#include <dirent.h>
-#include <coreinit/foreground.h>
-#include <proc_ui/procui.h>
+#include "it.h"
 #include "devoptab.h"
 #include "log.h"
-#include "it.h"
+#include <coreinit/foreground.h>
+#include <dirent.h>
+#include <proc_ui/procui.h>
+#include <sysapp/launch.h>
+#include <whb/proc.h>
 
 static uint32_t savecallback(SCHISM_UNUSED void *xyzzy)
 {

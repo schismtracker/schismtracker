@@ -21,12 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
 #include "test-assertions.h"
+#include "test.h"
 
 #include "song.h"
 
-static int test_pattern_length[] = { 32, 15, 64, 1, 64, 0, 0 };
+static int test_pattern_length[] = {32, 15, 64, 1, 64, 0, 0};
 
 static song_t *create_subject(void)
 {
@@ -40,12 +40,10 @@ static song_t *create_subject(void)
 	return ret;
 }
 
-static testresult_t test_song_get_pattern_hook_impl(
-	int start_pattern_number, int start_row_number, // for arrange
+static testresult_t test_song_get_pattern_hook_impl(int start_pattern_number, int start_row_number, // for arrange
 	testresult_t (*pre_act)(song_t *csf),
 	int test_offset, // for act
-	testresult_t (*post_act)(song_t *csf),
-	int expected_pattern_number, int expected_row_number) // for assert
+	testresult_t (*post_act)(song_t *csf), int expected_pattern_number, int expected_row_number) // for assert
 {
 	// Arrange
 	song_t *csf = create_subject();
@@ -95,102 +93,81 @@ static testresult_t test_song_get_pattern_hook_impl(
 	RETURN_PASS;
 }
 
-static testresult_t test_song_get_pattern_hook(
-	int start_pattern_number, int start_row_number, // for arrange
+static testresult_t test_song_get_pattern_hook(int start_pattern_number, int start_row_number, // for arrange
 	testresult_t (*pre_act)(song_t *csf),
 	int test_offset, // for act
-	testresult_t (*post_act)(song_t *csf),
-	int expected_pattern_number, int expected_row_number) // for assert
+	testresult_t (*post_act)(song_t *csf), int expected_pattern_number, int expected_row_number) // for assert
 {
-	testresult_t r = test_song_get_pattern_hook_impl(start_pattern_number,
-		start_row_number,
-		pre_act,
-		test_offset,
-		post_act,
-		expected_pattern_number, expected_row_number);
+	testresult_t r = test_song_get_pattern_hook_impl(start_pattern_number, start_row_number, pre_act, test_offset,
+		post_act, expected_pattern_number, expected_row_number);
 	/* im lazy */
 	current_song = NULL;
 	return r;
 }
 
-#define TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(name, start_pattern_number, \
-		start_row_number, test_offset, expected_pattern_number, \
-		expected_row_number) \
-	TEST_CASE_STUB(song_get_pattern_offset_##name, test_song_get_pattern_hook, \
-		start_pattern_number, start_row_number, \
-		NULL, /* pre-action hook */ \
-		test_offset, \
-		NULL, /* post-action hook */ \
+#define TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE( \
+	name, start_pattern_number, start_row_number, test_offset, expected_pattern_number, expected_row_number) \
+	TEST_CASE_STUB(song_get_pattern_offset_##name, test_song_get_pattern_hook, start_pattern_number, \
+		start_row_number, NULL, /* pre-action hook */ \
+		test_offset, NULL, /* post-action hook */ \
 		expected_pattern_number, expected_row_number)
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(0,
-	0, 15,  /* starting from 0:15 */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(0, 0, 15,  /* starting from 0:15 */
 	0,      /* advance by 0 rows */
 	0, 15   /* expect to be at 0:15 */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(same_pattern_1,
-	0, 15,  /* starting from 0:15 */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(same_pattern_1, 0, 15,  /* starting from 0:15 */
 	1,      /* advance by 0 rows */
 	0, 16   /* expect to be at 0:16 */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(same_pattern_n,
-	0, 15,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(same_pattern_n, 0, 15,  /* starting from */
 	10,     /* advance by */
 	0, 25   /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(same_pattern_LAST,
-	0, 15,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(same_pattern_LAST, 0, 15,  /* starting from */
 	16,     /* advance by */
 	0, 31   /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(next_pattern_FIRST,
-	0, 15,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(next_pattern_FIRST, 0, 15,  /* starting from */
 	17,     /* advance by */
 	1, 0    /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(next_pattern_n,
-	0, 15,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(next_pattern_n, 0, 15,  /* starting from */
 	27,     /* advance by */
 	1, 10   /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(next_pattern_LAST,
-	0, 15,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(next_pattern_LAST, 0, 15,  /* starting from */
 	31,     /* advance by */
 	1, 14   /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(more_than_two_patterns,
-	0, 15,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(more_than_two_patterns, 0, 15,  /* starting from */
 	96,     /* advance by */
 	3, 0    /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(from_middle_same_pattern,
-	2, 15,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(from_middle_same_pattern, 2, 15,  /* starting from */
 	2,      /* advance by */
 	2, 17   /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(from_middle_next_pattern,
-	2, 15, /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(from_middle_next_pattern, 2, 15, /* starting from */
 	49,    /* advance by */
 	3, 0   /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(from_middle_over_two_patterns,
-	2, 16,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(from_middle_over_two_patterns, 2, 16,  /* starting from */
 	49,     /* advance by */
 	4, 0    /* expect to be at */
 )
 
-TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(song_LAST,
-	2, 15,  /* starting from */
+TEST_SONG_GET_PATTERN_OFFSET_TEMPLATE(song_LAST, 2, 15,  /* starting from */
 	113,    /* advance by */
 	4, 63   /* expect to be at */
 )
@@ -213,8 +190,7 @@ static testresult_t latch_new_pattern_length(song_t *csf)
 
 testresult_t test_song_get_pattern_offset_past_end_of_song(void)
 {
-	testresult_t result = test_song_get_pattern_hook(
-		2, 15, // starting from
+	testresult_t result = test_song_get_pattern_hook(2, 15, // starting from
 		verify_end_of_song, // pre hook
 		114,   // advance by
 		latch_new_pattern_length, // post hook

@@ -26,10 +26,10 @@
 
 #include <ctype.h>
 
-size_t charset_strlen(const void* in, charset_t inset)
+size_t charset_strlen(const void *in, charset_t inset)
 {
 	charset_decode_t decoder = {0};
-	
+
 	decoder.in = (unsigned char *)in;
 	decoder.offset = 0;
 	decoder.size = SIZE_MAX; /* this is ok here */
@@ -44,10 +44,10 @@ size_t charset_strlen(const void* in, charset_t inset)
 			return 0;
 		}
 
-        if (decoder.state == DECODER_STATE_DONE)
-            break;
-        
-        count++;
+		if (decoder.state == DECODER_STATE_DONE)
+			break;
+
+		count++;
 	}
 
 	charset_decode_end(&decoder);
@@ -143,13 +143,13 @@ struct strxcasecmp_impl_struct {
 			break; \
 		} \
 \
-	    result.diff = charset_strcmp(cf1, CHARSET_UCS4, cf2, CHARSET_UCS4); \
+		result.diff = charset_strcmp(cf1, CHARSET_UCS4, cf2, CHARSET_UCS4); \
 \
-	    free(cf1); \
-	    free(cf2); \
+		free(cf1); \
+		free(cf2); \
 \
-	    if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || result.diff) \
-	        break; \
+		if (decoder1.state == DECODER_STATE_DONE || decoder2.state == DECODER_STATE_DONE || result.diff) \
+			break; \
 	} \
 \
 	charset_decode_end(&decoder1); \
@@ -159,22 +159,21 @@ struct strxcasecmp_impl_struct {
 \
 	return result;
 
-static inline SCHISM_ALWAYS_INLINE struct strxcasecmp_impl_struct charset_strcasecmp_impl(const void *in1, charset_t in1set, const void *in2, charset_t in2set)
+static inline SCHISM_ALWAYS_INLINE struct strxcasecmp_impl_struct charset_strcasecmp_impl(
+	const void *in1, charset_t in1set, const void *in2, charset_t in2set)
 {
 	CHARSET_STRCASECMP_VARIANT()
 }
 
-static inline SCHISM_ALWAYS_INLINE struct strxcasecmp_impl_struct charset_strncasecmp_impl(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t len)
-{
-	CHARSET_STRCASECMP_VARIANT(result.count < len)
-}
+static inline SCHISM_ALWAYS_INLINE struct strxcasecmp_impl_struct charset_strncasecmp_impl(const void *in1,
+	charset_t in1set, const void *in2, charset_t in2set, size_t len){CHARSET_STRCASECMP_VARIANT(result.count < len)}
 
 #undef CHARSET_STRCASECMP_VARIANT
 
 /* --------------------------------------------------------------------------- */
 
 /* this IS necessary to actually sort properly. */
-int32_t charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set)
+int32_t charset_strcasecmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set)
 {
 	{
 		const struct strxcasecmp_impl_struct result = charset_strcasecmp_impl(in1, in1set, in2, in2set);
@@ -197,7 +196,7 @@ int32_t charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, c
 }
 
 /* num is the number of CHARACTERS, not the number of bytes!! */
-int32_t charset_strncasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num)
+int32_t charset_strncasecmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t num)
 {
 	{
 		const struct strxcasecmp_impl_struct result = charset_strncasecmp_impl(in1, in1set, in2, in2set, num);
@@ -224,7 +223,7 @@ int32_t charset_strncasecmp(const void* in1, charset_t in1set, const void* in2, 
 }
 
 /* this does the exact same as the above function but returns how many characters were passed */
-size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num)
+size_t charset_strncasecmplen(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t num)
 {
 	{
 		const struct strxcasecmp_impl_struct result = charset_strncasecmp_impl(in1, in1set, in2, in2set, num);
@@ -249,7 +248,8 @@ size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2
 
 typedef int32_t (*charset_cmp_spec)(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t len);
 
-static inline SCHISM_ALWAYS_INLINE void *_charset_strxstr_impl(const void *in1, charset_t in1set, const void *in2, charset_t in2set, charset_cmp_spec cmp)
+static inline SCHISM_ALWAYS_INLINE void *_charset_strxstr_impl(
+	const void *in1, charset_t in1set, const void *in2, charset_t in2set, charset_cmp_spec cmp)
 {
 	const unsigned char *uc1 = (const unsigned char *)in1;
 	/*const*/ size_t len = charset_strlen(in2, in2set); /* OpenWatcom bug here */
@@ -298,7 +298,7 @@ void *charset_strcasestr(const void *in1, charset_t in1set, const void *in2, cha
 
 int32_t charset_strverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set)
 {
-#define UCS4_ZERO (UINT32_C(48))
+#define UCS4_ZERO        (UINT32_C(48))
 #define UCS4_IS_DIGIT(x) ((x) >= UINT32_C(48) && (x) <= UINT32_C(57))
 	charset_decode_t decoder1 = {0};
 	decoder1.in = (const unsigned char *)in1;
@@ -310,25 +310,57 @@ int32_t charset_strverscmp(const void *in1, charset_t in1set, const void *in2, c
 	decoder2.offset = 0;
 	decoder2.size = SIZE_MAX;
 
-	static const uint8_t next_state[] = {
-		/* state    x    d    0  */
-		/* S_N */  S_N, S_I, S_Z,
-		/* S_I */  S_N, S_I, S_I,
-		/* S_F */  S_N, S_F, S_F,
-		/* S_Z */  S_N, S_F, S_Z
-	};
+	static const uint8_t next_state[] = {  /* state    x    d    0  */
+		/* S_N */ S_N, S_I, S_Z,
+		/* S_I */ S_N, S_I, S_I,
+		/* S_F */ S_N, S_F, S_F,
+		/* S_Z */ S_N, S_F, S_Z};
 
 	static const int8_t result_type[] = {
 		/* state   x/x  x/d  x/0  d/x  d/d  d/0  0/x  0/d  0/0  */
 
-		/* S_N */  CMP, CMP, CMP, CMP, LEN, CMP, CMP, CMP, CMP,
-		/* S_I */  CMP, -1,  -1,  +1,  LEN, LEN, +1,  LEN, LEN,
-		/* S_F */  CMP, CMP, CMP, CMP, CMP, CMP, CMP, CMP, CMP,
-		/* S_Z */  CMP, +1,  +1,  -1,  CMP, CMP, -1,  CMP, CMP,
+		/* S_N */ CMP,
+		CMP,
+		CMP,
+		CMP,
+		LEN,
+		CMP,
+		CMP,
+		CMP,
+		CMP,
+		/* S_I */ CMP,
+		-1,
+		-1,
+		+1,
+		LEN,
+		LEN,
+		+1,
+		LEN,
+		LEN,
+		/* S_F */ CMP,
+		CMP,
+		CMP,
+		CMP,
+		CMP,
+		CMP,
+		CMP,
+		CMP,
+		CMP,
+		/* S_Z */ CMP,
+		+1,
+		+1,
+		-1,
+		CMP,
+		CMP,
+		-1,
+		CMP,
+		CMP,
 	};
 
-	if (charset_decode_next(&decoder1, in1set) == CHARSET_ERROR_DECODE) goto charsetfail;
-	if (charset_decode_next(&decoder2, in2set) == CHARSET_ERROR_DECODE) goto charsetfail;
+	if (charset_decode_next(&decoder1, in1set) == CHARSET_ERROR_DECODE)
+		goto charsetfail;
+	if (charset_decode_next(&decoder2, in2set) == CHARSET_ERROR_DECODE)
+		goto charsetfail;
 
 	int32_t state = S_N + ((decoder1.codepoint == UCS4_ZERO) + UCS4_IS_DIGIT(decoder1.codepoint));
 	int32_t diff;
@@ -340,8 +372,10 @@ int32_t charset_strverscmp(const void *in1, charset_t in1set, const void *in2, c
 		}
 
 		state = next_state[state];
-		if (charset_decode_next(&decoder1, in1set) == CHARSET_ERROR_DECODE) goto charsetfail;
-		if (charset_decode_next(&decoder2, in2set) == CHARSET_ERROR_DECODE) goto charsetfail;
+		if (charset_decode_next(&decoder1, in1set) == CHARSET_ERROR_DECODE)
+			goto charsetfail;
+		if (charset_decode_next(&decoder2, in2set) == CHARSET_ERROR_DECODE)
+			goto charsetfail;
 		state += ((decoder1.codepoint == UCS4_ZERO) + UCS4_IS_DIGIT(decoder1.codepoint));
 	}
 
@@ -360,8 +394,10 @@ int32_t charset_strverscmp(const void *in1, charset_t in1set, const void *in2, c
 				return 1;
 			}
 
-			if (charset_decode_next(&decoder1, in1set) == CHARSET_ERROR_DECODE) goto charsetfail;
-			if (charset_decode_next(&decoder2, in2set) == CHARSET_ERROR_DECODE) goto charsetfail;
+			if (charset_decode_next(&decoder1, in1set) == CHARSET_ERROR_DECODE)
+				goto charsetfail;
+			if (charset_decode_next(&decoder2, in2set) == CHARSET_ERROR_DECODE)
+				goto charsetfail;
 		}
 
 		return UCS4_IS_DIGIT(decoder2.codepoint) ? -1 : diff;
@@ -445,8 +481,7 @@ static inline int charset_fnmatch_impl(const uint32_t *m, const uint32_t *s)
 			if (!charset_fnmatch_impl(m, s))
 				return 0;
 
-	return (!*s || !(*m == UCS4_QUESTION || *s == *m))
-		? (int)(*m | *s) : charset_fnmatch_impl(m + 1, s + 1);
+	return (!*s || !(*m == UCS4_QUESTION || *s == *m)) ? (int)(*m | *s) : charset_fnmatch_impl(m + 1, s + 1);
 }
 
 int charset_fnmatch(const void *match, charset_t match_set, const void *str, charset_t str_set, int flags)
@@ -470,8 +505,8 @@ int charset_fnmatch(const void *match, charset_t match_set, const void *str, cha
 	}
 
 	int r = ((flags & CHARSET_FNM_PERIOD) && (*str_ucs4 == UCS4_PERIOD && *match_ucs4 != UCS4_PERIOD))
-		? 0
-		: charset_fnmatch_impl(match_ucs4, str_ucs4);
+			? 0
+			: charset_fnmatch_impl(match_ucs4, str_ucs4);
 
 	free(match_ucs4);
 	free(str_ucs4);

@@ -23,16 +23,16 @@
 
 /* Target Windows 10, so that we can get the extra audio codec
  * GUIDs it provides */
-#define WINVER 0x1000
+#define WINVER       0x1000
 #define _WIN32_WINNT 0x1000
 
 #include "headers.h"
 
-#include "mt.h"
 #include "charset.h"
 #include "fmt.h"
-#include "util.h"
 #include "loadso.h"
+#include "mt.h"
+#include "util.h"
 
 /* we want constant vtables */
 #define CONST_VTABLE
@@ -40,39 +40,41 @@
 #define COBJMACROS
 
 /* include these first */
-#include <windows.h>
-#include <propsys.h>
 #include <mediaobj.h>
+#include <propsys.h>
+#include <windows.h>
 
 /* define the GUIDs here; we don't use stuff outside here anyway */
 #include <initguid.h>
 #include <mfapi.h>
+#include <mferror.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
-#include <mferror.h>
-#include <shlwapi.h>
 #include <propvarutil.h>
+#include <shlwapi.h>
 
 /* Dynamically loaded Media Foundation functions, to keep Schism working with Windows XP */
 
-typedef HRESULT (WINAPI *MF_MFStartupSpec)(ULONG version, DWORD flags);
-typedef HRESULT (WINAPI *MF_MFShutdownSpec)(void);
-typedef HRESULT (WINAPI *MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppISourceResolver);
-typedef HRESULT (WINAPI *MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
-typedef HRESULT (WINAPI *MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
-typedef HRESULT (WINAPI *MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
-typedef HRESULT (WINAPI *MF_PropVariantClearSpec)(PROPVARIANT *pvar);
-typedef HRESULT (WINAPI *MF_MFCreateSourceReaderFromMediaSourceSpec)(IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
-typedef HRESULT (WINAPI *MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
-typedef HRESULT (WINAPI *MF_MFCreateAsyncResultSpec)(IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
-typedef HRESULT (WINAPI *MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
-typedef HRESULT (WINAPI *MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
-typedef HRESULT (WINAPI *MF_MFAllocateWorkQueueSpec)(DWORD *pdwWorkQueue);
-typedef HRESULT (WINAPI *MF_MFUnlockWorkQueueSpec)(DWORD dwWorkQueue);
-typedef HRESULT (WINAPI *MF_QISearchSpec)(void     *that,LPCQITAB pqit,REFIID   riid,void     **ppv);
-typedef HRESULT (WINAPI *MF_CoInitializeExSpec)(LPVOID pvReserved, DWORD  dwCoInit);
-typedef void (WINAPI *MF_CoUninitializeSpec)(void);
-typedef void (WINAPI *MF_CoTaskMemFreeSpec)(LPVOID pv);
+typedef HRESULT(WINAPI *MF_MFStartupSpec)(ULONG version, DWORD flags);
+typedef HRESULT(WINAPI *MF_MFShutdownSpec)(void);
+typedef HRESULT(WINAPI *MF_MFCreateSourceResolverSpec)(IMFSourceResolver **ppISourceResolver);
+typedef HRESULT(WINAPI *MF_MFGetServiceSpec)(IUnknown *punkObject, REFGUID guidService, REFIID riid, LPVOID *ppvObject);
+typedef HRESULT(WINAPI *MF_PropVariantToStringAllocSpec)(REFPROPVARIANT propvar, PWSTR *ppszOut);
+typedef HRESULT(WINAPI *MF_PropVariantToUInt64Spec)(REFPROPVARIANT propvar, ULONGLONG *pullRet);
+typedef HRESULT(WINAPI *MF_PropVariantClearSpec)(PROPVARIANT *pvar);
+typedef HRESULT(WINAPI *MF_MFCreateSourceReaderFromMediaSourceSpec)(
+	IMFMediaSource *pMediaSource, IMFAttributes *pAttributes, IMFSourceReader **ppSourceReader);
+typedef HRESULT(WINAPI *MF_MFCreateMediaTypeSpec)(IMFMediaType **ppMFType);
+typedef HRESULT(WINAPI *MF_MFCreateAsyncResultSpec)(
+	IUnknown *punkObject, IMFAsyncCallback *pCallback, IUnknown *punkState, IMFAsyncResult **ppAsyncResult);
+typedef HRESULT(WINAPI *MF_MFPutWorkItemSpec)(DWORD dwQueue, IMFAsyncCallback *pCallback, IUnknown *pState);
+typedef HRESULT(WINAPI *MF_MFInvokeCallbackSpec)(IMFAsyncResult *pAsyncResult);
+typedef HRESULT(WINAPI *MF_MFAllocateWorkQueueSpec)(DWORD *pdwWorkQueue);
+typedef HRESULT(WINAPI *MF_MFUnlockWorkQueueSpec)(DWORD dwWorkQueue);
+typedef HRESULT(WINAPI *MF_QISearchSpec)(void *that, LPCQITAB pqit, REFIID riid, void **ppv);
+typedef HRESULT(WINAPI *MF_CoInitializeExSpec)(LPVOID pvReserved, DWORD dwCoInit);
+typedef void(WINAPI *MF_CoUninitializeSpec)(void);
+typedef void(WINAPI *MF_CoTaskMemFreeSpec)(LPVOID pv);
 
 static MF_MFStartupSpec MF_MFStartup;
 static MF_MFShutdownSpec MF_MFShutdown;
@@ -96,7 +98,8 @@ static MF_MFAllocateWorkQueueSpec MF_MFAllocateWorkQueue;
 static int media_foundation_initialized = 0;
 
 /* forward declare this */
-static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos);
+static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(
+	IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos);
 
 /* --------------------------------------------------------------------- */
 /* "Fun things are fun" says who? */
@@ -121,7 +124,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_op_QueryInterface(IUnknown *This, R
 {
 	static const QITAB qit[] = {
 		{&IID_IUnknown, 0},
-		{NULL, 0},
+		{NULL,          0},
 	};
 
 	return MF_QISearch(This, qit, riid, ppvobj);
@@ -147,7 +150,8 @@ static const IUnknownVtbl slurp_async_op_vtbl = {
 	.Release = slurp_async_op_Release,
 };
 
-static inline int slurp_async_op_new(IUnknown **This, IMFByteStream *bs, IMFAsyncCallback *cb, BYTE *buffer, ULONG req_length, int64_t pos)
+static inline int slurp_async_op_new(
+	IUnknown **This, IMFByteStream *bs, IMFAsyncCallback *cb, BYTE *buffer, ULONG req_length, int64_t pos)
 {
 	struct slurp_async_op *op = calloc(1, sizeof(struct slurp_async_op));
 	if (!op)
@@ -186,7 +190,7 @@ static HRESULT STDMETHODCALLTYPE slurp_async_callback_QueryInterface(IMFAsyncCal
 {
 	static const QITAB qit[] = {
 		{&IID_IMFAsyncCallback, 0},
-		{NULL, 0},
+		{NULL,                  0},
 	};
 
 	return MF_QISearch(This, qit, riid, ppobj);
@@ -207,7 +211,8 @@ static ULONG STDMETHODCALLTYPE slurp_async_callback_Release(IMFAsyncCallback *Th
 }
 
 /* IMFAsyncCallback */
-static HRESULT STDMETHODCALLTYPE slurp_async_callback_GetParameters(IMFAsyncCallback *This, DWORD *pdwFlags, DWORD *pdwQueue)
+static HRESULT STDMETHODCALLTYPE slurp_async_callback_GetParameters(
+	IMFAsyncCallback *This, DWORD *pdwFlags, DWORD *pdwQueue)
 {
 	/* optional apparently, don't care enough to implement */
 	return E_NOTIMPL;
@@ -299,7 +304,7 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_QueryInterface(IMFByteStream *This
 {
 	static const QITAB qit[] = {
 		{&IID_IMFByteStream, 0},
-		{NULL, 0},
+		{NULL,               0},
 	};
 
 	return MF_QISearch(This, qit, riid, ppobj);
@@ -327,7 +332,7 @@ static ULONG STDMETHODCALLTYPE mfbytestream_Release(IMFByteStream *This)
 }
 
 /* IMFByteStream methods */
-static HRESULT STDMETHODCALLTYPE mfbytestream_GetCapabilities(SCHISM_UNUSED IMFByteStream* This, DWORD *pdwCapabilities)
+static HRESULT STDMETHODCALLTYPE mfbytestream_GetCapabilities(SCHISM_UNUSED IMFByteStream *This, DWORD *pdwCapabilities)
 {
 	*pdwCapabilities = MFBYTESTREAM_IS_READABLE | MFBYTESTREAM_IS_SEEKABLE | MFBYTESTREAM_DOES_NOT_USE_NETWORK;
 	return S_OK;
@@ -402,7 +407,8 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Read(IMFByteStream *This, BYTE *pb
 }
 
 /* this is only used internally */
-static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos)
+static HRESULT STDMETHODCALLTYPE mfbytestream_ReadAtPosition(
+	IMFByteStream *This, BYTE *pb, ULONG cb, ULONG *pcbRead, int64_t pos)
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 	HRESULT hr = S_OK;
@@ -432,10 +438,11 @@ done:
 	return hr;
 }
 
-static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(IMFByteStream *This, BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
+static HRESULT STDMETHODCALLTYPE mfbytestream_BeginRead(
+	IMFByteStream *This, BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
 {
 	IUnknown *op = NULL;
-	IMFAsyncCallback* callback = NULL;
+	IMFAsyncCallback *callback = NULL;
 	IMFAsyncResult *result = NULL;
 	QWORD pos;
 	HRESULT hr = S_OK;
@@ -499,7 +506,8 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_Write(IMFByteStream *This, const B
 	return E_NOINTERFACE;
 }
 
-static HRESULT STDMETHODCALLTYPE mfbytestream_BeginWrite(IMFByteStream *This, const BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
+static HRESULT STDMETHODCALLTYPE mfbytestream_BeginWrite(
+	IMFByteStream *This, const BYTE *pb, ULONG cb, IMFAsyncCallback *pCallback, IUnknown *punkState)
 {
 	return E_NOINTERFACE;
 }
@@ -509,7 +517,8 @@ static HRESULT STDMETHODCALLTYPE mfbytestream_EndWrite(IMFByteStream *This, IMFA
 	return E_NOINTERFACE;
 }
 
-static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTESTREAM_SEEK_ORIGIN SeekOrigin, LONGLONG llSeekOffset, DWORD dwSeekFlags, QWORD *pqwCurrentPosition)
+static HRESULT STDMETHODCALLTYPE mfbytestream_Seek(IMFByteStream *This, MFBYTESTREAM_SEEK_ORIGIN SeekOrigin,
+	LONGLONG llSeekOffset, DWORD dwSeekFlags, QWORD *pqwCurrentPosition)
 {
 	struct mfbytestream *mfb = (struct mfbytestream *)This;
 	int whence;
@@ -610,36 +619,36 @@ static inline int mfbytestream_new(IMFByteStream **imf, slurp_t *fp)
  * think it really has an impact, either */
 #define COM_INITFLAGS (COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)
 
-static const char* get_media_type_description(IMFMediaType* media_type)
+static const char *get_media_type_description(IMFMediaType *media_type)
 {
 	static const struct {
 		const GUID *guid;
 		const char *description;
 	} guids[] = {
 		// no RealAudio support? for shame, Microsoft.
-		{&MFAudioFormat_AAC, "Advanced Audio Coding"},
+		{&MFAudioFormat_AAC,                  "Advanced Audio Coding"            },
 		// {&MFAudioFormat_ADTS, "Not used"},
-		{&MFAudioFormat_ALAC, "Apple Lossless Audio Codec"},
-		{&MFAudioFormat_AMR_NB, "Adaptive Multi-Rate"},
-		{&MFAudioFormat_AMR_WB, "Adaptive Multi-Rate Wideband"},
-		{&MFAudioFormat_Dolby_AC3, "Dolby Digital (AC-3)"},
-		{&MFAudioFormat_Dolby_AC3_SPDIF, "Dolby AC-3 over S/PDIF"},
-		{&MFAudioFormat_Dolby_DDPlus, "Dolby Digital Plus"},
-		{&MFAudioFormat_DRM, "Encrypted audio data"}, // ????
-		{&MFAudioFormat_DTS, "Digital Theater Systems"}, // yes, "theater", not "theatre"
-		{&MFAudioFormat_FLAC, "Free Lossless Audio Codec"},
-		{&MFAudioFormat_Float, "Uncompressed floating-point audio"},
+		{&MFAudioFormat_ALAC,                 "Apple Lossless Audio Codec"       },
+		{&MFAudioFormat_AMR_NB,               "Adaptive Multi-Rate"              },
+		{&MFAudioFormat_AMR_WB,               "Adaptive Multi-Rate Wideband"     },
+		{&MFAudioFormat_Dolby_AC3,            "Dolby Digital (AC-3)"             },
+		{&MFAudioFormat_Dolby_AC3_SPDIF,      "Dolby AC-3 over S/PDIF"           },
+		{&MFAudioFormat_Dolby_DDPlus,         "Dolby Digital Plus"               },
+		{&MFAudioFormat_DRM,                  "Encrypted audio data"             }, // ????
+		{&MFAudioFormat_DTS,                  "Digital Theater Systems"          }, // yes, "theater", not "theatre"
+		{&MFAudioFormat_FLAC,                 "Free Lossless Audio Codec"        },
+		{&MFAudioFormat_Float,                "Uncompressed floating-point audio"},
 		{&MFAudioFormat_Float_SpatialObjects, "Uncompressed floating-point audio"},
-		{&MFAudioFormat_MP3, "MPEG Layer-3 (MP3)"},
-		{&MFAudioFormat_MPEG, "MPEG-1 audio payload"},
-		{&MFAudioFormat_MSP1, "Windows Media Audio 9 Voice"},
-		{&MFAudioFormat_Opus, "Opus"},
-		{&MFAudioFormat_PCM, "Uncompressed PCM"},
-		// {&MFAudioFormat_QCELP, "QCELP audio"}, // can't get this to compile... 
-		{&MFAudioFormat_WMASPDIF, "Windows Media Audio 9 over S/PDIF"},
-		{&MFAudioFormat_WMAudio_Lossless, "Windows Media Audio 9 Lossless"},
-		{&MFAudioFormat_WMAudioV8, "Windows Media Audio 8"},
-		{&MFAudioFormat_WMAudioV9, "Windows Media Audio 8"},
+		{&MFAudioFormat_MP3,                  "MPEG Layer-3 (MP3)"               },
+		{&MFAudioFormat_MPEG,                 "MPEG-1 audio payload"             },
+		{&MFAudioFormat_MSP1,                 "Windows Media Audio 9 Voice"      },
+		{&MFAudioFormat_Opus,                 "Opus"                             },
+		{&MFAudioFormat_PCM,                  "Uncompressed PCM"                 },
+		// {&MFAudioFormat_QCELP, "QCELP audio"}, // can't get this to compile...
+		{&MFAudioFormat_WMASPDIF,             "Windows Media Audio 9 over S/PDIF"},
+		{&MFAudioFormat_WMAudio_Lossless,     "Windows Media Audio 9 Lossless"   },
+		{&MFAudioFormat_WMAudioV8,            "Windows Media Audio 8"            },
+		{&MFAudioFormat_WMAudioV9,            "Windows Media Audio 8"            },
 	};
 
 	GUID subtype;
@@ -650,26 +659,26 @@ static const char* get_media_type_description(IMFMediaType* media_type)
 
 #ifdef SCHISM_MF_DEBUG
 		log_appendf(1, "Unknown Media Foundation subtype found:");
-		log_appendf(1, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
-			subtype.Data1, subtype.Data2, subtype.Data3,
-			subtype.Data4[0], subtype.Data4[1], subtype.Data4[2], subtype.Data4[3],
-			subtype.Data4[4], subtype.Data4[5], subtype.Data4[6], subtype.Data4[7]);
+		log_appendf(1, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}", subtype.Data1,
+			subtype.Data2, subtype.Data3, subtype.Data4[0], subtype.Data4[1], subtype.Data4[2],
+			subtype.Data4[3], subtype.Data4[4], subtype.Data4[5], subtype.Data4[6], subtype.Data4[7]);
 #endif
-
 	}
 
 	/* welp */
 	return "Media Foundation";
 }
 
-static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *file) {
+static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *file)
+{
 	IMFMediaType *media_type = NULL;
 	BOOL compressed = FALSE;
 
-	if (SUCCEEDED(IMFSourceReader_GetNativeMediaType(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type))) {
+	if (SUCCEEDED(IMFSourceReader_GetNativeMediaType(
+		    reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, MF_SOURCE_READER_CURRENT_TYPE_INDEX, &media_type))) {
 		file->type = (SUCCEEDED(IMFMediaType_IsCompressedFormat(media_type, &compressed)) && compressed)
-			? TYPE_SAMPLE_COMPR
-			: TYPE_SAMPLE_PLAIN;
+				     ? TYPE_SAMPLE_COMPR
+				     : TYPE_SAMPLE_PLAIN;
 
 		file->description = get_media_type_description(media_type);
 
@@ -679,7 +688,7 @@ static int get_source_reader_information(IMFSourceReader *reader, dmoz_file_t *f
 	return 1;
 }
 
-static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t* file)
+static int convert_media_foundation_metadata(IMFMediaSource *source, dmoz_file_t *file)
 {
 	IMFPresentationDescriptor *descriptor = NULL;
 	IMFMetadataProvider *provider = NULL;
@@ -697,7 +706,8 @@ static int convert_media_foundation_metadata(IMFMediaSource* source, dmoz_file_t
 	if (SUCCEEDED(IMFPresentationDescriptor_GetUINT64(descriptor, &MF_PD_DURATION, &duration)))
 		file->smp_length = (double)duration * file->smp_speed / (10.0 * 1000.0 * 1000.0);
 
-	if (FAILED(MF_MFGetService((IUnknown*)source, &MF_METADATA_PROVIDER_SERVICE, &IID_IMFMetadataProvider, (void**)&provider)))
+	if (FAILED(MF_MFGetService(
+		    (IUnknown *)source, &MF_METADATA_PROVIDER_SERVICE, &IID_IMFMetadataProvider, (void **)&provider)))
 		goto cleanup;
 
 	if (FAILED(IMFMetadataProvider_GetMFMetadata(provider, descriptor, 0, 0, &metadata)))
@@ -776,13 +786,17 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (!mfbytestream_new(&data->byte_stream, fp))
 		goto cleanup;
 
-	if (FAILED(IMFSourceResolver_CreateObjectFromByteStream(resolver, data->byte_stream, url, MF_RESOLUTION_MEDIASOURCE | (!url ? MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE : 0) | MF_RESOLUTION_READ, NULL, &object_type, &unknown_media_source)))
+	if (FAILED(IMFSourceResolver_CreateObjectFromByteStream(resolver, data->byte_stream, url,
+		    MF_RESOLUTION_MEDIASOURCE
+			    | (!url ? MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE : 0)
+			    | MF_RESOLUTION_READ,
+		    NULL, &object_type, &unknown_media_source)))
 		goto cleanup;
 
 	if (object_type != MF_OBJECT_MEDIASOURCE)
 		goto cleanup;
 
-	if (FAILED(IUnknown_QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void**)&data->source)))
+	if (FAILED(IUnknown_QueryInterface(unknown_media_source, &IID_IMFMediaSource, (void **)&data->source)))
 		goto cleanup;
 
 	if (FAILED(MF_MFCreateSourceReaderFromMediaSource(data->source, NULL, &data->reader)))
@@ -797,12 +811,14 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	if (FAILED(IMFMediaType_SetGUID(uncompressed_type, &MF_MT_SUBTYPE, &MFAudioFormat_PCM)))
 		goto cleanup;
 
-	if (FAILED(IMFSourceReader_SetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type)))
+	if (FAILED(IMFSourceReader_SetCurrentMediaType(
+		    data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, NULL, uncompressed_type)))
 		goto cleanup;
 
 	IMFMediaType_Release(uncompressed_type);
 
-	if (FAILED(IMFSourceReader_GetCurrentMediaType(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type)))
+	if (FAILED(IMFSourceReader_GetCurrentMediaType(
+		    data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, &uncompressed_type)))
 		goto cleanup;
 
 	if (FAILED(IMFSourceReader_SetStreamSelection(data->reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, TRUE)))
@@ -824,17 +840,31 @@ static int win32mf_start(struct win32mf_data *data, slurp_t *fp, wchar_t *url)
 	data->flags = SF_LE | SF_PCMS;
 
 	switch (data->channels) {
-	case 1:  data->flags |= SF_M;  break;
-	case 2:  data->flags |= SF_SI; break;
-	default: goto cleanup;
+	case 1:
+		data->flags |= SF_M;
+		break;
+	case 2:
+		data->flags |= SF_SI;
+		break;
+	default:
+		goto cleanup;
 	}
 
 	switch (data->bps) {
-	case 8:  data->flags |= SF_8;  break;
-	case 16: data->flags |= SF_16; break;
-	case 24: data->flags |= SF_24; break;
-	case 32: data->flags |= SF_32; break;
-	default: goto cleanup;
+	case 8:
+		data->flags |= SF_8;
+		break;
+	case 16:
+		data->flags |= SF_16;
+		break;
+	case 24:
+		data->flags |= SF_24;
+		break;
+	case 32:
+		data->flags |= SF_32;
+		break;
+	default:
+		goto cleanup;
 	}
 
 	success = 1;
@@ -910,7 +940,8 @@ static int reader_load_sample(IMFSourceReader *reader, disko_t *ds)
 	if (!reader)
 		goto cleanup;
 
-	if (FAILED(IMFSourceReader_ReadSample(reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &sample_flags, NULL, &sample)))
+	if (FAILED(IMFSourceReader_ReadSample(
+		    reader, MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, NULL, &sample_flags, NULL, &sample)))
 		goto cleanup;
 
 	if (sample_flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED || sample_flags & MF_SOURCE_READERF_ENDOFSTREAM) {
@@ -961,10 +992,8 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 		int r;
 
 		if (df.smp_length > 0) {
-			r = disko_memopen_estimate(&ds,
-				df.smp_length
-					* ((data.flags & SF_BIT_MASK) / 8)
-					* (((data.flags & SF_CHN_MASK) == SF_SI) ? 2 : 1));
+			r = disko_memopen_estimate(&ds, df.smp_length * ((data.flags & SF_BIT_MASK) / 8)
+								* (((data.flags & SF_CHN_MASK) == SF_SI) ? 2 : 1));
 		} else {
 			r = disko_memopen(&ds);
 		}
@@ -980,8 +1009,8 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 		if (loop_success == READER_LOAD_DONE)
 			break;
 
-		if (loop_success == READER_LOAD_ERROR ||
-			(ds.length / data.channels / (data.bps / 8) > MAX_SAMPLE_LENGTH)) {
+		if (loop_success == READER_LOAD_ERROR
+			|| (ds.length / data.channels / (data.bps / 8) > MAX_SAMPLE_LENGTH)) {
 			win32mf_end(&data);
 			disko_memclose(&ds, 0);
 			return 0;
@@ -995,8 +1024,8 @@ int fmt_win32mf_load_sample(slurp_t *fp, song_sample_t *smp)
 		return 0;
 	}
 
-	smp->c5speed       = data.sps;
-	smp->length        = sample_length;
+	smp->c5speed = data.sps;
+	smp->length = sample_length;
 
 	slurp_t fake_fp;
 	slurp_memstream(&fake_fp, ds.data, ds.length);
@@ -1025,22 +1054,28 @@ int win32mf_init(void)
 	int com_initialized = 0;
 
 #ifdef SCHISM_MF_DEBUG
-#define DEBUG_PUTS(x) puts(x)
+# define DEBUG_PUTS(x) puts(x)
 #else
-#define DEBUG_PUTS(x)
+# define DEBUG_PUTS(x)
 #endif
 
 #define LOAD_MF_LIBRARY(o) \
 	do { \
-		lib_ ## o = loadso_object_load(#o ".dll"); \
-		if (!(lib_ ## o)) { DEBUG_PUTS("Failed to load library " #o "!"); goto fail; } \
+		lib_##o = loadso_object_load(#o ".dll"); \
+		if (!(lib_##o)) { \
+			DEBUG_PUTS("Failed to load library " #o "!"); \
+			goto fail; \
+		} \
 	} while (0)
 
 #define LOAD_MF_OBJECT(o, x) \
 	do { \
 		/* the first cast to `void (*)(void)` is simply to make gcc shut up */ \
-		MF_##x = (MF_##x##Spec)loadso_function_load(lib_ ## o, #x); \
-		if (!MF_##x) { DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); goto fail; } \
+		MF_##x = (MF_##x##Spec)loadso_function_load(lib_##o, #x); \
+		if (!MF_##x) { \
+			DEBUG_PUTS("Failed to load " #x " from library " #o ".dll !"); \
+			goto fail; \
+		} \
 	} while (0)
 
 	LOAD_MF_LIBRARY(ole32);
@@ -1081,14 +1116,16 @@ int win32mf_init(void)
 
 	HRESULT com_init = MF_CoInitializeEx(NULL, COM_INITFLAGS);
 	switch (com_init) {
-	case S_OK: case S_FALSE: case RPC_E_CHANGED_MODE:
+	case S_OK:
+	case S_FALSE:
+	case RPC_E_CHANGED_MODE:
 		com_initialized = 1;
 		break;
 	default:
 		goto fail;
 	}
 
-	// Vista SDK version, 
+	// Vista SDK version,
 #define SCHISM_MF_VERSION ((0x0001U << 16) | 0x0070U)
 
 	/* MFSTARTUP_LITE == no sockets */

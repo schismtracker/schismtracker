@@ -44,7 +44,11 @@ typedef struct mm_subblock {
 static int read_mmcmp_header(mm_header_t *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(zirconia);
 	READ_VALUE(hdrsize);
@@ -58,18 +62,14 @@ static int read_mmcmp_header(mm_header_t *hdr, slurp_t *fp)
 
 #undef READ_VALUE
 
-	hdr->hdrsize  = bswapLE16(hdr->hdrsize);
-	hdr->version  = bswapLE16(hdr->version);
-	hdr->blocks   = bswapLE16(hdr->blocks);
+	hdr->hdrsize = bswapLE16(hdr->hdrsize);
+	hdr->version = bswapLE16(hdr->version);
+	hdr->blocks = bswapLE16(hdr->blocks);
 	hdr->filesize = bswapLE32(hdr->filesize);
 	hdr->blktable = bswapLE32(hdr->blktable);
 
-	if (memcmp(hdr->zirconia, "ziRCONia", 8)
-	    || hdr->hdrsize < 14
-	    || hdr->blocks == 0
-	    || hdr->filesize < 16
-	    || hdr->filesize > 0x8000000
-	    || !slurp_could_seek(fp, hdr->blktable + 4 * hdr->blocks, SEEK_SET))
+	if (memcmp(hdr->zirconia, "ziRCONia", 8) || hdr->hdrsize < 14 || hdr->blocks == 0 || hdr->filesize < 16
+		|| hdr->filesize > 0x8000000 || !slurp_could_seek(fp, hdr->blktable + 4 * hdr->blocks, SEEK_SET))
 		return 0;
 
 	return 1;
@@ -78,7 +78,11 @@ static int read_mmcmp_header(mm_header_t *hdr, slurp_t *fp)
 static int read_mmcmp_block(mm_block_t *pblk, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &pblk->name, sizeof(pblk->name)) != sizeof(pblk->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &pblk->name, sizeof(pblk->name)) != sizeof(pblk->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(unpk_size);
 	READ_VALUE(pk_size);
@@ -90,13 +94,13 @@ static int read_mmcmp_block(mm_block_t *pblk, slurp_t *fp)
 
 #undef READ_VALUE
 
-	pblk->unpk_size  = bswapLE32(pblk->unpk_size);
-	pblk->pk_size    = bswapLE32(pblk->pk_size);
-	pblk->xor_chk    = bswapLE32(pblk->xor_chk);
-	pblk->sub_blk    = bswapLE16(pblk->sub_blk);
-	pblk->flags      = bswapLE16(pblk->flags);
+	pblk->unpk_size = bswapLE32(pblk->unpk_size);
+	pblk->pk_size = bswapLE32(pblk->pk_size);
+	pblk->xor_chk = bswapLE32(pblk->xor_chk);
+	pblk->sub_blk = bswapLE16(pblk->sub_blk);
+	pblk->flags = bswapLE16(pblk->flags);
 	pblk->tt_entries = bswapLE16(pblk->tt_entries);
-	pblk->num_bits   = bswapLE16(pblk->num_bits);
+	pblk->num_bits = bswapLE16(pblk->num_bits);
 
 	return 1;
 }
@@ -104,7 +108,11 @@ static int read_mmcmp_block(mm_block_t *pblk, slurp_t *fp)
 static int read_mmcmp_subblocks(size_t size, mm_subblock_t *subblks, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &name, sizeof(name)) != sizeof(name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &name, sizeof(name)) != sizeof(name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	for (size_t i = 0; i < size; i++) {
 		READ_VALUE(subblks[i].unpk_pos);
@@ -123,34 +131,45 @@ typedef struct mm_bit_buffer {
 	uint8_t *src, *end;
 } mm_bit_buffer_t;
 
-
 enum {
-	MM_COMP   = 0x0001,
-	MM_DELTA  = 0x0002,
-	MM_16BIT  = 0x0004,
+	MM_COMP = 0x0001,
+	MM_DELTA = 0x0002,
+	MM_16BIT = 0x0004,
 	MM_STEREO = 0x0100, // unused?
-	MM_ABS16  = 0x0200,
+	MM_ABS16 = 0x0200,
 	MM_ENDIAN = 0x0400, // unused?
 };
 
+static const uint32_t mm_8bit_commands[8] = {0x01, 0x03, 0x07, 0x0F, 0x1E, 0x3C, 0x78, 0xF8};
 
-static const uint32_t mm_8bit_commands[8] = { 0x01, 0x03, 0x07, 0x0F, 0x1E, 0x3C, 0x78, 0xF8 };
-
-static const uint32_t mm_8bit_fetch[8] = { 3, 3, 3, 3, 2, 1, 0, 0 };
+static const uint32_t mm_8bit_fetch[8] = {3, 3, 3, 3, 2, 1, 0, 0};
 
 static const uint32_t mm_16bit_commands[16] = {
-	0x0001, 0x0003, 0x0007, 0x000F, 0x001E, 0x003C, 0x0078, 0x00F0,
-	0x01F0, 0x03F0, 0x07F0, 0x0FF0, 0x1FF0, 0x3FF0, 0x7FF0, 0xFFF0,
+	0x0001,
+	0x0003,
+	0x0007,
+	0x000F,
+	0x001E,
+	0x003C,
+	0x0078,
+	0x00F0,
+	0x01F0,
+	0x03F0,
+	0x07F0,
+	0x0FF0,
+	0x1FF0,
+	0x3FF0,
+	0x7FF0,
+	0xFFF0,
 };
 
-static const uint32_t mm_16bit_fetch[16] = { 4, 4, 4, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-
+static const uint32_t mm_16bit_fetch[16] = {4, 4, 4, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 static uint32_t get_bits(mm_bit_buffer_t *bb, uint32_t bits)
 {
 	uint32_t d;
-	if (!bits) return 0;
+	if (!bits)
+		return 0;
 	while (bb->bits < 24) {
 		bb->buffer |= ((bb->src < bb->end) ? *bb->src++ : 0) << bb->bits;
 		bb->bits += 8;
@@ -160,7 +179,6 @@ static uint32_t get_bits(mm_bit_buffer_t *bb, uint32_t bits)
 	bb->bits -= bits;
 	return d;
 }
-
 
 int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 {
@@ -208,10 +226,12 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 		if (!(pblk.flags & MM_COMP)) {
 			/* Data is not packed */
 			for (uint32_t i = 0; i < pblk.sub_blk; i++) {
-				if ((psubblk[i].unpk_pos > filesize) || (psubblk[i].unpk_pos + psubblk[i].unpk_size > filesize))
+				if ((psubblk[i].unpk_pos > filesize)
+					|| (psubblk[i].unpk_pos + psubblk[i].unpk_size > filesize))
 					break;
 
-				if (slurp_read(fp, buffer + psubblk[i].unpk_pos, psubblk[i].unpk_size) != psubblk[i].unpk_size) {
+				if (slurp_read(fp, buffer + psubblk[i].unpk_pos, psubblk[i].unpk_size)
+					!= psubblk[i].unpk_size) {
 					SCHISM_VLA_FREE(pblk_table);
 					SCHISM_VLA_FREE(psubblk);
 					free(buffer);
@@ -237,9 +257,8 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 				return 0;
 			}
 
-			
 			mm_bit_buffer_t bb = {0};
-	
+
 			bb.bits = 0;
 			bb.buffer = 0;
 			bb.src = buf;
@@ -251,8 +270,8 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 
 				if (d >= mm_16bit_commands[numbits]) {
 					uint32_t fetch = mm_16bit_fetch[numbits];
-					uint32_t newbits = get_bits(&bb, fetch)
-						+ ((d - mm_16bit_commands[numbits]) << fetch);
+					uint32_t newbits
+						= get_bits(&bb, fetch) + ((d - mm_16bit_commands[numbits]) << fetch);
 					if (newbits != numbits) {
 						numbits = newbits & 0x0F;
 					} else {
@@ -268,16 +287,15 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 					newval = d;
 				}
 				if (newval < 0x10000) {
-					newval = (newval & 1)
-						? (uint32_t) (-(int32_t)((newval + 1) >> 1))
-						: (uint32_t) (newval >> 1);
+					newval = (newval & 1) ? (uint32_t)(-(int32_t)((newval + 1) >> 1))
+							      : (uint32_t)(newval >> 1);
 					if (pblk.flags & MM_DELTA) {
 						newval += oldval;
 						oldval = newval;
 					} else if (!(pblk.flags & MM_ABS16)) {
 						newval ^= 0x8000;
 					}
-					dest[destpos++] = bswapLE16((uint16_t) newval);
+					dest[destpos++] = bswapLE16((uint16_t)newval);
 				}
 				if (destpos >= size) {
 					subblk++;
@@ -325,8 +343,8 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 
 				if (d >= mm_8bit_commands[numbits]) {
 					uint32_t fetch = mm_8bit_fetch[numbits];
-					uint32_t newbits = get_bits(&bb, fetch)
-						+ ((d - mm_8bit_commands[numbits]) << fetch);
+					uint32_t newbits
+						= get_bits(&bb, fetch) + ((d - mm_8bit_commands[numbits]) << fetch);
 					if (newbits != numbits) {
 						numbits = newbits & 0x07;
 					} else {
@@ -347,7 +365,7 @@ int mmcmp_unpack(slurp_t *fp, uint8_t **data, size_t *length)
 						n += oldval;
 						oldval = n;
 					}
-					dest[destpos++] = (uint8_t) n;
+					dest[destpos++] = (uint8_t)n;
 				}
 				if (destpos >= size) {
 					subblk++;

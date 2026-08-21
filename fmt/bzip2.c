@@ -33,9 +33,9 @@
 #include "headers.h"
 
 #include "fmt.h"
-#include "slurp.h"
-#include "mem.h"
 #include "loadso.h"
+#include "mem.h"
+#include "slurp.h"
 
 #include <bzlib.h>
 
@@ -65,7 +65,7 @@ static void *slurp_bzip2_start(void)
 		return NULL;
 	}
 
-	return zl;	
+	return zl;
 }
 
 static int slurp_bzip2_inflate(void *opaque)
@@ -136,17 +136,26 @@ int slurp_bzip2(slurp_t *src)
 # define BZIP2_SYM(x) BZIP2_##x = x
 # define BZIP2_END
 #else
-# define BZIP2_GLOBALS \
-	static void *lib_bz2;
+# define BZIP2_GLOBALS static void *lib_bz2;
 # define BZIP2_START \
-	do { lib_bz2 = library_load("bz2", 1, 0); if (!lib_bz2) return -2; } while (0)
+	 do { \
+		 lib_bz2 = library_load("bz2", 1, 0); \
+		 if (!lib_bz2) \
+			 return -2; \
+	 } while (0)
 # define BZIP2_SYM(x) \
-	do { BZIP2_##x = loadso_function_load(lib_bz2, "BZ2_" #x); if (!BZIP2_##x) { printf("%s\n", #x); return -1; } } while (0)
+	 do { \
+		 BZIP2_##x = loadso_function_load(lib_bz2, "BZ2_" #x); \
+		 if (!BZIP2_##x) { \
+			 printf("%s\n", #x); \
+			 return -1; \
+		 } \
+	 } while (0)
 # define BZIP2_END \
-do { \
-	loadso_object_unload(lib_bz2); \
-	lib_bz2 = NULL; \
-} while (0)
+	 do { \
+		 loadso_object_unload(lib_bz2); \
+		 lib_bz2 = NULL; \
+	 } while (0)
 #endif
 
 BZIP2_GLOBALS

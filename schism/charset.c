@@ -25,10 +25,10 @@
 
 #include "bits.h"
 #include "charset.h"
-#include "util.h"
 #include "disko.h"
-#include "mem.h"
 #include "log.h"
+#include "mem.h"
+#include "util.h"
 #ifdef SCHISM_WIN32
 # include "osdefs.h"
 # include <windows.h>
@@ -152,21 +152,18 @@ static void utf8_to_ucs4(charset_decode_t *decoder)
 		if ((in[1] ^ 0x80) < 0x40) {
 			decoder->state = DECODER_STATE_NEED_MORE;
 			decoder->offset += 2;
-			decoder->codepoint = ((uint32_t) (c & 0x1f) << 6)
-						 | (uint32_t) (in[1] ^ 0x80);
+			decoder->codepoint = ((uint32_t)(c & 0x1f) << 6) | (uint32_t)(in[1] ^ 0x80);
 		} else {
 			decoder->state = DECODER_STATE_ILL_FORMED;
 		}
 	} else if (c < 0xf0) {
 		DECODER_ASSERT_OVERFLOW(decoder, 3);
 
-		if ((in[1] ^ 0x80) < 0x40 && (in[2] ^ 0x80) < 0x40
-				&& (c >= 0xE1 || in[1] >= 0xA0)
-				&& (c != 0xED || in[1] < 0xA0)) {
+		if ((in[1] ^ 0x80) < 0x40 && (in[2] ^ 0x80) < 0x40 && (c >= 0xE1 || in[1] >= 0xA0)
+			&& (c != 0xED || in[1] < 0xA0)) {
 			decoder->state = DECODER_STATE_NEED_MORE;
-			decoder->codepoint = ((uint32_t) (c & 0x0f) << 12)
-						 | ((uint32_t) (in[1] ^ 0x80) << 6)
-						 | (uint32_t) (in[2] ^ 0x80);
+			decoder->codepoint = ((uint32_t)(c & 0x0f) << 12) | ((uint32_t)(in[1] ^ 0x80) << 6)
+					     | (uint32_t)(in[2] ^ 0x80);
 			decoder->offset += 3;
 		} else {
 			decoder->state = DECODER_STATE_ILL_FORMED;
@@ -174,20 +171,17 @@ static void utf8_to_ucs4(charset_decode_t *decoder)
 	} else if (c < 0xf8) {
 		DECODER_ASSERT_OVERFLOW(decoder, 4);
 
-		if ((in[1] ^ 0x80) < 0x40 && (in[2] ^ 0x80) < 0x40
-				&& (in[3] ^ 0x80) < 0x40
-				&& (c >= 0xf1 || in[1] >= 0x90)
-				&& (c < 0xf4 || (c == 0xf4 && in[1] < 0x90))) {
+		if ((in[1] ^ 0x80) < 0x40 && (in[2] ^ 0x80) < 0x40 && (in[3] ^ 0x80) < 0x40
+			&& (c >= 0xf1 || in[1] >= 0x90) && (c < 0xf4 || (c == 0xf4 && in[1] < 0x90))) {
 			decoder->state = DECODER_STATE_NEED_MORE;
-			decoder->codepoint = ((uint32_t) (c & 0x07) << 18)
-						 | ((uint32_t) (in[1] ^ 0x80) << 12)
-						 | ((uint32_t) (in[2] ^ 0x80) << 6)
-						 | (uint32_t) (in[3] ^ 0x80);
+			decoder->codepoint = ((uint32_t)(c & 0x07) << 18) | ((uint32_t)(in[1] ^ 0x80) << 12)
+					     | ((uint32_t)(in[2] ^ 0x80) << 6) | (uint32_t)(in[3] ^ 0x80);
 			decoder->offset += 4;
 		} else {
 			decoder->state = DECODER_STATE_ILL_FORMED;
 		}
-	} else decoder->state = DECODER_STATE_ILL_FORMED;
+	} else
+		decoder->state = DECODER_STATE_ILL_FORMED;
 }
 
 /* generic utf-16 decoder macro */
@@ -195,28 +189,29 @@ static void utf8_to_ucs4(charset_decode_t *decoder)
 	static void utf16##x##_to_ucs4(charset_decode_t *decoder) \
 	{ \
 		DECODER_ASSERT_OVERFLOW(decoder, sizeof(uint16_t)); \
-	\
+\
 		uint16_t wc; \
 		memcpy(&wc, decoder->in + decoder->offset, sizeof(wc)); \
 		wc = bswap##x##16(wc); \
 		decoder->offset += 2; \
 		decoder->state = DECODER_STATE_NEED_MORE; \
-	\
+\
 		if (wc < 0xD800 || wc > 0xDFFF) { \
 			decoder->codepoint = wc; \
 			if (!wc) \
 				decoder->state = DECODER_STATE_DONE; \
 		} else if (wc >= 0xD800 && wc <= 0xDBFF) { \
 			DECODER_ASSERT_OVERFLOW(decoder, sizeof(uint16_t)); \
-	\
+\
 			uint16_t wc2; \
 			memcpy(&wc2, decoder->in + decoder->offset, sizeof(wc2)); \
 			wc2 = bswap##x##16(wc2); \
 			decoder->offset += 2; \
-	\
+\
 			if (wc2 >= 0xDC00 && wc2 <= 0xDFFF) { \
 				decoder->codepoint = 0x10000 + ((wc - 0xD800) << 10) + (wc2 - 0xDC00); \
-			} else decoder->state = DECODER_STATE_ILL_FORMED; \
+			} else \
+				decoder->state = DECODER_STATE_ILL_FORMED; \
 		} \
 	}
 
@@ -235,7 +230,7 @@ DECODE_UTF16_VARIANT(BE)
 	static void ucs2##x##_to_ucs4(charset_decode_t *decoder) \
 	{ \
 		DECODER_ASSERT_OVERFLOW(decoder, sizeof(uint16_t)); \
-	\
+\
 		uint16_t wc; \
 		memcpy(&wc, decoder->in + decoder->offset, sizeof(wc)); \
 		decoder->codepoint = bswap##x##16(wc); \
@@ -253,7 +248,7 @@ DECODE_UCS2_VARIANT(BE)
 	static void ucs4##x##_to_ucs4(charset_decode_t *decoder) \
 	{ \
 		DECODER_ASSERT_OVERFLOW(decoder, sizeof(uint32_t)); \
-	\
+\
 		uint32_t wc; \
 		memcpy(&wc, decoder->in + decoder->offset, 4); \
 		decoder->codepoint = bswap##x##32(wc); \
@@ -272,29 +267,141 @@ static void itf_to_ucs4(charset_decode_t *decoder)
 	 * there are likely more characters that do not match up exactly */
 	static const uint16_t itf_table[128] = {
 		/* 0x80 */
-		0x00C7, 0x203E, 0x00E9, 0x00E2, 0x00E4, 0x00E0, 0x00E5, 0x00E7,
-		0x00EA, 0x00EB, 0x00E8, 0x00EF, 0x00EE, 0x00EC, 0x00C4, 0x00C5,
+		0x00C7,
+		0x203E,
+		0x00E9,
+		0x00E2,
+		0x00E4,
+		0x00E0,
+		0x00E5,
+		0x00E7,
+		0x00EA,
+		0x00EB,
+		0x00E8,
+		0x00EF,
+		0x00EE,
+		0x00EC,
+		0x00C4,
+		0x00C5,
 		/* 0x90 */
-		0x00C9, 0x00E6, 0x00C6, 0x00F4, 0x00F6, 0x00F2, 0x00FB, 0x00F9,
-		0x00FF, 0x00D6, 0x00DC, 0x00A2, 0x00A3, 0x00A5, 0x20A7, 0x0192,
+		0x00C9,
+		0x00E6,
+		0x00C6,
+		0x00F4,
+		0x00F6,
+		0x00F2,
+		0x00FB,
+		0x00F9,
+		0x00FF,
+		0x00D6,
+		0x00DC,
+		0x00A2,
+		0x00A3,
+		0x00A5,
+		0x20A7,
+		0x0192,
 		/* 0xA0 */
-		0x00E1, 0x00ED, 0x00F3, 0x00FA, 0x00F1, 0x00D1, 0x00AA, 0x00BA,
-		0x00BF, 0x2310, 0x00AC, 0x00BD, 0x00BC, 0x00A1, 0x00AB, 0x00BB,
+		0x00E1,
+		0x00ED,
+		0x00F3,
+		0x00FA,
+		0x00F1,
+		0x00D1,
+		0x00AA,
+		0x00BA,
+		0x00BF,
+		0x2310,
+		0x00AC,
+		0x00BD,
+		0x00BC,
+		0x00A1,
+		0x00AB,
+		0x00BB,
 		/* 0xB0 */
-		0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x2561, 0x2562, 0x2556,
-		0x2555, 0x2563, 0x2551, 0x2557, 0x255D, 0x255C, 0x255B, 0x2510,
+		0x2591,
+		0x2592,
+		0x2593,
+		0x2502,
+		0x2524,
+		0x2561,
+		0x2562,
+		0x2556,
+		0x2555,
+		0x2563,
+		0x2551,
+		0x2557,
+		0x255D,
+		0x255C,
+		0x255B,
+		0x2510,
 		/* 0xC0 */
-		0x2514, 0x2534, 0x252C, 0x251C, 0x2500, 0x253C, 0x255E, 0x255F,
-		0x255A, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256C, 0x2567,
+		0x2514,
+		0x2534,
+		0x252C,
+		0x251C,
+		0x2500,
+		0x253C,
+		0x255E,
+		0x255F,
+		0x255A,
+		0x2554,
+		0x2569,
+		0x2566,
+		0x2560,
+		0x2550,
+		0x256C,
+		0x2567,
 		/* 0xD0 */
-		0x2568, 0x2564, 0x2565, 0x2559, 0x2558, 0x2552, 0x2553, 0x256B,
-		0x256A, 0x2518, 0x250C, 0x25A0, 0x2584, 0x258C, 0x2590, 0x2580,
+		0x2568,
+		0x2564,
+		0x2565,
+		0x2559,
+		0x2558,
+		0x2552,
+		0x2553,
+		0x256B,
+		0x256A,
+		0x2518,
+		0x250C,
+		0x25A0,
+		0x2584,
+		0x258C,
+		0x2590,
+		0x2580,
 		/* 0xE0 */
-		0x03B1, 0x00DF, 0x0393, 0x03C0, 0x03A3, 0x03C3, 0x00B5, 0x03C4,
-		0x03A6, 0x0398, 0x03A9, 0x03B4, 0x221E, 0x03C6, 0x03B5, 0x2229,
+		0x03B1,
+		0x00DF,
+		0x0393,
+		0x03C0,
+		0x03A3,
+		0x03C3,
+		0x00B5,
+		0x03C4,
+		0x03A6,
+		0x0398,
+		0x03A9,
+		0x03B4,
+		0x221E,
+		0x03C6,
+		0x03B5,
+		0x2229,
 		/* 0xF0 */
-		0x2261, 0x00B1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00F7, 0x2248,
-		0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0,
+		0x2261,
+		0x00B1,
+		0x2265,
+		0x2264,
+		0x2320,
+		0x2321,
+		0x00F7,
+		0x2248,
+		0x00B0,
+		0x2219,
+		0x00B7,
+		0x221A,
+		0x207F,
+		0x00B2,
+		0x25A0,
+		0x00A0,
 	};
 
 	DECODER_ASSERT_OVERFLOW(decoder, 1);
@@ -308,29 +415,141 @@ static void cp437_to_ucs4(charset_decode_t *decoder)
 {
 	static const uint16_t cp437_table[128] = {
 		/* 0x80 */
-		0x00C7, 0x00FC, 0x00E9, 0x00E2, 0x00E4, 0x00E0, 0x00E5, 0x00E7,
-		0x00EA, 0x00EB, 0x00E8, 0x00EF, 0x00EE, 0x00EC, 0x00C4, 0x00C5,
+		0x00C7,
+		0x00FC,
+		0x00E9,
+		0x00E2,
+		0x00E4,
+		0x00E0,
+		0x00E5,
+		0x00E7,
+		0x00EA,
+		0x00EB,
+		0x00E8,
+		0x00EF,
+		0x00EE,
+		0x00EC,
+		0x00C4,
+		0x00C5,
 		/* 0x90 */
-		0x00C9, 0x00E6, 0x00C6, 0x00F4, 0x00F6, 0x00F2, 0x00FB, 0x00F9,
-		0x00FF, 0x00D6, 0x00DC, 0x00A2, 0x00A3, 0x00A5, 0x20A7, 0x0192,
+		0x00C9,
+		0x00E6,
+		0x00C6,
+		0x00F4,
+		0x00F6,
+		0x00F2,
+		0x00FB,
+		0x00F9,
+		0x00FF,
+		0x00D6,
+		0x00DC,
+		0x00A2,
+		0x00A3,
+		0x00A5,
+		0x20A7,
+		0x0192,
 		/* 0xA0 */
-		0x00E1, 0x00ED, 0x00F3, 0x00FA, 0x00F1, 0x00D1, 0x00AA, 0x00BA,
-		0x00BF, 0x2310, 0x00AC, 0x00BD, 0x00BC, 0x00A1, 0x00AB, 0x00BB,
+		0x00E1,
+		0x00ED,
+		0x00F3,
+		0x00FA,
+		0x00F1,
+		0x00D1,
+		0x00AA,
+		0x00BA,
+		0x00BF,
+		0x2310,
+		0x00AC,
+		0x00BD,
+		0x00BC,
+		0x00A1,
+		0x00AB,
+		0x00BB,
 		/* 0xB0 */
-		0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x2561, 0x2562, 0x2556,
-		0x2555, 0x2563, 0x2551, 0x2557, 0x255D, 0x255C, 0x255B, 0x2510,
+		0x2591,
+		0x2592,
+		0x2593,
+		0x2502,
+		0x2524,
+		0x2561,
+		0x2562,
+		0x2556,
+		0x2555,
+		0x2563,
+		0x2551,
+		0x2557,
+		0x255D,
+		0x255C,
+		0x255B,
+		0x2510,
 		/* 0xC0 */
-		0x2514, 0x2534, 0x252C, 0x251C, 0x2500, 0x253C, 0x255E, 0x255F,
-		0x255A, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256C, 0x2567,
+		0x2514,
+		0x2534,
+		0x252C,
+		0x251C,
+		0x2500,
+		0x253C,
+		0x255E,
+		0x255F,
+		0x255A,
+		0x2554,
+		0x2569,
+		0x2566,
+		0x2560,
+		0x2550,
+		0x256C,
+		0x2567,
 		/* 0xD0 */
-		0x2568, 0x2564, 0x2565, 0x2559, 0x2558, 0x2552, 0x2553, 0x256B,
-		0x256A, 0x2518, 0x250C, 0x2588, 0x2584, 0x258C, 0x2590, 0x2580,
+		0x2568,
+		0x2564,
+		0x2565,
+		0x2559,
+		0x2558,
+		0x2552,
+		0x2553,
+		0x256B,
+		0x256A,
+		0x2518,
+		0x250C,
+		0x2588,
+		0x2584,
+		0x258C,
+		0x2590,
+		0x2580,
 		/* 0xE0 */
-		0x03B1, 0x00DF, 0x0393, 0x03C0, 0x03A3, 0x03C3, 0x00B5, 0x03C4,
-		0x03A6, 0x0398, 0x03A9, 0x03B4, 0x221E, 0x03C6, 0x03B5, 0x2229,
+		0x03B1,
+		0x00DF,
+		0x0393,
+		0x03C0,
+		0x03A3,
+		0x03C3,
+		0x00B5,
+		0x03C4,
+		0x03A6,
+		0x0398,
+		0x03A9,
+		0x03B4,
+		0x221E,
+		0x03C6,
+		0x03B5,
+		0x2229,
 		/* 0xF0 */
-		0x2261, 0x00B1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00F7, 0x2248,
-		0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0,
+		0x2261,
+		0x00B1,
+		0x2265,
+		0x2264,
+		0x2320,
+		0x2321,
+		0x00F7,
+		0x2248,
+		0x00B0,
+		0x2219,
+		0x00B7,
+		0x221A,
+		0x207F,
+		0x00B2,
+		0x25A0,
+		0x00A0,
 	};
 
 	DECODER_ASSERT_OVERFLOW(decoder, 1);
@@ -348,11 +567,39 @@ static void windows1252_to_ucs4(charset_decode_t *decoder)
 	 * the same thing the Unicode -> CP437 conversion does. */
 	static const uint16_t windows1252_table[32] = {
 		/* 0x80 */
-		0x20AC, 0x003F, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
-		0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x003F, 0x017D, 0x003F,
+		0x20AC,
+		0x003F,
+		0x201A,
+		0x0192,
+		0x201E,
+		0x2026,
+		0x2020,
+		0x2021,
+		0x02C6,
+		0x2030,
+		0x0160,
+		0x2039,
+		0x0152,
+		0x003F,
+		0x017D,
+		0x003F,
 		/* 0x90 */
-		0x003F, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
-		0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x003F, 0x017E, 0x0178,
+		0x003F,
+		0x2018,
+		0x2019,
+		0x201C,
+		0x201D,
+		0x2022,
+		0x2013,
+		0x2014,
+		0x02DC,
+		0x2122,
+		0x0161,
+		0x203A,
+		0x0153,
+		0x003F,
+		0x017E,
+		0x0178,
 	};
 
 	DECODER_ASSERT_OVERFLOW(decoder, 1);
@@ -366,7 +613,7 @@ static void windows1252_to_ucs4(charset_decode_t *decoder)
 
 typedef void (*ce_write)(void *userdata, const void *buf, size_t sz);
 
-#define CHARSET_ENCODE_ERROR (-1)
+#define CHARSET_ENCODE_ERROR   (-1)
 #define CHARSET_ENCODE_SUCCESS (0)
 
 static int ucs4_to_utf8(uint32_t ch, void *userdata, ce_write w)
@@ -388,7 +635,8 @@ static int ucs4_to_utf8(uint32_t ch, void *userdata, ce_write w)
 		out_b[len++] = (unsigned char)(((ch >> 12) & 0x3F) | 0x80);
 		out_b[len++] = (unsigned char)(((ch >> 6) & 0x3F) | 0x80);
 		out_b[len++] = (unsigned char)((ch & 0x3F) | 0x80);
-	} else return CHARSET_ENCODE_ERROR; /* ZOMG NO WAY */
+	} else
+		return CHARSET_ENCODE_ERROR; /* ZOMG NO WAY */
 
 	w(userdata, out_b, len);
 
@@ -398,141 +646,272 @@ static int ucs4_to_utf8(uint32_t ch, void *userdata, ce_write w)
 int char_unicode_to_cp437(uint32_t c)
 {
 	/* https://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/PC/CP437.TXT */
-	if (c <= 127) return c;
+	if (c <= 127)
+		return c;
 
 	switch (c) {
-	case 0x00c7: return 0x80; /* LATIN CAPITAL LETTER C WITH CEDILLA */
-	case 0x00fc: return 0x81; /* LATIN SMALL LETTER U WITH DIAERESIS */
-	case 0x00e9: return 0x82; /* LATIN SMALL LETTER E WITH ACUTE */
-	case 0x00e2: return 0x83; /* LATIN SMALL LETTER A WITH CIRCUMFLEX */
-	case 0x00e4: return 0x84; /* LATIN SMALL LETTER A WITH DIAERESIS */
-	case 0x00e0: return 0x85; /* LATIN SMALL LETTER A WITH GRAVE */
-	case 0x00e5: return 0x86; /* LATIN SMALL LETTER A WITH RING ABOVE */
-	case 0x00e7: return 0x87; /* LATIN SMALL LETTER C WITH CEDILLA */
-	case 0x00ea: return 0x88; /* LATIN SMALL LETTER E WITH CIRCUMFLEX */
-	case 0x00eb: return 0x89; /* LATIN SMALL LETTER E WITH DIAERESIS */
-	case 0x00e8: return 0x8a; /* LATIN SMALL LETTER E WITH GRAVE */
-	case 0x00ef: return 0x8b; /* LATIN SMALL LETTER I WITH DIAERESIS */
-	case 0x00ee: return 0x8c; /* LATIN SMALL LETTER I WITH CIRCUMFLEX */
-	case 0x00ec: return 0x8d; /* LATIN SMALL LETTER I WITH GRAVE */
-	case 0x00c4: return 0x8e; /* LATIN CAPITAL LETTER A WITH DIAERESIS */
-	case 0x00c5: return 0x8f; /* LATIN CAPITAL LETTER A WITH RING ABOVE */
-	case 0x00c9: return 0x90; /* LATIN CAPITAL LETTER E WITH ACUTE */
-	case 0x00e6: return 0x91; /* LATIN SMALL LIGATURE AE */
-	case 0x00c6: return 0x92; /* LATIN CAPITAL LIGATURE AE */
-	case 0x00f4: return 0x93; /* LATIN SMALL LETTER O WITH CIRCUMFLEX */
-	case 0x00f6: return 0x94; /* LATIN SMALL LETTER O WITH DIAERESIS */
-	case 0x00f2: return 0x95; /* LATIN SMALL LETTER O WITH GRAVE */
-	case 0x00fb: return 0x96; /* LATIN SMALL LETTER U WITH CIRCUMFLEX */
-	case 0x00f9: return 0x97; /* LATIN SMALL LETTER U WITH GRAVE */
-	case 0x00ff: return 0x98; /* LATIN SMALL LETTER Y WITH DIAERESIS */
-	case 0x00d6: return 0x99; /* LATIN CAPITAL LETTER O WITH DIAERESIS */
-	case 0x00dc: return 0x9a; /* LATIN CAPITAL LETTER U WITH DIAERESIS */
-	case 0x00a2: return 0x9b; /* CENT SIGN */
-	case 0x00a3: return 0x9c; /* POUND SIGN */
-	case 0x00a5: return 0x9d; /* YEN SIGN */
-	case 0x20a7: return 0x9e; /* PESETA SIGN */
-	case 0x0192: return 0x9f; /* LATIN SMALL LETTER F WITH HOOK */
-	case 0x00e1: return 0xa0; /* LATIN SMALL LETTER A WITH ACUTE */
-	case 0x00ed: return 0xa1; /* LATIN SMALL LETTER I WITH ACUTE */
-	case 0x00f3: return 0xa2; /* LATIN SMALL LETTER O WITH ACUTE */
-	case 0x00fa: return 0xa3; /* LATIN SMALL LETTER U WITH ACUTE */
-	case 0x00f1: return 0xa4; /* LATIN SMALL LETTER N WITH TILDE */
-	case 0x00d1: return 0xa5; /* LATIN CAPITAL LETTER N WITH TILDE */
-	case 0x00aa: return 0xa6; /* FEMININE ORDINAL INDICATOR */
-	case 0x00ba: return 0xa7; /* MASCULINE ORDINAL INDICATOR */
-	case 0x00bf: return 0xa8; /* INVERTED QUESTION MARK */
-	case 0x2310: return 0xa9; /* REVERSED NOT SIGN */
-	case 0x00ac: return 0xaa; /* NOT SIGN */
-	case 0x00bd: return 0xab; /* VULGAR FRACTION ONE HALF */
-	case 0x00bc: return 0xac; /* VULGAR FRACTION ONE QUARTER */
-	case 0x00a1: return 0xad; /* INVERTED EXCLAMATION MARK */
-	case 0x00ab: return 0xae; /* LEFT-POINTING DOUBLE ANGLE QUOTATION MARK */
-	case 0x00bb: return 0xaf; /* RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK */
-	case 0x2591: return 0xb0; /* LIGHT SHADE */
-	case 0x2592: return 0xb1; /* MEDIUM SHADE */
-	case 0x2593: return 0xb2; /* DARK SHADE */
-	case 0x2502: return 0xb3; /* BOX DRAWINGS LIGHT VERTICAL */
-	case 0x2524: return 0xb4; /* BOX DRAWINGS LIGHT VERTICAL AND LEFT */
-	case 0x2561: return 0xb5; /* BOX DRAWINGS VERTICAL SINGLE AND LEFT DOUBLE */
-	case 0x2562: return 0xb6; /* BOX DRAWINGS VERTICAL DOUBLE AND LEFT SINGLE */
-	case 0x2556: return 0xb7; /* BOX DRAWINGS DOWN DOUBLE AND LEFT SINGLE */
-	case 0x2555: return 0xb8; /* BOX DRAWINGS DOWN SINGLE AND LEFT DOUBLE */
-	case 0x2563: return 0xb9; /* BOX DRAWINGS DOUBLE VERTICAL AND LEFT */
-	case 0x2551: return 0xba; /* BOX DRAWINGS DOUBLE VERTICAL */
-	case 0x2557: return 0xbb; /* BOX DRAWINGS DOUBLE DOWN AND LEFT */
-	case 0x255d: return 0xbc; /* BOX DRAWINGS DOUBLE UP AND LEFT */
-	case 0x255c: return 0xbd; /* BOX DRAWINGS UP DOUBLE AND LEFT SINGLE */
-	case 0x255b: return 0xbe; /* BOX DRAWINGS UP SINGLE AND LEFT DOUBLE */
-	case 0x2510: return 0xbf; /* BOX DRAWINGS LIGHT DOWN AND LEFT */
-	case 0x2514: return 0xc0; /* BOX DRAWINGS LIGHT UP AND RIGHT */
-	case 0x2534: return 0xc1; /* BOX DRAWINGS LIGHT UP AND HORIZONTAL */
-	case 0x252c: return 0xc2; /* BOX DRAWINGS LIGHT DOWN AND HORIZONTAL */
-	case 0x251c: return 0xc3; /* BOX DRAWINGS LIGHT VERTICAL AND RIGHT */
-	case 0x2500: return 0xc4; /* BOX DRAWINGS LIGHT HORIZONTAL */
-	case 0x253c: return 0xc5; /* BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL */
-	case 0x255e: return 0xc6; /* BOX DRAWINGS VERTICAL SINGLE AND RIGHT DOUBLE */
-	case 0x255f: return 0xc7; /* BOX DRAWINGS VERTICAL DOUBLE AND RIGHT SINGLE */
-	case 0x255a: return 0xc8; /* BOX DRAWINGS DOUBLE UP AND RIGHT */
-	case 0x2554: return 0xc9; /* BOX DRAWINGS DOUBLE DOWN AND RIGHT */
-	case 0x2569: return 0xca; /* BOX DRAWINGS DOUBLE UP AND HORIZONTAL */
-	case 0x2566: return 0xcb; /* BOX DRAWINGS DOUBLE DOWN AND HORIZONTAL */
-	case 0x2560: return 0xcc; /* BOX DRAWINGS DOUBLE VERTICAL AND RIGHT */
-	case 0x2550: return 0xcd; /* BOX DRAWINGS DOUBLE HORIZONTAL */
-	case 0x256c: return 0xce; /* BOX DRAWINGS DOUBLE VERTICAL AND HORIZONTAL */
-	case 0x2567: return 0xcf; /* BOX DRAWINGS UP SINGLE AND HORIZONTAL DOUBLE */
-	case 0x2568: return 0xd0; /* BOX DRAWINGS UP DOUBLE AND HORIZONTAL SINGLE */
-	case 0x2564: return 0xd1; /* BOX DRAWINGS DOWN SINGLE AND HORIZONTAL DOUBLE */
-	case 0x2565: return 0xd2; /* BOX DRAWINGS DOWN DOUBLE AND HORIZONTAL SINGLE */
-	case 0x2559: return 0xd3; /* BOX DRAWINGS UP DOUBLE AND RIGHT SINGLE */
-	case 0x2558: return 0xd4; /* BOX DRAWINGS UP SINGLE AND RIGHT DOUBLE */
-	case 0x2552: return 0xd5; /* BOX DRAWINGS DOWN SINGLE AND RIGHT DOUBLE */
-	case 0x2553: return 0xd6; /* BOX DRAWINGS DOWN DOUBLE AND RIGHT SINGLE */
-	case 0x256b: return 0xd7; /* BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE */
-	case 0x256a: return 0xd8; /* BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE */
-	case 0x2518: return 0xd9; /* BOX DRAWINGS LIGHT UP AND LEFT */
-	case 0x250c: return 0xda; /* BOX DRAWINGS LIGHT DOWN AND RIGHT */
-	case 0x2588: return 0xdb; /* FULL BLOCK */
-	case 0x2584: return 0xdc; /* LOWER HALF BLOCK */
-	case 0x258c: return 0xdd; /* LEFT HALF BLOCK */
-	case 0x2590: return 0xde; /* RIGHT HALF BLOCK */
-	case 0x2580: return 0xdf; /* UPPER HALF BLOCK */
-	case 0x03b1: return 0xe0; /* GREEK SMALL LETTER ALPHA */
-	case 0x00df: return 0xe1; /* LATIN SMALL LETTER SHARP S */
-	case 0x0393: return 0xe2; /* GREEK CAPITAL LETTER GAMMA */
-	case 0x03c0: return 0xe3; /* GREEK SMALL LETTER PI */
-	case 0x03a3: return 0xe4; /* GREEK CAPITAL LETTER SIGMA */
-	case 0x03c3: return 0xe5; /* GREEK SMALL LETTER SIGMA */
-	case 0x00b5: return 0xe6; /* MICRO SIGN */
-	case 0x03c4: return 0xe7; /* GREEK SMALL LETTER TAU */
-	case 0x03a6: return 0xe8; /* GREEK CAPITAL LETTER PHI */
-	case 0x0398: return 0xe9; /* GREEK CAPITAL LETTER THETA */
-	case 0x03a9: return 0xea; /* GREEK CAPITAL LETTER OMEGA */
-	case 0x03b4: return 0xeb; /* GREEK SMALL LETTER DELTA */
-	case 0x221e: return 0xec; /* INFINITY */
-	case 0x03c6: return 0xed; /* GREEK SMALL LETTER PHI */
-	case 0x03b5: return 0xee; /* GREEK SMALL LETTER EPSILON */
-	case 0x2229: return 0xef; /* INTERSECTION */
-	case 0x2261: return 0xf0; /* IDENTICAL TO */
-	case 0x00b1: return 0xf1; /* PLUS-MINUS SIGN */
-	case 0x2265: return 0xf2; /* GREATER-THAN OR EQUAL TO */
-	case 0x2264: return 0xf3; /* LESS-THAN OR EQUAL TO */
-	case 0x2320: return 0xf4; /* TOP HALF INTEGRAL */
-	case 0x2321: return 0xf5; /* BOTTOM HALF INTEGRAL */
-	case 0x00f7: return 0xf6; /* DIVISION SIGN */
-	case 0x2248: return 0xf7; /* ALMOST EQUAL TO */
-	case 0x00b0: return 0xf8; /* DEGREE SIGN */
-	case 0x2219: return 0xf9; /* BULLET OPERATOR */
-	case 0x00b7: return 0xfa; /* MIDDLE DOT */
-	case 0x221a: return 0xfb; /* SQUARE ROOT */
-	case 0x207f: return 0xfc; /* SUPERSCRIPT LATIN SMALL LETTER N */
-	case 0x00b2: return 0xfd; /* SUPERSCRIPT TWO */
-	case 0x25a0: return 0xfe; /* BLACK SQUARE */
-	case 0x00a0: return 0xff; /* NO-BREAK SPACE */
+	case 0x00c7:
+		return 0x80; /* LATIN CAPITAL LETTER C WITH CEDILLA */
+	case 0x00fc:
+		return 0x81; /* LATIN SMALL LETTER U WITH DIAERESIS */
+	case 0x00e9:
+		return 0x82; /* LATIN SMALL LETTER E WITH ACUTE */
+	case 0x00e2:
+		return 0x83; /* LATIN SMALL LETTER A WITH CIRCUMFLEX */
+	case 0x00e4:
+		return 0x84; /* LATIN SMALL LETTER A WITH DIAERESIS */
+	case 0x00e0:
+		return 0x85; /* LATIN SMALL LETTER A WITH GRAVE */
+	case 0x00e5:
+		return 0x86; /* LATIN SMALL LETTER A WITH RING ABOVE */
+	case 0x00e7:
+		return 0x87; /* LATIN SMALL LETTER C WITH CEDILLA */
+	case 0x00ea:
+		return 0x88; /* LATIN SMALL LETTER E WITH CIRCUMFLEX */
+	case 0x00eb:
+		return 0x89; /* LATIN SMALL LETTER E WITH DIAERESIS */
+	case 0x00e8:
+		return 0x8a; /* LATIN SMALL LETTER E WITH GRAVE */
+	case 0x00ef:
+		return 0x8b; /* LATIN SMALL LETTER I WITH DIAERESIS */
+	case 0x00ee:
+		return 0x8c; /* LATIN SMALL LETTER I WITH CIRCUMFLEX */
+	case 0x00ec:
+		return 0x8d; /* LATIN SMALL LETTER I WITH GRAVE */
+	case 0x00c4:
+		return 0x8e; /* LATIN CAPITAL LETTER A WITH DIAERESIS */
+	case 0x00c5:
+		return 0x8f; /* LATIN CAPITAL LETTER A WITH RING ABOVE */
+	case 0x00c9:
+		return 0x90; /* LATIN CAPITAL LETTER E WITH ACUTE */
+	case 0x00e6:
+		return 0x91; /* LATIN SMALL LIGATURE AE */
+	case 0x00c6:
+		return 0x92; /* LATIN CAPITAL LIGATURE AE */
+	case 0x00f4:
+		return 0x93; /* LATIN SMALL LETTER O WITH CIRCUMFLEX */
+	case 0x00f6:
+		return 0x94; /* LATIN SMALL LETTER O WITH DIAERESIS */
+	case 0x00f2:
+		return 0x95; /* LATIN SMALL LETTER O WITH GRAVE */
+	case 0x00fb:
+		return 0x96; /* LATIN SMALL LETTER U WITH CIRCUMFLEX */
+	case 0x00f9:
+		return 0x97; /* LATIN SMALL LETTER U WITH GRAVE */
+	case 0x00ff:
+		return 0x98; /* LATIN SMALL LETTER Y WITH DIAERESIS */
+	case 0x00d6:
+		return 0x99; /* LATIN CAPITAL LETTER O WITH DIAERESIS */
+	case 0x00dc:
+		return 0x9a; /* LATIN CAPITAL LETTER U WITH DIAERESIS */
+	case 0x00a2:
+		return 0x9b; /* CENT SIGN */
+	case 0x00a3:
+		return 0x9c; /* POUND SIGN */
+	case 0x00a5:
+		return 0x9d; /* YEN SIGN */
+	case 0x20a7:
+		return 0x9e; /* PESETA SIGN */
+	case 0x0192:
+		return 0x9f; /* LATIN SMALL LETTER F WITH HOOK */
+	case 0x00e1:
+		return 0xa0; /* LATIN SMALL LETTER A WITH ACUTE */
+	case 0x00ed:
+		return 0xa1; /* LATIN SMALL LETTER I WITH ACUTE */
+	case 0x00f3:
+		return 0xa2; /* LATIN SMALL LETTER O WITH ACUTE */
+	case 0x00fa:
+		return 0xa3; /* LATIN SMALL LETTER U WITH ACUTE */
+	case 0x00f1:
+		return 0xa4; /* LATIN SMALL LETTER N WITH TILDE */
+	case 0x00d1:
+		return 0xa5; /* LATIN CAPITAL LETTER N WITH TILDE */
+	case 0x00aa:
+		return 0xa6; /* FEMININE ORDINAL INDICATOR */
+	case 0x00ba:
+		return 0xa7; /* MASCULINE ORDINAL INDICATOR */
+	case 0x00bf:
+		return 0xa8; /* INVERTED QUESTION MARK */
+	case 0x2310:
+		return 0xa9; /* REVERSED NOT SIGN */
+	case 0x00ac:
+		return 0xaa; /* NOT SIGN */
+	case 0x00bd:
+		return 0xab; /* VULGAR FRACTION ONE HALF */
+	case 0x00bc:
+		return 0xac; /* VULGAR FRACTION ONE QUARTER */
+	case 0x00a1:
+		return 0xad; /* INVERTED EXCLAMATION MARK */
+	case 0x00ab:
+		return 0xae; /* LEFT-POINTING DOUBLE ANGLE QUOTATION MARK */
+	case 0x00bb:
+		return 0xaf; /* RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK */
+	case 0x2591:
+		return 0xb0; /* LIGHT SHADE */
+	case 0x2592:
+		return 0xb1; /* MEDIUM SHADE */
+	case 0x2593:
+		return 0xb2; /* DARK SHADE */
+	case 0x2502:
+		return 0xb3; /* BOX DRAWINGS LIGHT VERTICAL */
+	case 0x2524:
+		return 0xb4; /* BOX DRAWINGS LIGHT VERTICAL AND LEFT */
+	case 0x2561:
+		return 0xb5; /* BOX DRAWINGS VERTICAL SINGLE AND LEFT DOUBLE */
+	case 0x2562:
+		return 0xb6; /* BOX DRAWINGS VERTICAL DOUBLE AND LEFT SINGLE */
+	case 0x2556:
+		return 0xb7; /* BOX DRAWINGS DOWN DOUBLE AND LEFT SINGLE */
+	case 0x2555:
+		return 0xb8; /* BOX DRAWINGS DOWN SINGLE AND LEFT DOUBLE */
+	case 0x2563:
+		return 0xb9; /* BOX DRAWINGS DOUBLE VERTICAL AND LEFT */
+	case 0x2551:
+		return 0xba; /* BOX DRAWINGS DOUBLE VERTICAL */
+	case 0x2557:
+		return 0xbb; /* BOX DRAWINGS DOUBLE DOWN AND LEFT */
+	case 0x255d:
+		return 0xbc; /* BOX DRAWINGS DOUBLE UP AND LEFT */
+	case 0x255c:
+		return 0xbd; /* BOX DRAWINGS UP DOUBLE AND LEFT SINGLE */
+	case 0x255b:
+		return 0xbe; /* BOX DRAWINGS UP SINGLE AND LEFT DOUBLE */
+	case 0x2510:
+		return 0xbf; /* BOX DRAWINGS LIGHT DOWN AND LEFT */
+	case 0x2514:
+		return 0xc0; /* BOX DRAWINGS LIGHT UP AND RIGHT */
+	case 0x2534:
+		return 0xc1; /* BOX DRAWINGS LIGHT UP AND HORIZONTAL */
+	case 0x252c:
+		return 0xc2; /* BOX DRAWINGS LIGHT DOWN AND HORIZONTAL */
+	case 0x251c:
+		return 0xc3; /* BOX DRAWINGS LIGHT VERTICAL AND RIGHT */
+	case 0x2500:
+		return 0xc4; /* BOX DRAWINGS LIGHT HORIZONTAL */
+	case 0x253c:
+		return 0xc5; /* BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL */
+	case 0x255e:
+		return 0xc6; /* BOX DRAWINGS VERTICAL SINGLE AND RIGHT DOUBLE */
+	case 0x255f:
+		return 0xc7; /* BOX DRAWINGS VERTICAL DOUBLE AND RIGHT SINGLE */
+	case 0x255a:
+		return 0xc8; /* BOX DRAWINGS DOUBLE UP AND RIGHT */
+	case 0x2554:
+		return 0xc9; /* BOX DRAWINGS DOUBLE DOWN AND RIGHT */
+	case 0x2569:
+		return 0xca; /* BOX DRAWINGS DOUBLE UP AND HORIZONTAL */
+	case 0x2566:
+		return 0xcb; /* BOX DRAWINGS DOUBLE DOWN AND HORIZONTAL */
+	case 0x2560:
+		return 0xcc; /* BOX DRAWINGS DOUBLE VERTICAL AND RIGHT */
+	case 0x2550:
+		return 0xcd; /* BOX DRAWINGS DOUBLE HORIZONTAL */
+	case 0x256c:
+		return 0xce; /* BOX DRAWINGS DOUBLE VERTICAL AND HORIZONTAL */
+	case 0x2567:
+		return 0xcf; /* BOX DRAWINGS UP SINGLE AND HORIZONTAL DOUBLE */
+	case 0x2568:
+		return 0xd0; /* BOX DRAWINGS UP DOUBLE AND HORIZONTAL SINGLE */
+	case 0x2564:
+		return 0xd1; /* BOX DRAWINGS DOWN SINGLE AND HORIZONTAL DOUBLE */
+	case 0x2565:
+		return 0xd2; /* BOX DRAWINGS DOWN DOUBLE AND HORIZONTAL SINGLE */
+	case 0x2559:
+		return 0xd3; /* BOX DRAWINGS UP DOUBLE AND RIGHT SINGLE */
+	case 0x2558:
+		return 0xd4; /* BOX DRAWINGS UP SINGLE AND RIGHT DOUBLE */
+	case 0x2552:
+		return 0xd5; /* BOX DRAWINGS DOWN SINGLE AND RIGHT DOUBLE */
+	case 0x2553:
+		return 0xd6; /* BOX DRAWINGS DOWN DOUBLE AND RIGHT SINGLE */
+	case 0x256b:
+		return 0xd7; /* BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE */
+	case 0x256a:
+		return 0xd8; /* BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE */
+	case 0x2518:
+		return 0xd9; /* BOX DRAWINGS LIGHT UP AND LEFT */
+	case 0x250c:
+		return 0xda; /* BOX DRAWINGS LIGHT DOWN AND RIGHT */
+	case 0x2588:
+		return 0xdb; /* FULL BLOCK */
+	case 0x2584:
+		return 0xdc; /* LOWER HALF BLOCK */
+	case 0x258c:
+		return 0xdd; /* LEFT HALF BLOCK */
+	case 0x2590:
+		return 0xde; /* RIGHT HALF BLOCK */
+	case 0x2580:
+		return 0xdf; /* UPPER HALF BLOCK */
+	case 0x03b1:
+		return 0xe0; /* GREEK SMALL LETTER ALPHA */
+	case 0x00df:
+		return 0xe1; /* LATIN SMALL LETTER SHARP S */
+	case 0x0393:
+		return 0xe2; /* GREEK CAPITAL LETTER GAMMA */
+	case 0x03c0:
+		return 0xe3; /* GREEK SMALL LETTER PI */
+	case 0x03a3:
+		return 0xe4; /* GREEK CAPITAL LETTER SIGMA */
+	case 0x03c3:
+		return 0xe5; /* GREEK SMALL LETTER SIGMA */
+	case 0x00b5:
+		return 0xe6; /* MICRO SIGN */
+	case 0x03c4:
+		return 0xe7; /* GREEK SMALL LETTER TAU */
+	case 0x03a6:
+		return 0xe8; /* GREEK CAPITAL LETTER PHI */
+	case 0x0398:
+		return 0xe9; /* GREEK CAPITAL LETTER THETA */
+	case 0x03a9:
+		return 0xea; /* GREEK CAPITAL LETTER OMEGA */
+	case 0x03b4:
+		return 0xeb; /* GREEK SMALL LETTER DELTA */
+	case 0x221e:
+		return 0xec; /* INFINITY */
+	case 0x03c6:
+		return 0xed; /* GREEK SMALL LETTER PHI */
+	case 0x03b5:
+		return 0xee; /* GREEK SMALL LETTER EPSILON */
+	case 0x2229:
+		return 0xef; /* INTERSECTION */
+	case 0x2261:
+		return 0xf0; /* IDENTICAL TO */
+	case 0x00b1:
+		return 0xf1; /* PLUS-MINUS SIGN */
+	case 0x2265:
+		return 0xf2; /* GREATER-THAN OR EQUAL TO */
+	case 0x2264:
+		return 0xf3; /* LESS-THAN OR EQUAL TO */
+	case 0x2320:
+		return 0xf4; /* TOP HALF INTEGRAL */
+	case 0x2321:
+		return 0xf5; /* BOTTOM HALF INTEGRAL */
+	case 0x00f7:
+		return 0xf6; /* DIVISION SIGN */
+	case 0x2248:
+		return 0xf7; /* ALMOST EQUAL TO */
+	case 0x00b0:
+		return 0xf8; /* DEGREE SIGN */
+	case 0x2219:
+		return 0xf9; /* BULLET OPERATOR */
+	case 0x00b7:
+		return 0xfa; /* MIDDLE DOT */
+	case 0x221a:
+		return 0xfb; /* SQUARE ROOT */
+	case 0x207f:
+		return 0xfc; /* SUPERSCRIPT LATIN SMALL LETTER N */
+	case 0x00b2:
+		return 0xfd; /* SUPERSCRIPT TWO */
+	case 0x25a0:
+		return 0xfe; /* BLACK SQUARE */
+	case 0x00a0:
+		return 0xff; /* NO-BREAK SPACE */
 
 	/* -- CUSTOM CASES */
-	case 0x2019: return 39; // fancy apostrophe
-	case 0x00B3: return 51; // superscript three
+	case 0x2019:
+		return 39; // fancy apostrophe
+	case 0x00B3:
+		return 51; // superscript three
 	}
 
 	return -1;
@@ -541,136 +920,264 @@ int char_unicode_to_cp437(uint32_t c)
 /* for cyrillic (russian etc.) language rendering */
 int char_unicode_to_cp866(uint32_t c)
 {
-	if (c < 0x80) return c;
+	if (c < 0x80)
+		return c;
 
 	switch (c) {
-	case 0x0410: return 0x80; // CYRILLIC CAPITAL LETTER A
-	case 0x0411: return 0x81; // CYRILLIC CAPITAL LETTER BE
-	case 0x0412: return 0x82; // CYRILLIC CAPITAL LETTER VE
-	case 0x0413: return 0x83; // CYRILLIC CAPITAL LETTER GHE
-	case 0x0414: return 0x84; // CYRILLIC CAPITAL LETTER DE
-	case 0x0415: return 0x85; // CYRILLIC CAPITAL LETTER IE
-	case 0x0416: return 0x86; // CYRILLIC CAPITAL LETTER ZHE
-	case 0x0417: return 0x87; // CYRILLIC CAPITAL LETTER ZE
-	case 0x0418: return 0x88; // CYRILLIC CAPITAL LETTER I
-	case 0x0419: return 0x89; // CYRILLIC CAPITAL LETTER SHORT I
-	case 0x041A: return 0x8A; // CYRILLIC CAPITAL LETTER KA
-	case 0x041B: return 0x8B; // CYRILLIC CAPITAL LETTER EL
-	case 0x041C: return 0x8C; // CYRILLIC CAPITAL LETTER EM
-	case 0x041D: return 0x8D; // CYRILLIC CAPITAL LETTER EN
-	case 0x041E: return 0x8E; // CYRILLIC CAPITAL LETTER O
-	case 0x041F: return 0x8F; // CYRILLIC CAPITAL LETTER PE
-	case 0x0420: return 0x90; // CYRILLIC CAPITAL LETTER ER
-	case 0x0421: return 0x91; // CYRILLIC CAPITAL LETTER ES
-	case 0x0422: return 0x92; // CYRILLIC CAPITAL LETTER TE
-	case 0x0423: return 0x93; // CYRILLIC CAPITAL LETTER U
-	case 0x0424: return 0x94; // CYRILLIC CAPITAL LETTER EF
-	case 0x0425: return 0x95; // CYRILLIC CAPITAL LETTER HA
-	case 0x0426: return 0x96; // CYRILLIC CAPITAL LETTER TSE
-	case 0x0427: return 0x97; // CYRILLIC CAPITAL LETTER CHE
-	case 0x0428: return 0x98; // CYRILLIC CAPITAL LETTER SHA
-	case 0x0429: return 0x99; // CYRILLIC CAPITAL LETTER SHCHA
-	case 0x042A: return 0x9A; // CYRILLIC CAPITAL LETTER HARD SIGN
-	case 0x042B: return 0x9B; // CYRILLIC CAPITAL LETTER YERU
-	case 0x042C: return 0x9C; // CYRILLIC CAPITAL LETTER SOFT SIGN
-	case 0x042D: return 0x9D; // CYRILLIC CAPITAL LETTER E
-	case 0x042E: return 0x9E; // CYRILLIC CAPITAL LETTER YU
-	case 0x042F: return 0x9F; // CYRILLIC CAPITAL LETTER YA
-	case 0x0430: return 0xA0; // CYRILLIC SMALL LETTER A
-	case 0x0431: return 0xA1; // CYRILLIC SMALL LETTER BE
-	case 0x0432: return 0xA2; // CYRILLIC SMALL LETTER VE
-	case 0x0433: return 0xA3; // CYRILLIC SMALL LETTER GHE
-	case 0x0434: return 0xA4; // CYRILLIC SMALL LETTER DE
-	case 0x0435: return 0xA5; // CYRILLIC SMALL LETTER IE
-	case 0x0436: return 0xA6; // CYRILLIC SMALL LETTER ZHE
-	case 0x0437: return 0xA7; // CYRILLIC SMALL LETTER ZE
-	case 0x0438: return 0xA8; // CYRILLIC SMALL LETTER I
-	case 0x0439: return 0xA9; // CYRILLIC SMALL LETTER SHORT I
-	case 0x043A: return 0xAA; // CYRILLIC SMALL LETTER KA
-	case 0x043B: return 0xAB; // CYRILLIC SMALL LETTER EL
-	case 0x043C: return 0xAC; // CYRILLIC SMALL LETTER EM
-	case 0x043D: return 0xAD; // CYRILLIC SMALL LETTER EN
-	case 0x043E: return 0xAE; // CYRILLIC SMALL LETTER O
-	case 0x043F: return 0xAF; // CYRILLIC SMALL LETTER PE
-	case 0x2591: return 0xB0; // LIGHT SHADE
-	case 0x2592: return 0xB1; // MEDIUM SHADE
-	case 0x2593: return 0xB2; // DARK SHADE
-	case 0x2502: return 0xB3; // BOX DRAWINGS LIGHT VERTICAL
-	case 0x2524: return 0xB4; // BOX DRAWINGS LIGHT VERTICAL AND LEFT
-	case 0x2561: return 0xB5; // BOX DRAWINGS VERTICAL SINGLE AND LEFT DOUBLE
-	case 0x2562: return 0xB6; // BOX DRAWINGS VERTICAL DOUBLE AND LEFT SINGLE
-	case 0x2556: return 0xB7; // BOX DRAWINGS DOWN DOUBLE AND LEFT SINGLE
-	case 0x2555: return 0xB8; // BOX DRAWINGS DOWN SINGLE AND LEFT DOUBLE
-	case 0x2563: return 0xB9; // BOX DRAWINGS DOUBLE VERTICAL AND LEFT
-	case 0x2551: return 0xBA; // BOX DRAWINGS DOUBLE VERTICAL
-	case 0x2557: return 0xBB; // BOX DRAWINGS DOUBLE DOWN AND LEFT
-	case 0x255D: return 0xBC; // BOX DRAWINGS DOUBLE UP AND LEFT
-	case 0x255C: return 0xBD; // BOX DRAWINGS UP DOUBLE AND LEFT SINGLE
-	case 0x255B: return 0xBE; // BOX DRAWINGS UP SINGLE AND LEFT DOUBLE
-	case 0x2510: return 0xBF; // BOX DRAWINGS LIGHT DOWN AND LEFT
-	case 0x2514: return 0xC0; // BOX DRAWINGS LIGHT UP AND RIGHT
-	case 0x2534: return 0xC1; // BOX DRAWINGS LIGHT UP AND HORIZONTAL
-	case 0x252C: return 0xC2; // BOX DRAWINGS LIGHT DOWN AND HORIZONTAL
-	case 0x251C: return 0xC3; // BOX DRAWINGS LIGHT VERTICAL AND RIGHT
-	case 0x2500: return 0xC4; // BOX DRAWINGS LIGHT HORIZONTAL
-	case 0x253C: return 0xC5; // BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL
-	case 0x255E: return 0xC6; // BOX DRAWINGS VERTICAL SINGLE AND RIGHT DOUBLE
-	case 0x255F: return 0xC7; // BOX DRAWINGS VERTICAL DOUBLE AND RIGHT SINGLE
-	case 0x255A: return 0xC8; // BOX DRAWINGS DOUBLE UP AND RIGHT
-	case 0x2554: return 0xC9; // BOX DRAWINGS DOUBLE DOWN AND RIGHT
-	case 0x2569: return 0xCA; // BOX DRAWINGS DOUBLE UP AND HORIZONTAL
-	case 0x2566: return 0xCB; // BOX DRAWINGS DOUBLE DOWN AND HORIZONTAL
-	case 0x2560: return 0xCC; // BOX DRAWINGS DOUBLE VERTICAL AND RIGHT
-	case 0x2550: return 0xCD; // BOX DRAWINGS DOUBLE HORIZONTAL
-	case 0x256C: return 0xCE; // BOX DRAWINGS DOUBLE VERTICAL AND HORIZONTAL
-	case 0x2567: return 0xCF; // BOX DRAWINGS UP SINGLE AND HORIZONTAL DOUBLE
-	case 0x2568: return 0xD0; // BOX DRAWINGS UP DOUBLE AND HORIZONTAL SINGLE
-	case 0x2564: return 0xD1; // BOX DRAWINGS DOWN SINGLE AND HORIZONTAL DOUBLE
-	case 0x2565: return 0xD2; // BOX DRAWINGS DOWN DOUBLE AND HORIZONTAL SINGLE
-	case 0x2559: return 0xD3; // BOX DRAWINGS UP DOUBLE AND RIGHT SINGLE
-	case 0x2558: return 0xD4; // BOX DRAWINGS UP SINGLE AND RIGHT DOUBLE
-	case 0x2552: return 0xD5; // BOX DRAWINGS DOWN SINGLE AND RIGHT DOUBLE
-	case 0x2553: return 0xD6; // BOX DRAWINGS DOWN DOUBLE AND RIGHT SINGLE
-	case 0x256B: return 0xD7; // BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE
-	case 0x256A: return 0xD8; // BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE
-	case 0x2518: return 0xD9; // BOX DRAWINGS LIGHT UP AND LEFT
-	case 0x250C: return 0xDA; // BOX DRAWINGS LIGHT DOWN AND RIGHT
-	case 0x2588: return 0xDB; // FULL BLOCK
-	case 0x2584: return 0xDC; // LOWER HALF BLOCK
-	case 0x258C: return 0xDD; // LEFT HALF BLOCK
-	case 0x2590: return 0xDE; // RIGHT HALF BLOCK
-	case 0x2580: return 0xDF; // UPPER HALF BLOCK
-	case 0x0440: return 0xE0; // CYRILLIC SMALL LETTER ER
-	case 0x0441: return 0xE1; // CYRILLIC SMALL LETTER ES
-	case 0x0442: return 0xE2; // CYRILLIC SMALL LETTER TE
-	case 0x0443: return 0xE3; // CYRILLIC SMALL LETTER U
-	case 0x0444: return 0xE4; // CYRILLIC SMALL LETTER EF
-	case 0x0445: return 0xE5; // CYRILLIC SMALL LETTER HA
-	case 0x0446: return 0xE6; // CYRILLIC SMALL LETTER TSE
-	case 0x0447: return 0xE7; // CYRILLIC SMALL LETTER CHE
-	case 0x0448: return 0xE8; // CYRILLIC SMALL LETTER SHA
-	case 0x0449: return 0xE9; // CYRILLIC SMALL LETTER SHCHA
-	case 0x044A: return 0xEA; // CYRILLIC SMALL LETTER HARD SIGN
-	case 0x044B: return 0xEB; // CYRILLIC SMALL LETTER YERU
-	case 0x044C: return 0xEC; // CYRILLIC SMALL LETTER SOFT SIGN
-	case 0x044D: return 0xED; // CYRILLIC SMALL LETTER E
-	case 0x044E: return 0xEE; // CYRILLIC SMALL LETTER YU
-	case 0x044F: return 0xEF; // CYRILLIC SMALL LETTER YA
-	case 0x0401: return 0xF0; // CYRILLIC CAPITAL LETTER IO
-	case 0x0451: return 0xF1; // CYRILLIC SMALL LETTER IO
-	case 0x0404: return 0xF2; // CYRILLIC CAPITAL LETTER UKRAINIAN IE
-	case 0x0454: return 0xF3; // CYRILLIC SMALL LETTER UKRAINIAN IE
-	case 0x0407: return 0xF4; // CYRILLIC CAPITAL LETTER YI
-	case 0x0457: return 0xF5; // CYRILLIC SMALL LETTER YI
-	case 0x040E: return 0xF6; // CYRILLIC CAPITAL LETTER SHORT U
-	case 0x045E: return 0xF7; // CYRILLIC SMALL LETTER SHORT U
-	case 0x00B0: return 0xF8; // DEGREE SIGN
-	case 0x2219: return 0xF9; // BULLET OPERATOR
-	case 0x00B7: return 0xFA; // MIDDLE DOT
-	case 0x221A: return 0xFB; // SQUARE ROOT
-	case 0x2116: return 0xFC; // NUMERO SIGN
-	case 0x00A4: return 0xFD; // CURRENCY SIGN
-	case 0x25A0: return 0xFE; // BLACK SQUARE
+	case 0x0410:
+		return 0x80; // CYRILLIC CAPITAL LETTER A
+	case 0x0411:
+		return 0x81; // CYRILLIC CAPITAL LETTER BE
+	case 0x0412:
+		return 0x82; // CYRILLIC CAPITAL LETTER VE
+	case 0x0413:
+		return 0x83; // CYRILLIC CAPITAL LETTER GHE
+	case 0x0414:
+		return 0x84; // CYRILLIC CAPITAL LETTER DE
+	case 0x0415:
+		return 0x85; // CYRILLIC CAPITAL LETTER IE
+	case 0x0416:
+		return 0x86; // CYRILLIC CAPITAL LETTER ZHE
+	case 0x0417:
+		return 0x87; // CYRILLIC CAPITAL LETTER ZE
+	case 0x0418:
+		return 0x88; // CYRILLIC CAPITAL LETTER I
+	case 0x0419:
+		return 0x89; // CYRILLIC CAPITAL LETTER SHORT I
+	case 0x041A:
+		return 0x8A; // CYRILLIC CAPITAL LETTER KA
+	case 0x041B:
+		return 0x8B; // CYRILLIC CAPITAL LETTER EL
+	case 0x041C:
+		return 0x8C; // CYRILLIC CAPITAL LETTER EM
+	case 0x041D:
+		return 0x8D; // CYRILLIC CAPITAL LETTER EN
+	case 0x041E:
+		return 0x8E; // CYRILLIC CAPITAL LETTER O
+	case 0x041F:
+		return 0x8F; // CYRILLIC CAPITAL LETTER PE
+	case 0x0420:
+		return 0x90; // CYRILLIC CAPITAL LETTER ER
+	case 0x0421:
+		return 0x91; // CYRILLIC CAPITAL LETTER ES
+	case 0x0422:
+		return 0x92; // CYRILLIC CAPITAL LETTER TE
+	case 0x0423:
+		return 0x93; // CYRILLIC CAPITAL LETTER U
+	case 0x0424:
+		return 0x94; // CYRILLIC CAPITAL LETTER EF
+	case 0x0425:
+		return 0x95; // CYRILLIC CAPITAL LETTER HA
+	case 0x0426:
+		return 0x96; // CYRILLIC CAPITAL LETTER TSE
+	case 0x0427:
+		return 0x97; // CYRILLIC CAPITAL LETTER CHE
+	case 0x0428:
+		return 0x98; // CYRILLIC CAPITAL LETTER SHA
+	case 0x0429:
+		return 0x99; // CYRILLIC CAPITAL LETTER SHCHA
+	case 0x042A:
+		return 0x9A; // CYRILLIC CAPITAL LETTER HARD SIGN
+	case 0x042B:
+		return 0x9B; // CYRILLIC CAPITAL LETTER YERU
+	case 0x042C:
+		return 0x9C; // CYRILLIC CAPITAL LETTER SOFT SIGN
+	case 0x042D:
+		return 0x9D; // CYRILLIC CAPITAL LETTER E
+	case 0x042E:
+		return 0x9E; // CYRILLIC CAPITAL LETTER YU
+	case 0x042F:
+		return 0x9F; // CYRILLIC CAPITAL LETTER YA
+	case 0x0430:
+		return 0xA0; // CYRILLIC SMALL LETTER A
+	case 0x0431:
+		return 0xA1; // CYRILLIC SMALL LETTER BE
+	case 0x0432:
+		return 0xA2; // CYRILLIC SMALL LETTER VE
+	case 0x0433:
+		return 0xA3; // CYRILLIC SMALL LETTER GHE
+	case 0x0434:
+		return 0xA4; // CYRILLIC SMALL LETTER DE
+	case 0x0435:
+		return 0xA5; // CYRILLIC SMALL LETTER IE
+	case 0x0436:
+		return 0xA6; // CYRILLIC SMALL LETTER ZHE
+	case 0x0437:
+		return 0xA7; // CYRILLIC SMALL LETTER ZE
+	case 0x0438:
+		return 0xA8; // CYRILLIC SMALL LETTER I
+	case 0x0439:
+		return 0xA9; // CYRILLIC SMALL LETTER SHORT I
+	case 0x043A:
+		return 0xAA; // CYRILLIC SMALL LETTER KA
+	case 0x043B:
+		return 0xAB; // CYRILLIC SMALL LETTER EL
+	case 0x043C:
+		return 0xAC; // CYRILLIC SMALL LETTER EM
+	case 0x043D:
+		return 0xAD; // CYRILLIC SMALL LETTER EN
+	case 0x043E:
+		return 0xAE; // CYRILLIC SMALL LETTER O
+	case 0x043F:
+		return 0xAF; // CYRILLIC SMALL LETTER PE
+	case 0x2591:
+		return 0xB0; // LIGHT SHADE
+	case 0x2592:
+		return 0xB1; // MEDIUM SHADE
+	case 0x2593:
+		return 0xB2; // DARK SHADE
+	case 0x2502:
+		return 0xB3; // BOX DRAWINGS LIGHT VERTICAL
+	case 0x2524:
+		return 0xB4; // BOX DRAWINGS LIGHT VERTICAL AND LEFT
+	case 0x2561:
+		return 0xB5; // BOX DRAWINGS VERTICAL SINGLE AND LEFT DOUBLE
+	case 0x2562:
+		return 0xB6; // BOX DRAWINGS VERTICAL DOUBLE AND LEFT SINGLE
+	case 0x2556:
+		return 0xB7; // BOX DRAWINGS DOWN DOUBLE AND LEFT SINGLE
+	case 0x2555:
+		return 0xB8; // BOX DRAWINGS DOWN SINGLE AND LEFT DOUBLE
+	case 0x2563:
+		return 0xB9; // BOX DRAWINGS DOUBLE VERTICAL AND LEFT
+	case 0x2551:
+		return 0xBA; // BOX DRAWINGS DOUBLE VERTICAL
+	case 0x2557:
+		return 0xBB; // BOX DRAWINGS DOUBLE DOWN AND LEFT
+	case 0x255D:
+		return 0xBC; // BOX DRAWINGS DOUBLE UP AND LEFT
+	case 0x255C:
+		return 0xBD; // BOX DRAWINGS UP DOUBLE AND LEFT SINGLE
+	case 0x255B:
+		return 0xBE; // BOX DRAWINGS UP SINGLE AND LEFT DOUBLE
+	case 0x2510:
+		return 0xBF; // BOX DRAWINGS LIGHT DOWN AND LEFT
+	case 0x2514:
+		return 0xC0; // BOX DRAWINGS LIGHT UP AND RIGHT
+	case 0x2534:
+		return 0xC1; // BOX DRAWINGS LIGHT UP AND HORIZONTAL
+	case 0x252C:
+		return 0xC2; // BOX DRAWINGS LIGHT DOWN AND HORIZONTAL
+	case 0x251C:
+		return 0xC3; // BOX DRAWINGS LIGHT VERTICAL AND RIGHT
+	case 0x2500:
+		return 0xC4; // BOX DRAWINGS LIGHT HORIZONTAL
+	case 0x253C:
+		return 0xC5; // BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL
+	case 0x255E:
+		return 0xC6; // BOX DRAWINGS VERTICAL SINGLE AND RIGHT DOUBLE
+	case 0x255F:
+		return 0xC7; // BOX DRAWINGS VERTICAL DOUBLE AND RIGHT SINGLE
+	case 0x255A:
+		return 0xC8; // BOX DRAWINGS DOUBLE UP AND RIGHT
+	case 0x2554:
+		return 0xC9; // BOX DRAWINGS DOUBLE DOWN AND RIGHT
+	case 0x2569:
+		return 0xCA; // BOX DRAWINGS DOUBLE UP AND HORIZONTAL
+	case 0x2566:
+		return 0xCB; // BOX DRAWINGS DOUBLE DOWN AND HORIZONTAL
+	case 0x2560:
+		return 0xCC; // BOX DRAWINGS DOUBLE VERTICAL AND RIGHT
+	case 0x2550:
+		return 0xCD; // BOX DRAWINGS DOUBLE HORIZONTAL
+	case 0x256C:
+		return 0xCE; // BOX DRAWINGS DOUBLE VERTICAL AND HORIZONTAL
+	case 0x2567:
+		return 0xCF; // BOX DRAWINGS UP SINGLE AND HORIZONTAL DOUBLE
+	case 0x2568:
+		return 0xD0; // BOX DRAWINGS UP DOUBLE AND HORIZONTAL SINGLE
+	case 0x2564:
+		return 0xD1; // BOX DRAWINGS DOWN SINGLE AND HORIZONTAL DOUBLE
+	case 0x2565:
+		return 0xD2; // BOX DRAWINGS DOWN DOUBLE AND HORIZONTAL SINGLE
+	case 0x2559:
+		return 0xD3; // BOX DRAWINGS UP DOUBLE AND RIGHT SINGLE
+	case 0x2558:
+		return 0xD4; // BOX DRAWINGS UP SINGLE AND RIGHT DOUBLE
+	case 0x2552:
+		return 0xD5; // BOX DRAWINGS DOWN SINGLE AND RIGHT DOUBLE
+	case 0x2553:
+		return 0xD6; // BOX DRAWINGS DOWN DOUBLE AND RIGHT SINGLE
+	case 0x256B:
+		return 0xD7; // BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE
+	case 0x256A:
+		return 0xD8; // BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE
+	case 0x2518:
+		return 0xD9; // BOX DRAWINGS LIGHT UP AND LEFT
+	case 0x250C:
+		return 0xDA; // BOX DRAWINGS LIGHT DOWN AND RIGHT
+	case 0x2588:
+		return 0xDB; // FULL BLOCK
+	case 0x2584:
+		return 0xDC; // LOWER HALF BLOCK
+	case 0x258C:
+		return 0xDD; // LEFT HALF BLOCK
+	case 0x2590:
+		return 0xDE; // RIGHT HALF BLOCK
+	case 0x2580:
+		return 0xDF; // UPPER HALF BLOCK
+	case 0x0440:
+		return 0xE0; // CYRILLIC SMALL LETTER ER
+	case 0x0441:
+		return 0xE1; // CYRILLIC SMALL LETTER ES
+	case 0x0442:
+		return 0xE2; // CYRILLIC SMALL LETTER TE
+	case 0x0443:
+		return 0xE3; // CYRILLIC SMALL LETTER U
+	case 0x0444:
+		return 0xE4; // CYRILLIC SMALL LETTER EF
+	case 0x0445:
+		return 0xE5; // CYRILLIC SMALL LETTER HA
+	case 0x0446:
+		return 0xE6; // CYRILLIC SMALL LETTER TSE
+	case 0x0447:
+		return 0xE7; // CYRILLIC SMALL LETTER CHE
+	case 0x0448:
+		return 0xE8; // CYRILLIC SMALL LETTER SHA
+	case 0x0449:
+		return 0xE9; // CYRILLIC SMALL LETTER SHCHA
+	case 0x044A:
+		return 0xEA; // CYRILLIC SMALL LETTER HARD SIGN
+	case 0x044B:
+		return 0xEB; // CYRILLIC SMALL LETTER YERU
+	case 0x044C:
+		return 0xEC; // CYRILLIC SMALL LETTER SOFT SIGN
+	case 0x044D:
+		return 0xED; // CYRILLIC SMALL LETTER E
+	case 0x044E:
+		return 0xEE; // CYRILLIC SMALL LETTER YU
+	case 0x044F:
+		return 0xEF; // CYRILLIC SMALL LETTER YA
+	case 0x0401:
+		return 0xF0; // CYRILLIC CAPITAL LETTER IO
+	case 0x0451:
+		return 0xF1; // CYRILLIC SMALL LETTER IO
+	case 0x0404:
+		return 0xF2; // CYRILLIC CAPITAL LETTER UKRAINIAN IE
+	case 0x0454:
+		return 0xF3; // CYRILLIC SMALL LETTER UKRAINIAN IE
+	case 0x0407:
+		return 0xF4; // CYRILLIC CAPITAL LETTER YI
+	case 0x0457:
+		return 0xF5; // CYRILLIC SMALL LETTER YI
+	case 0x040E:
+		return 0xF6; // CYRILLIC CAPITAL LETTER SHORT U
+	case 0x045E:
+		return 0xF7; // CYRILLIC SMALL LETTER SHORT U
+	case 0x00B0:
+		return 0xF8; // DEGREE SIGN
+	case 0x2219:
+		return 0xF9; // BULLET OPERATOR
+	case 0x00B7:
+		return 0xFA; // MIDDLE DOT
+	case 0x221A:
+		return 0xFB; // SQUARE ROOT
+	case 0x2116:
+		return 0xFC; // NUMERO SIGN
+	case 0x00A4:
+		return 0xFD; // CURRENCY SIGN
+	case 0x25A0:
+		return 0xFE; // BLACK SQUARE
 	}
 
 	return -1;
@@ -678,157 +1185,274 @@ int char_unicode_to_cp866(uint32_t c)
 
 int char_unicode_to_itf(uint32_t c)
 {
-	if (!c || (c >= 32 && c <= 127)) return c;
+	if (!c || (c >= 32 && c <= 127))
+		return c;
 
 	switch (c) {
-	case 0x263A: return 1;  // WHITE SMILING FACE
-	case 0x263B: return 2;  // BLACK SMILING FACE
+	case 0x263A:
+		return 1;  // WHITE SMILING FACE
+	case 0x263B:
+		return 2;  // BLACK SMILING FACE
 	case 0x2661:
-	case 0x2665: return 3;  // BLACK HEART
+	case 0x2665:
+		return 3;  // BLACK HEART
 	case 0x2662:
 	case 0x25C6:
-	case 0x2666: return 4;  // BLACK DIAMOND
+	case 0x2666:
+		return 4;  // BLACK DIAMOND
 	case 0x2667:
-	case 0x2663: return 5;  // BLACK CLUBS
+	case 0x2663:
+		return 5;  // BLACK CLUBS
 	case 0x2664:
-	case 0x2660: return 6;  // BLACK SPADE
-	case 0x25CF: return 7;  // BLACK CIRCLE
-	case 0x25D8: return 8;  // INVERSE BULLET
+	case 0x2660:
+		return 6;  // BLACK SPADE
+	case 0x25CF:
+		return 7;  // BLACK CIRCLE
+	case 0x25D8:
+		return 8;  // INVERSE BULLET
 	case 0x25CB:
 	case 0x25E6:
-	case 0x25EF: return 9;  // LARGE CIRCLE
-	case 0x25D9: return 10; // INVERSE WHITE CIRCLE
-	case 0x2642: return 11; // MALE / MARS
-	case 0x2640: return 12; // FEMALE / VENUS
-	case 0x266A: return 13; // EIGHTH NOTE
-	case 0x266B: return 14; // BEAMED EIGHTH NOTES
+	case 0x25EF:
+		return 9;  // LARGE CIRCLE
+	case 0x25D9:
+		return 10; // INVERSE WHITE CIRCLE
+	case 0x2642:
+		return 11; // MALE / MARS
+	case 0x2640:
+		return 12; // FEMALE / VENUS
+	case 0x266A:
+		return 13; // EIGHTH NOTE
+	case 0x266B:
+		return 14; // BEAMED EIGHTH NOTES
 
-	case 0x2195: return 18; // UP DOWN ARROW
-	case 0x203C: return 19; // DOUBLE EXCLAMATION MARK
-	case 0x00B6: return 20; // PILCROW SIGN
-	case 0x00A7: return 21; // SECTION SIGN
+	case 0x2195:
+		return 18; // UP DOWN ARROW
+	case 0x203C:
+		return 19; // DOUBLE EXCLAMATION MARK
+	case 0x00B6:
+		return 20; // PILCROW SIGN
+	case 0x00A7:
+		return 21; // SECTION SIGN
 
-	case 0x21A8: return 23; // UP DOWN ARROW WITH BASE
-	case 0x2191: return 24; // UPWARD ARROW
-	case 0x2193: return 25; // DOWNWARD ARROW
-	case 0x2192: return 26; // RIGHTWARD ARROW
-	case 0x2190: return 27; // LEFTWARD ARROW
+	case 0x21A8:
+		return 23; // UP DOWN ARROW WITH BASE
+	case 0x2191:
+		return 24; // UPWARD ARROW
+	case 0x2193:
+		return 25; // DOWNWARD ARROW
+	case 0x2192:
+		return 26; // RIGHTWARD ARROW
+	case 0x2190:
+		return 27; // LEFTWARD ARROW
 
-	case 0x2194: return 29; // LEFT RIGHT ARROW
+	case 0x2194:
+		return 29; // LEFT RIGHT ARROW
 
-	case 0x266F: return '#';// MUSIC SHARP SIGN
-	case 0x00A6: return 124;
+	case 0x266F:
+		return '#';// MUSIC SHARP SIGN
+	case 0x00A6:
+		return 124;
 	case 0x0394:
-	case 0x2302: return 127;// HOUSE
+	case 0x2302:
+		return 127;// HOUSE
 
-	case 0x203E: return 129;// UNDERLINE (???)
+	case 0x203E:
+		return 129;// UNDERLINE (???)
 
 	case 0x20B5:
 	case 0x20B2:
-	case 0x00A2: return 155;// CENT SIGN
-	case 0x00A3: return 156;// POUND SIGN
-	case 0x00A5: return 157;// YEN SIGN
+	case 0x00A2:
+		return 155;// CENT SIGN
+	case 0x00A3:
+		return 156;// POUND SIGN
+	case 0x00A5:
+		return 157;// YEN SIGN
 
-	case 0x2310: return 169;// REVERSED NOT SIGN
-	case 0x00AC: return 170;// NOT SIGN
-	case 0x00BD: return 171;// 1/2
-	case 0x00BC: return 172;// 1/4
-	case 0x00A1: return 173;// INVERTED EXCLAMATION MARK
-	case 0x00AB: return 174;// <<
-	case 0x00BB: return 175;// >>
+	case 0x2310:
+		return 169;// REVERSED NOT SIGN
+	case 0x00AC:
+		return 170;// NOT SIGN
+	case 0x00BD:
+		return 171;// 1/2
+	case 0x00BC:
+		return 172;// 1/4
+	case 0x00A1:
+		return 173;// INVERTED EXCLAMATION MARK
+	case 0x00AB:
+		return 174;// <<
+	case 0x00BB:
+		return 175;// >>
 
-	case 0x2591: return 176;// LIGHT SHADE
-	case 0x2592: return 177;// MEDIUM SHADE
-	case 0x2593: return 178;// DARK SHADE
+	case 0x2591:
+		return 176;// LIGHT SHADE
+	case 0x2592:
+		return 177;// MEDIUM SHADE
+	case 0x2593:
+		return 178;// DARK SHADE
 
 	// BOX DRAWING
-	case 0x2502: return 179;
-	case 0x2524: return 180;
-	case 0x2561: return 181;
-	case 0x2562: return 182;
-	case 0x2556: return 183;
-	case 0x2555: return 184;
-	case 0x2563: return 185;
-	case 0x2551: return 186;
-	case 0x2557: return 187;
-	case 0x255D: return 188;
-	case 0x255C: return 189;
-	case 0x255B: return 190;
-	case 0x2510: return 191;
-	case 0x2514: return 192;
-	case 0x2534: return 193;
-	case 0x252C: return 194;
-	case 0x251C: return 195;
-	case 0x2500: return 196;
-	case 0x253C: return 197;
-	case 0x255E: return 198;
-	case 0x255F: return 199;
-	case 0x255A: return 200;
-	case 0x2554: return 201;
-	case 0x2569: return 202;
-	case 0x2566: return 203;
-	case 0x2560: return 204;
-	case 0x2550: return 205;
-	case 0x256C: return 206;
-	case 0x2567: return 207;
-	case 0x2568: return 208;
-	case 0x2564: return 209;
-	case 0x2565: return 210;
-	case 0x2559: return 211;
-	case 0x2558: return 212;
-	case 0x2552: return 213;
-	case 0x2553: return 214;
-	case 0x256B: return 215;
-	case 0x256A: return 216;
-	case 0x2518: return 217;
-	case 0x250C: return 218;
-	case 0x25A0: return 219;// BLACK SQUARE
-	case 0x2584: return 220;// LOWER HALF BLOCK
-	case 0x258C: return 221;// LEFT HALF BLOCK
-	case 0x2590: return 222;// RIGHT HALF BLOCK
-	case 0x2580: return 223;// UPPER HALF BLOCK
+	case 0x2502:
+		return 179;
+	case 0x2524:
+		return 180;
+	case 0x2561:
+		return 181;
+	case 0x2562:
+		return 182;
+	case 0x2556:
+		return 183;
+	case 0x2555:
+		return 184;
+	case 0x2563:
+		return 185;
+	case 0x2551:
+		return 186;
+	case 0x2557:
+		return 187;
+	case 0x255D:
+		return 188;
+	case 0x255C:
+		return 189;
+	case 0x255B:
+		return 190;
+	case 0x2510:
+		return 191;
+	case 0x2514:
+		return 192;
+	case 0x2534:
+		return 193;
+	case 0x252C:
+		return 194;
+	case 0x251C:
+		return 195;
+	case 0x2500:
+		return 196;
+	case 0x253C:
+		return 197;
+	case 0x255E:
+		return 198;
+	case 0x255F:
+		return 199;
+	case 0x255A:
+		return 200;
+	case 0x2554:
+		return 201;
+	case 0x2569:
+		return 202;
+	case 0x2566:
+		return 203;
+	case 0x2560:
+		return 204;
+	case 0x2550:
+		return 205;
+	case 0x256C:
+		return 206;
+	case 0x2567:
+		return 207;
+	case 0x2568:
+		return 208;
+	case 0x2564:
+		return 209;
+	case 0x2565:
+		return 210;
+	case 0x2559:
+		return 211;
+	case 0x2558:
+		return 212;
+	case 0x2552:
+		return 213;
+	case 0x2553:
+		return 214;
+	case 0x256B:
+		return 215;
+	case 0x256A:
+		return 216;
+	case 0x2518:
+		return 217;
+	case 0x250C:
+		return 218;
+	case 0x25A0:
+		return 219;// BLACK SQUARE
+	case 0x2584:
+		return 220;// LOWER HALF BLOCK
+	case 0x258C:
+		return 221;// LEFT HALF BLOCK
+	case 0x2590:
+		return 222;// RIGHT HALF BLOCK
+	case 0x2580:
+		return 223;// UPPER HALF BLOCK
 
-	case 0x03B1: return 224;// GREEK SMALL LETTER ALPHA
-	case 0x03B2: return 225;// GREEK SMALL LETTER BETA
-	case 0x0393: return 226;// GREEK CAPITAL LETTER GAMMA
-	case 0x03C0: return 227;// mmm... pie...
+	case 0x03B1:
+		return 224;// GREEK SMALL LETTER ALPHA
+	case 0x03B2:
+		return 225;// GREEK SMALL LETTER BETA
+	case 0x0393:
+		return 226;// GREEK CAPITAL LETTER GAMMA
+	case 0x03C0:
+		return 227;// mmm... pie...
 	case 0x03A3:
-	case 0x2211: return 228;// N-ARY SUMMATION / CAPITAL SIGMA
-	case 0x03C3: return 229;// GREEK SMALL LETTER SIGMA
+	case 0x2211:
+		return 228;// N-ARY SUMMATION / CAPITAL SIGMA
+	case 0x03C3:
+		return 229;// GREEK SMALL LETTER SIGMA
 	case 0x03BC:
-	case 0x00b5: return 230;// GREEK SMALL LETTER MU
+	case 0x00b5:
+		return 230;// GREEK SMALL LETTER MU
 	case 0x03C4:
-	case 0x03D2: return 231;// GREEK UPSILON+HOOK
+	case 0x03D2:
+		return 231;// GREEK UPSILON+HOOK
 
-	case 0x03B8: return 233;// GREEK SMALL LETTER THETA
-	case 0x03A9: return 234;// GREEK CAPITAL LETTER OMEGA
-	case 0x03B4: return 235;// GREEK SMALL LETTER DELTA
+	case 0x03B8:
+		return 233;// GREEK SMALL LETTER THETA
+	case 0x03A9:
+		return 234;// GREEK CAPITAL LETTER OMEGA
+	case 0x03B4:
+		return 235;// GREEK SMALL LETTER DELTA
 
-	case 0x221E: return 236;// INFINITY
+	case 0x221E:
+		return 236;// INFINITY
 	case 0x00D8:
-	case 0x00F8: return 237;// LATIN ... LETTER O WITH STROKE
-	case 0x03F5: return 238;// GREEK LUNATE EPSILON SYMBOL
+	case 0x00F8:
+		return 237;// LATIN ... LETTER O WITH STROKE
+	case 0x03F5:
+		return 238;// GREEK LUNATE EPSILON SYMBOL
 	case 0x2229:
-	case 0x03A0: return 239;// GREEK CAPITAL LETTER PI
-	case 0x039E: return 240;// GREEK CAPITAL LETTER XI
-	case 0x00b1: return 241;// PLUS-MINUS SIGN
-	case 0x2265: return 242;// GREATER-THAN OR EQUAL TO
-	case 0x2264: return 243;// LESS-THAN OR EQUAL TO
-	case 0x2320: return 244;// TOP HALF INTEGRAL
-	case 0x2321: return 245;// BOTTOM HALF INTEGRAL
-	case 0x00F7: return 246;// DIVISION SIGN
-	case 0x2248: return 247;// ALMOST EQUAL TO
-	case 0x00B0: return 248;// DEGREE SIGN
-	case 0x00B7: return 249;// MIDDLE DOT
+	case 0x03A0:
+		return 239;// GREEK CAPITAL LETTER PI
+	case 0x039E:
+		return 240;// GREEK CAPITAL LETTER XI
+	case 0x00b1:
+		return 241;// PLUS-MINUS SIGN
+	case 0x2265:
+		return 242;// GREATER-THAN OR EQUAL TO
+	case 0x2264:
+		return 243;// LESS-THAN OR EQUAL TO
+	case 0x2320:
+		return 244;// TOP HALF INTEGRAL
+	case 0x2321:
+		return 245;// BOTTOM HALF INTEGRAL
+	case 0x00F7:
+		return 246;// DIVISION SIGN
+	case 0x2248:
+		return 247;// ALMOST EQUAL TO
+	case 0x00B0:
+		return 248;// DEGREE SIGN
+	case 0x00B7:
+		return 249;// MIDDLE DOT
 	case 0x2219:
-	case 0x0387: return 250;// GREEK ANO TELEIA
-	case 0x221A: return 251;// SQUARE ROOT
+	case 0x0387:
+		return 250;// GREEK ANO TELEIA
+	case 0x221A:
+		return 251;// SQUARE ROOT
 	// NO UNICODE ALLOCATION?
-	case 0x00B2: return 253;// SUPERSCRIPT TWO
-	case 0x220E: return 254;// QED
+	case 0x00B2:
+		return 253;// SUPERSCRIPT TWO
+	case 0x220E:
+		return 254;// QED
 
 	// No idea if this is right ;P
-	case 0x00A0: return 255;
+	case 0x00A0:
+		return 255;
 	}
 
 	/* nothing */
@@ -866,19 +1490,20 @@ static int ucs4_to_itf(uint32_t ch, void *userdata, ce_write w)
 	{ \
 		uint16_t out_b[2]; \
 		size_t len = 0; \
-	\
+\
 		if (ch < 0x10000) { \
 			out_b[len++] = bswap##x##16(ch); \
 		} else if (ch < 0x110000) { \
 			uint16_t w1 = 0xD800 + ((ch - 0x10000) >> 10); \
 			uint16_t w2 = 0xDC00 + ((ch - 0x10000) & 0x3FF); \
-	\
+\
 			out_b[len++] = bswap##x##16(w1); \
 			out_b[len++] = bswap##x##16(w2); \
-		} else return CHARSET_ENCODE_ERROR; \
-	\
-		w(userdata, out_b, len * 2);\
-	\
+		} else \
+			return CHARSET_ENCODE_ERROR; \
+\
+		w(userdata, out_b, len * 2); \
+\
 		return CHARSET_ENCODE_SUCCESS; \
 	}
 
@@ -892,11 +1517,11 @@ ENCODE_UTF16_VARIANT(BE)
 	{ \
 		if (ch >= 0x10000) \
 			return CHARSET_ERROR_ENCODE; \
-	\
+\
 		uint16_t ch16 = bswap##x##16(ch); \
-	\
+\
 		w(userdata, &ch16, sizeof(ch16)); \
-	\
+\
 		return CHARSET_ENCODE_SUCCESS; \
 	}
 
@@ -938,7 +1563,7 @@ static int ucs4_to_wchar(uint32_t ch, void *userdata, ce_write w)
 
 /* function LUT here */
 typedef void (*charset_conv_to_ucs4_func)(charset_decode_t *decoder);
-typedef int (*charset_conv_from_ucs4_func)(uint32_t, void*, ce_write);
+typedef int (*charset_conv_from_ucs4_func)(uint32_t, void *, ce_write);
 
 static const charset_conv_to_ucs4_func conv_to_ucs4_funcs[] = {
 	[CHARSET_UTF8] = utf8_to_ucs4,
@@ -975,7 +1600,7 @@ static const charset_conv_from_ucs4_func conv_from_ucs4_funcs[] = {
 	[CHARSET_UCS4BE] = ucs4_to_ucs4BE,
 
 	/* these two share the same impl: */
-	[CHARSET_ITF]   = ucs4_to_itf,
+	[CHARSET_ITF] = ucs4_to_itf,
 	[CHARSET_CP437] = ucs4_to_cp437,
 
 	[CHARSET_CHAR] = ucs4_to_utf8,
@@ -1006,7 +1631,7 @@ SCHISM_CONST static charset_conv_from_ucs4_func charset_iconv_lookup_conv_from_u
 }
 
 /* for debugging */
-SCHISM_CONST const char* charset_iconv_error_lookup(charset_error_t err)
+SCHISM_CONST const char *charset_iconv_error_lookup(charset_error_t err)
 {
 	switch (err) {
 	case CHARSET_ERROR_SUCCESS:
@@ -1061,8 +1686,8 @@ static const size_t charset_size_estimate_divisor[] = {
 #if defined(SCHISM_XBOX)
 # include <xboxkrnl/xboxkrnl.h>
 #elif defined(SCHISM_MACOS)
-# include <TextEncodingConverter.h>
 # include <Script.h>
+# include <TextEncodingConverter.h>
 
 # ifndef kTECOutputBufferFullStatus
 #  define kTECOutputBufferFullStatus (-8785)
@@ -1084,7 +1709,8 @@ typedef struct UconvObject_notouchy_typesafety_ *UconvObject;
 #ifdef SCHISM_MACOS
 static inline SCHISM_ALWAYS_INLINE int charset_iconv_get_system_encoding_(TextEncoding *penc)
 {
-	if (UpgradeScriptInfoToTextEncoding(smSystemScript, kTextLanguageDontCare, kTextRegionDontCare, NULL, penc) == noErr)
+	if (UpgradeScriptInfoToTextEncoding(smSystemScript, kTextLanguageDontCare, kTextRegionDontCare, NULL, penc)
+		== noErr)
 		return 1;
 
 	/* Assume Mac OS Roman. */
@@ -1106,13 +1732,13 @@ static inline SCHISM_ALWAYS_INLINE int charset_iconv_get_system_encoding_(TextEn
 
 #if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 # define CHARSET_NEEDS_UNIBUF(x) ((x) == CHARSET_ANSI)
-# define CHARSET_UNIBUF (CHARSET_WCHAR_T)
+# define CHARSET_UNIBUF          (CHARSET_WCHAR_T)
 #elif defined(SCHISM_OS2)
 # define CHARSET_NEEDS_UNIBUF(x) ((x) == CHARSET_DOSCP)
-# define CHARSET_UNIBUF (CHARSET_UCS2)
+# define CHARSET_UNIBUF          (CHARSET_UCS2)
 #elif defined(SCHISM_MACOS)
 # define CHARSET_NEEDS_UNIBUF(x) ((x) == CHARSET_SYSTEMSCRIPT)
-# define CHARSET_UNIBUF (CHARSET_UCS2)
+# define CHARSET_UNIBUF          (CHARSET_UCS2)
 #endif
 
 struct charset_iconv_v2 {
@@ -1158,8 +1784,7 @@ static void ce_write_icon(void *userdata, const void *buf, size_t sz)
 {
 	struct charset_iconv_v2 *x = userdata;
 
-	SCHISM_RUNTIME_ASSERT((x->outbufsize + sz) <= MAXCHAROUT,
-		"Pending writes should never ever exceed MAXCHAROUT");
+	SCHISM_RUNTIME_ASSERT((x->outbufsize + sz) <= MAXCHAROUT, "Pending writes should never ever exceed MAXCHAROUT");
 
 #ifdef CHARSET_HAVE_UNIBUF
 	if (CHARSET_NEEDS_UNIBUF(x->outset)) {
@@ -1195,7 +1820,7 @@ struct charset_iconv_v2 *charset_iconv_v2_open(charset_t inset, charset_t outset
 #ifdef CHARSET_HAVE_UNIBUF
 	/* XXX move this to another function */
 	if (CHARSET_NEEDS_UNIBUF(inset) || CHARSET_NEEDS_UNIBUF(outset)) {
-#ifdef SCHISM_MACOS
+# ifdef SCHISM_MACOS
 		TextEncoding hfsenc, utf16enc, inenc, outenc;
 		OSStatus err;
 
@@ -1205,7 +1830,8 @@ struct charset_iconv_v2 *charset_iconv_v2_open(charset_t inset, charset_t outset
 			return NULL;
 		}
 
-		utf16enc = CreateTextEncoding(kTextEncodingUnicodeDefault, kTextEncodingDefaultVariant, kUnicode16BitFormat);
+		utf16enc = CreateTextEncoding(
+			kTextEncodingUnicodeDefault, kTextEncodingDefaultVariant, kUnicode16BitFormat);
 
 		if (CHARSET_NEEDS_UNIBUF(inset)) {
 			inenc = hfsenc;
@@ -1220,14 +1846,14 @@ struct charset_iconv_v2 *charset_iconv_v2_open(charset_t inset, charset_t outset
 			free(x);
 			return NULL;
 		}
-#elif defined(SCHISM_OS2)
+# elif defined(SCHISM_OS2)
 		ULONG cp;
 
 		if (UniCreateUconvObject((UniChar *)L"@path=yes", &x->uc) != ULS_SUCCESS)
 			return NULL;
-#elif defined(SCHISM_WIN32)
+# elif defined(SCHISM_WIN32)
 		x->cp = GetACP();
-#endif
+# endif
 	}
 
 	if (CHARSET_NEEDS_UNIBUF(inset))
@@ -1260,11 +1886,12 @@ struct charset_iconv_v2 *charset_iconv_v2_open(charset_t inset, charset_t outset
 /* Win32 and XBOX have basically the same API (and basically the same
  * limitations) so we just use a layer so they can share the same
  * implementation. */
-#if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
+# if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 /* CodePage is only used on Windows */
-int MultiByteToUnicodeSize(UINT CodePage, PULONG BytesInUnicodeString, LPCSTR MultiByteString, ULONG BytesInMultiByteString)
+int MultiByteToUnicodeSize(
+	UINT CodePage, PULONG BytesInUnicodeString, LPCSTR MultiByteString, ULONG BytesInMultiByteString)
 {
-#ifdef SCHISM_WIN32
+#  ifdef SCHISM_WIN32
 	int r;
 
 	if (BytesInMultiByteString > INT_MAX)
@@ -1276,9 +1903,11 @@ int MultiByteToUnicodeSize(UINT CodePage, PULONG BytesInUnicodeString, LPCSTR Mu
 
 	*BytesInUnicodeString = (ULONG)r << 1;
 	return 0;
-#else
-	return NT_SUCCESS(RtlMultiByteToUnicodeSize(BytesInUnicodeString, MultiByteString, BytesInMultiByteString)) ? 0 : -1;
-#endif
+#  else
+	return NT_SUCCESS(RtlMultiByteToUnicodeSize(BytesInUnicodeString, MultiByteString, BytesInMultiByteString))
+		       ? 0
+		       : -1;
+#  endif
 }
 
 /* NOTE: This function has different behavior if there
@@ -1287,31 +1916,36 @@ int MultiByteToUnicodeSize(UINT CodePage, PULONG BytesInUnicodeString, LPCSTR Mu
  *
  * This doesn't matter right now (because we don't use it)
  * but it is important to keep in mind. */
-int MultiByteToUnicodeN(UINT CodePage, PWSTR UnicodeString, ULONG MaxBytesInUnicodeString, PULONG BytesInUnicodeString, LPCSTR MultiByteString, ULONG BytesInMultiByteString)
+int MultiByteToUnicodeN(UINT CodePage, PWSTR UnicodeString, ULONG MaxBytesInUnicodeString, PULONG BytesInUnicodeString,
+	LPCSTR MultiByteString, ULONG BytesInMultiByteString)
 {
-#ifdef SCHISM_WIN32
+#  ifdef SCHISM_WIN32
 	int r;
 
 	if ((BytesInMultiByteString > INT_MAX) || (MaxBytesInUnicodeString > INT_MAX))
 		return -1;
 
-	r = MultiByteToWideChar(CodePage, MB_ERR_INVALID_CHARS, MultiByteString, BytesInMultiByteString, UnicodeString, MaxBytesInUnicodeString >> 1);
+	r = MultiByteToWideChar(CodePage, MB_ERR_INVALID_CHARS, MultiByteString, BytesInMultiByteString, UnicodeString,
+		MaxBytesInUnicodeString >> 1);
 	if (r <= 0)
 		return -1;
 
 	*BytesInUnicodeString = (ULONG)r << 1;
 	return 0;
-#else
-	return NT_SUCCESS(RtlMultiByteToUnicodeN(UnicodeString, MaxBytesInUnicodeString, BytesInUnicodeString, MultiByteString, BytesInMultiByteString)) ? 0 : -1;
-#endif
+#  else
+	return NT_SUCCESS(RtlMultiByteToUnicodeN(UnicodeString, MaxBytesInUnicodeString, BytesInUnicodeString,
+		       MultiByteString, BytesInMultiByteString))
+		       ? 0
+		       : -1;
+#  endif
 }
-#endif
+# endif
 
 int charset_to_unicode(struct charset_iconv_v2 *x, char **inbuf, size_t *insize)
 {
 	/* Convert to Unicode using our built in buffer */
 
-#if defined(SCHISM_OS2)
+# if defined(SCHISM_OS2)
 	UniChar *u = x->uniconv;
 	size_t outlen = ARRAY_SIZE(x->uniconv), nonidentical = 0;
 	int rc;
@@ -1324,12 +1958,13 @@ int charset_to_unicode(struct charset_iconv_v2 *x, char **inbuf, size_t *insize)
 	x->uniconvlen = u - x->uniconv;
 
 	return 0;
-#elif defined(SCHISM_MACOS)
+# elif defined(SCHISM_MACOS)
 	OSStatus err;
 	ByteCount bytes_consumed; // I love consuming media!
 	ByteCount bytes_produced;
 
-	err = TECConvertText(x->tec, (ConstTextPtr)*inbuf, *insize, &bytes_consumed, (TextPtr)x->uniconv, sizeof(x->uniconv), &bytes_produced);
+	err = TECConvertText(x->tec, (ConstTextPtr)*inbuf, *insize, &bytes_consumed, (TextPtr)x->uniconv,
+		sizeof(x->uniconv), &bytes_produced);
 	if (err != noErr && err != kTECOutputBufferFullStatus)
 		return -1;
 
@@ -1338,7 +1973,7 @@ int charset_to_unicode(struct charset_iconv_v2 *x, char **inbuf, size_t *insize)
 
 	x->uniconvlen = bytes_produced >> 1;
 	return 0;
-#elif defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
+# elif defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 	ULONG bytes;
 	size_t i, len;
 	char *in;
@@ -1379,7 +2014,7 @@ gotit:
 	*inbuf += i;
 	*insize -= i;
 	return 0;
-#endif
+# endif
 }
 
 static charset_error_t charset_decoder_unicode(struct charset_iconv_v2 *x, char **inbuf, size_t *inbufsz)
@@ -1422,10 +2057,11 @@ static charset_error_t charset_from_unicode(struct charset_iconv_v2 *x)
 		return CHARSET_ERROR_SUCCESS;
 
 	{
-#if defined(SCHISM_WIN32)
+# if defined(SCHISM_WIN32)
 		int r;
 
-		r = WideCharToMultiByte(x->cp, 0, x->uniconv, x->uniconvlen >> 1, (LPSTR)x->outbuf, sizeof(x->outbuf), NULL, NULL);
+		r = WideCharToMultiByte(
+			x->cp, 0, x->uniconv, x->uniconvlen >> 1, (LPSTR)x->outbuf, sizeof(x->outbuf), NULL, NULL);
 		if (r > 0) {
 			/* success */
 		} else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
@@ -1437,7 +2073,7 @@ static charset_error_t charset_from_unicode(struct charset_iconv_v2 *x)
 		}
 
 		s = r;
-#elif defined(SCHISM_OS2)
+# elif defined(SCHISM_OS2)
 		int rc;
 		size_t nonidentical = 0;
 		UniChar *uniptr = x->uniconv;
@@ -1451,22 +2087,23 @@ static charset_error_t charset_from_unicode(struct charset_iconv_v2 *x)
 			return CHARSET_ERROR_ENCODE;
 
 		s = (outptr - (char *)x->outbuf);
-#elif defined(SCHISM_MACOS)
+# elif defined(SCHISM_MACOS)
 		OSStatus err;
 		ByteCount bytes_consumed; // I love consuming media!
 		ByteCount bytes_produced;
 
-		err = TECConvertText(x->tec, (ConstTextPtr)x->uniconv, x->uniconvlen, &bytes_consumed, (TextPtr)x->outbuf, sizeof(x->outbuf), &bytes_produced);
+		err = TECConvertText(x->tec, (ConstTextPtr)x->uniconv, x->uniconvlen, &bytes_consumed,
+			(TextPtr)x->outbuf, sizeof(x->outbuf), &bytes_produced);
 		if (err != noErr)
 			return CHARSET_ERROR_ENCODE;
 
 		s = bytes_produced;
-#elif defined(SCHISM_XBOX)
+# elif defined(SCHISM_XBOX)
 		/* ;) */
 		ULONG ss;
 		RtlUnicodeToMultiByteN(x->outbuf, sizeof(x->outbuf), &ss, x->uniconv, x->uniconvlen);
 		s = ss;
-#endif
+# endif
 	}
 
 	/* hopefully that went okay */
@@ -1494,14 +2131,18 @@ static charset_error_t iconv_v2_write(struct charset_iconv_v2 *x, char **outbuf,
 	return CHARSET_ERROR_SUCCESS;
 }
 
-charset_error_t charset_iconv_v2(struct charset_iconv_v2 *x, char **inbuf, size_t *inbufsz, char **outbuf, size_t *outbufsz)
+charset_error_t charset_iconv_v2(
+	struct charset_iconv_v2 *x, char **inbuf, size_t *inbufsz, char **outbuf, size_t *outbufsz)
 {
 	charset_decode_t *decoder;
 
 	/* Sanity check */
-	if (!inbuf || !*inbuf) return CHARSET_ERROR_NULLINPUT;
-	if (!outbuf || !*outbuf) return CHARSET_ERROR_NULLOUTPUT;
-	if (inbuf == outbuf || *inbuf == *outbuf) return CHARSET_ERROR_INPUTISOUTPUT;
+	if (!inbuf || !*inbuf)
+		return CHARSET_ERROR_NULLINPUT;
+	if (!outbuf || !*outbuf)
+		return CHARSET_ERROR_NULLOUTPUT;
+	if (inbuf == outbuf || *inbuf == *outbuf)
+		return CHARSET_ERROR_INPUTISOUTPUT;
 
 	if (iconv_v2_write(x, outbuf, outbufsz) != CHARSET_ERROR_SUCCESS)
 		return CHARSET_ERROR_NOTENOUGHSPACE;
@@ -1596,11 +2237,11 @@ void charset_iconv_v2_close(struct charset_iconv_v2 *x)
 {
 #ifdef CHARSET_NEEDS_UNIBUF
 	if (CHARSET_NEEDS_UNIBUF(x->inset) || CHARSET_NEEDS_UNIBUF(x->outset)) {
-#ifdef SCHISM_MACOS
+# ifdef SCHISM_MACOS
 		TECDisposeConverter(x->tec);
-#elif defined(SCHISM_OS2)
+# elif defined(SCHISM_OS2)
 		UniFreeUconvObject(x->uc);
-#endif
+# endif
 	}
 #endif
 	free(x);
@@ -1694,7 +2335,9 @@ charset_error_t charset_iconv(const void *in, void *out, charset_t inset, charse
 
 	insize = charset_iconv_fixup_size(in, inset, insize);
 
-	if (disko_memopen_estimate(&fp, insize * charset_size_estimate_divisor[outset] / charset_size_estimate_divisor[inset]) < 0) {
+	if (disko_memopen_estimate(
+		    &fp, insize * charset_size_estimate_divisor[outset] / charset_size_estimate_divisor[inset])
+		< 0) {
 		charset_iconv_v2_close(v2);
 		return CHARSET_ERROR_NOMEM;
 	}
@@ -1785,8 +2428,8 @@ charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset)
 	decoder->offset = inptr - (char *)decoder->in;
 
 	decoder->state = (rc != CHARSET_ERROR_SUCCESS && rc != CHARSET_ERROR_NOTENOUGHSPACE) ? DECODER_STATE_ERROR
-		: (decoder->size == SIZE_MAX && decoder->codepoint == 0) ? DECODER_STATE_DONE
-		: DECODER_STATE_NEED_MORE;
+			 : (decoder->size == SIZE_MAX && decoder->codepoint == 0)            ? DECODER_STATE_DONE
+											     : DECODER_STATE_NEED_MORE;
 
 	return rc;
 }

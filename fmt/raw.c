@@ -55,10 +55,9 @@ int fmt_raw_load_sample(slurp_t *fp, song_sample_t *smp)
 
 int fmt_raw_save_sample(disko_t *fp, song_sample_t *smp)
 {
-	csf_write_sample(fp, smp, SF_LE
-		| ((smp->flags & CHN_16BIT) ? SF_16 | SF_PCMS : SF_8 | SF_PCMU)
-		| ((smp->flags & CHN_STEREO) ? SF_SI : SF_M),
+	csf_write_sample(fp, smp,
+		SF_LE | ((smp->flags & CHN_16BIT) ? SF_16 | SF_PCMS : SF_8 | SF_PCMU)
+			| ((smp->flags & CHN_STEREO) ? SF_SI : SF_M),
 		UINT32_MAX);
 	return SAVE_SUCCESS;
 }
-

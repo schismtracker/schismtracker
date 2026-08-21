@@ -253,12 +253,12 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 		slurp_read(fp, &type, 2);
 
 		smpl_offset = bswapLE32(smpl_offset);
-		smpl_end    = bswapLE32(smpl_end);
-		loop_start  = bswapLE32(loop_start);
-		loop_end    = bswapLE32(loop_end);
-		rate        = bswapLE32(rate);
-		link        = bswapLE16(link); /* used for stereo samples */
-		type        = bswapLE16(type);
+		smpl_end = bswapLE32(smpl_end);
+		loop_start = bswapLE32(loop_start);
+		loop_end = bswapLE32(loop_end);
+		rate = bswapLE32(rate);
+		link = bswapLE16(link); /* used for stereo samples */
+		type = bswapLE16(type);
 
 		switch (type) {
 		case 1: /* mono */
@@ -298,8 +298,7 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 
 		switch (type) {
 		case 1: /* mono */
-			iff_read_sample(&cs[SF2_CHUNK_smpl], fp, smp,
-				SF_16 | SF_M | SF_LE | SF_PCMS, smpl_offset << 1);
+			iff_read_sample(&cs[SF2_CHUNK_smpl], fp, smp, SF_16 | SF_M | SF_LE | SF_PCMS, smpl_offset << 1);
 			break;
 		case 2: { /* stereo */
 			/* I HATE SF2 :))) */
@@ -323,9 +322,9 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 
 			/* meh */
 			roffset = (roffset * 2) + cs[SF2_CHUNK_smpl].offset;
-			rend    = (rend * 2)    + cs[SF2_CHUNK_smpl].offset;
+			rend = (rend * 2) + cs[SF2_CHUNK_smpl].offset;
 			loffset = (loffset * 2) + cs[SF2_CHUNK_smpl].offset;
-			lend    = (lend * 2)    + cs[SF2_CHUNK_smpl].offset;
+			lend = (lend * 2) + cs[SF2_CHUNK_smpl].offset;
 
 			/* so far I haven't found any files where lend == roffset,
 			 * so I'm not going to add a special case for it ;) */
@@ -333,8 +332,7 @@ int fmt_sf2_load_instrument(slurp_t *fp, int slot)
 				slurp_t sf2sl;
 
 				/* left channel comes first when reading split stereo */
-				slurp_sf2(&sf2sl, fp, (loffset), (lend - loffset),
-					roffset, (rend - roffset));
+				slurp_sf2(&sf2sl, fp, (loffset), (lend - loffset), roffset, (rend - roffset));
 
 				csf_read_sample(smp, SF_16 | SF_SS | SF_LE | SF_PCMS, &sf2sl);
 

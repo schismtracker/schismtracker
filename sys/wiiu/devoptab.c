@@ -52,31 +52,30 @@ Changes from libwut source:
 */
 
 #include "headers.h"
-#include <sys/iosupport.h>
-#include <coreinit/mutex.h>
+#include "log.h"
 #include <coreinit/filesystem_fsa.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include <coreinit/mutex.h>
 #include <fcntl.h>
 #include <malloc.h> /* memalign */
-#include "log.h"
+#include <sys/iosupport.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 // The Wii U OSTime epoch is at 2000, so we must map it to 1970 for gettime
-#define WIIU_OSTIME_EPOCH_YEAR         (2000)
+#define WIIU_OSTIME_EPOCH_YEAR (2000)
 // The Wii U FSTime epoch is at 1980, so we must map it to 1970 for gettime
-#define WIIU_FSTIME_EPOCH_YEAR         (1980)
+#define WIIU_FSTIME_EPOCH_YEAR (1980)
 
 #define EPOCH_YEAR                     (1970)
 #define EPOCH_YEARS_SINCE_LEAP         2
 #define EPOCH_YEARS_SINCE_CENTURY      70
 #define EPOCH_YEARS_SINCE_LEAP_CENTURY 370
 
-#define EPOCH_DIFF_YEARS(year)         (year - EPOCH_YEAR)
-#define EPOCH_DIFF_DAYS(year)                                        \
-   ((EPOCH_DIFF_YEARS(year) * 365) +                                 \
-    (EPOCH_DIFF_YEARS(year) - 1 + EPOCH_YEARS_SINCE_LEAP) / 4 -      \
-    (EPOCH_DIFF_YEARS(year) - 1 + EPOCH_YEARS_SINCE_CENTURY) / 100 + \
-    (EPOCH_DIFF_YEARS(year) - 1 + EPOCH_YEARS_SINCE_LEAP_CENTURY) / 400)
+#define EPOCH_DIFF_YEARS(year) (year - EPOCH_YEAR)
+#define EPOCH_DIFF_DAYS(year) \
+	((EPOCH_DIFF_YEARS(year) * 365) + (EPOCH_DIFF_YEARS(year) - 1 + EPOCH_YEARS_SINCE_LEAP) / 4 \
+		- (EPOCH_DIFF_YEARS(year) - 1 + EPOCH_YEARS_SINCE_CENTURY) / 100 \
+		+ (EPOCH_DIFF_YEARS(year) - 1 + EPOCH_YEARS_SINCE_LEAP_CENTURY) / 400)
 #define EPOCH_DIFF_SECS(year) (60ull * 60ull * 24ull * (uint64_t)EPOCH_DIFF_DAYS(year))
 
 #define FSA_DIRITER_MAGIC 0x77696975
@@ -132,23 +131,21 @@ struct FSADOTDir {
 	OSMutex mutex;
 };
 
-#define COMP_MAX      50
+#define COMP_MAX 50
 
 #define ispathsep(ch) ((ch) == '/' || (ch) == '\\')
 #define iseos(ch)     ((ch) == '\0')
 #define ispathend(ch) (ispathsep(ch) || iseos(ch))
 
-static inline FSMode
-FSADOT_translate_permission_mode(mode_t mode)
+static inline FSMode FSADOT_translate_permission_mode(mode_t mode)
 {
    // Convert normal Unix octal permission bits into CafeOS hexadecimal permission bits
-   return (FSMode)(((mode & S_IRWXU) << 2) | ((mode & S_IRWXG) << 1) | (mode & S_IRWXO));
+	return (FSMode)(((mode & S_IRWXU) << 2) | ((mode & S_IRWXG) << 1) | (mode & S_IRWXO));
 }
 
-static inline time_t
-FSADOT_translate_time(FSTime timeValue)
+static inline time_t FSADOT_translate_time(FSTime timeValue)
 {
-   return (timeValue / 1000000) + EPOCH_DIFF_SECS(WIIU_FSTIME_EPOCH_YEAR);
+	return (timeValue / 1000000) + EPOCH_DIFF_SECS(WIIU_FSTIME_EPOCH_YEAR);
 }
 
 // https://gist.github.com/starwing/2761647
@@ -157,7 +154,8 @@ static char *FSADOT_normpath(char *out, const char *in)
 	char *pos[COMP_MAX], **top = pos, *head = out;
 	int isabs = ispathsep(*in);
 
-	if (isabs) *out++ = '/';
+	if (isabs)
+		*out++ = '/';
 	*top++ = out;
 
 	while (!iseos(*in)) {
@@ -243,7 +241,7 @@ static char *FSADOT_fixpath(struct _reent *r, const char *path)
 	}
 
 	int maxPathLength = PATH_MAX;
-	fixedPath         = memalign(0x40, maxPathLength);
+	fixedPath = memalign(0x40, maxPathLength);
 	if (!fixedPath) {
 		WUT_DEBUG_REPORT("FSADOT_fixpath: failed to allocate memory for fixedPath\n");
 		r->_errno = ENOMEM;
@@ -317,7 +315,8 @@ static mode_t FSADOT_translate_stat_mode(FSStat *fsStat)
 	}
 
 	// Convert normal CafeOS hexadecimal permission bits into Unix octal permission bits
-	mode_t permissionMode = (((fsStat->mode >> 2) & S_IRWXU) | ((fsStat->mode >> 1) & S_IRWXG) | (fsStat->mode & S_IRWXO));
+	mode_t permissionMode
+		= (((fsStat->mode >> 2) & S_IRWXU) | ((fsStat->mode >> 1) & S_IRWXG) | (fsStat->mode & S_IRWXO));
 
 	return retMode | permissionMode;
 }
@@ -325,91 +324,91 @@ static mode_t FSADOT_translate_stat_mode(FSStat *fsStat)
 static void FSADOT_translate_stat(FSAClientHandle clientHandle, FSStat *fsStat, ino_t ino, struct stat *posStat)
 {
 	memset(posStat, 0, sizeof(struct stat));
-	posStat->st_dev     = (dev_t)clientHandle;
-	posStat->st_ino     = ino;
-	posStat->st_mode    = FSADOT_translate_stat_mode(fsStat);
-	posStat->st_nlink   = 1;
-	posStat->st_uid     = fsStat->owner;
-	posStat->st_gid     = fsStat->group;
-	posStat->st_rdev    = posStat->st_dev;
-	posStat->st_size    = fsStat->size;
-	posStat->st_atime   = FSADOT_translate_time(fsStat->modified);
-	posStat->st_ctime   = FSADOT_translate_time(fsStat->created);
-	posStat->st_mtime   = FSADOT_translate_time(fsStat->modified);
+	posStat->st_dev = (dev_t)clientHandle;
+	posStat->st_ino = ino;
+	posStat->st_mode = FSADOT_translate_stat_mode(fsStat);
+	posStat->st_nlink = 1;
+	posStat->st_uid = fsStat->owner;
+	posStat->st_gid = fsStat->group;
+	posStat->st_rdev = posStat->st_dev;
+	posStat->st_size = fsStat->size;
+	posStat->st_atime = FSADOT_translate_time(fsStat->modified);
+	posStat->st_ctime = FSADOT_translate_time(fsStat->created);
+	posStat->st_mtime = FSADOT_translate_time(fsStat->modified);
 	posStat->st_blksize = 512;
-	posStat->st_blocks  = (posStat->st_size + posStat->st_blksize - 1) / posStat->st_size;
+	posStat->st_blocks = (posStat->st_size + posStat->st_blksize - 1) / posStat->st_size;
 }
 
 static int FSADOT_translate_error(FSError error)
 {
 	switch (error) {
-		case FS_ERROR_END_OF_DIR:
-		case FS_ERROR_END_OF_FILE:
-			return ENOENT;
-		case FS_ERROR_ALREADY_EXISTS:
-			return EEXIST;
-		case FS_ERROR_MEDIA_ERROR:
-			return EIO;
-		case FS_ERROR_NOT_FOUND:
-			return ENOENT;
-		case FS_ERROR_PERMISSION_ERROR:
-			return EPERM;
-		case FS_ERROR_STORAGE_FULL:
-			return ENOSPC;
-		case FS_ERROR_BUSY:
-			return EBUSY;
-		case FS_ERROR_CANCELLED:
-			return ECANCELED;
-		case FS_ERROR_FILE_TOO_BIG:
-			return EFBIG;
-		case FS_ERROR_INVALID_PATH:
-			return ENAMETOOLONG;
-		case FS_ERROR_NOT_DIR:
-			return ENOTDIR;
-		case FS_ERROR_NOT_FILE:
-			return EISDIR;
-		case FS_ERROR_OUT_OF_RANGE:
-			return EINVAL;
-		case FS_ERROR_UNSUPPORTED_COMMAND:
-			return ENOTSUP;
-		case FS_ERROR_WRITE_PROTECTED:
-			return EROFS;
-		case FS_ERROR_NOT_INIT:
-			return ENODEV;
-		case FS_ERROR_MAX_MOUNT_POINTS:
-		case FS_ERROR_MAX_VOLUMES:
-		case FS_ERROR_MAX_CLIENTS:
-		case FS_ERROR_MAX_FILES:
-		case FS_ERROR_MAX_DIRS:
-			return EMFILE;
-		case FS_ERROR_ALREADY_OPEN:
-			return EBUSY;
-		case FS_ERROR_NOT_EMPTY:
-			return ENOTEMPTY;
-		case FS_ERROR_ACCESS_ERROR:
-			return EACCES;
-		case FS_ERROR_DATA_CORRUPTED:
-			return EILSEQ;
-		case FS_ERROR_JOURNAL_FULL:
-			return EBUSY;
-		case FS_ERROR_UNAVAILABLE_COMMAND:
-			return EBUSY;
-		case FS_ERROR_INVALID_PARAM:
-			return EBUSY;
-		case FS_ERROR_INVALID_BUFFER:
-		case FS_ERROR_INVALID_ALIGNMENT:
-		case FS_ERROR_INVALID_CLIENTHANDLE:
-		case FS_ERROR_INVALID_FILEHANDLE:
-		case FS_ERROR_INVALID_DIRHANDLE:
-			return EINVAL;
-		case FS_ERROR_OUT_OF_RESOURCES:
-			return ENOMEM;
-		case FS_ERROR_MEDIA_NOT_READY:
-			return EIO;
-		case FS_ERROR_INVALID_MEDIA:
-			return EIO;
-		default:
-			return EIO;
+	case FS_ERROR_END_OF_DIR:
+	case FS_ERROR_END_OF_FILE:
+		return ENOENT;
+	case FS_ERROR_ALREADY_EXISTS:
+		return EEXIST;
+	case FS_ERROR_MEDIA_ERROR:
+		return EIO;
+	case FS_ERROR_NOT_FOUND:
+		return ENOENT;
+	case FS_ERROR_PERMISSION_ERROR:
+		return EPERM;
+	case FS_ERROR_STORAGE_FULL:
+		return ENOSPC;
+	case FS_ERROR_BUSY:
+		return EBUSY;
+	case FS_ERROR_CANCELLED:
+		return ECANCELED;
+	case FS_ERROR_FILE_TOO_BIG:
+		return EFBIG;
+	case FS_ERROR_INVALID_PATH:
+		return ENAMETOOLONG;
+	case FS_ERROR_NOT_DIR:
+		return ENOTDIR;
+	case FS_ERROR_NOT_FILE:
+		return EISDIR;
+	case FS_ERROR_OUT_OF_RANGE:
+		return EINVAL;
+	case FS_ERROR_UNSUPPORTED_COMMAND:
+		return ENOTSUP;
+	case FS_ERROR_WRITE_PROTECTED:
+		return EROFS;
+	case FS_ERROR_NOT_INIT:
+		return ENODEV;
+	case FS_ERROR_MAX_MOUNT_POINTS:
+	case FS_ERROR_MAX_VOLUMES:
+	case FS_ERROR_MAX_CLIENTS:
+	case FS_ERROR_MAX_FILES:
+	case FS_ERROR_MAX_DIRS:
+		return EMFILE;
+	case FS_ERROR_ALREADY_OPEN:
+		return EBUSY;
+	case FS_ERROR_NOT_EMPTY:
+		return ENOTEMPTY;
+	case FS_ERROR_ACCESS_ERROR:
+		return EACCES;
+	case FS_ERROR_DATA_CORRUPTED:
+		return EILSEQ;
+	case FS_ERROR_JOURNAL_FULL:
+		return EBUSY;
+	case FS_ERROR_UNAVAILABLE_COMMAND:
+		return EBUSY;
+	case FS_ERROR_INVALID_PARAM:
+		return EBUSY;
+	case FS_ERROR_INVALID_BUFFER:
+	case FS_ERROR_INVALID_ALIGNMENT:
+	case FS_ERROR_INVALID_CLIENTHANDLE:
+	case FS_ERROR_INVALID_FILEHANDLE:
+	case FS_ERROR_INVALID_DIRHANDLE:
+		return EINVAL;
+	case FS_ERROR_OUT_OF_RESOURCES:
+		return ENOMEM;
+	case FS_ERROR_MEDIA_NOT_READY:
+		return EIO;
+	case FS_ERROR_INVALID_MEDIA:
+		return EIO;
+	default:
+		return EIO;
 	}
 }
 
@@ -430,9 +429,10 @@ static int FSADOT_chdir(struct _reent *r, const char *path)
 	}
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
-	status     = FSAChangeDir(deviceData->clientHandle, fixedPath);
+	status = FSAChangeDir(deviceData->clientHandle, fixedPath);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSAChangeDir(0x%08X, %s) failed: %s\n", deviceData->clientHandle, fixedPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSAChangeDir(0x%08X, %s) failed: %s\n", deviceData->clientHandle, fixedPath,
+			FSAGetStatusStr(status));
 		free(fixedPath);
 		r->_errno = FSADOT_translate_error(status);
 		return -1;
@@ -473,12 +473,12 @@ static int FSADOT_chmod(struct _reent *r, const char *path, mode_t mode)
 
 	FSMode translatedMode = FSADOT_translate_permission_mode(mode);
 
-	deviceData            = (struct FSADOTDeviceData *)r->deviceData;
+	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
-	status                = FSAChangeMode(deviceData->clientHandle, fixedPath, translatedMode);
+	status = FSAChangeMode(deviceData->clientHandle, fixedPath, translatedMode);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSAChangeMode(0x%08X, %s, 0x%X) failed: %s\n",
-							  deviceData->clientHandle, fixedPath, translatedMode, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSAChangeMode(0x%08X, %s, 0x%X) failed: %s\n", deviceData->clientHandle, fixedPath,
+			translatedMode, FSAGetStatusStr(status));
 		free(fixedPath);
 		r->_errno = FSADOT_translate_error(status);
 		return -1;
@@ -499,7 +499,7 @@ static int FSADOT_close(struct _reent *r, void *fd)
 		return -1;
 	}
 
-	file       = (struct FSADOTFile *)fd;
+	file = (struct FSADOTFile *)fd;
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
@@ -507,8 +507,8 @@ static int FSADOT_close(struct _reent *r, void *fd)
 
 	status = FSACloseFile(deviceData->clientHandle, file->fd);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSACloseFile(0x%08X, 0x%08X) (%s) failed: %s\n",
-							  deviceData->clientHandle, file->fd, file->fullPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSACloseFile(0x%08X, 0x%08X) (%s) failed: %s\n", deviceData->clientHandle, file->fd,
+			file->fullPath, FSAGetStatusStr(status));
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&file->mutex);
 		return -1;
@@ -530,7 +530,7 @@ int FSADOT_dirclose(struct _reent *r, DIR_ITER *dirState)
 		return -1;
 	}
 
-	dir        = (struct FSADOTDir *)(dirState->dirStruct);
+	dir = (struct FSADOTDir *)(dirState->dirStruct);
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
@@ -538,8 +538,8 @@ int FSADOT_dirclose(struct _reent *r, DIR_ITER *dirState)
 
 	status = FSACloseDir(deviceData->clientHandle, dir->fd);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSACloseDir(0x%08X, 0x%08X) (%s) failed: %s\n",
-							  deviceData->clientHandle, dir->fd, dir->fullPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSACloseDir(0x%08X, 0x%08X) (%s) failed: %s\n", deviceData->clientHandle, dir->fd,
+			dir->fullPath, FSAGetStatusStr(status));
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&dir->mutex);
 		return -1;
@@ -561,7 +561,7 @@ static int FSADOT_dirnext(struct _reent *r, DIR_ITER *dirState, char *filename, 
 	}
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
-	dir        = (struct FSADOTDir *)(dirState->dirStruct);
+	dir = (struct FSADOTDir *)(dirState->dirStruct);
 
 	OSLockMutex(&dir->mutex);
 	memset(&dir->entry_data, 0, sizeof(dir->entry_data));
@@ -569,8 +569,8 @@ static int FSADOT_dirnext(struct _reent *r, DIR_ITER *dirState, char *filename, 
 	status = FSAReadDir(deviceData->clientHandle, dir->fd, &dir->entry_data);
 	if (status < 0) {
 		if (status != FS_ERROR_END_OF_DIR) {
-			WUT_DEBUG_REPORT("FSAReadDir(0x%08X, 0x%08X, %p) (%s) failed: %s\n",
-								  deviceData->clientHandle, dir->fd, &dir->entry_data, dir->fullPath, FSAGetStatusStr(status));
+			WUT_DEBUG_REPORT("FSAReadDir(0x%08X, 0x%08X, %p) (%s) failed: %s\n", deviceData->clientHandle,
+				dir->fd, &dir->entry_data, dir->fullPath, FSAGetStatusStr(status));
 		}
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&dir->mutex);
@@ -579,7 +579,7 @@ static int FSADOT_dirnext(struct _reent *r, DIR_ITER *dirState, char *filename, 
 
 	ino_t ino;
 	size_t fullLen = strlen(dir->fullPath) + 1 + strlen(dir->entry_data.name) + 1;
-	char *fullStr  = memalign(0x40, fullLen);
+	char *fullStr = memalign(0x40, fullLen);
 	if (fullStr) {
 		if (snprintf(fullStr, fullLen, "%s/%s", dir->fullPath, dir->entry_data.name) >= (int)fullLen) {
 			WUT_DEBUG_REPORT("FSADOT_dirnext: snprintf fullStr result was truncated\n");
@@ -617,7 +617,7 @@ static DIR_ITER *FSADOT_diropen(struct _reent *r, DIR_ITER *dirState, const char
 	if (!fixedPath) {
 		return NULL;
 	}
-	dir        = (struct FSADOTDir *)(dirState->dirStruct);
+	dir = (struct FSADOTDir *)(dirState->dirStruct);
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
 	// Remove trailing '/'
@@ -638,15 +638,15 @@ static DIR_ITER *FSADOT_diropen(struct _reent *r, DIR_ITER *dirState, const char
 
 	status = FSAOpenDir(deviceData->clientHandle, dir->fullPath, &fd);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSAOpenDir(0x%08X, %s, %p) failed: %s\n",
-							  deviceData->clientHandle, dir->fullPath, &fd, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSAOpenDir(0x%08X, %s, %p) failed: %s\n", deviceData->clientHandle, dir->fullPath,
+			&fd, FSAGetStatusStr(status));
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&dir->mutex);
 		return NULL;
 	}
 
 	dir->magic = FSA_DIRITER_MAGIC;
-	dir->fd    = fd;
+	dir->fd = fd;
 	memset(&dir->entry_data, 0, sizeof(dir->entry_data));
 	OSUnlockMutex(&dir->mutex);
 	return dirState;
@@ -663,15 +663,15 @@ static int FSADOT_dirreset(struct _reent *r, DIR_ITER *dirState)
 		return -1;
 	}
 
-	dir        = (struct FSADOTDir *)(dirState->dirStruct);
+	dir = (struct FSADOTDir *)(dirState->dirStruct);
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
 	OSLockMutex(&dir->mutex);
 
 	status = FSARewindDir(deviceData->clientHandle, dir->fd);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSARewindDir(0x%08X, 0x%08X) (%s) failed: %s\n",
-							  deviceData->clientHandle, dir->fd, dir->fullPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSARewindDir(0x%08X, 0x%08X) (%s) failed: %s\n", deviceData->clientHandle, dir->fd,
+			dir->fullPath, FSAGetStatusStr(status));
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&dir->mutex);
 		return -1;
@@ -694,16 +694,15 @@ static int FSADOT_fstat(struct _reent *r, void *fd, struct stat *st)
 		return -1;
 	}
 
-	file       = (struct FSADOTFile *)fd;
+	file = (struct FSADOTFile *)fd;
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
 	OSLockMutex(&file->mutex);
 
 	status = FSAGetStatFile(deviceData->clientHandle, file->fd, &fsStat);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSAGetStatFile(0x%08X, 0x%08X, %p) (%s) failed: %s\n",
-							  deviceData->clientHandle, file->fd, &fsStat,
-							  file->fullPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSAGetStatFile(0x%08X, 0x%08X, %p) (%s) failed: %s\n", deviceData->clientHandle,
+			file->fd, &fsStat, file->fullPath, FSAGetStatusStr(status));
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&file->mutex);
 		return -1;
@@ -728,7 +727,7 @@ static int FSADOT_fsync(struct _reent *r, void *fd)
 		return -1;
 	}
 
-	file       = (struct FSADOTFile *)fd;
+	file = (struct FSADOTFile *)fd;
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
@@ -736,8 +735,8 @@ static int FSADOT_fsync(struct _reent *r, void *fd)
 
 	status = FSAFlushFile(deviceData->clientHandle, file->fd);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSAFlushFile(0x%08X, 0x%08X) (%s) failed: %s\n",
-							  deviceData->clientHandle, file->fd, file->fullPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSAFlushFile(0x%08X, 0x%08X) (%s) failed: %s\n", deviceData->clientHandle, file->fd,
+			file->fullPath, FSAGetStatusStr(status));
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&file->mutex);
 		return -1;
@@ -765,14 +764,14 @@ static int FSADOT_mkdir(struct _reent *r, const char *path, int mode)
 		return -1;
 	}
 
-	deviceData            = (struct FSADOTDeviceData *)r->deviceData;
+	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
 	FSMode translatedMode = FSADOT_translate_permission_mode(mode);
 
-	status                = FSAMakeDir(deviceData->clientHandle, fixedPath, translatedMode);
+	status = FSAMakeDir(deviceData->clientHandle, fixedPath, translatedMode);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSAMakeDir(0x%08X, %s, 0x%X) failed: %s\n",
-							  deviceData->clientHandle, fixedPath, translatedMode, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSAMakeDir(0x%08X, %s, 0x%X) failed: %s\n", deviceData->clientHandle, fixedPath,
+			translatedMode, FSAGetStatusStr(status));
 		free(fixedPath);
 		r->_errno = FSADOT_translate_error(status);
 		return -1;
@@ -782,9 +781,10 @@ static int FSADOT_mkdir(struct _reent *r, const char *path, int mode)
 	return 0;
 }
 
-// Extended "magic" value that allows opening files with FS_OPEN_FLAG_UNENCRYPTED in underlying FSOpenFileEx() call similar to O_DIRECTORY
+// Extended "magic" value that allows opening files with FS_OPEN_FLAG_UNENCRYPTED in underlying FSOpenFileEx() call
+// similar to O_DIRECTORY
 #ifndef O_UNENCRYPTED
-#define O_UNENCRYPTED 0x4000000
+# define O_UNENCRYPTED 0x4000000
 #endif
 
 static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int flags, int mode)
@@ -801,9 +801,9 @@ static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int
 	}
 
 	bool createFileIfNotFound = false;
-	bool failIfFileNotFound   = false;
+	bool failIfFileNotFound = false;
 	// Map flags to open modes
-	int commonFlagMask        = O_CREAT | O_TRUNC | O_APPEND;
+	int commonFlagMask = O_CREAT | O_TRUNC | O_APPEND;
 	if (((flags & O_ACCMODE) == O_RDONLY) && !(flags & commonFlagMask)) {
 		fsMode = "r";
 	} else if (((flags & O_ACCMODE) == O_RDWR) && !(flags & commonFlagMask)) {
@@ -812,10 +812,12 @@ static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int
 		fsMode = "w";
 	} else if (((flags & O_ACCMODE) == O_RDWR) && ((flags & commonFlagMask) == (O_CREAT | O_TRUNC))) {
 		fsMode = "w+";
-	} else if (((flags & O_ACCMODE) == O_WRONLY) && ((flags & commonFlagMask) == O_CREAT) && (flags & O_EXCL) == O_EXCL) {
+	} else if (((flags & O_ACCMODE) == O_WRONLY) && ((flags & commonFlagMask) == O_CREAT)
+		   && (flags & O_EXCL) == O_EXCL) {
 		// if O_EXCL is set, we don't need O_TRUNC
 		fsMode = "w";
-	} else if (((flags & O_ACCMODE) == O_RDWR) && ((flags & commonFlagMask) == O_CREAT) && (flags & O_EXCL) == O_EXCL) {
+	} else if (((flags & O_ACCMODE) == O_RDWR) && ((flags & commonFlagMask) == O_CREAT)
+		   && (flags & O_EXCL) == O_EXCL) {
 		// if O_EXCL is set, we don't need O_TRUNC
 		fsMode = "w+";
 	} else if (((flags & O_ACCMODE) == O_WRONLY) && ((flags & commonFlagMask) == (O_CREAT | O_APPEND))) {
@@ -827,19 +829,19 @@ static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int
 		createFileIfNotFound = true;
 		// It's not possible to open a file with write only mode which doesn't truncate the file
 		// Technically we could read from the file, but our read implementation is blocking this.
-		fsMode               = "r+";
+		fsMode = "r+";
 	} else if (((flags & O_ACCMODE) == O_RDWR) && ((flags & commonFlagMask) == (O_CREAT))) {
 		// Cafe OS doesn't have a matching mode for this, so we have to be creative and create the file.
 		createFileIfNotFound = true;
-		fsMode               = "r+";
+		fsMode = "r+";
 	} else if (((flags & O_ACCMODE) == O_WRONLY) && ((flags & commonFlagMask) == (O_APPEND))) {
 		// Cafe OS doesn't have a matching mode for this, so we have to check if the file exists.
 		failIfFileNotFound = true;
-		fsMode             = "a";
+		fsMode = "a";
 	} else if (((flags & O_ACCMODE) == O_WRONLY) && ((flags & commonFlagMask) == (O_TRUNC))) {
 		// As above
 		failIfFileNotFound = true;
-		fsMode             = "w";
+		fsMode = "w";
 	} else {
 		r->_errno = EINVAL;
 		return -1;
@@ -851,8 +853,7 @@ static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int
 		return -1;
 	}
 
-
-	file       = (struct FSADOTFile *)fileStruct;
+	file = (struct FSADOTFile *)fileStruct;
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
 	if (snprintf(file->fullPath, sizeof(file->fullPath), "%s", fixedPath) >= (int)sizeof(file->fullPath)) {
@@ -862,8 +863,8 @@ static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int
 
 	// Prepare flags
 	FSOpenFileFlags openFlags = (flags & O_UNENCRYPTED) ? FS_OPEN_FLAG_UNENCRYPTED : FS_OPEN_FLAG_NONE;
-	FSMode translatedMode     = FSADOT_translate_permission_mode(mode);
-	uint32_t preAllocSize     = 0;
+	FSMode translatedMode = FSADOT_translate_permission_mode(mode);
+	uint32_t preAllocSize = 0;
 
 	// Init mutex and lock
 	OSInitMutexEx(&file->mutex, file->fullPath);
@@ -876,17 +877,19 @@ static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int
 		if (status == FS_ERROR_NOT_FOUND) {
 			if (createFileIfNotFound) { // Create new file if needed
 				status = FSAOpenFileEx(deviceData->clientHandle, file->fullPath, "w", translatedMode,
-											  openFlags, preAllocSize, &fd);
+					openFlags, preAllocSize, &fd);
 				if (status == FS_ERROR_OK) {
 					if (FSACloseFile(deviceData->clientHandle, fd) != FS_ERROR_OK) {
 						WUT_DEBUG_REPORT("FSACloseFile(0x%08X, 0x%08X) (%s) failed: %s\n",
-											  deviceData->clientHandle, fd, file->fullPath, FSAGetStatusStr(status));
+							deviceData->clientHandle, fd, file->fullPath,
+							FSAGetStatusStr(status));
 					}
 					fd = -1;
 				} else {
-					WUT_DEBUG_REPORT("FSAOpenFileEx(0x%08X, %s, %s, 0x%X, 0x%08X, 0x%08X, %p) failed: %s\n",
-										  deviceData->clientHandle, file->fullPath, "w", translatedMode, openFlags, preAllocSize, &fd,
-										  FSAGetStatusStr(status));
+					WUT_DEBUG_REPORT(
+						"FSAOpenFileEx(0x%08X, %s, %s, 0x%X, 0x%08X, 0x%08X, %p) failed: %s\n",
+						deviceData->clientHandle, file->fullPath, "w", translatedMode,
+						openFlags, preAllocSize, &fd, FSAGetStatusStr(status));
 					r->_errno = FSADOT_translate_error(status);
 					OSUnlockMutex(&file->mutex);
 					return -1;
@@ -906,20 +909,21 @@ static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int
 		}
 	}
 
-	status = FSAOpenFileEx(deviceData->clientHandle, file->fullPath, fsMode, translatedMode, openFlags, preAllocSize, &fd);
+	status = FSAOpenFileEx(
+		deviceData->clientHandle, file->fullPath, fsMode, translatedMode, openFlags, preAllocSize, &fd);
 	if (status < 0) {
 		if (status != FS_ERROR_NOT_FOUND) {
 			WUT_DEBUG_REPORT("FSAOpenFileEx(0x%08X, %s, %s, 0x%X, 0x%08X, 0x%08X, %p) failed: %s\n",
-								  deviceData->clientHandle, file->fullPath, fsMode, translatedMode, openFlags, preAllocSize, &fd,
-								  FSAGetStatusStr(status));
+				deviceData->clientHandle, file->fullPath, fsMode, translatedMode, openFlags,
+				preAllocSize, &fd, FSAGetStatusStr(status));
 		}
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&file->mutex);
 		return -1;
 	}
 
-	file->fd     = fd;
-	file->flags  = (flags & (O_ACCMODE | O_APPEND | O_SYNC));
+	file->fd = fd;
+	file->flags = (flags & (O_ACCMODE | O_APPEND | O_SYNC));
 	// Is always 0, even if O_APPEND is set.
 	file->offset = 0;
 
@@ -928,12 +932,12 @@ static int FSADOT_open(struct _reent *r, void *fileStruct, const char *path, int
 		status = FSAGetStatFile(deviceData->clientHandle, fd, &stat);
 		if (status < 0) {
 			WUT_DEBUG_REPORT("FSAGetStatFile(0x%08X, 0x%08X, %p) (%s) failed: %s\n",
-								  deviceData->clientHandle, fd, &stat, file->fullPath, FSAGetStatusStr(status));
+				deviceData->clientHandle, fd, &stat, file->fullPath, FSAGetStatusStr(status));
 
 			r->_errno = FSADOT_translate_error(status);
 			if (FSACloseFile(deviceData->clientHandle, fd) < 0) {
 				WUT_DEBUG_REPORT("FSACloseFile(0x%08X, 0x%08X) (%s) failed: %s\n",
-									  deviceData->clientHandle, fd, file->fullPath, FSAGetStatusStr(status));
+					deviceData->clientHandle, fd, file->fullPath, FSAGetStatusStr(status));
 			}
 			OSUnlockMutex(&file->mutex);
 			return -1;
@@ -973,14 +977,14 @@ static ssize_t FSADOT_read(struct _reent *r, void *fd, char *ptr, size_t len)
 		// only use input buffer if cache-aligned and read size is a multiple of cache line size
 		// otherwise read into alignedBuffer
 		uint8_t *tmp = (uint8_t *)ptr;
-		size_t size  = len - bytesRead;
+		size_t size = len - bytesRead;
 
 		if (size < 0x40) {
 			// read partial cache-line back-end
 			tmp = alignedBuffer;
 		} else if ((uintptr_t)ptr & 0x3F) {
 			// read partial cache-line front-end
-			tmp  = alignedBuffer;
+			tmp = alignedBuffer;
 			size = MIN(size, 0x40 - ((uintptr_t)ptr & 0x3F));
 		} else {
 			// read whole cache lines
@@ -996,7 +1000,7 @@ static ssize_t FSADOT_read(struct _reent *r, void *fd, char *ptr, size_t len)
 
 		if (status < 0) {
 			WUT_DEBUG_REPORT("FSAReadFile(0x%08X, %p, 1, 0x%08X, 0x%08X, 0) (%s) failed: %s\n",
-								  deviceData->clientHandle, tmp, size, file->fd, file->fullPath, FSAGetStatusStr(status));
+				deviceData->clientHandle, tmp, size, file->fd, file->fullPath, FSAGetStatusStr(status));
 
 			if (bytesRead != 0) {
 				OSUnlockMutex(&file->mutex);
@@ -1052,10 +1056,10 @@ static int FSADOT_rename(struct _reent *r, const char *oldName, const char *newN
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
-	status     = FSARename(deviceData->clientHandle, fixedOldPath, fixedNewPath);
+	status = FSARename(deviceData->clientHandle, fixedOldPath, fixedNewPath);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSARename(0x%08X, %s, %s) failed: %s\n",
-							  deviceData->clientHandle, fixedOldPath, fixedNewPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSARename(0x%08X, %s, %s) failed: %s\n", deviceData->clientHandle, fixedOldPath,
+			fixedNewPath, FSAGetStatusStr(status));
 		free(fixedOldPath);
 		free(fixedNewPath);
 		r->_errno = FSADOT_translate_error(status);
@@ -1085,10 +1089,10 @@ static int FSADOT_rmdir(struct _reent *r, const char *name)
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
-	status     = FSARemove(deviceData->clientHandle, fixedPath);
+	status = FSARemove(deviceData->clientHandle, fixedPath);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSARemove(0x%08X, %s) failed: %s\n",
-							  deviceData->clientHandle, fixedPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSARemove(0x%08X, %s) failed: %s\n", deviceData->clientHandle, fixedPath,
+			FSAGetStatusStr(status));
 		free(fixedPath);
 		r->_errno = FSADOT_translate_error(status);
 		return -1;
@@ -1112,7 +1116,7 @@ static off_t FSADOT_seek(struct _reent *r, void *fd, off_t pos, int whence)
 		return -1;
 	}
 
-	file       = (struct FSADOTFile *)fd;
+	file = (struct FSADOTFile *)fd;
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
@@ -1120,31 +1124,31 @@ static off_t FSADOT_seek(struct _reent *r, void *fd, off_t pos, int whence)
 
 	// Find the offset to see from
 	switch (whence) {
-		case SEEK_SET: { // Set absolute position; start offset is 0
-			offset = 0;
-			break;
-		}
-		case SEEK_CUR: { // Set position relative to the current position
-			offset = file->offset;
-			break;
-		}
-		case SEEK_END: { // Set position relative to the end of the file
-			status = FSAGetStatFile(deviceData->clientHandle, file->fd, &fsStat);
-			if (status < 0) {
-				WUT_DEBUG_REPORT("FSAGetStatFile(0x%08X, 0x%08X, %p) (%s) failed: %s\n",
-									  deviceData->clientHandle, file->fd, &fsStat, file->fullPath, FSAGetStatusStr(status));
-				r->_errno = FSADOT_translate_error(status);
-				OSUnlockMutex(&file->mutex);
-				return -1;
-			}
-			offset = fsStat.size;
-			break;
-		}
-		default: { // An invalid option was provided
-			r->_errno = EINVAL;
+	case SEEK_SET: { // Set absolute position; start offset is 0
+		offset = 0;
+		break;
+	}
+	case SEEK_CUR: { // Set position relative to the current position
+		offset = file->offset;
+		break;
+	}
+	case SEEK_END: { // Set position relative to the end of the file
+		status = FSAGetStatFile(deviceData->clientHandle, file->fd, &fsStat);
+		if (status < 0) {
+			WUT_DEBUG_REPORT("FSAGetStatFile(0x%08X, 0x%08X, %p) (%s) failed: %s\n",
+				deviceData->clientHandle, file->fd, &fsStat, file->fullPath, FSAGetStatusStr(status));
+			r->_errno = FSADOT_translate_error(status);
 			OSUnlockMutex(&file->mutex);
 			return -1;
 		}
+		offset = fsStat.size;
+		break;
+	}
+	default: { // An invalid option was provided
+		r->_errno = EINVAL;
+		OSUnlockMutex(&file->mutex);
+		return -1;
+	}
 	}
 
 	if (pos < 0 && (off_t)offset < -pos) {
@@ -1165,14 +1169,14 @@ static off_t FSADOT_seek(struct _reent *r, void *fd, off_t pos, int whence)
 	}
 
 	uint32_t old_pos = file->offset;
-	file->offset     = offset + pos;
+	file->offset = offset + pos;
 
-	status           = FSASetPosFile(deviceData->clientHandle, file->fd, file->offset);
+	status = FSASetPosFile(deviceData->clientHandle, file->fd, file->offset);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSASetPosFile(0x%08X, 0x%08X, 0x%08X) (%s) failed: %s\n",
-							  deviceData->clientHandle, file->fd, file->offset, file->fullPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSASetPosFile(0x%08X, 0x%08X, 0x%08X) (%s) failed: %s\n", deviceData->clientHandle,
+			file->fd, file->offset, file->fullPath, FSAGetStatusStr(status));
 		file->offset = old_pos;
-		r->_errno    = FSADOT_translate_error(status);
+		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&file->mutex);
 		return -1;
 	}
@@ -1200,11 +1204,11 @@ static int FSADOT_stat(struct _reent *r, const char *path, struct stat *st)
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
-	status     = FSAGetStat(deviceData->clientHandle, fixedPath, &fsStat);
+	status = FSAGetStat(deviceData->clientHandle, fixedPath, &fsStat);
 	if (status < 0) {
 		if (status != FS_ERROR_NOT_FOUND) {
-			WUT_DEBUG_REPORT("FSAGetStat(0x%08X, %s, %p) failed: %s\n",
-								  deviceData->clientHandle, fixedPath, &fsStat, FSAGetStatusStr(status));
+			WUT_DEBUG_REPORT("FSAGetStat(0x%08X, %s, %p) failed: %s\n", deviceData->clientHandle, fixedPath,
+				&fsStat, FSAGetStatusStr(status));
 		}
 		free(fixedPath);
 		r->_errno = FSADOT_translate_error(status);
@@ -1240,8 +1244,8 @@ static int FSADOT_statvfs(struct _reent *r, const char *path, struct statvfs *bu
 
 	status = FSAGetFreeSpaceSize(deviceData->clientHandle, fixedPath, &freeSpace);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSAGetFreeSpaceSize(0x%08X, %s, %p) failed: %s\n",
-							  deviceData->clientHandle, fixedPath, &freeSpace, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSAGetFreeSpaceSize(0x%08X, %s, %p) failed: %s\n", deviceData->clientHandle,
+			fixedPath, &freeSpace, FSAGetStatusStr(status));
 		free(fixedPath);
 		r->_errno = FSADOT_translate_error(status);
 		return -1;
@@ -1249,7 +1253,7 @@ static int FSADOT_statvfs(struct _reent *r, const char *path, struct statvfs *bu
 	free(fixedPath);
 
 	// File system block size
-	buf->f_bsize  = deviceData->deviceSectorSize;
+	buf->f_bsize = deviceData->deviceSectorSize;
 	// Fundamental file system block size
 	buf->f_frsize = deviceData->deviceSectorSize;
 	// Total number of blocks on file system in units of f_frsize
@@ -1257,15 +1261,15 @@ static int FSADOT_statvfs(struct _reent *r, const char *path, struct statvfs *bu
 	// Free blocks available for all and for non-privileged processes
 	buf->f_bfree = buf->f_bavail = (uint32_t)(freeSpace / buf->f_frsize);
 	// Number of inodes at this point in time
-	buf->f_files                 = 0xFFFFFFFF;
+	buf->f_files = 0xFFFFFFFF;
 	// Free inodes available for all and for non-privileged processes
-	buf->f_ffree                 = 0xFFFFFFFF;
+	buf->f_ffree = 0xFFFFFFFF;
 	// File system id
-	buf->f_fsid                  = (unsigned long)deviceData->clientHandle;
+	buf->f_fsid = (unsigned long)deviceData->clientHandle;
 	// Bit mask of f_flag values.
-	buf->f_flag                  = 0;
+	buf->f_flag = 0;
 	// Maximum length of filenames
-	buf->f_namemax               = 255;
+	buf->f_namemax = 255;
 
 	return 0;
 }
@@ -1282,7 +1286,7 @@ static int FSADOT_ftruncate(struct _reent *r, void *fd, off_t len)
 		return -1;
 	}
 
-	file       = (struct FSADOTFile *)fd;
+	file = (struct FSADOTFile *)fd;
 
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
@@ -1291,8 +1295,8 @@ static int FSADOT_ftruncate(struct _reent *r, void *fd, off_t len)
 	// Set the new file size
 	status = FSASetPosFile(deviceData->clientHandle, file->fd, len);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSASetPosFile(0x%08X, 0x%08X, 0x%08llX) failed: %s\n",
-							  deviceData->clientHandle, file->fd, len, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSASetPosFile(0x%08X, 0x%08X, 0x%08llX) failed: %s\n", deviceData->clientHandle,
+			file->fd, len, FSAGetStatusStr(status));
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&file->mutex);
 		return -1;
@@ -1300,8 +1304,8 @@ static int FSADOT_ftruncate(struct _reent *r, void *fd, off_t len)
 
 	status = FSATruncateFile(deviceData->clientHandle, file->fd);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSATruncateFile(0x%08X, 0x%08X) failed: %s\n",
-							  deviceData->clientHandle, file->fd, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSATruncateFile(0x%08X, 0x%08X) failed: %s\n", deviceData->clientHandle, file->fd,
+			FSAGetStatusStr(status));
 		r->_errno = FSADOT_translate_error(status);
 		OSUnlockMutex(&file->mutex);
 		return -1;
@@ -1330,10 +1334,10 @@ static int FSADOT_unlink(struct _reent *r, const char *name)
 	}
 	deviceData = (struct FSADOTDeviceData *)r->deviceData;
 
-	status     = FSARemove(deviceData->clientHandle, fixedPath);
+	status = FSARemove(deviceData->clientHandle, fixedPath);
 	if (status < 0) {
-		WUT_DEBUG_REPORT("FSARemove(0x%08X, %s) failed: %s\n",
-							  deviceData->clientHandle, fixedPath, FSAGetStatusStr(status));
+		WUT_DEBUG_REPORT("FSARemove(0x%08X, %s) failed: %s\n", deviceData->clientHandle, fixedPath,
+			FSAGetStatusStr(status));
 		free(fixedPath);
 		r->_errno = FSADOT_translate_error(status);
 		return -1;
@@ -1380,14 +1384,14 @@ static ssize_t FSADOT_write(struct _reent *r, void *fd, const char *ptr, size_t 
 		// only use input buffer if cache-aligned and write size is a multiple of cache line size
 		// otherwise write from alignedBuffer
 		uint8_t *tmp = (uint8_t *)ptr;
-		size_t size  = len - bytesWritten;
+		size_t size = len - bytesWritten;
 
 		if (size < 0x40) {
 			// write partial cache-line back-end
 			tmp = alignedBuffer;
 		} else if ((uintptr_t)ptr & 0x3F) {
 			// write partial cache-line front-end
-			tmp  = alignedBuffer;
+			tmp = alignedBuffer;
 			size = MIN(size, 0x40 - ((uintptr_t)ptr & 0x3F));
 		} else {
 			// write whole cache lines
@@ -1406,7 +1410,7 @@ static ssize_t FSADOT_write(struct _reent *r, void *fd, const char *ptr, size_t 
 		status = FSAWriteFile(deviceData->clientHandle, tmp, 1, size, file->fd, 0);
 		if (status < 0) {
 			WUT_DEBUG_REPORT("FSAWriteFile(0x%08X, %p, 1, 0x%08X, 0x%08X, 0) (%s) failed: %s\n",
-								  deviceData->clientHandle, tmp, size, file->fd, file->fullPath, FSAGetStatusStr(status));
+				deviceData->clientHandle, tmp, size, file->fd, file->fullPath, FSAGetStatusStr(status));
 			if (bytesWritten != 0) {
 				OSUnlockMutex(&file->mutex);
 				return bytesWritten; // error after partial write
@@ -1441,31 +1445,31 @@ static struct FSADOTDeviceData dot_data_tab[] = {
 static devoptab_t dot_tab[] = {
 #define DEVICE(id, name_p, path, sdcard) \
 	{ \
-		.name         = (name_p), \
-		.structSize   = sizeof(struct FSADOTFile), \
-		.open_r       = FSADOT_open, \
-		.close_r      = FSADOT_close, \
-		.write_r      = FSADOT_write, \
-		.read_r       = FSADOT_read, \
-		.seek_r       = FSADOT_seek, \
-		.fstat_r      = FSADOT_fstat, \
-		.stat_r       = FSADOT_stat, \
-		.unlink_r     = FSADOT_unlink, \
-		.chdir_r      = FSADOT_chdir, \
-		.rename_r     = FSADOT_rename, \
-		.mkdir_r      = FSADOT_mkdir, \
+		.name = (name_p), \
+		.structSize = sizeof(struct FSADOTFile), \
+		.open_r = FSADOT_open, \
+		.close_r = FSADOT_close, \
+		.write_r = FSADOT_write, \
+		.read_r = FSADOT_read, \
+		.seek_r = FSADOT_seek, \
+		.fstat_r = FSADOT_fstat, \
+		.stat_r = FSADOT_stat, \
+		.unlink_r = FSADOT_unlink, \
+		.chdir_r = FSADOT_chdir, \
+		.rename_r = FSADOT_rename, \
+		.mkdir_r = FSADOT_mkdir, \
 		.dirStateSize = sizeof(struct FSADOTDir), \
-		.diropen_r    = FSADOT_diropen, \
-		.dirreset_r   = FSADOT_dirreset, \
-		.dirnext_r    = FSADOT_dirnext, \
-		.dirclose_r   = FSADOT_dirclose, \
-		.statvfs_r    = FSADOT_statvfs, \
-		.ftruncate_r  = FSADOT_ftruncate, \
-		.fsync_r      = FSADOT_fsync, \
-		.deviceData   = dot_data_tab + (id), \
-		.chmod_r      = FSADOT_chmod, \
-		.rmdir_r      = FSADOT_rmdir, \
-		.lstat_r      = FSADOT_stat, \
+		.diropen_r = FSADOT_diropen, \
+		.dirreset_r = FSADOT_dirreset, \
+		.dirnext_r = FSADOT_dirnext, \
+		.dirclose_r = FSADOT_dirclose, \
+		.statvfs_r = FSADOT_statvfs, \
+		.ftruncate_r = FSADOT_ftruncate, \
+		.fsync_r = FSADOT_fsync, \
+		.deviceData = dot_data_tab + (id), \
+		.chmod_r = FSADOT_chmod, \
+		.rmdir_r = FSADOT_rmdir, \
+		.lstat_r = FSADOT_stat, \
 	},
 #include "devoptab-devs.h"
 };
@@ -1487,28 +1491,31 @@ int FSADOT_Init(void)
 	{ \
 		op = dot_tab + id; \
 		opd = dot_data_tab + id; \
-	\
+\
 		opd->clientHandle = FSAAddClient(NULL); \
 		if (opd->clientHandle) { \
-			if ((rc = FSAMount(opd->clientHandle, (path), "/vol/schism_" #name, FSA_MOUNT_FLAG_LOCAL_MOUNT, NULL, 0)) >= 0) { \
+			if ((rc = FSAMount(opd->clientHandle, (path), "/vol/schism_" #name, \
+				     FSA_MOUNT_FLAG_LOCAL_MOUNT, NULL, 0)) \
+				>= 0) { \
 				FSADeviceInfo devinfo; \
-	\
+\
 				if (FSAGetDeviceInfo(opd->clientHandle, "/vol/schism_" #name, &devinfo) >= 0) { \
 					opd->deviceSizeInSectors = devinfo.deviceSizeInSectors; \
-					opd->deviceSectorSize    = devinfo.deviceSectorSize; \
+					opd->deviceSectorSize = devinfo.deviceSectorSize; \
 				} else { \
 					/* okay assumption */ \
 					opd->deviceSizeInSectors = 0xFFFFFFFF; \
-					opd->deviceSectorSize    = 512; \
+					opd->deviceSectorSize = 512; \
 				} \
-	\
+\
 				if (AddDevice(op) >= 0) { \
 					strncpy(opd->mountPath, "/vol/schism_" #name, sizeof(opd->mountPath) - 1); \
 					opd->mountPath[sizeof(opd->mountPath) - 1] = 0; \
 					strcpy(opd->cwd, opd->mountPath); \
 					r = 0; \
 				} else { \
-					FSAUnmount(opd->clientHandle, "/vol/schism_" #name, FSA_UNMOUNT_FLAG_BIND_MOUNT); \
+					FSAUnmount( \
+						opd->clientHandle, "/vol/schism_" #name, FSA_UNMOUNT_FLAG_BIND_MOUNT); \
 					FSADelClient(opd->clientHandle); \
 				} \
 			} else { \
@@ -1537,10 +1544,10 @@ int FSADOT_Quit(void)
 			if (dot >= dot_data_tab && dot < (dot_data_tab + ARRAY_SIZE(dot_data_tab))) { \
 				/* Ok, this is our device; remove it from the devoptab */ \
 				RemoveDevice(name); \
-	\
+\
 				/* Now kill off everything */ \
 				FSAUnmount(dot->clientHandle, dot->mountPath, FSA_UNMOUNT_FLAG_BIND_MOUNT); \
-	\
+\
 				FSADelClient(dot->clientHandle); \
 			} \
 		} \

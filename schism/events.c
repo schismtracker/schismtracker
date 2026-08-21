@@ -25,9 +25,9 @@
 
 #include "headers.h"
 #include "events.h"
+#include "config.h" // keyboard crap
 #include "mem.h"
 #include "osdefs.h"
-#include "config.h" // keyboard crap
 
 #include "mt.h"
 
@@ -141,7 +141,8 @@ void events_pump_events(void)
 {
 	mt_mutex_lock(queue_mutex);
 	// eh
-	if (events_backend) events_backend->pump_events();
+	if (events_backend)
+		events_backend->pump_events();
 	mt_mutex_unlock(queue_mutex);
 }
 

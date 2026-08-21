@@ -52,4 +52,3 @@ int ver_parse_ctimestamp(const char *timestamp, uint32_t *pyear, uint32_t *pmont
 int ver_parse_cdate(const char *cdate, uint32_t *pyear, uint32_t *pmonth, uint32_t *pday);
 
 #endif /* SCHISM_VERSION_H_ */
-

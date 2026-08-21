@@ -26,8 +26,8 @@
 
 #include "headers.h"
 
-#include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/Xlib.h>
 
 int x11_init(void);
 void x11_quit(void);
@@ -50,11 +50,15 @@ Atom x11_get_cut_buffer_internal_fmt(Display *display, int mime_type);
 extern Display *(*X11_XOpenDisplay)(const char *display_name);
 extern int (*X11_XCloseDisplay)(Display *display);
 extern Atom (*X11_XInternAtom)(Display *display, const char *atom_name, Bool only_if_exists);
-extern int (*X11_XChangeProperty)(Display *display, Window w, Atom property, Atom type, int format, int mode, const unsigned char *data, int nelements);
+extern int (*X11_XChangeProperty)(Display *display, Window w, Atom property, Atom type, int format, int mode,
+	const unsigned char *data, int nelements);
 extern Window (*X11_XGetSelectionOwner)(Display *display, Atom selection);
-extern int (*X11_XConvertSelection)(Display *display, Atom selection, Atom target, Atom property, Window requestor, Time time);
+extern int (*X11_XConvertSelection)(
+	Display *display, Atom selection, Atom target, Atom property, Window requestor, Time time);
 extern int (*X11_XFree)(void *ptr);
-extern int (*X11_XGetWindowProperty)(Display *display, Window w, Atom property, long long_offset, long long_length, Bool delete, Atom req_type, Atom *actual_type_return, int *actual_format_return, unsigned long *nitems_return, unsigned long *bytes_after_return, unsigned char **prop_return);
+extern int (*X11_XGetWindowProperty)(Display *display, Window w, Atom property, long long_offset, long long_length,
+	Bool delete, Atom req_type, Atom *actual_type_return, int *actual_format_return, unsigned long *nitems_return,
+	unsigned long *bytes_after_return, unsigned char **prop_return);
 extern int (*X11_XSetSelectionOwner)(Display *display, Atom selection, Window owner, Time time);
 extern Status (*X11_XSendEvent)(Display *display, Window w, Bool propagate, long event_mask, XEvent *event_send);
 extern int (*X11_XSync)(Display *display, Bool discard);

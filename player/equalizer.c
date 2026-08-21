@@ -23,53 +23,45 @@
 
 #include "headers.h"
 
-#include "player/sndfile.h"
-#include "player/cmixer.h"
 #include "song.h"
+#include "player/cmixer.h"
+#include "player/sndfile.h"
 
-#define EQ_BANDWIDTH    2.0
-#define EQ_ZERO         0.000001
+#define EQ_BANDWIDTH 2.0
+#define EQ_ZERO      0.000001
 
 typedef struct {
-    float a0, a1, a2, b1, b2;
-    float x1, x2, y1, y2;
-    float gain, center_frequency;
-    int   enabled;
+	float a0, a1, a2, b1, b2;
+	float x1, x2, y1, y2;
+	float gain, center_frequency;
+	int enabled;
 } eq_band;
-
-
 
 //static REAL f2ic = (REAL)(1 << 28);
 //static REAL i2fc = (REAL)(1.0 / (1 << 28));
 
-static eq_band eq[MAX_EQ_BANDS * 2] =
-{
+static eq_band eq[MAX_EQ_BANDS * 2] = {
     // Default: Flat EQ
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   120, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   600, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,  1200, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,  3000, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,  6000, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 10000, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   120, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   600, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,  1200, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,  3000, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1,  6000, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 10000, 0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 120,   0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 600,   0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1200,  0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3000,  0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6000,  0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 10000, 0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 120,   0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 600,   0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1200,  0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3000,  0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6000,  0},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 10000, 0},
 };
-
 
 static void eq_filter(eq_band *pbs, int32_t *buffer, uint32_t count)
 {
-	int32_t amt = (!!(audio_settings.channels-1)+1); // if 1, amt is 1, else 2
-	for (uint32_t i = 0; i < count; i+=amt) {
+	int32_t amt = (!!(audio_settings.channels - 1) + 1); // if 1, amt is 1, else 2
+	for (uint32_t i = 0; i < count; i += amt) {
 		float x = buffer[i];
-		float y = pbs->a1 * pbs->x1 +
-			  pbs->a2 * pbs->x2 +
-			  pbs->a0 * x +
-			  pbs->b1 * pbs->y1 +
-			  pbs->b2 * pbs->y2;
+		float y = pbs->a1 * pbs->x1 + pbs->a2 * pbs->x2 + pbs->a0 * x + pbs->b1 * pbs->y1 + pbs->b2 * pbs->y2;
 
 		pbs->x2 = pbs->x1;
 		pbs->y2 = pbs->y1;
@@ -111,11 +103,10 @@ void normalize_stereo(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t sampl
 	} /* else... */
 
 	for (b = 0; b < size; b += 2) {
-		buffer[b]   = _muldiv(buffer[b],   audio_settings.master.left,  31);
-		buffer[b+1] = _muldiv(buffer[b+1], audio_settings.master.right, 31);
+		buffer[b] = _muldiv(buffer[b], audio_settings.master.left, 31);
+		buffer[b + 1] = _muldiv(buffer[b + 1], audio_settings.master.right, 31);
 	}
 }
-
 
 void eq_mono(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t count)
 {
@@ -139,7 +130,6 @@ void eq_stereo(SCHISM_UNUSED song_t *csf, int32_t *buffer, uint32_t count)
 			eq_filter(&eq[br], buffer + 1, count << 1);
 	}
 }
-
 
 void initialize_eq(int32_t reset, float freq)
 {
@@ -180,15 +170,14 @@ void initialize_eq(int32_t reset, float freq)
 		//if (k > (float) 0.707)
 		//          k = (float) 0.707;
 
-		k2 = k*k;
+		k2 = k * k;
 		v0 = eq[band].gain;
 		v1 = 1;
 
 		if (eq[band].gain < 1.0) {
 			v0 *= 0.5f / EQ_BANDWIDTH;
 			v1 *= 0.5f / EQ_BANDWIDTH;
-		}
-		else {
+		} else {
 			v0 *= 1.0f / EQ_BANDWIDTH;
 			v1 *= 1.0f / EQ_BANDWIDTH;
 		}
@@ -237,7 +226,6 @@ void initialize_eq(int32_t reset, float freq)
 	}
 }
 
-
 void set_eq_gains(const uint32_t *gainbuff, uint32_t gains, const uint32_t *freqs, int32_t reset, int32_t mix_freq)
 {
 	for (uint32_t i = 0; i < MAX_EQ_BANDS; i++) {
@@ -249,32 +237,24 @@ void set_eq_gains(const uint32_t *gainbuff, uint32_t gains, const uint32_t *freq
 			//if (n > 32)
 			//        n = 32;
 
-			g = 1.0 + (((double) n) / 64.0);
+			g = 1.0 + (((double)n) / 64.0);
 
 			if (freqs)
-			    f = (float)(int32_t)freqs[i];
-		}
-		else {
+				f = (float)(int32_t)freqs[i];
+		} else {
 			g = 1;
 		}
 
-		eq[i].gain =
-		eq[i + MAX_EQ_BANDS].gain = g;
-		eq[i].center_frequency =
-		eq[i + MAX_EQ_BANDS].center_frequency = f;
+		eq[i].gain = eq[i + MAX_EQ_BANDS].gain = g;
+		eq[i].center_frequency = eq[i + MAX_EQ_BANDS].center_frequency = f;
 
 		/* don't enable bands outside... */
-		if (f > 20.0f &&
-		    i < gains) {
-			eq[i].enabled =
-			eq[i + MAX_EQ_BANDS].enabled = 1;
-		}
-		else {
-			eq[i].enabled =
-			eq[i + MAX_EQ_BANDS].enabled = 0;
+		if (f > 20.0f && i < gains) {
+			eq[i].enabled = eq[i + MAX_EQ_BANDS].enabled = 1;
+		} else {
+			eq[i].enabled = eq[i + MAX_EQ_BANDS].enabled = 0;
 		}
 	}
 
 	initialize_eq(reset, mix_freq);
 }
-

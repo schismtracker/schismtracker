@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
 #include "test-assertions.h"
+#include "test.h"
 
 /* sanity.c: these don't test Schism, and actually just make sure
  * that everything works right. if not, there is probably a bug in
@@ -33,10 +33,10 @@ static char *ex_strlcpy(char *dst, const char *src, size_t len)
 	/* This is trivial to implement off of strncpy */
 	switch (len) {
 	default: /* len > 1 */
-		strncpy(dst, src, len-1);
+		strncpy(dst, src, len - 1);
 		SCHISM_FALLTHROUGH;
 	case 1:
-		dst[len-1] = 0;
+		dst[len - 1] = 0;
 		SCHISM_FALLTHROUGH;
 	case 0:
 		return dst;
@@ -67,15 +67,13 @@ testresult_t test_sanity_time(void)
 		ex_strlcpy(buf2, ctime(&r), sizeof(buf2));
 		ex_strlcpy(buf3, asctime(&t), sizeof(buf3));
 
-		test_log_printf(
-			" time(NULL) and mktime(localtime((time_t[]){ time(NULL); })) have different values!\n"
-			" something is very wrong.\n"
-			"\n"
-			" time(...): %s"
-			" localtime(...): %s"
-			" mktime(...): %s",
-			buf1, buf3, buf2
-		);
+		test_log_printf(" time(NULL) and mktime(localtime((time_t[]){ time(NULL); })) have different values!\n"
+				" something is very wrong.\n"
+				"\n"
+				" time(...): %s"
+				" localtime(...): %s"
+				" mktime(...): %s",
+			buf1, buf3, buf2);
 		RETURN_FAIL;
 	}
 

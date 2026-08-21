@@ -24,31 +24,31 @@
 #include "init.h"
 
 #include "headers.h"
-#include "events.h"
 #include "backend/events.h"
-#include "util.h"
+#include "events.h"
 #include "mem.h"
+#include "util.h"
 #include "video.h"
 
 #include <SDL_syswm.h>
 
 /* need to redefine these on SDL < 2.0.4 */
 #if !SDL_VERSION_ATLEAST(2, 0, 4)
-#define SDL_AUDIODEVICEADDED (0x1100)
-#define SDL_AUDIODEVICEREMOVED (0x1101)
+# define SDL_AUDIODEVICEADDED   (0x1100)
+# define SDL_AUDIODEVICEREMOVED (0x1101)
 #endif
 
-static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
-static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
+static int(SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
+static void(SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
 
-static SDL_Keymod (SDLCALL *sdl2_GetModState)(void);
-static void (SDLCALL *sdl2_PumpEvents)(void);
-static int (SDLCALL *sdl2_PeepEvents)(SDL_Event *events, int numevents, SDL_eventaction action, Uint32 min, Uint32 max);
-static SDL_bool (SDLCALL *sdl2_IsTextInputActive)(void) = NULL;
+static SDL_Keymod(SDLCALL *sdl2_GetModState)(void);
+static void(SDLCALL *sdl2_PumpEvents)(void);
+static int(SDLCALL *sdl2_PeepEvents)(SDL_Event *events, int numevents, SDL_eventaction action, Uint32 min, Uint32 max);
+static SDL_bool(SDLCALL *sdl2_IsTextInputActive)(void) = NULL;
 
-static void (SDLCALL *sdl2_free)(void *) = NULL;
+static void(SDLCALL *sdl2_free)(void *) = NULL;
 
-static Uint8 (SDLCALL *sdl2_EventState)(Uint32 type, int state) = NULL;
+static Uint8(SDLCALL *sdl2_EventState)(Uint32 type, int state) = NULL;
 
 // whether SDL's wheel event gives mouse coordinates or not
 static int wheel_have_mouse_coordinates = 0;
@@ -60,16 +60,16 @@ static int wheel_have_mouse_coordinates = 0;
 // main logic. This really ought to not be the case and the events
 // should just be sent to the main file as-is so it can handle it.
 
-static SDL_bool (SDLCALL *sdl2_IsGameController)(int joystick_index) = NULL;
-static SDL_GameController* (SDLCALL *sdl2_GameControllerOpen)(int joystick_index) = NULL;
-static void (SDLCALL *sdl2_GameControllerClose)(SDL_GameController *gamecontroller) = NULL;
-static SDL_Joystick* (SDLCALL *sdl2_GameControllerGetJoystick)(SDL_GameController *gamecontroller) = NULL;
-static SDL_JoystickID (SDLCALL *sdl2_JoystickInstanceID)(SDL_Joystick *joystick) = NULL;
-static int (SDLCALL *sdl2_NumJoysticks)(void);
+static SDL_bool(SDLCALL *sdl2_IsGameController)(int joystick_index) = NULL;
+static SDL_GameController *(SDLCALL *sdl2_GameControllerOpen)(int joystick_index) = NULL;
+static void(SDLCALL *sdl2_GameControllerClose)(SDL_GameController *gamecontroller) = NULL;
+static SDL_Joystick *(SDLCALL *sdl2_GameControllerGetJoystick)(SDL_GameController *gamecontroller) = NULL;
+static SDL_JoystickID(SDLCALL *sdl2_JoystickInstanceID)(SDL_Joystick *joystick) = NULL;
+static int(SDLCALL *sdl2_NumJoysticks)(void);
 
-#include "it.h"
-#include "song.h"
-#include "page.h"
+# include "it.h"
+# include "page.h"
+# include "song.h"
 
 struct controller_node {
 	SDL_GameController *controller;
@@ -94,35 +94,35 @@ static void game_controller_insert(SDL_GameController *controller)
 
 static void game_controller_remove(SDL_JoystickID id)
 {
-    struct controller_node* prev;
-    struct controller_node* temp = game_controller_list;
+	struct controller_node *prev;
+	struct controller_node *temp = game_controller_list;
 
-    if (!temp)
-        return;
+	if (!temp)
+		return;
 
-    if (temp->id == id) {
-        game_controller_list = temp->next;
-        free(temp);
-        return;
-    }
+	if (temp->id == id) {
+		game_controller_list = temp->next;
+		free(temp);
+		return;
+	}
 
-    while (temp && temp->id != id) {
-        prev = temp;
-        temp = temp->next;
-    }
+	while (temp && temp->id != id) {
+		prev = temp;
+		temp = temp->next;
+	}
 
-    if (temp) {
-        prev->next = temp->next;
-        sdl2_GameControllerClose(temp->controller);
-        free(temp);
-    }
+	if (temp) {
+		prev->next = temp->next;
+		sdl2_GameControllerClose(temp->controller);
+		free(temp);
+	}
 
-    return;
+	return;
 }
 
 static void game_controller_free(void)
 {
-	struct controller_node* temp;
+	struct controller_node *temp;
 
 	while (game_controller_list) {
 		temp = game_controller_list;
@@ -178,7 +178,7 @@ static int sdl2_controller_quit(void)
 }
 
 // the minimum value for schism to handle left axis events
-#define CONTROLLER_LEFT_AXIS_SENSITIVITY (INT16_MAX / 2)
+# define CONTROLLER_LEFT_AXIS_SENSITIVITY (INT16_MAX / 2)
 
 static int sdl2_controller_sdlevent(SDL_Event *event)
 {
@@ -189,8 +189,7 @@ static int sdl2_controller_sdlevent(SDL_Event *event)
 
 	switch (event->type) {
 	case SDL_CONTROLLERAXISMOTION:
-		if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX
-			|| event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+		if (event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || event->caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
 			// Left axis simply acts as a D-pad
 			SDL_Keycode *lastaxissymptr = NULL;
 
@@ -251,7 +250,7 @@ static int sdl2_controller_sdlevent(SDL_Event *event)
 			*event = newev;
 			return 1;
 		} else if (event->caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX
-			|| event->caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY) {
+			   || event->caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY) {
 			// TODO control the mouse here; we'd need access to main()
 			// to do that, so i'm putting it off until this crap
 			// gets moved into events.c/events.h
@@ -413,7 +412,7 @@ static void pop_pending_keydown(const char *text)
 	if (have_pending_keydown) {
 		if (text) {
 			strncpy(pending_keydown.key.text, text, ARRAY_SIZE(pending_keydown.text.text));
-			pending_keydown.key.text[ARRAY_SIZE(pending_keydown.text.text)-1] = '\0';
+			pending_keydown.key.text[ARRAY_SIZE(pending_keydown.text.text) - 1] = '\0';
 		} else {
 			memset(pending_keydown.key.text, 0, sizeof(pending_keydown.key.text));
 		}
@@ -525,7 +524,7 @@ static void sdl2_pump_events(void)
 				schism_event.type = SCHISM_TEXTINPUT;
 
 				strncpy(schism_event.text.text, e.text.text, ARRAY_SIZE(schism_event.text.text));
-				schism_event.text.text[ARRAY_SIZE(schism_event.text.text)-1] = '\0';
+				schism_event.text.text[ARRAY_SIZE(schism_event.text.text) - 1] = '\0';
 
 				events_push_event(&schism_event);
 			}
@@ -539,7 +538,8 @@ static void sdl2_pump_events(void)
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
-			schism_event.type = (e.type == SDL_MOUSEBUTTONDOWN) ? SCHISM_MOUSEBUTTONDOWN : SCHISM_MOUSEBUTTONUP;
+			schism_event.type
+				= (e.type == SDL_MOUSEBUTTONDOWN) ? SCHISM_MOUSEBUTTONDOWN : SCHISM_MOUSEBUTTONUP;
 
 			switch (e.button.button) {
 			case SDL_BUTTON_LEFT:
@@ -622,15 +622,30 @@ static void sdl2_pump_events(void)
 				schism_event.wm_msg.subsystem = SCHISM_WM_MSG_SUBSYSTEM_X11;
 				schism_event.wm_msg.msg.x11.event.type = e.syswm.msg->msg.x11.event.type;
 				if (e.syswm.msg->msg.x11.event.type == SelectionRequest) {
-					schism_event.wm_msg.msg.x11.event.selection_request.serial = e.syswm.msg->msg.x11.event.xselectionrequest.serial;
-					schism_event.wm_msg.msg.x11.event.selection_request.send_event = e.syswm.msg->msg.x11.event.xselectionrequest.send_event;     // `Bool' in Xlib
-					schism_event.wm_msg.msg.x11.event.selection_request.display = e.syswm.msg->msg.x11.event.xselectionrequest.display;      // `Display *' in Xlib
-					schism_event.wm_msg.msg.x11.event.selection_request.owner = e.syswm.msg->msg.x11.event.xselectionrequest.owner;     // `Window' in Xlib
-					schism_event.wm_msg.msg.x11.event.selection_request.requestor = e.syswm.msg->msg.x11.event.xselectionrequest.requestor; // `Window' in Xlib
-					schism_event.wm_msg.msg.x11.event.selection_request.selection = e.syswm.msg->msg.x11.event.xselectionrequest.selection; // `Atom' in Xlib
-					schism_event.wm_msg.msg.x11.event.selection_request.target = e.syswm.msg->msg.x11.event.xselectionrequest.target;    // `Atom' in Xlib
-					schism_event.wm_msg.msg.x11.event.selection_request.property = e.syswm.msg->msg.x11.event.xselectionrequest.property;  // `Atom' in Xlib
-					schism_event.wm_msg.msg.x11.event.selection_request.time = e.syswm.msg->msg.x11.event.xselectionrequest.time;      // `Time' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.serial
+						= e.syswm.msg->msg.x11.event.xselectionrequest.serial;
+					schism_event.wm_msg.msg.x11.event.selection_request.send_event
+						= e.syswm.msg->msg.x11.event.xselectionrequest
+							  .send_event;     // `Bool' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.display
+						= e.syswm.msg->msg.x11.event.xselectionrequest
+							  .display;      // `Display *' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.owner
+						= e.syswm.msg->msg.x11.event.xselectionrequest
+							  .owner;     // `Window' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.requestor
+						= e.syswm.msg->msg.x11.event.xselectionrequest
+							  .requestor; // `Window' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.selection
+						= e.syswm.msg->msg.x11.event.xselectionrequest
+							  .selection; // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.target
+						= e.syswm.msg->msg.x11.event.xselectionrequest.target; // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.property
+						= e.syswm.msg->msg.x11.event.xselectionrequest
+							  .property; // `Atom' in Xlib
+					schism_event.wm_msg.msg.x11.event.selection_request.time
+						= e.syswm.msg->msg.x11.event.xselectionrequest.time; // `Time' in Xlib
 				}
 				// ...?
 				//events_push_event(&schism_event);

@@ -21,20 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
 #include "test-assertions.h"
+#include "test.h"
 
 #include "headers.h"
-#include "slurp.h"
 #include "fmt.h"
+#include "slurp.h"
 
-#define IFFID_fmt  UINT32_C(0x666D7420)
+#define IFFID_fmt UINT32_C(0x666D7420)
 
 /* All of the data is still technically separated still;
  * but they are based on a common ancestor */
 
-#define WAVE_hdr \
-	"WAVE" /* Tail of the RIFF header */
+#define WAVE_hdr "WAVE" /* Tail of the RIFF header */
 
 #define WAVE_CHUNK_fmt \
 	"fmt " /* chunk identifier */ \
@@ -55,7 +54,8 @@ testresult_t test_iff_chunk_peek_ex_middle(void)
 {
 	// Arrange
 
-	static const char input_data[sizeof(WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data) - 1] = WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data;
+	static const char input_data[sizeof(WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data) - 1]
+		= WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data;
 
 	int fmt_start = sizeof(WAVE_hdr) - 1;
 	int fmt_content_start = fmt_start + 8;
@@ -73,7 +73,7 @@ testresult_t test_iff_chunk_peek_ex_middle(void)
 
 	slurp_t fp;
 
-	iff_chunk_t chunk = { 0 };
+	iff_chunk_t chunk = {0};
 
 	int success;
 
@@ -110,7 +110,7 @@ testresult_t test_iff_chunk_peek_ex_end_of_file(void)
 
 	slurp_t fp;
 
-	iff_chunk_t chunk = { 0 };
+	iff_chunk_t chunk = {0};
 
 	int success;
 
@@ -135,7 +135,8 @@ testresult_t test_iff_chunk_peek_ex_end_of_file(void)
 testresult_t test_iff_chunk_peek_ex_truncated(void)
 {
 	// Arrange
-	static const char input_data[sizeof(WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data) - 1] = WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data;
+	static const char input_data[sizeof(WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data) - 1]
+		= WAVE_hdr WAVE_CHUNK_fmt WAVE_CHUNK_data;
 
 	int fmt_start = 4;
 	int fmt_content_start = fmt_start + 8;
@@ -147,7 +148,7 @@ testresult_t test_iff_chunk_peek_ex_truncated(void)
 
 	slurp_t fp;
 
-	iff_chunk_t chunk = { 0 };
+	iff_chunk_t chunk = {0};
 
 	int success;
 

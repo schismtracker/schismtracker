@@ -1,0 +1,62 @@
+---
+Language: C
+#   don't see this documented anywhere nor do I think it matters.
+#   C grammar hasn't changed much since C99.
+#Standard: c99
+BasedOnStyle: LLVM
+UseTab: ForContinuationAndIndentation
+PointerAlignment: Right
+ColumnLimit: 120
+IndentWidth: 8
+TabWidth: 8
+PPIndentWidth: 1
+
+IndentCaseLabels: false
+IndentAccessModifiers: false
+IndentPPDirectives: AfterHash
+
+BreakBeforeBraces: WebKit
+BreakStringLiterals: true
+
+AlwaysBreakTemplateDeclarations: true
+
+SpaceAfterTemplateKeyword: false
+
+AlignAfterOpenBracket: false
+ContinuationIndentWidth: 8
+
+AlignArrayOfStructures: Left
+AlignEscapedNewlines: DontAlign
+AlignConsecutiveMacros: true
+
+AllowShortIfStatementsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortCaseLabelsOnASingleLine: false
+
+QualifierAlignment: Left
+
+SpacesBeforeTrailingComments: 1
+# SpacesInBlockComments: Leave
+
+#  don't touch this
+SpacesInLineCommentPrefix:
+  Minimum: 0
+  Maximum: -1
+
+BreakBeforeBinaryOperators: All
+
+InsertNewlineAtEOF: true
+
+# I know better than you do
+AlignTrailingComments: Leave
+
+IncludeCategories:
+  - Regex: '^"headers\.h"$'
+    Priority: -2
+  - Regex: '^"(it|song|page|dialog)\.h"$'
+    Priority: -1
+    # This has to be after song.h so song_note_t is defined
+  - Regex: '^"(pattern\-view|widget)\.h"$'
+    Priority: 2

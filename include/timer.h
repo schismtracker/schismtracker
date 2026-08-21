@@ -49,7 +49,7 @@ void timer_usleep(uint64_t usec);
 void timer_msleep(uint32_t msec);
 
 // Old functions that are simply macros now.
-#define timer_delay(ms)  timer_msleep(ms)
+#define timer_delay(ms) timer_msleep(ms)
 
 // Run a function after `ms` milliseconds
 void timer_oneshot(uint32_t ms, void (*callback)(void *param), void *param);

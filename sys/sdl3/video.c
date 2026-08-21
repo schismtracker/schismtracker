@@ -21,117 +21,124 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NATIVE_SCREEN_WIDTH		640
-#define NATIVE_SCREEN_HEIGHT	400
-#define WINDOW_TITLE			"Schism Tracker"
+#define NATIVE_SCREEN_WIDTH  640
+#define NATIVE_SCREEN_HEIGHT 400
+#define WINDOW_TITLE         "Schism Tracker"
 
 #include "headers.h"
 
 #include "it.h"
-#include "charset.h"
 #include "bits.h"
+#include "charset.h"
 #include "config.h"
-#include "video.h"
+#include "events.h"
 #include "osdefs.h"
 #include "vgamem.h"
-#include "events.h"
+#include "video.h"
 
 #include "backend/video.h"
 
 #include "init.h"
 
 #ifndef SCHISM_MACOSX
-#include "auto/schismico_hires.h"
+# include "auto/schismico_hires.h"
 #endif
 
-static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
-static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
+static bool(SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
+static void(SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
-static bool (SDLCALL *sdl3_TextInputActive)(SDL_Window *window) = NULL;
+static bool(SDLCALL *sdl3_TextInputActive)(SDL_Window *window) = NULL;
 
 static const char *(SDLCALL *sdl3_GetCurrentVideoDriver)(void);
-static SDL_DisplayID (SDLCALL *sdl3_GetDisplayForWindow)(SDL_Window *window);
+static SDL_DisplayID(SDLCALL *sdl3_GetDisplayForWindow)(SDL_Window *window);
 static const SDL_DisplayMode *(SDLCALL *sdl3_GetCurrentDisplayMode)(SDL_DisplayID id);
-static const char * (SDLCALL *sdl3_GetRendererName)(SDL_Renderer * renderer);
-static bool (SDLCALL *sdl3_ShowCursor)(void);
-static bool (SDLCALL *sdl3_HideCursor)(void);
-static SDL_WindowFlags (SDLCALL *sdl3_GetWindowFlags)(SDL_Window * window);
-static Uint32 (SDLCALL *sdl3_MapRGB)(const SDL_PixelFormatDetails *format, const SDL_Palette *palette, Uint8 r, Uint8 g, Uint8 b);
-static bool (SDLCALL *sdl3_SetWindowPosition)(SDL_Window * window, int x, int y);
-static bool (SDLCALL *sdl3_SetWindowSize)(SDL_Window * window, int w, int h);
-static float (SDLCALL *sdl3_GetWindowDisplayScale)(SDL_Window * window);
-static bool (SDLCALL *sdl3_SetWindowFullscreen)(SDL_Window * window, bool fullscreen);
-static bool (SDLCALL *sdl3_GetWindowPosition)(SDL_Window * window, int *x, int *y);
-static SDL_Window * (SDLCALL *sdl3_CreateWindowWithProperties)(SDL_PropertiesID);
-static SDL_Renderer * (SDLCALL *sdl3_CreateRenderer)(SDL_Window *window, const char *name);
-static SDL_Texture * (SDLCALL *sdl3_CreateTexture)(SDL_Renderer * renderer, SDL_PixelFormat format, SDL_TextureAccess access, int w, int h);
-static const SDL_PixelFormatDetails * (SDLCALL *sdl3_GetPixelFormatDetails)(Uint32 pixel_format);
-static void (SDLCALL *sdl3_DestroyTexture)(SDL_Texture * texture);
-static void (SDLCALL *sdl3_DestroyRenderer)(SDL_Renderer * renderer);
-static void (SDLCALL *sdl3_DestroyWindow)(SDL_Window * window);
-static bool (SDLCALL *sdl3_ScreenSaverEnabled)(void);
-static bool (SDLCALL *sdl3_EnableScreenSaver)(void);
-static bool (SDLCALL *sdl3_DisableScreenSaver)(void);
-static bool (SDLCALL *sdl3_GetRenderScale)(SDL_Renderer * renderer, float *scaleX, float *scaleY);
-static void (SDLCALL *sdl3_WarpMouseInWindow)(SDL_Window * window, float x, float y);
-static bool (SDLCALL *sdl3_GetWindowSize)(SDL_Window * window, int *w, int *h);
-static bool (SDLCALL *sdl3_SetWindowSize)(SDL_Window * window, int w, int h);
-static bool (SDLCALL *sdl3_RenderClear)(SDL_Renderer * renderer);
-static bool (SDLCALL *sdl3_LockTexture)(SDL_Texture * texture, const SDL_Rect * rect, void **pixels, int *pitch);
-static void (SDLCALL *sdl3_UnlockTexture)(SDL_Texture * texture);
-static bool (SDLCALL *sdl3_RenderTexture)(SDL_Renderer * renderer, SDL_Texture * texture, const SDL_FRect * srcrect, const SDL_FRect * dstrect);
-static bool (SDLCALL *sdl3_RenderPresent)(SDL_Renderer * renderer);
-static bool (SDLCALL *sdl3_SetWindowTitle)(SDL_Window * window, const char *title);
+static const char *(SDLCALL *sdl3_GetRendererName)(SDL_Renderer *renderer);
+static bool(SDLCALL *sdl3_ShowCursor)(void);
+static bool(SDLCALL *sdl3_HideCursor)(void);
+static SDL_WindowFlags(SDLCALL *sdl3_GetWindowFlags)(SDL_Window *window);
+static Uint32(SDLCALL *sdl3_MapRGB)(
+	const SDL_PixelFormatDetails *format, const SDL_Palette *palette, Uint8 r, Uint8 g, Uint8 b);
+static bool(SDLCALL *sdl3_SetWindowPosition)(SDL_Window *window, int x, int y);
+static bool(SDLCALL *sdl3_SetWindowSize)(SDL_Window *window, int w, int h);
+static float(SDLCALL *sdl3_GetWindowDisplayScale)(SDL_Window *window);
+static bool(SDLCALL *sdl3_SetWindowFullscreen)(SDL_Window *window, bool fullscreen);
+static bool(SDLCALL *sdl3_GetWindowPosition)(SDL_Window *window, int *x, int *y);
+static SDL_Window *(SDLCALL *sdl3_CreateWindowWithProperties)(SDL_PropertiesID);
+static SDL_Renderer *(SDLCALL *sdl3_CreateRenderer)(SDL_Window *window, const char *name);
+static SDL_Texture *(SDLCALL *sdl3_CreateTexture)(
+	SDL_Renderer *renderer, SDL_PixelFormat format, SDL_TextureAccess access, int w, int h);
+static const SDL_PixelFormatDetails *(SDLCALL *sdl3_GetPixelFormatDetails)(Uint32 pixel_format);
+static void(SDLCALL *sdl3_DestroyTexture)(SDL_Texture *texture);
+static void(SDLCALL *sdl3_DestroyRenderer)(SDL_Renderer *renderer);
+static void(SDLCALL *sdl3_DestroyWindow)(SDL_Window *window);
+static bool(SDLCALL *sdl3_ScreenSaverEnabled)(void);
+static bool(SDLCALL *sdl3_EnableScreenSaver)(void);
+static bool(SDLCALL *sdl3_DisableScreenSaver)(void);
+static bool(SDLCALL *sdl3_GetRenderScale)(SDL_Renderer *renderer, float *scaleX, float *scaleY);
+static void(SDLCALL *sdl3_WarpMouseInWindow)(SDL_Window *window, float x, float y);
+static bool(SDLCALL *sdl3_GetWindowSize)(SDL_Window *window, int *w, int *h);
+static bool(SDLCALL *sdl3_SetWindowSize)(SDL_Window *window, int w, int h);
+static bool(SDLCALL *sdl3_RenderClear)(SDL_Renderer *renderer);
+static bool(SDLCALL *sdl3_LockTexture)(SDL_Texture *texture, const SDL_Rect *rect, void **pixels, int *pitch);
+static void(SDLCALL *sdl3_UnlockTexture)(SDL_Texture *texture);
+static bool(SDLCALL *sdl3_RenderTexture)(
+	SDL_Renderer *renderer, SDL_Texture *texture, const SDL_FRect *srcrect, const SDL_FRect *dstrect);
+static bool(SDLCALL *sdl3_RenderPresent)(SDL_Renderer *renderer);
+static bool(SDLCALL *sdl3_SetWindowTitle)(SDL_Window *window, const char *title);
 
-static bool (SDLCALL *sdl3_SetWindowIcon)(SDL_Window * window, SDL_Surface * icon);
-static void (SDLCALL *sdl3_DestroySurface)(SDL_Surface * surface);
-static bool (SDLCALL *sdl3_SetHint)(const char *name, const char *value);
+static bool(SDLCALL *sdl3_SetWindowIcon)(SDL_Window *window, SDL_Surface *icon);
+static void(SDLCALL *sdl3_DestroySurface)(SDL_Surface *surface);
+static bool(SDLCALL *sdl3_SetHint)(const char *name, const char *value);
 
 /* RENDERER */
-static bool (SDLCALL *sdl3_SetRenderLogicalPresentation)(SDL_Renderer *renderer, int w, int h, SDL_RendererLogicalPresentation mode);
+static bool(SDLCALL *sdl3_SetRenderLogicalPresentation)(
+	SDL_Renderer *renderer, int w, int h, SDL_RendererLogicalPresentation mode);
 
 /* WINDOW GRAB */
-static bool (SDLCALL *sdl3_GetWindowMouseGrab)(SDL_Window * window);
-static bool (SDLCALL *sdl3_GetWindowKeyboardGrab)(SDL_Window * window);
-static bool (SDLCALL *sdl3_SetWindowMouseGrab)(SDL_Window * window, bool grabbed);
-static bool (SDLCALL *sdl3_SetWindowKeyboardGrab)(SDL_Window * window, bool grabbed);
+static bool(SDLCALL *sdl3_GetWindowMouseGrab)(SDL_Window *window);
+static bool(SDLCALL *sdl3_GetWindowKeyboardGrab)(SDL_Window *window);
+static bool(SDLCALL *sdl3_SetWindowMouseGrab)(SDL_Window *window, bool grabbed);
+static bool(SDLCALL *sdl3_SetWindowKeyboardGrab)(SDL_Window *window, bool grabbed);
 
-static bool (SDLCALL *sdl3_EventEnabled)(Uint32 type);
-static void (SDLCALL *sdl3_SetEventEnabled)(Uint32 type, bool enabled);
+static bool(SDLCALL *sdl3_EventEnabled)(Uint32 type);
+static void(SDLCALL *sdl3_SetEventEnabled)(Uint32 type, bool enabled);
 
-static bool (SDLCALL *sdl3_RenderCoordinatesFromWindow)(SDL_Renderer * renderer, float windowX, float windowY, float *logicalX, float *logicalY);
+static bool(SDLCALL *sdl3_RenderCoordinatesFromWindow)(
+	SDL_Renderer *renderer, float windowX, float windowY, float *logicalX, float *logicalY);
 
-static bool (SDLCALL *sdl3_SetTextureScaleMode)(SDL_Texture * texture, SDL_ScaleMode scaleMode);
+static bool(SDLCALL *sdl3_SetTextureScaleMode)(SDL_Texture *texture, SDL_ScaleMode scaleMode);
 
-static SDL_PropertiesID (SDLCALL *sdl3_GetRendererProperties)(SDL_Renderer *renderer);
-static SDL_PropertiesID (SDLCALL *sdl3_GetWindowProperties)(SDL_Window *window);
+static SDL_PropertiesID(SDLCALL *sdl3_GetRendererProperties)(SDL_Renderer *renderer);
+static SDL_PropertiesID(SDLCALL *sdl3_GetWindowProperties)(SDL_Window *window);
 static void *(SDLCALL *sdl3_GetPointerProperty)(SDL_PropertiesID props, const char *name, void *default_value);
-static Sint64 (SDLCALL *sdl3_GetNumberProperty)(SDL_PropertiesID props, const char *name, Sint64 default_value);
+static Sint64(SDLCALL *sdl3_GetNumberProperty)(SDL_PropertiesID props, const char *name, Sint64 default_value);
 
 /* WINDOW FRAMEBUFFER */
-static bool (SDLCALL *sdl3_WindowHasSurface)(SDL_Window *window);
+static bool(SDLCALL *sdl3_WindowHasSurface)(SDL_Window *window);
 static SDL_Surface *(SDLCALL *sdl3_GetWindowSurface)(SDL_Window *window);
-static bool (SDLCALL *sdl3_DestroyWindowSurface)(SDL_Window *window);
-static bool (SDLCALL *sdl3_UpdateWindowSurface)(SDL_Window *window);
-static bool (SDLCALL *sdl3_LockSurface)(SDL_Surface *surface);
-static void (SDLCALL *sdl3_UnlockSurface)(SDL_Surface *surface);
+static bool(SDLCALL *sdl3_DestroyWindowSurface)(SDL_Window *window);
+static bool(SDLCALL *sdl3_UpdateWindowSurface)(SDL_Window *window);
+static bool(SDLCALL *sdl3_LockSurface)(SDL_Surface *surface);
+static void(SDLCALL *sdl3_UnlockSurface)(SDL_Surface *surface);
 
-static bool (SDLCALL *sdl3_StartTextInput)(SDL_Window *window);
+static bool(SDLCALL *sdl3_StartTextInput)(SDL_Window *window);
 
 // this is used in multiple places here.
 static int sdl3_video_get_wm_data(video_wm_data_t *wm_data);
 
-static SDL_Surface *(SDLCALL *sdl3_CreateSurfaceFrom)(int width, int height, SDL_PixelFormat format, void *pixels, int pitch);
-static SDL_PixelFormat (SDLCALL *sdl3_GetPixelFormatForMasks)(int bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
+static SDL_Surface *(SDLCALL *sdl3_CreateSurfaceFrom)(
+	int width, int height, SDL_PixelFormat format, void *pixels, int pitch);
+static SDL_PixelFormat(SDLCALL *sdl3_GetPixelFormatForMasks)(
+	int bpp, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
 
-static bool (SDLCALL *sdl3_SetStringProperty)(SDL_PropertiesID props, const char *name, const char *value);
-static bool (SDLCALL *sdl3_SetBooleanProperty)(SDL_PropertiesID props, const char *name, bool value);
-static bool (SDLCALL *sdl3_SetNumberProperty)(SDL_PropertiesID props, const char *name, Sint64 value);
+static bool(SDLCALL *sdl3_SetStringProperty)(SDL_PropertiesID props, const char *name, const char *value);
+static bool(SDLCALL *sdl3_SetBooleanProperty)(SDL_PropertiesID props, const char *name, bool value);
+static bool(SDLCALL *sdl3_SetNumberProperty)(SDL_PropertiesID props, const char *name, Sint64 value);
 
-static SDL_PropertiesID (SDLCALL *sdl3_CreateProperties)(void);
-static void (SDLCALL *sdl3_DestroyProperties)(SDL_PropertiesID props);
+static SDL_PropertiesID(SDLCALL *sdl3_CreateProperties)(void);
+static void(SDLCALL *sdl3_DestroyProperties)(SDL_PropertiesID props);
 
-static bool (SDLCALL *sdl3_ConvertEventToRenderCoordinates)(SDL_Renderer *renderer, SDL_Event *event);
+static bool(SDLCALL *sdl3_ConvertEventToRenderCoordinates)(SDL_Renderer *renderer, SDL_Event *event);
 
 static void sdl3_video_setup(int quality);
 
@@ -193,26 +200,26 @@ static const struct {
 } native_formats[] = {
 	// RGB
 	// ----------------
-	{SDL_PIXELFORMAT_XRGB8888, "RGB888"},
+	{SDL_PIXELFORMAT_XRGB8888, "RGB888"  },
 	{SDL_PIXELFORMAT_ARGB8888, "ARGB8888"},
-	{SDL_PIXELFORMAT_RGB24, "RGB24"},
-	{SDL_PIXELFORMAT_RGB565, "RGB565"},
-	{SDL_PIXELFORMAT_XRGB1555, "RGB555"},
+	{SDL_PIXELFORMAT_RGB24,    "RGB24"   },
+	{SDL_PIXELFORMAT_RGB565,   "RGB565"  },
+	{SDL_PIXELFORMAT_XRGB1555, "RGB555"  },
 	{SDL_PIXELFORMAT_ARGB1555, "ARGB1555"},
-	{SDL_PIXELFORMAT_XRGB4444, "RGB444"},
+	{SDL_PIXELFORMAT_XRGB4444, "RGB444"  },
 	{SDL_PIXELFORMAT_ARGB4444, "ARGB4444"},
-	{SDL_PIXELFORMAT_RGB332, "RGB332"},
+	{SDL_PIXELFORMAT_RGB332,   "RGB332"  },
 	// ----------------
 
 	// YUV
 	// ----------------
-	{SDL_PIXELFORMAT_IYUV, "IYUV"},
-	{SDL_PIXELFORMAT_YV12, "YV12"},
+	{SDL_PIXELFORMAT_IYUV,     "IYUV"    },
+	{SDL_PIXELFORMAT_YV12,     "YV12"    },
 	// {SDL_PIXELFORMAT_UYVY, "UYVY"},
 	// {SDL_PIXELFORMAT_YVYU, "YVYU"},
 	// {SDL_PIXELFORMAT_YUY2, "YUY2"},
-	{SDL_PIXELFORMAT_NV12, "NV12"},
-	{SDL_PIXELFORMAT_NV21, "NV21"},
+	{SDL_PIXELFORMAT_NV12,     "NV12"    },
+	{SDL_PIXELFORMAT_NV21,     "NV21"    },
 	// ----------------
 };
 
@@ -245,8 +252,7 @@ static void sdl3_video_report(void)
 		const char *name = sdl3_GetRendererName(video.u.r.renderer);
 
 		log_appendf(5, " %s renderer '%s'",
-			!strcmp(name, SDL_SOFTWARE_RENDERER) ? "Software" : "Hardware-accelerated",
-			name);
+			!strcmp(name, SDL_SOFTWARE_RENDERER) ? "Software" : "Hardware-accelerated", name);
 		break;
 	}
 	case VIDEO_TYPE_SURFACE:
@@ -271,7 +277,7 @@ static void sdl3_video_report(void)
 		video_yuv_report();
 		break;
 	default:
-		log_appendf(5, " Display format: %"PRIu32" bits/pixel", SDL_BITSPERPIXEL(video.format));
+		log_appendf(5, " Display format: %" PRIu32 " bits/pixel", SDL_BITSPERPIXEL(video.format));
 		break;
 	}
 
@@ -294,7 +300,9 @@ static void set_icon(void)
 		uint32_t *pixels;
 		int width, height;
 		if (!xpmdata(_schism_icon_xpm_hires, &pixels, &width, &height)) {
-			SDL_Surface *icon = sdl3_CreateSurfaceFrom(width, height, sdl3_GetPixelFormatForMasks(32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000), pixels, width * sizeof(uint32_t));
+			SDL_Surface *icon = sdl3_CreateSurfaceFrom(width, height,
+				sdl3_GetPixelFormatForMasks(32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000), pixels,
+				width * sizeof(uint32_t));
 			if (icon) {
 				sdl3_SetWindowIcon(video.window, icon);
 				sdl3_DestroySurface(icon);
@@ -311,13 +319,12 @@ static inline void video_recalculate_fixed_width(void)
 	switch (video.type) {
 	case VIDEO_TYPE_RENDERER:
 		if (cfg_video_want_fixed)
-			sdl3_SetRenderLogicalPresentation(video.u.r.renderer,
-				cfg_video_want_fixed_width, cfg_video_want_fixed_height,
-				SDL_LOGICAL_PRESENTATION_LETTERBOX);
+			sdl3_SetRenderLogicalPresentation(video.u.r.renderer, cfg_video_want_fixed_width,
+				cfg_video_want_fixed_height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 		break;
 	case VIDEO_TYPE_SURFACE:
-		video_calculate_clip(video.u.s.surface->w, video.u.s.surface->h,
-			&video.u.s.clip.x, &video.u.s.clip.y, &video.u.s.clip.w, &video.u.s.clip.h);
+		video_calculate_clip(video.u.s.surface->w, video.u.s.surface->h, &video.u.s.clip.x, &video.u.s.clip.y,
+			&video.u.s.clip.w, &video.u.s.clip.h);
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
 		SCHISM_UNREACHABLE;
@@ -336,7 +343,8 @@ static void sdl3_video_redraw_texture(void)
 
 		if (*cfg_video_format) {
 			for (size_t i = 0; i < ARRAY_SIZE(native_formats); i++) {
-				if (!charset_strcasecmp(cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
+				if (!charset_strcasecmp(
+					    cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
 					format = native_formats[i].format;
 					goto got_format;
 				}
@@ -349,7 +357,8 @@ static void sdl3_video_redraw_texture(void)
 		// conversion.
 		SDL_PropertiesID rprop = sdl3_GetRendererProperties(video.u.r.renderer);
 		if (rprop) {
-			const SDL_PixelFormat *formats = sdl3_GetPointerProperty(rprop, SDL_PROP_RENDERER_TEXTURE_FORMATS_POINTER, NULL);
+			const SDL_PixelFormat *formats
+				= sdl3_GetPointerProperty(rprop, SDL_PROP_RENDERER_TEXTURE_FORMATS_POINTER, NULL);
 			if (formats) {
 				for (uint32_t i = 0; formats[i] != SDL_PIXELFORMAT_UNKNOWN; i++)
 					for (size_t j = 0; j < ARRAY_SIZE(native_formats); j++)
@@ -358,7 +367,7 @@ static void sdl3_video_redraw_texture(void)
 			}
 		}
 
-got_format:
+	got_format:
 		/* TODO need an option for IYUV+TV */
 		video.yuv.tv = 0;
 
@@ -393,7 +402,8 @@ got_format:
 			break;
 		}
 
-		video.u.r.texture = sdl3_CreateTexture(video.u.r.renderer, format, SDL_TEXTUREACCESS_STREAMING, twidth, theight);
+		video.u.r.texture
+			= sdl3_CreateTexture(video.u.r.renderer, format, SDL_TEXTUREACCESS_STREAMING, twidth, theight);
 		video.format = format;
 		break;
 	}
@@ -446,10 +456,9 @@ static void sdl3_video_set_hardware(int hardware)
 		video.type = VIDEO_TYPE_RENDERER;
 		SCHISM_FALLTHROUGH;
 	case VIDEO_TYPE_RENDERER:
-		video.u.r.renderer = sdl3_CreateRenderer(video.window,
-			(hardware) ? (const char *)NULL : SDL_SOFTWARE_RENDERER);
-		SCHISM_RUNTIME_ASSERT(!!video.u.r.renderer,
-			"Failed to create a renderer!");
+		video.u.r.renderer
+			= sdl3_CreateRenderer(video.window, (hardware) ? (const char *)NULL : SDL_SOFTWARE_RENDERER);
+		SCHISM_RUNTIME_ASSERT(!!video.u.r.renderer, "Failed to create a renderer!");
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
 		/* wut? */
@@ -489,8 +498,8 @@ static void sdl3_video_setup(int interpolation)
 {
 	static const SDL_ScaleMode modes[] = {
 		[VIDEO_INTERPOLATION_NEAREST] = SDL_SCALEMODE_NEAREST,
-		[VIDEO_INTERPOLATION_LINEAR]  = SDL_SCALEMODE_LINEAR,
-		[VIDEO_INTERPOLATION_BEST]    = SDL_SCALEMODE_LINEAR,
+		[VIDEO_INTERPOLATION_LINEAR] = SDL_SCALEMODE_LINEAR,
+		[VIDEO_INTERPOLATION_BEST] = SDL_SCALEMODE_LINEAR,
 	};
 
 	if (video.type == VIDEO_TYPE_RENDERER)
@@ -680,8 +689,7 @@ static int sdl3_video_is_hardware(void)
 	case VIDEO_TYPE_SURFACE:
 		return 0;
 	case VIDEO_TYPE_RENDERER:
-		return strcmp(sdl3_GetRendererName(video.u.r.renderer),
-			SDL_SOFTWARE_RENDERER);
+		return strcmp(sdl3_GetRendererName(video.u.r.renderer), SDL_SOFTWARE_RENDERER);
 	}
 
 	/* should never happen */
@@ -698,15 +706,16 @@ static int sdl3_video_is_screensaver_enabled(void)
 static void sdl3_video_toggle_screensaver(int enabled)
 {
 	/* this API reeks */
-	if (enabled) sdl3_EnableScreenSaver();
-	else sdl3_DisableScreenSaver();
+	if (enabled)
+		sdl3_EnableScreenSaver();
+	else
+		sdl3_DisableScreenSaver();
 }
 
 /* ------------------------------------------------------------------------ */
 /* coordinate translation */
 
-static void sdl3_video_translate(uint32_t vx, uint32_t vy,
-	uint32_t *x, uint32_t *y)
+static void sdl3_video_translate(uint32_t vx, uint32_t vy, uint32_t *x, uint32_t *y)
 {
 	uint32_t cx, cy, cw, ch;
 
@@ -719,7 +728,7 @@ static void sdl3_video_translate(uint32_t vx, uint32_t vy,
 		break;
 	case VIDEO_TYPE_RENDERER:
 		cx = cy = 0;
-		cw = (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
+		cw = (cfg_video_want_fixed) ? cfg_video_want_fixed_width : video.width;
 		ch = (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
@@ -740,8 +749,7 @@ static void sdl3_video_translate(uint32_t vx, uint32_t vy,
 
 static int sdl3_video_is_input_grabbed(void)
 {
-	return sdl3_GetWindowMouseGrab(video.window)
-		&& sdl3_GetWindowKeyboardGrab(video.window);
+	return sdl3_GetWindowMouseGrab(video.window) && sdl3_GetWindowKeyboardGrab(video.window);
 }
 
 static void sdl3_video_set_input_grabbed(int enabled)
@@ -799,8 +807,7 @@ static void sdl3_video_toggle_menu(SCHISM_UNUSED int on)
 
 /* ------------------------------------------------------------------------ */
 
-SCHISM_HOT static uint32_t sdl3_map_rgb_callback(void *data, uint8_t r,
-	uint8_t g, uint8_t b)
+SCHISM_HOT static uint32_t sdl3_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t b)
 {
 	const SDL_PixelFormatDetails *format = data;
 
@@ -839,7 +846,8 @@ SCHISM_HOT static void sdl3_video_blit(void)
 			break;
 		}
 		sdl3_UnlockTexture(video.u.r.texture);
-		sdl3_RenderTexture(video.u.r.renderer, video.u.r.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
+		sdl3_RenderTexture(
+			video.u.r.renderer, video.u.r.texture, NULL, (cfg_video_want_fixed) ? &dstrect : NULL);
 		sdl3_RenderPresent(video.u.r.renderer);
 		break;
 	}
@@ -853,16 +861,9 @@ SCHISM_HOT static void sdl3_video_blit(void)
 			memset(video.u.s.surface->pixels, 0, video.u.s.surface->pitch * video.u.s.surface->h);
 		}
 
-		video_blitSC(SDL_BYTESPERPIXEL(video.format),
-			video.u.s.surface->pixels,
-			video.u.s.surface->pitch,
-			video.pal,
-			sdl3_map_rgb_callback,
-			(void *)video.pixel_format /* stupid cast */,
-			video.u.s.clip.x,
-			video.u.s.clip.y,
-			video.u.s.clip.w,
-			video.u.s.clip.h);
+		video_blitSC(SDL_BYTESPERPIXEL(video.format), video.u.s.surface->pixels, video.u.s.surface->pitch,
+			video.pal, sdl3_map_rgb_callback, (void *)video.pixel_format /* stupid cast */,
+			video.u.s.clip.x, video.u.s.clip.y, video.u.s.clip.w, video.u.s.clip.h);
 
 		if (SDL_MUSTLOCK(video.u.s.surface))
 			sdl3_UnlockSurface(video.u.s.surface);
@@ -878,8 +879,10 @@ SCHISM_HOT static void sdl3_video_blit(void)
 
 static void sdl3_video_show_cursor(int enabled)
 {
-	if (enabled) sdl3_ShowCursor();
-	else sdl3_HideCursor();
+	if (enabled)
+		sdl3_ShowCursor();
+	else
+		sdl3_HideCursor();
 }
 
 static void sdl3_video_mousecursor_changed(void)

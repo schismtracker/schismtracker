@@ -23,21 +23,21 @@
 
 #include "headers.h"
 
-#include "config.h"
 #include "dialog.h"
 #include "it.h"
 #include "page.h"
 #include "song.h"
-#include "vgamem.h"
 #include "widget.h"
+#include "config.h"
+#include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
 /* static variables */
 
 static struct widget widgets_vars[18];
-static const int group_control[] = { 8, 9, -1 };
-static const int group_playback[] = { 10, 11, -1 };
-static const int group_slides[] = { 12, 13, -1 };
+static const int group_control[] = {8, 9, -1};
+static const int group_playback[] = {10, 11, -1};
+static const int group_slides[] = {12, 13, -1};
 static char Amiga[6] = "Amiga";
 
 /* --------------------------------------------------------------------- */
@@ -115,7 +115,6 @@ static void update_values_in_song(void)
 	status.flags |= SONG_NEEDS_SAVE;
 }
 
-
 static void init_instruments(SCHISM_UNUSED void *data)
 {
 	song_init_instruments(-1);
@@ -129,7 +128,6 @@ static void maybe_init_instruments(void)
 
 	status.flags |= SONG_NEEDS_SAVE;
 }
-
 
 static void song_changed_cb(void)
 {
@@ -163,11 +161,12 @@ static void song_changed_cb(void)
 		widget_togglebutton_set(widgets_vars, 13, 0);
 
 	/* XXX wtf is going on here */
-	for (b = strpbrk(song_get_basename(), "Aa"),
-	c = 12632; c && b && b[1]; c >>= 4, b++)
-	if ((c & 15) != b[1] - *b) return;
-	if (!c) for (b = Amiga, c = 12632; c; c>>= 4, b++)
-	b[1] = *b + (c & 15);
+	for (b = strpbrk(song_get_basename(), "Aa"), c = 12632; c && b && b[1]; c >>= 4, b++)
+		if ((c & 15) != b[1] - *b)
+			return;
+	if (!c)
+		for (b = Amiga, c = 12632; c; c >>= 4, b++)
+			b[1] = *b + (c & 15);
 }
 
 /* --------------------------------------------------------------------- */
@@ -216,28 +215,27 @@ void song_vars_load_page(struct page *page)
 	/* 7 = compatible gxx */
 	widget_create_toggle(widgets_vars + 7, 17, 27, 6, 8, 6, 8, 8, update_values_in_song);
 	/* 8-13 = switches */
-	widget_create_togglebutton(widgets_vars + 8, 17, 30, 11, 7, 10, 9, 9, 9, maybe_init_instruments,
-			    "Instruments", 1, group_control);
+	widget_create_togglebutton(
+		widgets_vars + 8, 17, 30, 11, 7, 10, 9, 9, 9, maybe_init_instruments, "Instruments", 1, group_control);
 	widgets_vars[8].next.backtab = 9;
-	widget_create_togglebutton(widgets_vars + 9, 32, 30, 11, 7, 11, 8, 8, 8, update_values_in_song,
-			    "Samples", 1, group_control);
-	widget_create_togglebutton(widgets_vars + 10, 17, 33, 11, 8, 12, 11, 11, 11, update_values_in_song,
-			    "Stereo", 1, group_playback);
-	widget_create_togglebutton(widgets_vars + 11, 32, 33, 11, 9, 13, 10, 10, 10, update_values_in_song,
-			    "Mono", 1, group_playback);
-	widget_create_togglebutton(widgets_vars + 12, 17, 36, 11, 10, 14, 13, 13, 13, update_values_in_song,
-			    "Linear", 1, group_slides);
-	widget_create_togglebutton(widgets_vars + 13, 32, 36, 11, 11, 14, 12, 12, 12, update_values_in_song,
-			    Amiga, 1, group_slides);
+	widget_create_togglebutton(
+		widgets_vars + 9, 32, 30, 11, 7, 11, 8, 8, 8, update_values_in_song, "Samples", 1, group_control);
+	widget_create_togglebutton(
+		widgets_vars + 10, 17, 33, 11, 8, 12, 11, 11, 11, update_values_in_song, "Stereo", 1, group_playback);
+	widget_create_togglebutton(
+		widgets_vars + 11, 32, 33, 11, 9, 13, 10, 10, 10, update_values_in_song, "Mono", 1, group_playback);
+	widget_create_togglebutton(
+		widgets_vars + 12, 17, 36, 11, 10, 14, 13, 13, 13, update_values_in_song, "Linear", 1, group_slides);
+	widget_create_togglebutton(
+		widgets_vars + 13, 32, 36, 11, 11, 14, 12, 12, 12, update_values_in_song, Amiga, 1, group_slides);
 	/* 14-16 = directories */
-	widget_create_textentry(widgets_vars + 14, 13, 42, 65, 12, 15, 15, dir_modules_changed,
-			 cfg_dir_modules, ARRAY_SIZE(cfg_dir_modules) - 1);
-	widget_create_textentry(widgets_vars + 15, 13, 43, 65, 14, 16, 16, dir_samples_changed,
-			 cfg_dir_samples, ARRAY_SIZE(cfg_dir_samples) - 1);
-	widget_create_textentry(widgets_vars + 16, 13, 44, 65, 15, 17, 17, dir_instruments_changed,
-			 cfg_dir_instruments, ARRAY_SIZE(cfg_dir_instruments) - 1);
+	widget_create_textentry(widgets_vars + 14, 13, 42, 65, 12, 15, 15, dir_modules_changed, cfg_dir_modules,
+		ARRAY_SIZE(cfg_dir_modules) - 1);
+	widget_create_textentry(widgets_vars + 15, 13, 43, 65, 14, 16, 16, dir_samples_changed, cfg_dir_samples,
+		ARRAY_SIZE(cfg_dir_samples) - 1);
+	widget_create_textentry(widgets_vars + 16, 13, 44, 65, 15, 17, 17, dir_instruments_changed, cfg_dir_instruments,
+		ARRAY_SIZE(cfg_dir_instruments) - 1);
 	/* 17 = save all preferences */
 	widget_create_button(widgets_vars + 17, 28, 47, 22, 16, 17, 17, 17, 17, cfg_save, "Save all Preferences", 2);
 	widgets_vars[17].next.backtab = 17;
 }
-

@@ -28,8 +28,8 @@
 #include "it.h"
 #include "song.h"
 #include "log.h"
-#include "version.h"
 #include "mem.h"
+#include "version.h"
 
 /* -------------------------------------------------------- */
 
@@ -104,8 +104,7 @@ struct it_instrument {
 
 /* --------------------------------------------------------------------- */
 
-static int load_it_notetrans(struct instrumentloader *ii, song_instrument_t *instrument, slurp_t *fp,
-	int *numsamps)
+static int load_it_notetrans(struct instrumentloader *ii, song_instrument_t *instrument, slurp_t *fp, int *numsamps)
 {
 	/* sample bits; made an array simply because it means it's expandible */
 	BITARRAY_DECLARE(smpbits, 256);
@@ -159,8 +158,7 @@ int fmt_iti_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!slurp_could_seek(fp, 554, SEEK_CUR))
 		return 0;
 
-	if (slurp_read(fp, impi, sizeof(impi)) != sizeof(impi)
-		|| memcmp(impi, "IMPI", sizeof(impi)))
+	if (slurp_read(fp, impi, sizeof(impi)) != sizeof(impi) || memcmp(impi, "IMPI", sizeof(impi)))
 		return 0;
 
 	/* read in name */
@@ -183,8 +181,8 @@ int fmt_iti_read_info(dmoz_file_t *file, slurp_t *fp)
 }
 
 static const uint32_t env_flags[3][4] = {
-	{ENV_VOLUME,  ENV_VOLLOOP,   ENV_VOLSUSTAIN,   ENV_VOLCARRY},
-	{ENV_PANNING, ENV_PANLOOP,   ENV_PANSUSTAIN,   ENV_PANCARRY},
+	{ENV_VOLUME,  ENV_VOLLOOP,   ENV_VOLSUSTAIN,   ENV_VOLCARRY  },
+	{ENV_PANNING, ENV_PANLOOP,   ENV_PANSUSTAIN,   ENV_PANCARRY  },
 	{ENV_PITCH,   ENV_PITCHLOOP, ENV_PITCHSUSTAIN, ENV_PITCHCARRY},
 };
 
@@ -238,7 +236,12 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 	struct it_instrument_old ihdr;
 	int n;
 
-#define READ_VALUE(name) do { if (slurp_read(fp, &ihdr.name, sizeof(ihdr.name)) != sizeof(ihdr.name)) { return 0; } } while (0)
+#define READ_VALUE(name) \
+	do { \
+		if (slurp_read(fp, &ihdr.name, sizeof(ihdr.name)) != sizeof(ihdr.name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(id);
 	READ_VALUE(filename);
@@ -316,11 +319,16 @@ int load_it_instrument_old(song_instrument_t *instrument, slurp_t *fp)
 	return 1;
 }
 
-int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrument, slurp_t *fp)
+int load_it_instrument(struct instrumentloader *ii, song_instrument_t *instrument, slurp_t *fp)
 {
 	struct it_instrument ihdr;
 
-#define READ_VALUE(name) do { if (slurp_read(fp, &ihdr.name, sizeof(ihdr.name)) != sizeof(ihdr.name)) { return 0; } } while (0)
+#define READ_VALUE(name) \
+	do { \
+		if (slurp_read(fp, &ihdr.name, sizeof(ihdr.name)) != sizeof(ihdr.name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(id);
 	READ_VALUE(filename);
@@ -374,12 +382,8 @@ int load_it_instrument(struct instrumentloader* ii, song_instrument_t *instrumen
 
 	// (blah... this isn't supposed to be a mask according to the
 	// spec. where did this code come from? and what is 0x10000?)
-	instrument->midi_channel_mask =
-			((ihdr.mch > 16)
-			 ? (0x10000 + ihdr.mch)
-			 : ((ihdr.mch > 0)
-			    ? (1 << (ihdr.mch - 1))
-			    : 0));
+	instrument->midi_channel_mask
+		= ((ihdr.mch > 16) ? (0x10000 + ihdr.mch) : ((ihdr.mch > 0) ? (1 << (ihdr.mch - 1)) : 0));
 	instrument->midi_program = ihdr.mpr;
 	instrument->midi_bank = bswapLE16(ihdr.mbank);
 
@@ -405,7 +409,7 @@ int fmt_iti_load_instrument(slurp_t *fp, int slot)
 
 	/* okay, on to samples */
 	for (int j = 0; j < ii.expect_samples; j++) {
-		song_sample_t *smp = song_get_sample(ii.sample_map[j+1]);
+		song_sample_t *smp = song_get_sample(ii.sample_map[j + 1]);
 		if (!smp)
 			break;
 
@@ -439,31 +443,25 @@ static int save_iti_envelopes(disko_t *fp, song_instrument_t *ins)
 {
 	struct it_envelope vol = {0}, pan = {0}, pitch = {0};
 
-	vol.flags = ((ins->flags & ENV_VOLUME) ? 0x01 : 0)
-		| ((ins->flags & ENV_VOLLOOP) ? 0x02 : 0)
-		| ((ins->flags & ENV_VOLSUSTAIN) ? 0x04 : 0)
-		| ((ins->flags & ENV_VOLCARRY) ? 0x08 : 0);
+	vol.flags = ((ins->flags & ENV_VOLUME) ? 0x01 : 0) | ((ins->flags & ENV_VOLLOOP) ? 0x02 : 0)
+		    | ((ins->flags & ENV_VOLSUSTAIN) ? 0x04 : 0) | ((ins->flags & ENV_VOLCARRY) ? 0x08 : 0);
 	vol.num = ins->vol_env.nodes;
 	vol.lpb = ins->vol_env.loop_start;
 	vol.lpe = ins->vol_env.loop_end;
 	vol.slb = ins->vol_env.sustain_start;
 	vol.sle = ins->vol_env.sustain_end;
 
-	pan.flags = ((ins->flags & ENV_PANNING) ? 0x01 : 0)
-		| ((ins->flags & ENV_PANLOOP) ? 0x02 : 0)
-		| ((ins->flags & ENV_PANSUSTAIN) ? 0x04 : 0)
-		| ((ins->flags & ENV_PANCARRY) ? 0x08 : 0);
+	pan.flags = ((ins->flags & ENV_PANNING) ? 0x01 : 0) | ((ins->flags & ENV_PANLOOP) ? 0x02 : 0)
+		    | ((ins->flags & ENV_PANSUSTAIN) ? 0x04 : 0) | ((ins->flags & ENV_PANCARRY) ? 0x08 : 0);
 	pan.num = ins->pan_env.nodes;
 	pan.lpb = ins->pan_env.loop_start;
 	pan.lpe = ins->pan_env.loop_end;
 	pan.slb = ins->pan_env.sustain_start;
 	pan.sle = ins->pan_env.sustain_end;
 
-	pitch.flags = ((ins->flags & ENV_PITCH) ? 0x01 : 0)
-		| ((ins->flags & ENV_PITCHLOOP) ? 0x02 : 0)
-		| ((ins->flags & ENV_PITCHSUSTAIN) ? 0x04 : 0)
-		| ((ins->flags & ENV_PITCHCARRY) ? 0x08 : 0)
-		| ((ins->flags & ENV_FILTER) ? 0x80 : 0);
+	pitch.flags = ((ins->flags & ENV_PITCH) ? 0x01 : 0) | ((ins->flags & ENV_PITCHLOOP) ? 0x02 : 0)
+		      | ((ins->flags & ENV_PITCHSUSTAIN) ? 0x04 : 0) | ((ins->flags & ENV_PITCHCARRY) ? 0x08 : 0)
+		      | ((ins->flags & ENV_FILTER) ? 0x80 : 0);
 	pitch.num = ins->pitch_env.nodes;
 	pitch.lpb = ins->pitch_env.loop_start;
 	pitch.lpe = ins->pitch_env.loop_end;
@@ -481,9 +479,12 @@ static int save_iti_envelopes(disko_t *fp, song_instrument_t *ins)
 		pitch.nodes[j].tick = ins->pitch_env.ticks[j];
 	}
 
-	if (!save_iti_envelope(fp, vol))   return 0;
-	if (!save_iti_envelope(fp, pan))   return 0;
-	if (!save_iti_envelope(fp, pitch)) return 0;
+	if (!save_iti_envelope(fp, vol))
+		return 0;
+	if (!save_iti_envelope(fp, pan))
+		return 0;
+	if (!save_iti_envelope(fp, pitch))
+		return 0;
 
 	return 1;
 }
@@ -501,7 +502,7 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 	// envelope: flags num lpb lpe slb sle data[25*3] reserved
 
 	iti.id = bswapLE32(0x49504D49); // IMPI
-	memcpy((char *) iti.filename, (char *) ins->filename, MIN(sizeof(ins->filename), sizeof(iti.filename)));
+	memcpy((char *)iti.filename, (char *)ins->filename, MIN(sizeof(ins->filename), sizeof(iti.filename)));
 	iti.zero = 0;
 	iti.nna = ins->nna;
 	iti.dct = ins->dct;
@@ -522,20 +523,19 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 		iti.trkvers = bswapLE16(0x1000 | ver_cwtv);
 
 	// reserved1
-	memcpy((char *) iti.name, (char *) ins->name, MIN(sizeof(ins->name), sizeof(iti.name)));
+	memcpy((char *)iti.name, (char *)ins->name, MIN(sizeof(ins->name), sizeof(iti.name)));
 	iti.name[25] = 0;
 	iti.ifc = ins->ifc;
 	iti.ifr = ins->ifr;
 	iti.mch = 0;
-	if(ins->midi_channel_mask >= 0x10000)
-	{
-	    iti.mch = ins->midi_channel_mask - 0x10000;
-	    if(iti.mch <= 16) iti.mch = 16;
-	}
-	else if(ins->midi_channel_mask & 0xFFFF)
-	{
-	    iti.mch = 1;
-	    while(!(ins->midi_channel_mask & (1 << (iti.mch-1)))) ++iti.mch;
+	if (ins->midi_channel_mask >= 0x10000) {
+		iti.mch = ins->midi_channel_mask - 0x10000;
+		if (iti.mch <= 16)
+			iti.mch = 16;
+	} else if (ins->midi_channel_mask & 0xFFFF) {
+		iti.mch = 1;
+		while (!(ins->midi_channel_mask & (1 << (iti.mch - 1))))
+			++iti.mch;
 	}
 	iti.mpr = ins->midi_program;
 	iti.mbank = bswapLE16(ins->midi_bank);
@@ -562,7 +562,7 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 				iti_invmap[iti_nalloc] = o;
 				iti_nalloc++;
 			}
-			notetrans[j].smp = iti_map[o]+1;
+			notetrans[j].smp = iti_map[o] + 1;
 		} else {
 			notetrans[j].smp = ins->sample_map[j];
 		}
@@ -629,13 +629,13 @@ void save_iti_instrument(disko_t *fp, song_t *song, song_instrument_t *ins, int 
 
 			op = disko_tell(fp);
 			tmp = bswapLE32(op);
-			disko_seek(fp, iti_map[o]+0x48, SEEK_SET);
+			disko_seek(fp, iti_map[o] + 0x48, SEEK_SET);
 			disko_write(fp, &tmp, 4);
 			disko_seek(fp, op, SEEK_SET);
-			csf_write_sample(fp, smp, SF_LE | SF_PCMS
-					| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+			csf_write_sample(fp, smp,
+				SF_LE | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
 					| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
-					UINT32_MAX);
+				UINT32_MAX);
 		}
 	}
 }

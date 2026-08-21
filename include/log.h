@@ -24,8 +24,8 @@
 #define SCHISM_LOG_H_
 
 #include "headers.h"
-#include "util.h"
 #include "charset.h"
+#include "util.h"
 
 /* appends a line to the log in charset 'set' (all log functions are
  * in essence a wrapper around this in some way or another) */
@@ -45,8 +45,7 @@ void log_append(int color, int must_free, const char *text);
 void log_append2(int bios_font, int color, int must_free, const char *text);
 
 /* appends a line after being formatted with printf */
-void log_appendf(int color, const char *format, ...)
-	SCHISM_FORMAT_PRINTF(2, 3);
+void log_appendf(int color, const char *format, ...) SCHISM_FORMAT_PRINTF(2, 3);
 
 /* like perror() but dumps into the log */
 void log_perror(const char *prefix);
@@ -55,10 +54,8 @@ void log_perror(const char *prefix);
 void log_append_timestamp(int color, const char *text);
 void log_appendf_timestamp(int color, const char *format, ...);
 
-void status_text_flash(const char *format, ...)
-	SCHISM_FORMAT_PRINTF(1, 2);
-void status_text_flash_bios(const char *format, ...)
-	SCHISM_FORMAT_PRINTF(1, 2);
+void status_text_flash(const char *format, ...) SCHISM_FORMAT_PRINTF(1, 2);
+void status_text_flash_bios(const char *format, ...) SCHISM_FORMAT_PRINTF(1, 2);
 /* Clears any status text.
  * This is better than doing status_text_flash(" "); as this
  * doesn't override any playback data */

@@ -26,34 +26,34 @@
 #include "headers.h"
 
 #include "it.h"
+#include "song.h"
+#include "charset.h"
 #include "config-parser.h"
 #include "config.h"
-#include "charset.h"
-#include "song.h"
 #include "dmoz.h"
-#include "slurp.h"
-#include "util.h"
-#include "osdefs.h"
 #include "loadso.h"
 #include "mem.h"
+#include "osdefs.h"
+#include "slurp.h"
 #include "str.h"
+#include "util.h"
 
 #include "backend/dmoz.h"
 
 #include "fmt.h"
 
-#include <unistd.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #ifdef __amigaos4__
 # include <proto/dos.h>
 #endif
 
 #if defined(SCHISM_WIN32)
-# include <windows.h>
-# include <winbase.h>
-# include <shlobj.h>
 # include <direct.h>
+# include <shlobj.h>
+# include <winbase.h>
+# include <windows.h>
 #elif defined(SCHISM_MACOS)
 # include <Files.h>
 # include <Folders.h>
@@ -67,9 +67,9 @@
 # define INCL_DOSFILEMGR
 # include <os2.h>
 #elif defined(SCHISM_XBOX)
-# include <windows.h>
-# include <winbase.h>
 # include <shlobj.h>
+# include <winbase.h>
+# include <windows.h>
 #elif defined(HAVE_DIRENT_H)
 # include <dirent.h>
 #else
@@ -101,15 +101,16 @@ static const char *wii_getdevname(size_t i)
 	}
 
 	dev = devoptab_list[i];
-	if (!dev || !dev->name || !strcmp(dev->name, "stdnull")
-#ifdef SCHISM_WII
+	if (!dev || !dev->name
+		|| !strcmp(dev->name, "stdnull")
+# ifdef SCHISM_WII
 		/* ETicket services -- contains nothing unless you do
 		 * manual path manipulation */
 		|| !strcmp(dev->name, "es")
-#elif defined(SCHISM_WIIU)
+# elif defined(SCHISM_WIIU)
 		/* default devoptab */
 		|| !strcmp(dev->name, "fs")
-#endif
+# endif
 	)
 		return NULL;
 
@@ -142,7 +143,8 @@ static const schism_dmoz_backend_t *backend = NULL;
 /* constants */
 
 /* note: this has to be split up like this; otherwise it gets read as '\x9ad' which is the Wrong Thing. */
-#define TITLE_DIRECTORY "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a" \
+#define TITLE_DIRECTORY \
+	"\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a" \
 	"Directory\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"
 #define DESCR_DIRECTORY "Directory"
 
@@ -159,7 +161,7 @@ static const schism_dmoz_backend_t *backend = NULL;
 
 /* memory allocation: how many files/dirs are allocated at a time */
 #define FILE_BLOCK_SIZE 256
-#define DIR_BLOCK_SIZE 32
+#define DIR_BLOCK_SIZE  32
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* file format tables */
@@ -174,11 +176,11 @@ static const fmt_read_info_func read_info_funcs[] = {
 /* --------------------------------------------------------------------------------------------------------- */
 /* sorting stuff */
 
-typedef int (*dmoz_fcmp_t) (const dmoz_file_t *a, const dmoz_file_t *b);
-typedef int (*dmoz_dcmp_t) (const dmoz_dir_t *a, const dmoz_dir_t *b);
+typedef int (*dmoz_fcmp_t)(const dmoz_file_t *a, const dmoz_file_t *b);
+typedef int (*dmoz_dcmp_t)(const dmoz_dir_t *a, const dmoz_dir_t *b);
 
-#define _DECL_CMP(name)                                                                 \
-	static int dmoz_fcmp_##name(const dmoz_file_t *a, const dmoz_file_t *b);        \
+#define _DECL_CMP(name) \
+	static int dmoz_fcmp_##name(const dmoz_file_t *a, const dmoz_file_t *b); \
 	static int dmoz_dcmp_##name(const dmoz_dir_t *a, const dmoz_dir_t *b);
 _DECL_CMP(strcmp)
 _DECL_CMP(strcasecmp)
@@ -194,12 +196,12 @@ static struct {
 	dmoz_fcmp_t fcmp;
 	dmoz_dcmp_t dcmp;
 } compare_funcs[] = {
-	{"strcmp", dmoz_fcmp_strcmp, dmoz_dcmp_strcmp},
-	{"strcasecmp", dmoz_fcmp_strcasecmp, dmoz_dcmp_strcasecmp},
-	{"strverscmp", dmoz_fcmp_strverscmp, dmoz_dcmp_strverscmp},
-	{"timestamp", dmoz_fcmp_timestamp, dmoz_dcmp_strverscmp},
+	{"strcmp",         dmoz_fcmp_strcmp,         dmoz_dcmp_strcmp        },
+        {"strcasecmp",     dmoz_fcmp_strcasecmp,     dmoz_dcmp_strcasecmp    },
+	{"strverscmp",     dmoz_fcmp_strverscmp,     dmoz_dcmp_strverscmp    },
+	{"timestamp",      dmoz_fcmp_timestamp,      dmoz_dcmp_strverscmp    },
 	{"strcaseverscmp", dmoz_fcmp_strcaseverscmp, dmoz_dcmp_strcaseverscmp},
-	{NULL, NULL, NULL}
+        {NULL,             NULL,                     NULL                    }
 };
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -225,7 +227,7 @@ void dmoz_cache_update(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 		dn = dl->dirs[dl->selected]->base;
 	else
 		dn = NULL;
-	dmoz_cache_update_names(path,fn,dn);
+	dmoz_cache_update_names(path, fn, dn);
 }
 
 void dmoz_cache_update_names(const char *path, const char *filen, const char *dirn)
@@ -241,7 +243,7 @@ void dmoz_cache_update_names(const char *path, const char *filen, const char *di
 	if (dirn && strcmp(dirn, "..") == 0)
 		dirn = NULL;
 	for (p = cache_top; p; p = p->next) {
-		if (strcmp(p->path,q)==0) {
+		if (strcmp(p->path, q) == 0) {
 			free(q);
 			if (filen) {
 				free(p->cache_filen);
@@ -274,13 +276,16 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 	struct dmoz_cache *p;
 	int i;
 
-	if (fl) fl->selected = 0;
-	if (dl) dl->selected = 0;
+	if (fl)
+		fl->selected = 0;
+	if (dl)
+		dl->selected = 0;
 	for (p = cache_top; p; p = p->next) {
 		if (strcmp(p->path, path) == 0) {
 			if (fl && p->cache_filen) {
 				for (i = 0; i < fl->num_files; i++) {
-					if (!fl->files[i]) continue;
+					if (!fl->files[i])
+						continue;
 					if (strcmp(fl->files[i]->base, p->cache_filen) == 0) {
 						fl->selected = i;
 						break;
@@ -289,7 +294,8 @@ void dmoz_cache_lookup(const char *path, dmoz_filelist_t *fl, dmoz_dirlist_t *dl
 			}
 			if (dl && p->cache_dirn) {
 				for (i = 0; i < dl->num_dirs; i++) {
-					if (!dl->dirs[i]) continue;
+					if (!dl->dirs[i])
+						continue;
 					if (strcmp(dl->dirs[i]->base, p->cache_dirn) == 0) {
 						dl->selected = i;
 						break;
@@ -339,7 +345,7 @@ int dmoz_path_from_fsspec(const void *pvref, char **path)
 		cinfo.dirInfo.ioFDirIndex = index;
 		cinfo.dirInfo.ioDrDirID = spec.parID;
 		err = PBGetCatInfoSync(&cinfo);
-		
+
 		if (err == noErr) {
 			unsigned char name_len = spec.name[0];
 
@@ -354,7 +360,7 @@ int dmoz_path_from_fsspec(const void *pvref, char **path)
 
 			// from here on out, ignore the input file name
 			index = -1;
-			
+
 			// move up to the parent
 			spec.parID = cinfo.dirInfo.ioDrParID;
 		}
@@ -372,7 +378,7 @@ int dmoz_path_from_fsspec(const void *pvref, char **path)
 
 int dmoz_path_to_fsspec(const char *path, void *pvref)
 {
-#if 1
+# if 1
 	int trunc;
 	unsigned char ppath[256];
 
@@ -384,7 +390,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 	 * vRefNum and dirID parameters. Thus, we can send our pascal-path
 	 * directly into FSMakeFSSpec */
 	return (FSMakeFSSpec(0, 0, ppath, pvref) == noErr);
-#else
+# else
 	/* This doesn't work!!
 	 * I sourced it from some old Apache program, but we never ended
 	 * up needing it since we never had to convert to FSSpec.
@@ -396,28 +402,28 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 	FSSpec spec;
 	Str255 name; // Must be long enough for a partial pathname consisting of two segments (64 bytes)
 
-	const char* p = path;
-	const char* pEnd;
+	const char *p = path;
+	const char *pEnd;
 	size_t segLen;
 	// Find the end of the path segment
-	for (pEnd = ++p; *pEnd && *pEnd != ':'; ++pEnd);
+	for (pEnd = ++p; *pEnd && *pEnd != ':'; ++pEnd)
+		;
 	segLen = pEnd - p;
 
 	/* zero out the FSSpec */
 	memset(&spec, 0, sizeof(spec));
 
 	// Try to find a volume that matches this name
-	for (ItemCount volIndex = 1; err == noErr; ++volIndex)
-	{
+	for (ItemCount volIndex = 1; err == noErr; ++volIndex) {
 		FSVolumeRefNum volRefNum;
 		HParamBlockRec hfsParams;
 		name[0] = 0;
-		hfsParams.volumeParam.ioNamePtr  = name;
-		hfsParams.volumeParam.ioVRefNum  = 0;
+		hfsParams.volumeParam.ioNamePtr = name;
+		hfsParams.volumeParam.ioVRefNum = 0;
 		hfsParams.volumeParam.ioVolIndex = volIndex;
 		err = PBHGetVInfoSync(&hfsParams);
 		volRefNum = hfsParams.volumeParam.ioVRefNum;
-	
+
 		// Compare against our path segment
 		if (err == noErr && segLen == StrLength(name)) {
 			// FIXME FIXME READ ALL ABOUT IT:
@@ -432,9 +438,9 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 			}
 		}
 	}
-	
+
 	p = pEnd;
-	
+
 	// okay, now we have the root directory.
 	// NOW, we have to parse the rest of the path.
 	// I have no idea if '.' or '..' are actual real filenames on Mac OS.
@@ -443,7 +449,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 		case ':': // skip any path separators
 			++p;
 			break;
-	
+
 		case '.': // "current directory" or "parent directory"
 			if (p[1] == '/' || p[1] == 0) { // "current directory"
 				++p;
@@ -471,12 +477,13 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 			SCHISM_FALLTHROUGH;
 		default: {
 			// Find the end of the path segment
-			for (pEnd = p; *pEnd && *pEnd != ':'; ++pEnd) ;
+			for (pEnd = p; *pEnd && *pEnd != ':'; ++pEnd)
+				;
 			segLen = pEnd - p;
 
 			// Check for name length overflow (XXX: what is this magic constant)
 			if (segLen > 31)
-					return 0;
+				return 0;
 
 			// Make a partial pathname from our current spec to the new object
 			unsigned char *partial = &name[1];
@@ -490,7 +497,7 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 			*partial++ = ':'; // Separator
 			while (p != pEnd)
 				*partial++ = *p++; // copy in the new element
-			  
+
 			name[0] = partial - &name[1]; // Set the name length
 
 			// Update the spec
@@ -499,12 +506,12 @@ int dmoz_path_to_fsspec(const char *path, void *pvref)
 		}
 		}
 	}
-	
+
 	// copy the result
 	memcpy(pvref, &spec, sizeof(spec));
 
 	return err == noErr;
-#endif
+# endif
 }
 #endif
 
@@ -543,14 +550,14 @@ const char *dmoz_path_get_extension(const char *filename)
  *      if input is /home/ it returns /
  *
  * the equivalent windows paths also work here
-*/
+ */
 char *dmoz_path_get_parent_directory(const char *dirname)
 {
 	if (!dirname || !dirname[0])
 		return NULL;
 
 	/* need the root path, including the separator */
-	const char* root = strchr(dirname, DIR_SEPARATOR);
+	const char *root = strchr(dirname, DIR_SEPARATOR);
 	if (!root)
 		return NULL;
 	root++;
@@ -560,7 +567,7 @@ char *dmoz_path_get_parent_directory(const char *dirname)
 		return NULL;
 
 	/* okay, now we need to find the final token */
-	const char* pos = root + strlen(root) - 1;
+	const char *pos = root + strlen(root) - 1;
 	if (IS_DIR_SEPARATOR(*pos)) /* strip off an excess separator, if any */
 		pos--;
 
@@ -615,41 +622,42 @@ int dmoz_path_make_backup(const char *filename, int numbered)
 
 #if defined(SCHISM_WIN32)
 # define DMOZ_PATH_RENAME_IMPL(TYPE, CHARSET, SUFFIX, CHMOD) \
-	static int dmoz_path_rename##SUFFIX(const char *old, const char *new, int overwrite) \
-	{ \
-		int res = -1; \
-	\
-		TYPE *old_w = NULL, *new_w = NULL; \
-		if (!charset_iconv(old, &old_w, CHARSET_UTF8, CHARSET, SIZE_MAX) \
-			&& !charset_iconv(new, &new_w, CHARSET_UTF8, CHARSET, SIZE_MAX)) { \
-			if (MoveFile##SUFFIX(old_w, new_w)) { \
-				win32_filecreated_callback(new); \
-				res = 0; \
-			} else if (overwrite) { \
-				if (MoveFileEx##SUFFIX(old_w, new_w, MOVEFILE_REPLACE_EXISTING)) { \
-					/* no callback here; file already existed */ \
-					res = 0; \
-				} else { \
-					CHMOD(new_w, 0777); \
-					CHMOD(old_w, 0777); \
-	\
-					SetFileAttributes##SUFFIX(new_w, FILE_ATTRIBUTE_NORMAL); \
-					SetFileAttributes##SUFFIX(new_w, FILE_ATTRIBUTE_TEMPORARY); \
-	\
-					/* wee */ \
-					if (MoveFile##SUFFIX(old_w, new_w) || (DeleteFile##SUFFIX(new_w) && MoveFile##SUFFIX(old_w, new_w))) { \
-						win32_filecreated_callback(new); \
-						res = 0; \
-					} \
-				} \
-			} \
-		} \
-	\
-		free(new_w); \
-		free(old_w); \
-	\
-		return res; \
-	}
+	 static int dmoz_path_rename##SUFFIX(const char *old, const char *new, int overwrite) \
+	 { \
+		 int res = -1; \
+\
+		 TYPE *old_w = NULL, *new_w = NULL; \
+		 if (!charset_iconv(old, &old_w, CHARSET_UTF8, CHARSET, SIZE_MAX) \
+			 && !charset_iconv(new, &new_w, CHARSET_UTF8, CHARSET, SIZE_MAX)) { \
+			 if (MoveFile##SUFFIX(old_w, new_w)) { \
+				 win32_filecreated_callback(new); \
+				 res = 0; \
+			 } else if (overwrite) { \
+				 if (MoveFileEx##SUFFIX(old_w, new_w, MOVEFILE_REPLACE_EXISTING)) { \
+					 /* no callback here; file already existed */ \
+					 res = 0; \
+				 } else { \
+					 CHMOD(new_w, 0777); \
+					 CHMOD(old_w, 0777); \
+\
+					 SetFileAttributes##SUFFIX(new_w, FILE_ATTRIBUTE_NORMAL); \
+					 SetFileAttributes##SUFFIX(new_w, FILE_ATTRIBUTE_TEMPORARY); \
+\
+					 /* wee */ \
+					 if (MoveFile##SUFFIX(old_w, new_w) \
+						 || (DeleteFile##SUFFIX(new_w) && MoveFile##SUFFIX(old_w, new_w))) { \
+						 win32_filecreated_callback(new); \
+						 res = 0; \
+					 } \
+				 } \
+			 } \
+		 } \
+\
+		 free(new_w); \
+		 free(old_w); \
+\
+		 return res; \
+	 }
 
 # ifdef SCHISM_WIN32_COMPILE_ANSI
 DMOZ_PATH_RENAME_IMPL(CHAR, CHARSET_ANSI, A, _chmod)
@@ -674,11 +682,8 @@ int dmoz_path_rename(const char *old, const char *new, int overwrite)
 	int ret = -1;
 	DWORD em = SetErrorMode(0);
 
-	SCHISM_ANSI_UNICODE({
-		ret = dmoz_path_renameA(old, new, overwrite);
-	}, {
-		ret = dmoz_path_renameW(old, new, overwrite);
-	})
+	SCHISM_ANSI_UNICODE(
+		{ ret = dmoz_path_renameA(old, new, overwrite); }, { ret = dmoz_path_renameW(old, new, overwrite); })
 
 	switch (GetLastError()) {
 	case ERROR_ALREADY_EXISTS:
@@ -837,7 +842,7 @@ end:
 		 * that they cannot remove. these systems are decidedly not POSIX.1
 		 * but they may try to compile schism, and we won't know they
 		 * are broken unless we warn them.
-		*/
+		 */
 		if (unlink(old) == -1)
 			fprintf(stderr, "link() succeeded, but unlink() failed. something is very wrong\n");
 
@@ -864,15 +869,17 @@ int dmoz_path_remove(const char *path)
 #if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 	BOOL b;
 
-	SCHISM_ANSI_UNICODE({
-		LPSTR npath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI);
-		b = DeleteFileA(npath);
-		free(npath);
-	}, {
-		LPWSTR npath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T);
-		b = DeleteFileW(npath);
-		free(npath);
-	})
+	SCHISM_ANSI_UNICODE(
+		{
+			LPSTR npath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI);
+			b = DeleteFileA(npath);
+			free(npath);
+		},
+		{
+			LPWSTR npath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T);
+			b = DeleteFileW(npath);
+			free(npath);
+		})
 
 	return (b ? 0 : -1);
 #elif defined(SCHISM_MACOS)
@@ -992,7 +999,8 @@ int dmoz_path_is_directory(const char *filename)
 	return S_ISDIR(buf.st_mode);
 }
 
-unsigned long long dmoz_path_get_file_size(const char *filename) {
+unsigned long long dmoz_path_get_file_size(const char *filename)
+{
 	struct stat buf;
 
 	if (os_stat(filename, &buf) < 0)
@@ -1010,9 +1018,10 @@ unsigned long long dmoz_path_get_file_size(const char *filename) {
 
 #ifdef SCHISM_WIN32
 // Functions that only exist on new systems; see dmoz_win32_get_csidl_directory
-static HRESULT (WINAPI *WIN32_SHGetFolderPathW)(HWND hwnd,int csidl,HANDLE hToken,DWORD dwFlags,LPWSTR pszPath) = NULL;
-static BOOL (WINAPI *WIN32_SHGetSpecialFolderPathA)(HWND  hwnd, LPSTR pszPath, int csidl, BOOL  fCreate) = NULL;
-static BOOL (WINAPI *WIN32_SHGetSpecialFolderPathW)(HWND  hwnd, LPWSTR pszPath, int csidl, BOOL  fCreate) = NULL;
+static HRESULT(WINAPI *WIN32_SHGetFolderPathW)(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPWSTR pszPath)
+	= NULL;
+static BOOL(WINAPI *WIN32_SHGetSpecialFolderPathA)(HWND hwnd, LPSTR pszPath, int csidl, BOOL fCreate) = NULL;
+static BOOL(WINAPI *WIN32_SHGetSpecialFolderPathW)(HWND hwnd, LPWSTR pszPath, int csidl, BOOL fCreate) = NULL;
 #endif
 
 char *dmoz_get_current_directory(void)
@@ -1029,29 +1038,29 @@ char *dmoz_get_current_directory(void)
 	/* nothing */
 #elif defined(SCHISM_WIN32)
 	{
-#define TRY_GETCWD(TYPE, SUFFIX, CHARSET) \
-	do { \
-		DWORD bufsize; \
-		TYPE *buf; \
-		char *utf8; \
-	\
-		bufsize = GetCurrentDirectory##SUFFIX(0, NULL); \
-		if (!bufsize) \
-			break; \
-	\
-		buf = mem_alloc((bufsize + 1) * sizeof(TYPE)); \
-	\
-		GetCurrentDirectory##SUFFIX(bufsize + 1, buf); \
-	\
-		utf8 = charset_iconv_easy(buf, CHARSET, CHARSET_UTF8); \
-		if (utf8) \
-			return utf8; \
-	} while (0)
+# define TRY_GETCWD(TYPE, SUFFIX, CHARSET) \
+	 do { \
+		 DWORD bufsize; \
+		 TYPE *buf; \
+		 char *utf8; \
+\
+		 bufsize = GetCurrentDirectory##SUFFIX(0, NULL); \
+		 if (!bufsize) \
+			 break; \
+\
+		 buf = mem_alloc((bufsize + 1) * sizeof(TYPE)); \
+\
+		 GetCurrentDirectory##SUFFIX(bufsize + 1, buf); \
+\
+		 utf8 = charset_iconv_easy(buf, CHARSET, CHARSET_UTF8); \
+		 if (utf8) \
+			 return utf8; \
+	 } while (0)
 
 		TRY_GETCWD(WCHAR, W, CHARSET_WCHAR_T);
 		TRY_GETCWD(CHAR, A, CHARSET_ANSI);
 
-#undef TRY_GETCWD
+# undef TRY_GETCWD
 	}
 #else
     /* Double the buffer size until getcwd() succeeds or we run out
@@ -1068,7 +1077,6 @@ char *dmoz_get_current_directory(void)
 		if (!buf)
 			break;
 	}
-
 
 	if (buf)
 		return buf;
@@ -1088,111 +1096,122 @@ char *dmoz_get_current_directory(void)
 // environment variables. THEN we fallback to FALLBACK_DIR.
 
 // wow this sucks
-#define DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(TYPE, CHARSET, SUFFIX, GETENV, LITERAL) \
-	static inline SCHISM_ALWAYS_INLINE char *dmoz_win32_get_csidl_directory##SUFFIX(int csidl, const TYPE *registry, const TYPE *envvar) \
-	{ \
-		{ \
-			TYPE buf[MAX_PATH]; \
-	\
-			if (WIN32_SHGetSpecialFolderPath##SUFFIX && WIN32_SHGetSpecialFolderPath##SUFFIX(NULL, buf, csidl, 1)) { \
-				char *utf8; \
-				if (!charset_iconv(buf, &utf8, CHARSET, CHARSET_UTF8, sizeof(buf))) \
-					return utf8; \
-			} \
-		} \
-	\
-		if (registry) { \
-			static const TYPE *regpaths[] = { \
-				LITERAL##"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders", \
-				LITERAL##"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders", /* Win95 */ \
-			}; \
-			int i; \
-			for (i = 0; i < ARRAY_SIZE(regpaths); i++) {\
-				HKEY shell_folders; \
-				if (RegOpenKeyEx##SUFFIX(HKEY_CURRENT_USER, regpaths[i], 0, KEY_READ, &shell_folders) != ERROR_SUCCESS) \
-					continue; \
-	\
-				DWORD type; \
-				DWORD length; \
-	\
-				if (RegQueryValueEx##SUFFIX(shell_folders, registry, NULL, &type, NULL, &length) != ERROR_SUCCESS \
-					|| (type != REG_EXPAND_SZ && type != REG_SZ)) \
-					continue; \
-	\
-				TYPE *data = mem_alloc(length); \
-	\
-				if (RegQueryValueEx##SUFFIX(shell_folders, registry, NULL, NULL, (LPBYTE)data, &length) != ERROR_SUCCESS) { \
-					free(data); \
-					continue; \
-				} \
-	\
-				if (type == REG_EXPAND_SZ) {\
-					TYPE expanded[MAX_PATH]; \
-					if (ExpandEnvironmentStrings##SUFFIX((void *)data, expanded, ARRAY_SIZE(expanded))) { \
-						char *utf8; \
-						if (!charset_iconv(expanded, &utf8, CHARSET, CHARSET_UTF8, sizeof(expanded))) { \
-							free(data); \
-							return utf8; \
-						} \
-					} \
-				} else if (type == REG_SZ) { \
-					char *utf8; \
-					if (!charset_iconv(data, &utf8, CHARSET, CHARSET_UTF8, length)) { \
-						free(data); \
-						return utf8; \
-					} \
-				} \
-	\
-				free(data); \
-			} \
-		} \
-	\
-		if (envvar) { \
-			TYPE *ptr = GETENV(envvar); \
-			if (ptr) { \
-				char *utf8; \
-	\
-				if (!charset_iconv(ptr, &utf8, CHARSET, CHARSET_UTF8, MAX_PATH * sizeof(TYPE))) \
-					return utf8; \
-			} \
-		} \
-	\
-		return NULL; \
-	}
+# define DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(TYPE, CHARSET, SUFFIX, GETENV, LITERAL) \
+	 static inline SCHISM_ALWAYS_INLINE char *dmoz_win32_get_csidl_directory##SUFFIX( \
+		 int csidl, const TYPE *registry, const TYPE *envvar) \
+	 { \
+		 { \
+			 TYPE buf[MAX_PATH]; \
+\
+			 if (WIN32_SHGetSpecialFolderPath##SUFFIX \
+				 && WIN32_SHGetSpecialFolderPath##SUFFIX(NULL, buf, csidl, 1)) { \
+				 char *utf8; \
+				 if (!charset_iconv(buf, &utf8, CHARSET, CHARSET_UTF8, sizeof(buf))) \
+					 return utf8; \
+			 } \
+		 } \
+\
+		 if (registry) { \
+			 static const TYPE *regpaths[] = { \
+				 LITERAL##"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User " \
+					  "Shell Folders", \
+				 LITERAL##"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell " \
+					  "Folders", /* Win95 */ \
+			 }; \
+			 int i; \
+			 for (i = 0; i < ARRAY_SIZE(regpaths); i++) { \
+				 HKEY shell_folders; \
+				 if (RegOpenKeyEx##SUFFIX(HKEY_CURRENT_USER, regpaths[i], 0, KEY_READ, &shell_folders) \
+					 != ERROR_SUCCESS) \
+					 continue; \
+\
+				 DWORD type; \
+				 DWORD length; \
+\
+				 if (RegQueryValueEx##SUFFIX(shell_folders, registry, NULL, &type, NULL, &length) \
+						 != ERROR_SUCCESS \
+					 || (type != REG_EXPAND_SZ && type != REG_SZ)) \
+					 continue; \
+\
+				 TYPE *data = mem_alloc(length); \
+\
+				 if (RegQueryValueEx##SUFFIX( \
+					     shell_folders, registry, NULL, NULL, (LPBYTE)data, &length) \
+					 != ERROR_SUCCESS) { \
+					 free(data); \
+					 continue; \
+				 } \
+\
+				 if (type == REG_EXPAND_SZ) { \
+					 TYPE expanded[MAX_PATH]; \
+					 if (ExpandEnvironmentStrings##SUFFIX( \
+						     (void *)data, expanded, ARRAY_SIZE(expanded))) { \
+						 char *utf8; \
+						 if (!charset_iconv(expanded, &utf8, CHARSET, CHARSET_UTF8, \
+							     sizeof(expanded))) { \
+							 free(data); \
+							 return utf8; \
+						 } \
+					 } \
+				 } else if (type == REG_SZ) { \
+					 char *utf8; \
+					 if (!charset_iconv(data, &utf8, CHARSET, CHARSET_UTF8, length)) { \
+						 free(data); \
+						 return utf8; \
+					 } \
+				 } \
+\
+				 free(data); \
+			 } \
+		 } \
+\
+		 if (envvar) { \
+			 TYPE *ptr = GETENV(envvar); \
+			 if (ptr) { \
+				 char *utf8; \
+\
+				 if (!charset_iconv(ptr, &utf8, CHARSET, CHARSET_UTF8, MAX_PATH * sizeof(TYPE))) \
+					 return utf8; \
+			 } \
+		 } \
+\
+		 return NULL; \
+	 }
 
-#ifdef SCHISM_WIN32_COMPILE_ANSI
+# ifdef SCHISM_WIN32_COMPILE_ANSI
 DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(CHAR, CHARSET_ANSI, A, getenv, /* none */)
-#endif
+# endif
 DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL(WCHAR, CHARSET_WCHAR_T, W, _wgetenv, L)
 
-#undef DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL
+# undef DMOZ_WIN32_GET_CSIDL_DIRECTORY_IMPL
 
 // Don't use this function directly! see the macro defined below
-static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw, const char *registry, const wchar_t *envvarw, const char *envvar)
+static char *dmoz_win32_get_csidl_directory(
+	int csidl, const wchar_t *registryw, const char *registry, const wchar_t *envvarw, const char *envvar)
 {
 	char *utf8;
 
-	SCHISM_ANSI_UNICODE({
-		utf8 = dmoz_win32_get_csidl_directoryA(csidl, registry, envvar);
-		if (utf8)
-			return utf8;
-	}, {
-		// Windows NT.
+	SCHISM_ANSI_UNICODE(
 		{
-			// special case: SHGetFolderPathW
-			wchar_t bufw[MAX_PATH];
-
-			if (WIN32_SHGetFolderPathW
-				&& WIN32_SHGetFolderPathW(NULL, csidl, NULL, 0, bufw) == S_OK
-				&& !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8,
-					sizeof(bufw)))
+			utf8 = dmoz_win32_get_csidl_directoryA(csidl, registry, envvar);
+			if (utf8)
 				return utf8;
-		}
+		},
+		{
+			// Windows NT.
+			{
+				// special case: SHGetFolderPathW
+				wchar_t bufw[MAX_PATH];
 
-		utf8 = dmoz_win32_get_csidl_directoryW(csidl, registryw, envvarw);
-		if (utf8)
-			return utf8;
-	})
+				if (WIN32_SHGetFolderPathW && WIN32_SHGetFolderPathW(NULL, csidl, NULL, 0, bufw) == S_OK
+					&& !charset_iconv(bufw, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, sizeof(bufw)))
+					return utf8;
+			}
+
+			utf8 = dmoz_win32_get_csidl_directoryW(csidl, registryw, envvarw);
+			if (utf8)
+				return utf8;
+		})
 
 	// we'll get em next time
 	return NULL;
@@ -1201,7 +1220,8 @@ static char *dmoz_win32_get_csidl_directory(int csidl, const wchar_t *registryw,
 // this just makes stuff simpler.
 // registry and envvar need to be compile time constants,
 // but really they should already be that anyway
-# define DMOZ_GET_WIN32_DIRECTORY(csidl, registry, envvar) dmoz_win32_get_csidl_directory(csidl, L ## registry, registry, L ## envvar, envvar)
+# define DMOZ_GET_WIN32_DIRECTORY(csidl, registry, envvar) \
+	 dmoz_win32_get_csidl_directory(csidl, L##registry, registry, L##envvar, envvar)
 #elif defined(SCHISM_MACOS)
 static char *dmoz_macos_find_folder(OSType folder_type)
 {
@@ -1246,10 +1266,12 @@ char *dmoz_get_home_directory(void)
 		char *ptr;
 
 		ptr = getenv("HOME");
-		if (ptr) return str_dup(ptr);
+		if (ptr)
+			return str_dup(ptr);
 
 		ptr = getenv("ETC");
-		if (ptr) return str_dup(ptr);
+		if (ptr)
+			return str_dup(ptr);
 	}
 #else
 	{
@@ -1260,7 +1282,7 @@ char *dmoz_get_home_directory(void)
 #endif
 
 	/* hmm. fall back to the current dir */
-	char* path = dmoz_get_current_directory();
+	char *path = dmoz_get_current_directory();
 	if (strcmp(path, "."))
 		return path;
 
@@ -1365,7 +1387,7 @@ char *dmoz_path_normal(const char *path)
 		} else if (p[0] == '.' && p[1] == '.' && (!p[2] || IS_DIR_SEPARATOR(p[2]))) {
 			/* .. and ../ */
 			p += 2; /* skip `..' */
-			if (q > dotdot) {       /* can backtrack */
+			if (q > dotdot) { /* can backtrack */
 				while (--q > dotdot && !IS_DIR_SEPARATOR(*q)) {
 					/* nothing */
 				}
@@ -1404,7 +1426,8 @@ int dmoz_path_is_absolute(const char *path, int *count)
 
 #if defined(SCHISM_WIN32) || defined(SCHISM_OS2) || defined(SCHISM_XBOX)
 	if (isalpha(path[0]) && path[1] == ':') {
-		if (count) *count = IS_DIR_SEPARATOR(path[2]) ? 3 : 2;
+		if (count)
+			*count = IS_DIR_SEPARATOR(path[2]) ? 3 : 2;
 		return 1;
 	}
 #elif defined(__amigaos4__)
@@ -1412,14 +1435,16 @@ int dmoz_path_is_absolute(const char *path, int *count)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon && (colon < slash || (colon && !slash && colon[1] == '\0'))) {
 		int x = colon - path + 1;
-		if (count) *count = x;
+		if (count)
+			*count = x;
 		return !!x;
 	}
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	char *colon = strchr(path, ':'), *slash = strchr(path, '/');
 	if (colon + 1 == slash) {
 		int x = slash - path + 1;
-		if (count) *count = x;
+		if (count)
+			*count = x;
 		return !!x;
 	}
 #elif defined(SCHISM_MACOS)
@@ -1431,7 +1456,8 @@ int dmoz_path_is_absolute(const char *path, int *count)
 	if (IS_DIR_SEPARATOR(path[0]))
 		return 0;
 
-	if (count) *count = 0;
+	if (count)
+		*count = 0;
 	return 1;
 #endif
 	/* presumably, /foo (or \foo) is an absolute path on all platforms */
@@ -1440,10 +1466,10 @@ int dmoz_path_is_absolute(const char *path, int *count)
 
 	/* POSIX says to allow two leading slashes, but not more.
 	 * (This also catches win32 \\share\blah\blah semantics) */
-	if (count) *count = ((IS_DIR_SEPARATOR(path[1]) && !IS_DIR_SEPARATOR(path[2])) ? 2 : 1);
+	if (count)
+		*count = ((IS_DIR_SEPARATOR(path[1]) && !IS_DIR_SEPARATOR(path[2])) ? 2 : 1);
 	return 1;
 }
-
 
 /* See dmoz_path_concat_len. This function is a convenience for when the lengths aren't already known. */
 char *dmoz_path_concat(const char *a, const char *b)
@@ -1530,8 +1556,7 @@ static void allocate_more_files(dmoz_filelist_t *flist)
 		flist->files = (dmoz_file_t **)mem_alloc(FILE_BLOCK_SIZE * sizeof(dmoz_file_t *));
 	} else {
 		flist->alloc_size *= 2;
-		flist->files = (dmoz_file_t **)mem_realloc(flist->files,
-			flist->alloc_size * sizeof(dmoz_filelist_t *));
+		flist->files = (dmoz_file_t **)mem_realloc(flist->files, flist->alloc_size * sizeof(dmoz_filelist_t *));
 	}
 }
 
@@ -1542,8 +1567,7 @@ static void allocate_more_dirs(dmoz_dirlist_t *dlist)
 		dlist->dirs = (dmoz_dir_t **)mem_alloc(DIR_BLOCK_SIZE * sizeof(dmoz_dir_t *));
 	} else {
 		dlist->alloc_size *= 2;
-		dlist->dirs = (dmoz_dir_t **)mem_realloc(dlist->dirs,
-			dlist->alloc_size * sizeof(dmoz_dir_t *));
+		dlist->dirs = (dmoz_dir_t **)mem_realloc(dlist->dirs, dlist->alloc_size * sizeof(dmoz_dir_t *));
 	}
 }
 
@@ -1624,8 +1648,8 @@ int dmoz_worker(void)
 		return 0;
 	}
 
-	if (!current_dmoz_filter(current_dmoz_filelist->files[ current_dmoz_file ])) {
-		if (current_dmoz_filelist->num_files == current_dmoz_file+1) {
+	if (!current_dmoz_filter(current_dmoz_filelist->files[current_dmoz_file])) {
+		if (current_dmoz_filelist->num_files == current_dmoz_file + 1) {
 			current_dmoz_filelist->num_files--;
 			current_dmoz_filelist = NULL;
 			current_dmoz_filter = NULL;
@@ -1634,22 +1658,21 @@ int dmoz_worker(void)
 			return 0;
 		}
 
-		nf = current_dmoz_filelist->files[ current_dmoz_file ];
-		memmove(&current_dmoz_filelist->files[ current_dmoz_file ],
-			&current_dmoz_filelist->files[ current_dmoz_file+1 ],
-			sizeof(dmoz_file_t *) * (current_dmoz_filelist->num_files
-						- current_dmoz_file));
+		nf = current_dmoz_filelist->files[current_dmoz_file];
+		memmove(&current_dmoz_filelist->files[current_dmoz_file],
+			&current_dmoz_filelist->files[current_dmoz_file + 1],
+			sizeof(dmoz_file_t *) * (current_dmoz_filelist->num_files - current_dmoz_file));
 		free_file(nf);
 		current_dmoz_filelist->num_files--;
-		if (current_dmoz_file_pointer && *current_dmoz_file_pointer >=
-					current_dmoz_file) {
+		if (current_dmoz_file_pointer && *current_dmoz_file_pointer >= current_dmoz_file) {
 			(*current_dmoz_file_pointer) = (*current_dmoz_file_pointer) - 1;
-			if (dmoz_worker_onmove) dmoz_worker_onmove();
+			if (dmoz_worker_onmove)
+				dmoz_worker_onmove();
 		}
-		if (current_dmoz_file_pointer && *current_dmoz_file_pointer >=
-					current_dmoz_filelist->num_files) {
-			(*current_dmoz_file_pointer) = (current_dmoz_filelist->num_files-1);
-			if (dmoz_worker_onmove) dmoz_worker_onmove();
+		if (current_dmoz_file_pointer && *current_dmoz_file_pointer >= current_dmoz_filelist->num_files) {
+			(*current_dmoz_file_pointer) = (current_dmoz_filelist->num_files - 1);
+			if (dmoz_worker_onmove)
+				dmoz_worker_onmove();
 		}
 		status.flags |= NEED_UPDATE;
 	} else {
@@ -1657,7 +1680,6 @@ int dmoz_worker(void)
 	}
 	return 1;
 }
-
 
 /* filters a filelist and removes rejected entries. this works in-place
 so it can't generate error conditions. */
@@ -1730,8 +1752,8 @@ dmoz_dir_t *dmoz_add_dir(dmoz_dirlist_t *dlist, char *path, char *base, int sort
 	return dir;
 }
 
-void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
-			  char *path, char *base, struct stat *st, int sort_order)
+void dmoz_add_file_or_dir(
+	dmoz_filelist_t *flist, dmoz_dirlist_t *dlist, char *path, char *base, struct stat *st, int sort_order)
 {
 	if (dlist)
 		dmoz_add_dir(dlist, path, base, sort_order);
@@ -1742,14 +1764,14 @@ void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 /* --------------------------------------------------------------------------------------------------------- */
 /* sorting */
 
-#define _DEF_CMP_CHARSET(name)                                                                  \
-	static int dmoz_fcmp_##name(const dmoz_file_t *a, const dmoz_file_t *b)         \
-	{                                                                               \
-		return charset_##name(a->base, CHARSET_CHAR, b->base, CHARSET_CHAR);                  \
-	}                                                                               \
-	static int dmoz_dcmp_##name(const dmoz_dir_t *a, const dmoz_dir_t *b)           \
-	{                                                                               \
-		return charset_##name(a->base, CHARSET_CHAR, b->base, CHARSET_CHAR);                  \
+#define _DEF_CMP_CHARSET(name) \
+	static int dmoz_fcmp_##name(const dmoz_file_t *a, const dmoz_file_t *b) \
+	{ \
+		return charset_##name(a->base, CHARSET_CHAR, b->base, CHARSET_CHAR); \
+	} \
+	static int dmoz_dcmp_##name(const dmoz_dir_t *a, const dmoz_dir_t *b) \
+	{ \
+		return charset_##name(a->base, CHARSET_CHAR, b->base, CHARSET_CHAR); \
 	}
 _DEF_CMP_CHARSET(strcmp)
 _DEF_CMP_CHARSET(strcasecmp)
@@ -1765,8 +1787,8 @@ static int dmoz_fcmp_timestamp(const dmoz_file_t *a, const dmoz_file_t *b)
 
 static int qsort_cmp_file(const void *_a, const void *_b)
 {
-	const dmoz_file_t *a = *(const dmoz_file_t **) _a;
-	const dmoz_file_t *b = *(const dmoz_file_t **) _b;
+	const dmoz_file_t *a = *(const dmoz_file_t **)_a;
+	const dmoz_file_t *b = *(const dmoz_file_t **)_b;
 
 	if ((b->type & TYPE_HIDDEN) && !(a->type & TYPE_HIDDEN))
 		return -1; /* a goes first */
@@ -1781,8 +1803,8 @@ static int qsort_cmp_file(const void *_a, const void *_b)
 
 static int qsort_cmp_dir(const void *_a, const void *_b)
 {
-	const dmoz_dir_t *a = *(const dmoz_dir_t **) _a;
-	const dmoz_dir_t *b = *(const dmoz_dir_t **) _b;
+	const dmoz_dir_t *a = *(const dmoz_dir_t **)_a;
+	const dmoz_dir_t *b = *(const dmoz_dir_t **)_b;
 
 	if (a->sort_order < b->sort_order)
 		return -1; /* a goes first */
@@ -1851,8 +1873,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 					 *      pString[i] = pTemp[i + 1]; */
 					memcpy(pString, pTemp + 1, pTemp[0]);
 					pString[pTemp[0]] = '\0';
-					dmoz_add_file_or_dir(flist, dlist, pString, str_dup(pString),
-								 NULL, order++);
+					dmoz_add_file_or_dir(flist, dlist, pString, str_dup(pString), NULL, order++);
 				}
 			}
 		}
@@ -1874,8 +1895,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 
 	for (; x && sbuf[0] <= 'Z'; sbuf[0]++) {
 		if ((x >> (sbuf[0] - 'A')) & 1) {
-			dmoz_add_file_or_dir(flist, dlist, str_dup(sbuf),
-				str_dup(sbuf), NULL, -(1024 - 'A' - sbuf[0]));
+			dmoz_add_file_or_dir(flist, dlist, str_dup(sbuf), str_dup(sbuf), NULL, -(1024 - 'A' - sbuf[0]));
 		}
 	}
 # ifdef SCHISM_WIN32
@@ -1883,7 +1903,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 # endif
 #elif defined(SCHISM_WII) || defined(SCHISM_WIIU)
 	size_t num, i;
-	
+
 	num = wii_getnumdevs();
 
 	for (i = 0; i < num; i++) {
@@ -1901,7 +1921,7 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		dmoz_add_file_or_dir(flist, dlist, s, str_dup(s), NULL, -(1024 - i));
 	}
 #elif defined(SCHISM_MACOS)
-	for (ItemCount index = 1; ; index++) {
+	for (ItemCount index = 1;; index++) {
 		unsigned char ppath[256];
 		ppath[0] = 0;
 
@@ -1916,13 +1936,14 @@ static void add_platform_dirs(const char *path, dmoz_filelist_t *flist, dmoz_dir
 		OSErr err = PBHGetVInfoSync(&hfsParams);
 		if (err != noErr)
 			break;
-	
+
 		// FIXME: Need conversion to & from UTF-8
-		dmoz_add_file_or_dir(flist, dlist, strn_dup(&ppath[1], ppath[0]), strn_dup(&ppath[1], ppath[0]), NULL, -(1024 - index + 1));
+		dmoz_add_file_or_dir(flist, dlist, strn_dup(&ppath[1], ppath[0]), strn_dup(&ppath[1], ppath[0]), NULL,
+			-(1024 - index + 1));
 	}
 #else /* assume POSIX */
 /*	char *home;
-	home = get_home_directory();*/
+				home = get_home_directory();*/
 	dmoz_add_file_or_dir(flist, dlist, str_dup("/"), str_dup("/"), NULL, -1024);
 /*	dmoz_add_file_or_dir(flist, dlist, home, str_dup("~"), NULL, -5); */
 
@@ -1962,21 +1983,23 @@ static dmoz_DIR *dmoz_opendir(const char *path)
 	DWORD attrib;
 	void *path_v;
 
-	SCHISM_ANSI_UNICODE({
-		if (charset_iconv(path, &path_v, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-			errno = ENOMEM;
-			return NULL;
-		}
+	SCHISM_ANSI_UNICODE(
+		{
+			if (charset_iconv(path, &path_v, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+				errno = ENOMEM;
+				return NULL;
+			}
 
-		attrib = GetFileAttributesA(path_v);
-	}, {
-		if (charset_iconv(path, &path_v, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-			errno = ENOMEM;
-			return NULL;
-		}
+			attrib = GetFileAttributesA(path_v);
+		},
+		{
+			if (charset_iconv(path, &path_v, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+				errno = ENOMEM;
+				return NULL;
+			}
 
-		attrib = GetFileAttributesW(path_v);
-	});
+			attrib = GetFileAttributesW(path_v);
+		});
 
 	free(path_v);
 
@@ -1991,11 +2014,9 @@ static dmoz_DIR *dmoz_opendir(const char *path)
 		if (!searchpath_n)
 			return NULL;
 
-		SCHISM_ANSI_UNICODE({
-			path_v = charset_iconv_easy(searchpath_n, CHARSET_UTF8, CHARSET_ANSI);
-		}, {
-			path_v = charset_iconv_easy(searchpath_n, CHARSET_UTF8, CHARSET_WCHAR_T);
-		});
+		SCHISM_ANSI_UNICODE(
+			{ path_v = charset_iconv_easy(searchpath_n, CHARSET_UTF8, CHARSET_ANSI); },
+			{ path_v = charset_iconv_easy(searchpath_n, CHARSET_UTF8, CHARSET_WCHAR_T); });
 
 		free(searchpath_n);
 	}
@@ -2028,12 +2049,12 @@ static int dmoz_closedir(dmoz_DIR *dir)
 static dmoz_dirent *dmoz_readdir(dmoz_DIR *dir)
 {
 	union {
-#if defined(SCHISM_WIN32_COMPILE_ANSI) || defined(SCHISM_XBOX)
+# if defined(SCHISM_WIN32_COMPILE_ANSI) || defined(SCHISM_XBOX)
 		WIN32_FIND_DATAA a;
-#endif
-#ifdef SCHISM_WIN32
+# endif
+# ifdef SCHISM_WIN32
 		WIN32_FIND_DATAW w;
-#endif
+# endif
 	} ffd;
 
 	if (!dir)
@@ -2050,11 +2071,9 @@ static dmoz_dirent *dmoz_readdir(dmoz_DIR *dir)
 	if (dir->find == INVALID_HANDLE_VALUE) {
 		/* We've started up */
 
-		SCHISM_ANSI_UNICODE({
-			dir->find = FindFirstFileA(dir->searchpath_v, &ffd.a);
-		}, {
-			dir->find = FindFirstFileW(dir->searchpath_v, &ffd.w);
-		})
+		SCHISM_ANSI_UNICODE(
+			{ dir->find = FindFirstFileA(dir->searchpath_v, &ffd.a); },
+			{ dir->find = FindFirstFileW(dir->searchpath_v, &ffd.w); })
 
 		free(dir->searchpath_v);
 		dir->searchpath_v = NULL;
@@ -2070,15 +2089,17 @@ static dmoz_dirent *dmoz_readdir(dmoz_DIR *dir)
 		BOOL b;
 
 		/* Process the next file */
-		SCHISM_ANSI_UNICODE({
-			do {
-				b = FindNextFileA(dir->find, &ffd.a);
-			} while (b && (ffd.a.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN));
-		}, {
-			do {
-				b = FindNextFileW(dir->find, &ffd.w);
-			} while (b && (ffd.w.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN));
-		})
+		SCHISM_ANSI_UNICODE(
+			{
+				do {
+					b = FindNextFileA(dir->find, &ffd.a);
+				} while (b && (ffd.a.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN));
+			},
+			{
+				do {
+					b = FindNextFileW(dir->find, &ffd.w);
+				} while (b && (ffd.w.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN));
+			})
 
 		if (!b) {
 			/* either end of directory or error. either way, die */
@@ -2087,11 +2108,9 @@ static dmoz_dirent *dmoz_readdir(dmoz_DIR *dir)
 		}
 	}
 
-	SCHISM_ANSI_UNICODE({
-		dir->ent.d_name = charset_iconv_easy(ffd.a.cFileName, CHARSET_ANSI, CHARSET_UTF8);
-	}, {
-		dir->ent.d_name = charset_iconv_easy(ffd.w.cFileName, CHARSET_WCHAR_T, CHARSET_UTF8);
-	})
+	SCHISM_ANSI_UNICODE(
+		{ dir->ent.d_name = charset_iconv_easy(ffd.a.cFileName, CHARSET_ANSI, CHARSET_UTF8); },
+		{ dir->ent.d_name = charset_iconv_easy(ffd.w.cFileName, CHARSET_WCHAR_T, CHARSET_UTF8); })
 
 	return &dir->ent;
 }
@@ -2128,7 +2147,8 @@ static dmoz_DIR *dmoz_opendir(const char *path)
 
 static int dmoz_closedir(dmoz_DIR *dir)
 {
-	if (!dir) return -1;
+	if (!dir)
+		return -1;
 
 	closedir(dir->dirp);
 	free(dir->ent.d_name);
@@ -2139,13 +2159,15 @@ static int dmoz_closedir(dmoz_DIR *dir)
 
 static dmoz_dirent *dmoz_readdir(dmoz_DIR *dir)
 {
-	if (!dir) return NULL;
+	if (!dir)
+		return NULL;
 
 	free(dir->ent.d_name);
 	dir->ent.d_name = NULL;
 
 	struct dirent *ent = readdir(dir->dirp);
-	if (!ent) return NULL;
+	if (!ent)
+		return NULL;
 
 	dir->ent.d_name = charset_iconv_easy(ent->d_name, CHARSET_DOSCP, CHARSET_UTF8);
 	return &dir->ent;
@@ -2157,15 +2179,15 @@ static dmoz_dirent *dmoz_readdir(dmoz_DIR *dir)
  * this separately. */
 typedef DIR dmoz_DIR;
 typedef struct dirent dmoz_dirent;
-# define dmoz_opendir opendir
+# define dmoz_opendir  opendir
 # define dmoz_closedir closedir
-# define dmoz_readdir readdir
+# define dmoz_readdir  readdir
 #endif
 
 /* on success, this will fill the lists and return 0. if something goes
 wrong, it adds a 'stub' entry for the root directory, and returns -1. */
 int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
-		int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
+	int (*load_library)(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist))
 {
 	dmoz_DIR *dir;
 	dmoz_dirent *ent;
@@ -2180,7 +2202,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 
 	/* This won't work anymore; if this really matters that much then we can do some
 	 * global cache hack for each device. */
-#if 0/*def SCHISM_WII */
+#if 0 /*def SCHISM_WII */
 	/* awful hack: libfat's file reads bail if a device is given without a slash. */
 	if (strchr(path, ':') != NULL && strchr(path, '/') == NULL) {
 		int i;
@@ -2217,7 +2239,8 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 			}
 
 			/* why? */
-			if (st.st_mtime < 0) st.st_mtime = 0;
+			if (st.st_mtime < 0)
+				st.st_mtime = 0;
 
 			if (S_ISDIR(st.st_mode))
 				dmoz_add_file_or_dir(flist, dlist, ptr, str_dup(ent->d_name), &st, 0);
@@ -2261,10 +2284,10 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 /* --------------------------------------------------------------------------------------------------------- */
 
 enum {
-	FINF_SUCCESS = (0),     /* nothing wrong */
+	FINF_SUCCESS = (0), /* nothing wrong */
 	FINF_UNSUPPORTED = (1), /* unsupported file type */
-	FINF_EMPTY = (2),       /* zero-byte-long file */
-	FINF_ERRNO = (-1),      /* check errno */
+	FINF_EMPTY = (2), /* zero-byte-long file */
+	FINF_ERRNO = (-1), /* check errno */
 };
 
 static int file_info_get(dmoz_file_t *file)
@@ -2282,7 +2305,7 @@ static int file_info_get(dmoz_file_t *file)
 	file->smp_gblvol = 64;
 	for (const fmt_read_info_func *func = read_info_funcs; *func; func++) {
 		slurp_rewind(&t);
-		if ((*func) (file, &t)) {
+		if ((*func)(file, &t)) {
 			if (file->artist)
 				str_trim(file->artist);
 			if (file->title == NULL)
@@ -2300,8 +2323,7 @@ int dmoz_filter_ext_data(dmoz_file_t *file)
 {
 	int ret;
 
-	if ((file->type & TYPE_EXT_DATA_MASK)
-	|| (file->type == TYPE_DIRECTORY)) {
+	if ((file->type & TYPE_EXT_DATA_MASK) || (file->type == TYPE_DIRECTORY)) {
 		/* nothing to do */
 		return 1;
 	}
@@ -2348,7 +2370,7 @@ static void *lib_shell32 = NULL;
 int dmoz_init(void)
 {
 	static const schism_dmoz_backend_t *backends[] = {
-		// ordered by preference
+	// ordered by preference
 #ifdef SCHISM_WIN32
 		&schism_dmoz_backend_win32,
 #endif

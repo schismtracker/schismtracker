@@ -22,37 +22,33 @@
  */
 
 #include "headers.h"
-#include "util.h"
-#include "osdefs.h"
-#include "mem.h"
 #include "cpu.h"
+#include "mem.h"
 #include "mt.h"
+#include "osdefs.h"
 #include "util-vec.h"
+#include "util.h"
 
 #include <altivec.h>
 
-static inline SCHISM_ALWAYS_INLINE
-vector signed char altivec_set1_s8(signed char x)
+static inline SCHISM_ALWAYS_INLINE vector signed char altivec_set1_s8(signed char x)
 {
 	return (vector signed char){x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x};
 }
 
-static inline SCHISM_ALWAYS_INLINE
-vector signed short altivec_set1_s16(signed short x)
+static inline SCHISM_ALWAYS_INLINE vector signed short altivec_set1_s16(signed short x)
 {
 	return (vector signed short){x, x, x, x, x, x, x, x};
 }
 
 #define altivec_load_unaligned_(x) vec_perm(vec_ld(0, x), vec_ld(15, x), vec_lvsl(0, x))
 
-static inline SCHISM_ALWAYS_INLINE
-vector signed char altivec_loadu_s8(const vector signed char *x)
+static inline SCHISM_ALWAYS_INLINE vector signed char altivec_loadu_s8(const vector signed char *x)
 {
 	return altivec_load_unaligned_((const signed char *)x);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-vector signed short altivec_loadu_s16(const vector signed short *x)
+static inline SCHISM_ALWAYS_INLINE vector signed short altivec_loadu_s16(const vector signed short *x)
 {
 	return altivec_load_unaligned_((const signed short *)x);
 }
@@ -60,9 +56,9 @@ vector signed short altivec_loadu_s16(const vector signed short *x)
 #define altivec_store(arr, x) (vec_st(x, 0, arr))
 
 MINMAX_INTRINSICS_EX(extern, altivec, altivec, vector signed char, 8, 16,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	altivec_set1_s8, altivec_loadu_s8, vec_min, vec_max, altivec_store)
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */, altivec_set1_s8, altivec_loadu_s8, vec_min, vec_max,
+	altivec_store)
 
 MINMAX_INTRINSICS_EX(extern, altivec, altivec, vector signed short, 16, 8,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	altivec_set1_s16, altivec_loadu_s16, vec_min, vec_max, altivec_store)
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */, altivec_set1_s16, altivec_loadu_s16, vec_min,
+	vec_max, altivec_store)

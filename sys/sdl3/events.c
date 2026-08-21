@@ -24,8 +24,8 @@
 #include "headers.h"
 #include "events.h"
 #include "backend/events.h"
-#include "util.h"
 #include "mem.h"
+#include "util.h"
 #include "video.h"
 
 #include "init.h"
@@ -38,27 +38,28 @@ Just disable it for now I guess
 */
 
 /* FIXME: use a .h file that contains every function we need */
-static bool (SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
-static void (SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
+static bool(SDLCALL *sdl3_InitSubSystem)(SDL_InitFlags flags) = NULL;
+static void(SDLCALL *sdl3_QuitSubSystem)(SDL_InitFlags flags) = NULL;
 
-static SDL_Keymod (SDLCALL *sdl3_GetModState)(void) = NULL;
+static SDL_Keymod(SDLCALL *sdl3_GetModState)(void) = NULL;
 
-static int (SDLCALL *sdl3_PeepEvents)(SDL_Event *events, int numevents, SDL_EventAction action, Uint32 minType, Uint32 maxType);
-static void (SDLCALL *sdl3_PumpEvents)(void);
+static int(SDLCALL *sdl3_PeepEvents)(
+	SDL_Event *events, int numevents, SDL_EventAction action, Uint32 minType, Uint32 maxType);
+static void(SDLCALL *sdl3_PumpEvents)(void);
 
-static void (SDLCALL *sdl3_free)(void *) = NULL;
+static void(SDLCALL *sdl3_free)(void *) = NULL;
 
 #ifdef SCHISM_WIN32
-static void (SDLCALL *sdl3_SetWindowsMessageHook)(SDL_WindowsMessageHook callback, void *userdata);
+static void(SDLCALL *sdl3_SetWindowsMessageHook)(SDL_WindowsMessageHook callback, void *userdata);
 #endif
 #ifdef SCHISM_USE_X11
-static void (SDLCALL *sdl3_SetX11EventHook)(SDL_X11EventHook callback, void *userdata);
+static void(SDLCALL *sdl3_SetX11EventHook)(SDL_X11EventHook callback, void *userdata);
 #endif
 
-static SDL_Keycode (SDLCALL *sdl3_GetKeyFromScancode)(SDL_Scancode, SDL_Keymod, bool);
+static SDL_Keycode(SDLCALL *sdl3_GetKeyFromScancode)(SDL_Scancode, SDL_Keymod, bool);
 
 #ifndef SDLK_EXTENDED_MASK // Debian doesn't have this for some reason
-#define SDLK_EXTENDED_MASK (1u << 29)
+# define SDLK_EXTENDED_MASK (1u << 29)
 #endif
 
 // TODO: Re-add controller support, preferably in a global controller.c
@@ -133,7 +134,7 @@ static void pop_pending_keydown(const char *text)
 	if (have_pending_keydown) {
 		if (text) {
 			strncpy(pending_keydown.key.text, text, ARRAY_SIZE(pending_keydown.text.text));
-			pending_keydown.key.text[ARRAY_SIZE(pending_keydown.text.text)-1] = '\0';
+			pending_keydown.key.text[ARRAY_SIZE(pending_keydown.text.text) - 1] = '\0';
 		} else {
 			memset(pending_keydown.key.text, 0, sizeof(pending_keydown.key.text));
 		}
@@ -172,13 +173,13 @@ static bool SDLCALL sdl3_win32_msg_hook(SCHISM_UNUSED void *userdata, MSG *msg)
 
 static bool SDLCALL sdl3_x11_msg_hook(SCHISM_UNUSED void *userdata, SCHISM_UNUSED XEvent *xevent)
 {
-#if 0
+# if 0
 	schism_event_t e;
 
 	e.type = SCHISM_EVENT_WM_MSG;
 	e.wm_msg.subsystem = SCHISM_WM_MSG_SUBSYSTEM_X11;
 	e.wm_msg.msg.x11.event.type = xevent->type;
-#if 0 // handled by SDL's clipboard
+#  if 0 // handled by SDL's clipboard
 	if (e.syswm.msg->msg.x11.event.type == SelectionRequest) {
 		e.wm_msg.msg.x11.event.selection_request.serial = xevent->xselectionrequest.serial;
 		e.wm_msg.msg.x11.event.selection_request.send_event = xevent->xselectionrequest.send_event;     // `Bool' in Xlib
@@ -191,8 +192,8 @@ static bool SDLCALL sdl3_x11_msg_hook(SCHISM_UNUSED void *userdata, SCHISM_UNUSE
 		e.wm_msg.msg.x11.event.selection_request.time = xevent->xselectionrequest.time;      // `Time' in Xlib
 		events_push_event(&e);
 	}
-#endif
-#endif
+#  endif
+# endif
 
 	return true;
 }
@@ -362,7 +363,7 @@ static void sdl3_pump_events(void)
 				schism_event.type = SCHISM_TEXTINPUT;
 
 				strncpy(schism_event.text.text, e.text.text, ARRAY_SIZE(schism_event.text.text));
-				schism_event.text.text[ARRAY_SIZE(schism_event.text.text)-1] = '\0';
+				schism_event.text.text[ARRAY_SIZE(schism_event.text.text) - 1] = '\0';
 
 				events_push_event(&schism_event);
 			}
@@ -376,7 +377,8 @@ static void sdl3_pump_events(void)
 			break;
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 		case SDL_EVENT_MOUSE_BUTTON_UP:
-			schism_event.type = (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) ? SCHISM_MOUSEBUTTONDOWN : SCHISM_MOUSEBUTTONUP;
+			schism_event.type = (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) ? SCHISM_MOUSEBUTTONDOWN
+										    : SCHISM_MOUSEBUTTONUP;
 
 			switch (e.button.button) {
 			case SDL_BUTTON_LEFT:
@@ -438,7 +440,7 @@ static void sdl3_pump_events(void)
 
 #ifdef SCHISM_SDL3_SMOOTH_RESIZING
 
-static bool (SDLCALL *sdl3_AddEventWatch)(SDL_EventFilter filter, void *userdata);
+static bool(SDLCALL *sdl3_AddEventWatch)(SDL_EventFilter filter, void *userdata);
 
 /* For smooth resizing on Windows */
 static bool SDLCALL sdl3_event_filter(void *userdata, SDL_Event *e)

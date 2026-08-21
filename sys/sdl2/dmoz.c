@@ -27,9 +27,9 @@
 #include "backend/dmoz.h"
 #include "mem.h"
 
-static char * (SDLCALL *sdl2_GetBasePath)(void);
+static char *(SDLCALL *sdl2_GetBasePath)(void);
 
-static void (SDLCALL *sdl2_free)(void *);
+static void(SDLCALL *sdl2_free)(void *);
 
 static char *sdl2_dmoz_get_exe_path(void)
 {

@@ -25,36 +25,33 @@
 
 #include "headers.h"
 
-#include "config.h"
 #include "it.h"
-#include "osdefs.h"
-#include "fmt.h"
+#include "song.h"
 #include "charset.h"
+#include "config.h"
+#include "fmt.h"
 #include "loadso.h"
 #include "mem.h"
-#include "song.h"
+#include "osdefs.h"
 
-#include <ws2tcpip.h>
-#include <windows.h>
-#include <winerror.h>
 #include <process.h>
 #include <shlobj.h>
+#include <windows.h>
+#include <winerror.h>
+#include <ws2tcpip.h>
 
 #include <direct.h>
 
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 /* helper macro for A/W funcs */
-#define WINFUNC_AW(hwnd, func) \
-	(IsWindowUnicode(hwnd) ? func##W : func##A)
+#define WINFUNC_AW(hwnd, func) (IsWindowUnicode(hwnd) ? func##W : func##A)
 
 #define CallWindowProcAW(wndproc, hwnd, msg, wparam, lparam) \
-	(WINFUNC_AW(hwnd, CallWindowProc) (wndproc, hwnd, msg, wparam, lparam))
-#define GetWindowLongPtrAW(hwnd, x) \
-	(WINFUNC_AW(hwnd, GetWindowLongPtr) (hwnd, x))
-#define SetWindowLongPtrAW(hwnd, x, y) \
-	(WINFUNC_AW(hwnd, SetWindowLongPtr) (hwnd, x, y))
+	(WINFUNC_AW(hwnd, CallWindowProc)(wndproc, hwnd, msg, wparam, lparam))
+#define GetWindowLongPtrAW(hwnd, x)    (WINFUNC_AW(hwnd, GetWindowLongPtr)(hwnd, x))
+#define SetWindowLongPtrAW(hwnd, x, y) (WINFUNC_AW(hwnd, SetWindowLongPtr)(hwnd, x, y))
 
 /* -------------------------------------------------------------------- */
 /* version checking */
@@ -81,12 +78,10 @@ static int win32_ver_init(void)
 		ntdll = LoadLibraryW(L"NTDLL.DLL");
 		if (ntdll) {
 			int success;
-			typedef long (WINAPI *NTDLL_RtlGetVersionSpec)(OSVERSIONINFOEXW*);
+			typedef long(WINAPI * NTDLL_RtlGetVersionSpec)(OSVERSIONINFOEXW *);
 			NTDLL_RtlGetVersionSpec NTDLL_RtlGetVersion;
 
-			NTDLL_RtlGetVersion =
-				(NTDLL_RtlGetVersionSpec)GetProcAddress(ntdll,
-					"RtlGetVersion");
+			NTDLL_RtlGetVersion = (NTDLL_RtlGetVersionSpec)GetProcAddress(ntdll, "RtlGetVersion");
 
 			success = (NTDLL_RtlGetVersion && !NTDLL_RtlGetVersion(&ver.w));
 
@@ -119,9 +114,7 @@ static int win32_ver_init(void)
 	win32_ver_build = (ver.v & 0x7FFF0000) >> 16;
 
 	/* most significant bit toggled = win9x */
-	win32_platform = (ver.v & 0x80000000)
-		? VER_PLATFORM_WIN32_WINDOWS
-		: VER_PLATFORM_WIN32_NT;
+	win32_platform = (ver.v & 0x80000000) ? VER_PLATFORM_WIN32_WINDOWS : VER_PLATFORM_WIN32_NT;
 
 	return 1;
 }
@@ -131,8 +124,7 @@ int win32_ntver_atleast(int major, int minor, int build)
 	if (win32_platform != VER_PLATFORM_WIN32_NT)
 		return 0;
 
-	return SCHISM_SEMVER_ATLEAST(major, minor, build,
-		win32_ver_major, win32_ver_minor, win32_ver_build);
+	return SCHISM_SEMVER_ATLEAST(major, minor, build, win32_ver_major, win32_ver_minor, win32_ver_build);
 }
 
 /* returns whether this version of windows supports Unicode APIs. */
@@ -162,17 +154,17 @@ void win32_get_modkey(schism_keymod_t *mk)
 		// does this key work on win9x?
 		int win9x;
 	} conv[] = {
-		{VK_NUMLOCK, SCHISM_KEYMOD_NUM, 1, 1},
-		{VK_CAPITAL, SCHISM_KEYMOD_CAPS, 1, 1},
-		{VK_CAPITAL, SCHISM_KEYMOD_CAPS_PRESSED, 0, 1},
-		{VK_LSHIFT, SCHISM_KEYMOD_LSHIFT, 0, 0},
-		{VK_RSHIFT, SCHISM_KEYMOD_RSHIFT, 0, 0},
-		{VK_LMENU, SCHISM_KEYMOD_LALT, 0, 0},
-		{VK_RMENU, SCHISM_KEYMOD_RALT, 0, 0},
-		{VK_LCONTROL, SCHISM_KEYMOD_LCTRL, 0, 0},
-		{VK_RCONTROL, SCHISM_KEYMOD_RCTRL, 0, 0},
-		{VK_LWIN, SCHISM_KEYMOD_LGUI, 0, 0},
-		{VK_RWIN, SCHISM_KEYMOD_RGUI, 0, 0},
+		{VK_NUMLOCK,  SCHISM_KEYMOD_NUM,          1, 1},
+		{VK_CAPITAL,  SCHISM_KEYMOD_CAPS,         1, 1},
+		{VK_CAPITAL,  SCHISM_KEYMOD_CAPS_PRESSED, 0, 1},
+		{VK_LSHIFT,   SCHISM_KEYMOD_LSHIFT,       0, 0},
+		{VK_RSHIFT,   SCHISM_KEYMOD_RSHIFT,       0, 0},
+		{VK_LMENU,    SCHISM_KEYMOD_LALT,         0, 0},
+		{VK_RMENU,    SCHISM_KEYMOD_RALT,         0, 0},
+		{VK_LCONTROL, SCHISM_KEYMOD_LCTRL,        0, 0},
+		{VK_RCONTROL, SCHISM_KEYMOD_RCTRL,        0, 0},
+		{VK_LWIN,     SCHISM_KEYMOD_LGUI,         0, 0},
+		{VK_RWIN,     SCHISM_KEYMOD_RGUI,         0, 0},
 	};
 	BYTE ks[256];
 	size_t i;
@@ -183,7 +175,8 @@ void win32_get_modkey(schism_keymod_t *mk)
 	 * fixes it. Any random key will work. */
 	(void)GetKeyState(VK_CAPITAL);
 
-	if (!GetKeyboardState(ks)) return;
+	if (!GetKeyboardState(ks))
+		return;
 
 	for (i = 0; i < ARRAY_SIZE(conv); i++) {
 		/* FIXME: Some keys (notably left and right variations) simply
@@ -212,23 +205,25 @@ void win32_show_message_box(const char *title, const char *text, int style)
 		[OS_MESSAGE_BOX_WARNING] = (MB_OK | MB_ICONEXCLAMATION),
 	};
 
-	SCHISM_ANSI_UNICODE({
-		char *title_a = NULL;
-		char *text_a = NULL;
-		if (!charset_iconv(title, &title_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
-			&& !charset_iconv(text, &text_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			MessageBoxA(NULL, text_a, title_a, styles[style]);
-		free(title_a);
-		free(text_a);
-	}, {
-		wchar_t *title_w = NULL;
-		wchar_t *text_w = NULL;
-		if (!charset_iconv(title, &title_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
-			&& !charset_iconv(text, &text_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			MessageBoxW(NULL, text_w, title_w, styles[style]);
-		free(title_w);
-		free(text_w);
-	})
+	SCHISM_ANSI_UNICODE(
+		{
+			char *title_a = NULL;
+			char *text_a = NULL;
+			if (!charset_iconv(title, &title_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
+				&& !charset_iconv(text, &text_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+				MessageBoxA(NULL, text_a, title_a, styles[style]);
+			free(title_a);
+			free(text_a);
+		},
+		{
+			wchar_t *title_w = NULL;
+			wchar_t *text_w = NULL;
+			if (!charset_iconv(title, &title_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
+				&& !charset_iconv(text, &text_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+				MessageBoxW(NULL, text_w, title_w, styles[style]);
+			free(title_w);
+			free(text_w);
+		})
 }
 
 /* -------------------------------------------------------------------- */
@@ -252,7 +247,7 @@ int win32_get_key_repeat(int *pdelay, int *prate)
 	//
 	// Eventually I came up with this formula to translate
 	// it to the repeat rate in milliseconds.
-	*prate = (int)(1000.0/((speed/(62.0/55.0)) + 2.5));
+	*prate = (int)(1000.0 / ((speed / (62.0 / 55.0)) + 2.5));
 
 	// This one is much simpler.
 	*pdelay = (delay + 1) * 250;
@@ -268,16 +263,15 @@ int win32_get_key_repeat(int *pdelay, int *prate)
  *
  * Doing this gives us access to longer and more "general" devices names,
  * such as "G432 Gaming Headset", but only if the device supports it! */
-static int win32_audio_lookup_device_name_registry_(const void *nameguid,
-	char **result)
+static int win32_audio_lookup_device_name_registry_(const void *nameguid, char **result)
 {
 	/* format for printing GUIDs with printf */
-#define GUIDF "%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16 "-%02" PRIx8 "%02" \
-	PRIx8 "-%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" PRIx8 "%02" \
-	PRIx8
-#define GUIDX(x) (x).Data1, (x).Data2, (x).Data3, (x).Data4[0], (x).Data4[1], \
-	(x).Data4[2], (x).Data4[3], (x).Data4[4], (x).Data4[5], (x).Data4[6], \
-	(x).Data4[7]
+#define GUIDF \
+	"%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16 "-%02" PRIx8 "%02" PRIx8 "-%02" PRIx8 "%02" PRIx8 "%02" PRIx8 \
+	"%02" PRIx8 "%02" PRIx8 "%02" PRIx8
+#define GUIDX(x) \
+	(x).Data1, (x).Data2, (x).Data3, (x).Data4[0], (x).Data4[1], (x).Data4[2], (x).Data4[3], (x).Data4[4], \
+		(x).Data4[5], (x).Data4[6], (x).Data4[7]
 	// Set this to NULL before doing anything
 	*result = NULL;
 
@@ -293,7 +287,9 @@ static int win32_audio_lookup_device_name_registry_(const void *nameguid,
 		DWORD type;
 
 		WCHAR keystr[256] = {0};
-		_snwprintf(keystr, ARRAY_SIZE(keystr) - 1, L"System\\CurrentControlSet\\Control\\MediaCategories\\{" GUIDF "}", GUIDX(*(const GUID *)nameguid));
+		_snwprintf(keystr, ARRAY_SIZE(keystr) - 1,
+			L"System\\CurrentControlSet\\Control\\MediaCategories\\{" GUIDF "}",
+			GUIDX(*(const GUID *)nameguid));
 
 		if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, keystr, 0, KEY_QUERY_VALUE, &hkey) != ERROR_SUCCESS)
 			return 0;
@@ -334,15 +330,12 @@ static int win32_audio_lookup_device_name_registry_(const void *nameguid,
  * "nameguid" is a directsound device GUID.
  * "waveoutdevid" is a waveout device ID, which is looked up in the
  * directsound DLL to find a long device name if provided */
-int win32_audio_lookup_device_name(const void *nameguid,
-	const uint32_t *waveoutdevid, char **result)
+int win32_audio_lookup_device_name(const void *nameguid, const uint32_t *waveoutdevid, char **result)
 {
-	if (nameguid
-		&& win32_audio_lookup_device_name_registry_(nameguid, result))
+	if (nameguid && win32_audio_lookup_device_name_registry_(nameguid, result))
 		return 1;
 
-	if (waveoutdevid
-		&& win32_dsound_audio_lookup_waveout_name(waveoutdevid, result))
+	if (waveoutdevid && win32_dsound_audio_lookup_waveout_name(waveoutdevid, result))
 		return 1;
 
 	return 0;
@@ -351,36 +344,36 @@ int win32_audio_lookup_device_name(const void *nameguid,
 /* -------------------------------------------------------------------- */
 /* menu bar cruft */
 
-#define IDM_FILE_NEW  101
-#define IDM_FILE_LOAD 102
-#define IDM_FILE_SAVE_CURRENT 103
-#define IDM_FILE_SAVE_AS 104
-#define IDM_FILE_EXPORT 105
-#define IDM_FILE_MESSAGE_LOG 106
-#define IDM_FILE_QUIT 107
-#define IDM_PLAYBACK_SHOW_INFOPAGE 201
-#define IDM_PLAYBACK_PLAY_SONG 202
-#define IDM_PLAYBACK_PLAY_PATTERN 203
-#define IDM_PLAYBACK_PLAY_FROM_ORDER 204
+#define IDM_FILE_NEW                       101
+#define IDM_FILE_LOAD                      102
+#define IDM_FILE_SAVE_CURRENT              103
+#define IDM_FILE_SAVE_AS                   104
+#define IDM_FILE_EXPORT                    105
+#define IDM_FILE_MESSAGE_LOG               106
+#define IDM_FILE_QUIT                      107
+#define IDM_PLAYBACK_SHOW_INFOPAGE         201
+#define IDM_PLAYBACK_PLAY_SONG             202
+#define IDM_PLAYBACK_PLAY_PATTERN          203
+#define IDM_PLAYBACK_PLAY_FROM_ORDER       204
 #define IDM_PLAYBACK_PLAY_FROM_MARK_CURSOR 205
-#define IDM_PLAYBACK_STOP 206
-#define IDM_PLAYBACK_CALCULATE_LENGTH 207
-#define IDM_SAMPLES_SAMPLE_LIST 301
-#define IDM_SAMPLES_SAMPLE_LIBRARY 302
-#define IDM_SAMPLES_RELOAD_SOUNDCARD 303
-#define IDM_INSTRUMENTS_INSTRUMENT_LIST 401
+#define IDM_PLAYBACK_STOP                  206
+#define IDM_PLAYBACK_CALCULATE_LENGTH      207
+#define IDM_SAMPLES_SAMPLE_LIST            301
+#define IDM_SAMPLES_SAMPLE_LIBRARY         302
+#define IDM_SAMPLES_RELOAD_SOUNDCARD       303
+#define IDM_INSTRUMENTS_INSTRUMENT_LIST    401
 #define IDM_INSTRUMENTS_INSTRUMENT_LIBRARY 402
-#define IDM_VIEW_HELP 501
-#define IDM_VIEW_VIEW_PATTERNS 502
-#define IDM_VIEW_ORDERS_PANNING 503
-#define IDM_VIEW_VARIABLES 504
-#define IDM_VIEW_MESSAGE_EDITOR 505
-#define IDM_VIEW_TOGGLE_FULLSCREEN 506
-#define IDM_SETTINGS_PREFERENCES 601
-#define IDM_SETTINGS_MIDI_CONFIGURATION 602
-#define IDM_SETTINGS_PALETTE_EDITOR 603
-#define IDM_SETTINGS_FONT_EDITOR 604
-#define IDM_SETTINGS_SYSTEM_CONFIGURATION 605
+#define IDM_VIEW_HELP                      501
+#define IDM_VIEW_VIEW_PATTERNS             502
+#define IDM_VIEW_ORDERS_PANNING            503
+#define IDM_VIEW_VARIABLES                 504
+#define IDM_VIEW_MESSAGE_EDITOR            505
+#define IDM_VIEW_TOGGLE_FULLSCREEN         506
+#define IDM_SETTINGS_PREFERENCES           601
+#define IDM_SETTINGS_MIDI_CONFIGURATION    602
+#define IDM_SETTINGS_PALETTE_EDITOR        603
+#define IDM_SETTINGS_FONT_EDITOR           604
+#define IDM_SETTINGS_SYSTEM_CONFIGURATION  605
 
 static HMENU menu = NULL;
 
@@ -388,8 +381,7 @@ static int win32_menu_event(schism_event_t *event)
 {
 	schism_event_t e = {0};
 
-	if (event->type != SCHISM_EVENT_WM_MSG
-		|| event->wm_msg.subsystem != SCHISM_WM_MSG_SUBSYSTEM_WINDOWS
+	if (event->type != SCHISM_EVENT_WM_MSG || event->wm_msg.subsystem != SCHISM_WM_MSG_SUBSYSTEM_WINDOWS
 		|| event->wm_msg.msg.win.msg != WM_COMMAND)
 		return 0; /* what? */
 
@@ -587,34 +579,35 @@ void win32_toggle_menu(void *window, int on)
 #endif
 
 typedef enum {
-    WCA_UNDEFINED = 0,
-    WCA_USEDARKMODECOLORS = 26,
-    WCA_LAST = 27
+	WCA_UNDEFINED = 0,
+	WCA_USEDARKMODECOLORS = 26,
+	WCA_LAST = 27
 } WINDOWCOMPOSITIONATTRIB;
 
 typedef struct {
-    WINDOWCOMPOSITIONATTRIB Attrib;
-    PVOID pvData;
-    SIZE_T cbData;
+	WINDOWCOMPOSITIONATTRIB Attrib;
+	PVOID pvData;
+	SIZE_T cbData;
 } WINDOWCOMPOSITIONATTRIBDATA;
 
 /* C-ization: "bool" replaced with "unsigned char" */
 static void *lib_dwmapi;
-static HRESULT (WINAPI *DWMAPI_DwmSetWindowAttribute)(HWND hwnd, DWORD key, LPCVOID data, DWORD sz_data);
+static HRESULT(WINAPI *DWMAPI_DwmSetWindowAttribute)(HWND hwnd, DWORD key, LPCVOID data, DWORD sz_data);
 
 static void *lib_user32;
-static BOOL (WINAPI *USER32_SetWindowCompositionAttribute)(HWND, const WINDOWCOMPOSITIONATTRIBDATA *);
-static BOOL (WINAPI *USER32_GetMenuItemInfoW)(HMENU, UINT, BOOL, LPMENUITEMINFOW);
-static BOOL (WINAPI *USER32_GetMenuBarInfo)(HWND, LONG, LONG, PMENUBARINFO);
+static BOOL(WINAPI *USER32_SetWindowCompositionAttribute)(HWND, const WINDOWCOMPOSITIONATTRIBDATA *);
+static BOOL(WINAPI *USER32_GetMenuItemInfoW)(HMENU, UINT, BOOL, LPMENUITEMINFOW);
+static BOOL(WINAPI *USER32_GetMenuBarInfo)(HWND, LONG, LONG, PMENUBARINFO);
 
 static void *lib_uxtheme;
-static unsigned char (WINAPI *UXTHEME_ShouldAppsUseDarkMode)(void);
-static unsigned char (WINAPI *UXTHEME_AllowDarkModeForWindow)(HWND hwnd, unsigned char allow);
-static void (WINAPI *UXTHEME_AllowDarkModeForApp)(unsigned char allow); // v1809
-static DWORD (WINAPI *UXTHEME_SetPreferredAppMode)(DWORD app_mode); // v1903
-static HTHEME (WINAPI *UXTHEME_OpenThemeData)(HWND hwnd, LPCWSTR pszClassList);
-static HRESULT (WINAPI *UXTHEME_DrawThemeTextEx)(HTHEME hTheme, HDC hdc, int iPartId, int iStateId, LPCWSTR pszText, int cchText, DWORD dwTextFlags, LPRECT pRect, const DTTOPTS *pOptions);
-static void (WINAPI *UXTHEME_RefreshImmersiveColorPolicyState)(void);
+static unsigned char(WINAPI *UXTHEME_ShouldAppsUseDarkMode)(void);
+static unsigned char(WINAPI *UXTHEME_AllowDarkModeForWindow)(HWND hwnd, unsigned char allow);
+static void(WINAPI *UXTHEME_AllowDarkModeForApp)(unsigned char allow); // v1809
+static DWORD(WINAPI *UXTHEME_SetPreferredAppMode)(DWORD app_mode); // v1903
+static HTHEME(WINAPI *UXTHEME_OpenThemeData)(HWND hwnd, LPCWSTR pszClassList);
+static HRESULT(WINAPI *UXTHEME_DrawThemeTextEx)(HTHEME hTheme, HDC hdc, int iPartId, int iStateId, LPCWSTR pszText,
+	int cchText, DWORD dwTextFlags, LPRECT pRect, const DTTOPTS *pOptions);
+static void(WINAPI *UXTHEME_RefreshImmersiveColorPolicyState)(void);
 #define APPMODE_DEFAULT    (0)
 #define APPMODE_ALLOWDARK  (1)
 #define APPMODE_FORCEDARK  (2)
@@ -630,7 +623,7 @@ static WNDPROC old_wndproc = NULL;
 /**
  * Hijacked from wxWidgets
  * Copyright (c) 2022 Vadim Zeitlin <vadim@wxwidgets.org>
-**/
+ **/
 static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
 	if (!win32_dark_mode_enabled)
@@ -709,8 +702,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 			HBRUSH hbr;
 
 			mbi.cbSize = sizeof(MENUBARINFO);
-			if (!USER32_GetMenuBarInfo
-				|| !USER32_GetMenuBarInfo(hwnd, OBJID_MENU, 0, &mbi))
+			if (!USER32_GetMenuBarInfo || !USER32_GetMenuBarInfo(hwnd, OBJID_MENU, 0, &mbi))
 				break;
 
 			if (!GetWindowRect(hwnd, &rcWindow))
@@ -755,8 +747,8 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 			 * not initialized in the struct passed to us here, so this is
 			 * the only way to identify the item we're dealing with. */
 			if (!USER32_GetMenuItemInfoW
-				|| !USER32_GetMenuItemInfoW((HMENU)drawmenuitem->dis.hwndItem,
-					drawmenuitem->mbmi.iPosition, TRUE, &mii))
+				|| !USER32_GetMenuItemInfoW(
+					(HMENU)drawmenuitem->dis.hwndItem, drawmenuitem->mbmi.iPosition, TRUE, &mii))
 				break;
 
 			item_state = drawmenuitem->dis.itemState;
@@ -766,8 +758,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 			if (item_state & ODS_INACTIVE) {
 				part_state = MBI_DISABLED;
 				col_text = 0x6D6D6D;
-			} else if ((item_state & (ODS_GRAYED|ODS_HOTLIGHT))
-					== (ODS_GRAYED|ODS_HOTLIGHT)) {
+			} else if ((item_state & (ODS_GRAYED | ODS_HOTLIGHT)) == (ODS_GRAYED | ODS_HOTLIGHT)) {
 				part_state = MBI_DISABLEDHOT;
 			} else if (item_state & ODS_GRAYED) {
 				part_state = MBI_DISABLED;
@@ -784,8 +775,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 			 * the "Menu" theme. */
 			{
 				HBRUSH hbr = CreateSolidBrush(col_bg);
-				FillRect(drawmenuitem->dis.hDC, &drawmenuitem->dis.rcItem,
-					hbr);
+				FillRect(drawmenuitem->dis.hDC, &drawmenuitem->dis.rcItem, hbr);
 				DeleteObject(hbr);
 			}
 
@@ -801,9 +791,8 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 				drawTextFlags |= DT_HIDEPREFIX;
 
 			theme = UXTHEME_OpenThemeData(hwnd, L"Menu");
-			UXTHEME_DrawThemeTextEx(theme, drawmenuitem->dis.hDC,
-				MENU_BARITEM, part_state, buf, mii.cch, drawTextFlags,
-				&drawmenuitem->dis.rcItem, &dttopts);
+			UXTHEME_DrawThemeTextEx(theme, drawmenuitem->dis.hDC, MENU_BARITEM, part_state, buf, mii.cch,
+				drawTextFlags, &drawmenuitem->dis.rcItem, &dttopts);
 		}
 		return 0;
 	}
@@ -816,8 +805,7 @@ static LRESULT CALLBACK win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 
 /* TODO: Check for changes in theme settings.
  * My hope is that windows will send an event that we can parse :) */
-static inline SCHISM_ALWAYS_INLINE
-void win32_toggle_dark_title_bar(void *window, int on)
+static inline SCHISM_ALWAYS_INLINE void win32_toggle_dark_title_bar(void *window, int on)
 {
 	/* this function is a crime against humanity */
 	win32_dark_mode_enabled = (on && (UXTHEME_ShouldAppsUseDarkMode && UXTHEME_ShouldAppsUseDarkMode()));
@@ -838,7 +826,7 @@ void win32_toggle_dark_title_bar(void *window, int on)
 	if (win32_ntver_atleast(10, 0, 18362)) {
 		BOOL v = b; /* this value isn't const ? */
 		if (USER32_SetWindowCompositionAttribute) {
-			WINDOWCOMPOSITIONATTRIBDATA data = { WCA_USEDARKMODECOLORS, &v, sizeof(v) };
+			WINDOWCOMPOSITIONATTRIBDATA data = {WCA_USEDARKMODECOLORS, &v, sizeof(v)};
 			USER32_SetWindowCompositionAttribute((HWND)window, &data);
 		}
 	} else if (win32_ntver_atleast(10, 0, 17763)) {
@@ -904,7 +892,8 @@ static int win32_dark_init(void)
 #define LOAD_UNDOCUMENTED_FUNC(name, ordinal) \
 	do { \
 		UXTHEME_##name = loadso_function_load(lib_uxtheme, #name); \
-		if (!UXTHEME_##name) UXTHEME_##name = loadso_function_load(lib_uxtheme, MAKEINTRESOURCEA(ordinal)); \
+		if (!UXTHEME_##name) \
+			UXTHEME_##name = loadso_function_load(lib_uxtheme, MAKEINTRESOURCEA(ordinal)); \
 	} while (0)
 
 			LOAD_UNDOCUMENTED_FUNC(RefreshImmersiveColorPolicyState, 104);
@@ -924,7 +913,8 @@ static int win32_dark_init(void)
 
 		lib_user32 = loadso_object_load("user32.dll");
 		if (lib_user32) {
-			USER32_SetWindowCompositionAttribute = loadso_function_load(lib_user32, "SetWindowCompositionAttribute");
+			USER32_SetWindowCompositionAttribute
+				= loadso_function_load(lib_user32, "SetWindowCompositionAttribute");
 			USER32_GetMenuItemInfoW = loadso_function_load(lib_user32, "GetMenuItemInfoW");
 			USER32_GetMenuBarInfo = loadso_function_load(lib_user32, "GetMenuBarInfo");
 		}
@@ -949,24 +939,21 @@ static void win32_dark_quit(void)
 /* crash handler, only available on Windows NT (?) */
 
 static void *lib_dbghelp;
-static BOOL (WINAPI *DBGHELP_SymInitialize)(HANDLE,PCSTR,BOOL);
-static DWORD64 (WINAPI *DBGHELP_SymGetModuleBase64)(HANDLE,DWORD64);
-static BOOL (WINAPI *DBGHELP_SymFromAddr)(HANDLE,DWORD64,PDWORD64,PSYMBOL_INFO);
-static BOOL (WINAPI *DBGHELP_StackWalk64)(DWORD,HANDLE,HANDLE,LPSTACKFRAME64,
-	PVOID,PREAD_PROCESS_MEMORY_ROUTINE64,PFUNCTION_TABLE_ACCESS_ROUTINE64,
-	PGET_MODULE_BASE_ROUTINE64,PTRANSLATE_ADDRESS_ROUTINE64);
-static PVOID (WINAPI *DBGHELP_SymFunctionTableAccess64)(HANDLE,DWORD64);
+static BOOL(WINAPI *DBGHELP_SymInitialize)(HANDLE, PCSTR, BOOL);
+static DWORD64(WINAPI *DBGHELP_SymGetModuleBase64)(HANDLE, DWORD64);
+static BOOL(WINAPI *DBGHELP_SymFromAddr)(HANDLE, DWORD64, PDWORD64, PSYMBOL_INFO);
+static BOOL(WINAPI *DBGHELP_StackWalk64)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64, PVOID, PREAD_PROCESS_MEMORY_ROUTINE64,
+	PFUNCTION_TABLE_ACCESS_ROUTINE64, PGET_MODULE_BASE_ROUTINE64, PTRANSLATE_ADDRESS_ROUTINE64);
+static PVOID(WINAPI *DBGHELP_SymFunctionTableAccess64)(HANDLE, DWORD64);
 
 static void *lib_kernel32;
-static LPTOP_LEVEL_EXCEPTION_FILTER (WINAPI *KERNEL32_SetUnhandledExceptionFilter)(
-	LPTOP_LEVEL_EXCEPTION_FILTER
-);
+static LPTOP_LEVEL_EXCEPTION_FILTER(WINAPI *KERNEL32_SetUnhandledExceptionFilter)(LPTOP_LEVEL_EXCEPTION_FILTER);
 
 static void *lib_psapi;
-static DWORD (WINAPI *PSAPI_GetModuleBaseNameA)(HANDLE,HMODULE,LPSTR,DWORD);
+static DWORD(WINAPI *PSAPI_GetModuleBaseNameA)(HANDLE, HMODULE, LPSTR, DWORD);
 
 static void *lib_ntdll;
-static USHORT (WINAPI *NTDLL_RtlCaptureStackBackTrace)(ULONG,ULONG,PVOID,PULONG);
+static USHORT(WINAPI *NTDLL_RtlCaptureStackBackTrace)(ULONG, ULONG, PVOID, PULONG);
 
 static void win32_exception_log_cb(FILE *log, void *userdata)
 {
@@ -986,28 +973,26 @@ static void win32_exception_log_cb(FILE *log, void *userdata)
 	addr = DBGHELP_SymGetModuleBase64(process, (DWORD64)(uintptr_t)p->ExceptionRecord->ExceptionAddress);
 	PSAPI_GetModuleBaseNameA(process, (HMODULE)(uintptr_t)addr, module_name, sizeof(module_name));
 
-	fprintf(log, "Exception code: 0x%08X\n",
-		(uint32_t)p->ExceptionRecord->ExceptionCode);
-	fprintf(log, "Exception address: 0x%p (%s+0x%llX)\n\n",
-		p->ExceptionRecord->ExceptionAddress, module_name,
+	fprintf(log, "Exception code: 0x%08X\n", (uint32_t)p->ExceptionRecord->ExceptionCode);
+	fprintf(log, "Exception address: 0x%p (%s+0x%llX)\n\n", p->ExceptionRecord->ExceptionAddress, module_name,
 		(uint64_t)(uintptr_t)p->ExceptionRecord->ExceptionAddress - addr);
 
 	fprintf(log, "General purpose and control registers:\n");
 #if defined(__i386__) || defined(_M_IX86)
-	fprintf(log, "EAX: 0x%08X, EBX: 0x%08X, ECX: 0x%08X\n",
-		p->ContextRecord->Eax, p->ContextRecord->Ebx, p->ContextRecord->Ecx);
-	fprintf(log, "EDX: 0x%08X, EBP: 0x%08X, EDI: 0x%08X\n",
-		p->ContextRecord->Edx, p->ContextRecord->Ebp, p->ContextRecord->Edi);
-	fprintf(log, "EIP: 0x%08X, ESI: 0x%08X, ESP: 0x%08X\n",
-		p->ContextRecord->Eip, p->ContextRecord->Esi, p->ContextRecord->Esp);
+	fprintf(log, "EAX: 0x%08X, EBX: 0x%08X, ECX: 0x%08X\n", p->ContextRecord->Eax, p->ContextRecord->Ebx,
+		p->ContextRecord->Ecx);
+	fprintf(log, "EDX: 0x%08X, EBP: 0x%08X, EDI: 0x%08X\n", p->ContextRecord->Edx, p->ContextRecord->Ebp,
+		p->ContextRecord->Edi);
+	fprintf(log, "EIP: 0x%08X, ESI: 0x%08X, ESP: 0x%08X\n", p->ContextRecord->Eip, p->ContextRecord->Esi,
+		p->ContextRecord->Esp);
 #elif defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
 	/* same as i386, but this time with R prefix instead of E */
-	fprintf(log, "RAX: 0x%08llX, RBX: 0x%08llX, RCX: 0x%08llX\n",
-		p->ContextRecord->Rax, p->ContextRecord->Rbx, p->ContextRecord->Rcx);
-	fprintf(log, "RDX: 0x%08llX, RBP: 0x%08llX, RDI: 0x%08llX\n",
-		p->ContextRecord->Rdx, p->ContextRecord->Rbp, p->ContextRecord->Rdi);
-	fprintf(log, "RIP: 0x%08llX, RSI: 0x%08llX, RSP: 0x%08llX\n",
-		p->ContextRecord->Rip, p->ContextRecord->Rsi, p->ContextRecord->Rsp);
+	fprintf(log, "RAX: 0x%08llX, RBX: 0x%08llX, RCX: 0x%08llX\n", p->ContextRecord->Rax, p->ContextRecord->Rbx,
+		p->ContextRecord->Rcx);
+	fprintf(log, "RDX: 0x%08llX, RBP: 0x%08llX, RDI: 0x%08llX\n", p->ContextRecord->Rdx, p->ContextRecord->Rbp,
+		p->ContextRecord->Rdi);
+	fprintf(log, "RIP: 0x%08llX, RSI: 0x%08llX, RSP: 0x%08llX\n", p->ContextRecord->Rip, p->ContextRecord->Rsi,
+		p->ContextRecord->Rsp);
 #elif defined(__aarch64__) || defined(_M_ARM64)
 	fprintf(log, "?\n");
 #elif defined(__arm__) || defined(_M_ARM)
@@ -1018,10 +1003,10 @@ static void win32_exception_log_cb(FILE *log, void *userdata)
 
 	fprintf(log, "\nSegment registers:\n");
 #if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
-	fprintf(log, "CS: 0x%04X, DS: 0x%04X, ES: 0x%04X\n",
-		p->ContextRecord->SegCs, p->ContextRecord->SegDs, p->ContextRecord->SegEs);
-	fprintf(log, "FS: 0x%04X, GS: 0x%04X, SS: 0x%04X\n",
-		p->ContextRecord->SegFs, p->ContextRecord->SegGs, p->ContextRecord->SegSs);
+	fprintf(log, "CS: 0x%04X, DS: 0x%04X, ES: 0x%04X\n", p->ContextRecord->SegCs, p->ContextRecord->SegDs,
+		p->ContextRecord->SegEs);
+	fprintf(log, "FS: 0x%04X, GS: 0x%04X, SS: 0x%04X\n", p->ContextRecord->SegFs, p->ContextRecord->SegGs,
+		p->ContextRecord->SegSs);
 #else
 	fprintf(log, "?\n");
 #endif
@@ -1035,33 +1020,34 @@ static void win32_exception_log_cb(FILE *log, void *userdata)
 	if (!DBGHELP_SymFromAddr || !DBGHELP_SymFunctionTableAccess64)
 		return;
 
-#if defined(__i386__) || defined(_M_IX86)
-	stack.AddrPC.Offset    = p->ContextRecord->Eip;
+# if defined(__i386__) || defined(_M_IX86)
+	stack.AddrPC.Offset = p->ContextRecord->Eip;
 	stack.AddrStack.Offset = p->ContextRecord->Esp;
 	stack.AddrFrame.Offset = p->ContextRecord->Ebp;
-#elif defined(__amd64__) || defined(_M_AMD64) || defined(_M_X64)
-	stack.AddrPC.Offset    = p->ContextRecord->Rip;
+# elif defined(__amd64__) || defined(_M_AMD64) || defined(_M_X64)
+	stack.AddrPC.Offset = p->ContextRecord->Rip;
 	stack.AddrStack.Offset = p->ContextRecord->Rsp;
 	stack.AddrFrame.Offset = p->ContextRecord->Rbp;
-#endif
-	stack.AddrPC.Mode      = AddrModeFlat;
-	stack.AddrStack.Mode   = AddrModeFlat;
-	stack.AddrFrame.Mode   = AddrModeFlat;
+# endif
+	stack.AddrPC.Mode = AddrModeFlat;
+	stack.AddrStack.Mode = AddrModeFlat;
+	stack.AddrFrame.Mode = AddrModeFlat;
 
 	fprintf(log, "\nStack trace:\n");
 
 	memcpy(&context, &p->ContextRecord, sizeof(CONTEXT));
 
-    for (i = 0; DBGHELP_StackWalk64(
-#if defined(__i386__) || defined(_M_IX86)
-		IMAGE_FILE_MACHINE_I386
-#elif defined(__amd64__) || defined(_M_AMD64) || defined(_M_X64)
-		IMAGE_FILE_MACHINE_AMD64
-#else
-# error whoops
-#endif
-		, process, thread, &stack, &context, NULL,
-		DBGHELP_SymFunctionTableAccess64, DBGHELP_SymGetModuleBase64, NULL);
+	for (i = 0; DBGHELP_StackWalk64(
+# if defined(__i386__) || defined(_M_IX86)
+		     IMAGE_FILE_MACHINE_I386
+# elif defined(__amd64__) || defined(_M_AMD64) || defined(_M_X64)
+		     IMAGE_FILE_MACHINE_AMD64
+# else
+#  error whoops
+# endif
+		     ,
+		     process, thread, &stack, &context, NULL, DBGHELP_SymFunctionTableAccess64,
+		     DBGHELP_SymGetModuleBase64, NULL);
 		i++) {
 		/* This seems backwards, but it's what MSDN does */
 		char symbol_buf[sizeof(SYMBOL_INFO) + 256] = {0};
@@ -1084,8 +1070,7 @@ static void win32_exception_log_cb(FILE *log, void *userdata)
 		// with symbols
 		if (symbol->Address && (stack.AddrPC.Offset >= symbol->Address)) {
 			fprintf(log, "(%s+%llX) - 0x%llX\n", symbol->Name,
-				(DWORD64)stack.AddrPC.Offset - symbol->Address,
-				symbol->Address);
+				(DWORD64)stack.AddrPC.Offset - symbol->Address, symbol->Address);
 		} else {
 			fprintf(log, "- 0x%llX\n", stack.AddrPC.Offset);
 		}
@@ -1132,9 +1117,7 @@ static int win32_exception_init(void)
 	if (lib_ntdll)
 		NTDLL_RtlCaptureStackBackTrace = loadso_function_load(lib_ntdll, "RtlCaptureStackBackTrace");
 
-	if (!KERNEL32_SetUnhandledExceptionFilter
-		|| !DBGHELP_SymGetModuleBase64
-		|| !DBGHELP_SymInitialize
+	if (!KERNEL32_SetUnhandledExceptionFilter || !DBGHELP_SymGetModuleBase64 || !DBGHELP_SymInitialize
 		|| !PSAPI_GetModuleBaseNameA) {
 		loadso_object_unload(lib_kernel32);
 		loadso_object_unload(lib_dbghelp);
@@ -1208,8 +1191,7 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 				utf8_argv = mem_alloc(sizeof(char *) * utf8_argc);
 
 				for (i = 0; i < utf8_argc; i++) {
-					charset_iconv(argvw[i], &utf8_argv[i], CHARSET_WCHAR_T,
-						CHARSET_CHAR, SIZE_MAX);
+					charset_iconv(argvw[i], &utf8_argv[i], CHARSET_WCHAR_T, CHARSET_CHAR, SIZE_MAX);
 					if (!utf8_argv[i])
 						utf8_argv[i] = str_dup(""); // ...
 				}
@@ -1225,13 +1207,12 @@ void win32_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 		utf8_argv = mem_alloc(sizeof(char *) * utf8_argc);
 
 		for (i = 0; i < utf8_argc; i++) {
-			charset_iconv((*pargv)[i], &utf8_argv[i], CHARSET_ANSI,
-				CHARSET_CHAR, SIZE_MAX);
+			charset_iconv((*pargv)[i], &utf8_argv[i], CHARSET_ANSI, CHARSET_CHAR, SIZE_MAX);
 			if (!utf8_argv[i])
 				utf8_argv[i] = str_dup(""); // ...
 		}
 
-have_utf8_args: ;
+	have_utf8_args:;
 		*pargv = utf8_argv;
 		*pargc = utf8_argc;
 	}
@@ -1266,25 +1247,26 @@ int win32_event(schism_event_t *event)
 
 			HDROP drop = (HDROP)event->wm_msg.msg.win.wparam;
 
-			SCHISM_ANSI_UNICODE({
-				int needed = DragQueryFileA(drop, 0, NULL, 0);
+			SCHISM_ANSI_UNICODE(
+				{
+					int needed = DragQueryFileA(drop, 0, NULL, 0);
 
-				char *f = mem_alloc(needed + 1);
-				DragQueryFileA(drop, 0, f, needed + 1);
-				f[needed] = 0;
+					char *f = mem_alloc(needed + 1);
+					DragQueryFileA(drop, 0, f, needed + 1);
+					f[needed] = 0;
 
-				charset_iconv(f, &e.drop.file, CHARSET_ANSI, CHARSET_CHAR,
-					needed + 1);
-			}, {
-				int needed = DragQueryFileW(drop, 0, NULL, 0);
+					charset_iconv(f, &e.drop.file, CHARSET_ANSI, CHARSET_CHAR, needed + 1);
+				},
+				{
+					int needed = DragQueryFileW(drop, 0, NULL, 0);
 
-				wchar_t *f = mem_alloc((needed + 1) * sizeof(wchar_t));
-				DragQueryFileW(drop, 0, f, needed + 1);
-				f[needed] = 0;
+					wchar_t *f = mem_alloc((needed + 1) * sizeof(wchar_t));
+					DragQueryFileW(drop, 0, f, needed + 1);
+					f[needed] = 0;
 
-				charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR,
-					(needed + 1) * sizeof(wchar_t));
-			})
+					charset_iconv(f, &e.drop.file, CHARSET_WCHAR_T, CHARSET_CHAR,
+						(needed + 1) * sizeof(wchar_t));
+				})
 
 			if (!e.drop.file)
 				return 0;
@@ -1299,9 +1281,8 @@ int win32_event(schism_event_t *event)
 		 * As a workaround, we can check what Windows thinks, but only
 		 * for Right Ctrl. Left Ctrl just gets completely ignored, and there's
 		 * nothing we can do about it. */
-		if (event->key.sym == SCHISM_KEYSYM_SCROLLLOCK
-				&& (event->key.mod & SCHISM_KEYMOD_RCTRL)
-				&& !(GetKeyState(VK_SCROLL) & 0x80))
+		if (event->key.sym == SCHISM_KEYSYM_SCROLLLOCK && (event->key.mod & SCHISM_KEYMOD_RCTRL)
+			&& !(GetKeyState(VK_SCROLL) & 0x80))
 			event->key.sym = SCHISM_KEYSYM_PAUSE;
 
 		return 1;
@@ -1313,21 +1294,20 @@ int win32_event(schism_event_t *event)
 /* ------------------------------------------------------------------------ */
 
 /* converts FILETIME to unix time_t */
-static inline int64_t win32_filetime_to_unix_time(FILETIME *ft) {
+static inline int64_t win32_filetime_to_unix_time(FILETIME *ft)
+{
 	uint64_t ul = ((uint64_t)ft->dwHighDateTime << 32) | ft->dwLowDateTime;
 	return ((int64_t)(ul - 116444736000000000ULL) / 10000000);
 }
 
 /* this is highly related to the XBOX code */
-int win32_stat(const char* path, struct stat* st)
+int win32_stat(const char *path, struct stat *st)
 {
 	void *wpath;
 
-	SCHISM_ANSI_UNICODE({
-		wpath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI);
-	}, {
-		wpath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T);
-	})
+	SCHISM_ANSI_UNICODE(
+		{ wpath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI); },
+		{ wpath = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T); })
 	if (!wpath)
 		return -1;
 
@@ -1336,11 +1316,7 @@ int win32_stat(const char* path, struct stat* st)
 
 		st->st_mode = 0;
 
-		SCHISM_ANSI_UNICODE({
-			dw = GetFileAttributesA(wpath);
-		}, {
-			dw = GetFileAttributesW(wpath);
-		})
+		SCHISM_ANSI_UNICODE({ dw = GetFileAttributesA(wpath); }, { dw = GetFileAttributesW(wpath); })
 		if (dw == INVALID_FILE_ATTRIBUTES) {
 			free(wpath);
 			errno = ENOENT;
@@ -1360,11 +1336,9 @@ int win32_stat(const char* path, struct stat* st)
 		int fail = 0;
 
 		/* we could possibly be more lenient with the access rights here */
-		SCHISM_ANSI_UNICODE({
-			fh = CreateFileA(wpath, 0, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		}, {
-			fh = CreateFileW(wpath, 0, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		})
+		SCHISM_ANSI_UNICODE(
+			{ fh = CreateFileA(wpath, 0, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL); },
+			{ fh = CreateFileW(wpath, 0, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL); })
 		if (fh == INVALID_HANDLE_VALUE) {
 			free(wpath);
 			errno = EINVAL; /* FIXME set something useful here */
@@ -1396,33 +1370,35 @@ int win32_stat(const char* path, struct stat* st)
 	return 0;
 }
 
-FILE *win32_fopen(const char* path, const char* flags)
+FILE *win32_fopen(const char *path, const char *flags)
 {
-	SCHISM_ANSI_UNICODE({
-		// Windows 9x
-		char *ac = NULL;
-		char *ac_flags = NULL;
-		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
-			|| charset_iconv(flags, &ac_flags, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return NULL;
+	SCHISM_ANSI_UNICODE(
+		{
+                // Windows 9x
+			char *ac = NULL;
+			char *ac_flags = NULL;
+			if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)
+				|| charset_iconv(flags, &ac_flags, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+				return NULL;
 
-		FILE *ret = fopen(ac, ac_flags);
-		free(ac);
-		free(ac_flags);
-		return ret;
-	}, {
-		// Windows NT
-		wchar_t *wc = NULL;
-		wchar_t *wc_flags = NULL;
-		if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
-			|| charset_iconv(flags, &wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return NULL;
+			FILE *ret = fopen(ac, ac_flags);
+			free(ac);
+			free(ac_flags);
+			return ret;
+		},
+		{
+                // Windows NT
+			wchar_t *wc = NULL;
+			wchar_t *wc_flags = NULL;
+			if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)
+				|| charset_iconv(flags, &wc_flags, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+				return NULL;
 
-		FILE* ret = _wfopen(wc, wc_flags);
-		free(wc);
-		free(wc_flags);
-		return ret;
-	})
+			FILE *ret = _wfopen(wc, wc_flags);
+			free(wc);
+			free(wc_flags);
+			return ret;
+		})
 
 	// err
 	return NULL;
@@ -1430,23 +1406,25 @@ FILE *win32_fopen(const char* path, const char* flags)
 
 int win32_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 {
-	SCHISM_ANSI_UNICODE({
-		char* ac = NULL;
-		if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return -1;
+	SCHISM_ANSI_UNICODE(
+		{
+			char *ac = NULL;
+			if (charset_iconv(path, &ac, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+				return -1;
 
-		int ret = _mkdir(ac);
-		free(ac);
-		return ret;
-	}, {
-		wchar_t* wc = NULL;
-		if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return -1;
+			int ret = _mkdir(ac);
+			free(ac);
+			return ret;
+		},
+		{
+			wchar_t *wc = NULL;
+			if (charset_iconv(path, &wc, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+				return -1;
 
-		int ret = _wmkdir(wc);
-		free(wc);
-		return ret;
-	})
+			int ret = _wmkdir(wc);
+			free(wc);
+			return ret;
+		})
 
 	return -1;
 }
@@ -1466,23 +1444,25 @@ int win32_access(const char *path, int amode)
 	if (amode & W_OK)
 		winamode |= 0x02;
 
-	SCHISM_ANSI_UNICODE({
-		char* ac = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI);
-		if (!ac)
-			return -1;
+	SCHISM_ANSI_UNICODE(
+		{
+			char *ac = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_ANSI);
+			if (!ac)
+				return -1;
 
-		int ret = _access(ac, winamode);
-		free(ac);
-		return ret;
-	}, {
-		wchar_t* ac = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T);
-		if (!ac)
-			return -1;
+			int ret = _access(ac, winamode);
+			free(ac);
+			return ret;
+		},
+		{
+			wchar_t *ac = charset_iconv_easy(path, CHARSET_UTF8, CHARSET_WCHAR_T);
+			if (!ac)
+				return -1;
 
-		int ret = _waccess(ac, winamode);
-		free(ac);
-		return ret;
-	})
+			int ret = _waccess(ac, winamode);
+			free(ac);
+			return ret;
+		})
 
 	return -1;
 }
@@ -1550,75 +1530,77 @@ struct tm *win32_localtime(const time_t *t)
 /* exec */
 
 #define WIN32_EXEC_IMPL(SUFFIX, CHARSET, CHAR_TYPE, SPAWNVP, CHDIR, STRDUP, GETCWD) \
-	static inline SCHISM_ALWAYS_INLINE \
-	int win32_exec_##SUFFIX(int *status, int *abnormal_exit, const char *dir, const char *name, va_list ap) \
+	static inline SCHISM_ALWAYS_INLINE int win32_exec_##SUFFIX( \
+		int *status, int *abnormal_exit, const char *dir, const char *name, va_list ap) \
 	{ \
 		CHAR_TYPE *argv[256]; \
 		int i; \
 		int r = 0; \
-	\
+\
 		if (charset_iconv(name, &argv[0], CHARSET_UTF8, CHARSET, SIZE_MAX)) \
 			goto cleanup; \
-	\
+\
 		for (i = 1; i < 255; i++) { \
 			const char *arg = va_arg(ap, const char *); \
 			if (!arg) \
 				break; \
-	\
+\
 			/* lol what */ \
 			if (charset_iconv(arg, &argv[i], CHARSET_UTF8, CHARSET, SIZE_MAX)) \
 				goto cleanup; \
 		} \
-	\
+\
 		argv[i] = NULL; \
-	\
+\
 		{ \
 			intptr_t st; \
 			CHAR_TYPE old_wdir[MAX_PATH]; \
-	\
+\
 			if (dir) { \
 				CHAR_TYPE *wdir; \
-	\
+\
 				/* need to save this to chdir back */ \
 				GETCWD(old_wdir, MAX_PATH); \
-	\
+\
 				wdir = charset_iconv_easy(dir, CHARSET_UTF8, CHARSET); \
 				if (!wdir) \
 					goto cleanup; \
-	\
+\
 				if (CHDIR(wdir) == -1) { \
 					free(wdir); \
 					goto cleanup; \
 				} \
-	\
+\
 				free(wdir); \
 			} \
-	\
+\
 			/* standard C is weird and needs an ugly cast */ \
 			st = SPAWNVP(_P_WAIT, argv[0], (const CHAR_TYPE *const *)argv); \
 			if (st == -1) \
 				goto cleanup; \
-	\
-			if (status) *status = st; \
-	\
-			/* on Windows, if a process dies because of an unhandled exception, the status code
-			 * will be STATUS_(exception type), e.g. STATUS_ACCESS_VIOLATION, which will be a
-			 * 32-bit number with the top two bits set. see documentation for the
-			 * EXCEPTION_RECORD structure for more info
+\
+			if (status) \
+				*status = st; \
+\
+			/* on Windows, if a process dies because of an unhandled exception, the status code \
+			 * will be STATUS_(exception type), e.g. STATUS_ACCESS_VIOLATION, which will be a \
+			 * 32-bit number with the top two bits set. see documentation for the \
+			 * EXCEPTION_RECORD structure for more info \
 			 */ \
 			if (abnormal_exit) \
 				*abnormal_exit = ((st & 0xC0000000) == 0xC0000000); \
-	\
+\
 			/* hope this works? */ \
-			if (dir) CHDIR(old_wdir); \
+			if (dir) \
+				CHDIR(old_wdir); \
 		} \
-	\
+\
 		r = 1; \
-	\
-cleanup: \
+\
+	cleanup: \
 		for (i = 0; argv[i]; i++) \
 			free(argv[i]); \
-	\
+\
 		return r; \
 	}
 
@@ -1632,11 +1614,9 @@ int win32_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 
 	va_start(ap, name);
 
-	SCHISM_ANSI_UNICODE({
-		r = win32_exec_A(status, abnormal_exit, dir, name, ap);
-	}, {
-		r = win32_exec_W(status, abnormal_exit, dir, name, ap);
-	})
+	SCHISM_ANSI_UNICODE(
+		{ r = win32_exec_A(status, abnormal_exit, dir, name, ap); },
+		{ r = win32_exec_W(status, abnormal_exit, dir, name, ap); })
 
 	va_end(ap);
 
@@ -1660,15 +1640,17 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 	char *cmd;
 
 	/* obey COMSPEC */
-	SCHISM_ANSI_UNICODE({
-		char *x = getenv("COMSPEC");
-		if (charset_iconv(x ? x : "cmd", &cmd, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX))
-			return 0;
-	}, {
-		wchar_t *x = _wgetenv(L"COMSPEC");
-		if (charset_iconv(x ? x : L"cmd", &cmd, CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX))
-			return 0;
-	})
+	SCHISM_ANSI_UNICODE(
+		{
+			char *x = getenv("COMSPEC");
+			if (charset_iconv(x ? x : "cmd", &cmd, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX))
+				return 0;
+		},
+		{
+			wchar_t *x = _wgetenv(L"COMSPEC");
+			if (charset_iconv(x ? x : L"cmd", &cmd, CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX))
+				return 0;
+		})
 
 	for (i = 0; i < ARRAY_SIZE(extensions); i++) {
 		struct stat dummy;

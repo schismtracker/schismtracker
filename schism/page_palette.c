@@ -24,13 +24,13 @@
 #include "headers.h"
 
 #include "it.h"
-#include "config.h"
 #include "page.h"
-#include "clippy.h"
-#include "palettes.h"
 #include "widget.h"
-#include "vgamem.h"
+#include "clippy.h"
+#include "config.h"
 #include "keyboard.h"
+#include "palettes.h"
+#include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -90,7 +90,8 @@ static void update_thumbbars(void)
 
 /* --------------------------------------------------------------------- */
 
-static void palette_copy_palette_to_clipboard(int which) {
+static void palette_copy_palette_to_clipboard(int which)
+{
 	char palette_text[49];
 	palette_to_string(which, palette_text);
 	palette_text[48] = 0;
@@ -99,19 +100,22 @@ static void palette_copy_palette_to_clipboard(int which) {
 	clippy_yank();
 }
 
-static void palette_copy_current_to_clipboard(void) {
+static void palette_copy_current_to_clipboard(void)
+{
 	palette_copy_palette_to_clipboard(current_palette_index);
 }
 
-static void palette_paste_from_clipboard(void) {
+static void palette_paste_from_clipboard(void)
+{
 	clippy_paste(CLIPPY_BUFFER);
 }
 
 static int palette_paste_callback(SCHISM_UNUSED int cb, const void *data)
 {
-	if (!data) return 0;
+	if (!data)
+		return 0;
 
-	int result = set_palette_from_string((const char*)data);
+	int result = set_palette_from_string((const char *)data);
 
 	if (!result) {
 		status_text_flash("Bad character or wrong length");
@@ -132,13 +136,49 @@ static int palette_paste_callback(SCHISM_UNUSED int cb, const void *data)
 /* --------------------------------------------------------------------- */
 
 static const int palette_list_focus_offsets_left_[] = {
-	29, 30, 30, 31, 32, 32, 33, 33, 34, 35,
-	35, 36, 36, 37, 38, 39, 40, 40, 41, 42,
+	29,
+	30,
+	30,
+	31,
+	32,
+	32,
+	33,
+	33,
+	34,
+	35,
+	35,
+	36,
+	36,
+	37,
+	38,
+	39,
+	40,
+	40,
+	41,
+	42,
 };
 
 static const int palette_list_focus_offsets_right_[] = {
-	8,  9,  9,  10, 11, 11, 12, 12, 13, 14,
-	14, 15, 15, 16, 17, 18, 19, 19, 20, 21,
+	8,
+	9,
+	9,
+	10,
+	11,
+	11,
+	12,
+	12,
+	13,
+	14,
+	14,
+	15,
+	15,
+	16,
+	17,
+	18,
+	19,
+	19,
+	20,
+	21,
 };
 
 static uint32_t palette_list_size_(void)
@@ -185,7 +225,7 @@ static int palette_list_handle_key_(struct key_event *kk)
 
 /* --------------------------------------------------------------------- */
 
-static void palette_list_handle_key(struct key_event * k)
+static void palette_list_handle_key(struct key_event *k)
 {
 	int n = *selected_widget;
 
@@ -280,20 +320,17 @@ void palette_load_page(struct page *page)
 			tabs[2] = 3 * n - 40;
 		}
 		widget_create_thumbbar(widgets_palette + (3 * n), 10 + 27 * (n / 7), 5 * (n % 7) + 14, 9,
-				n ? (3 * n - 1) : 0, 3 * n + 1, tabs[0], update_palette, 0, 63);
-		widget_create_thumbbar(widgets_palette + (3 * n + 1), 10 + 27 * (n / 7), 5 * (n % 7) + 15, 9,
-				3 * n, 3 * n + 2, tabs[1], update_palette, 0, 63);
-		widget_create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9,
-				3 * n + 1, 3 * n + 3, tabs[2], update_palette, 0, 63);
+			n ? (3 * n - 1) : 0, 3 * n + 1, tabs[0], update_palette, 0, 63);
+		widget_create_thumbbar(widgets_palette + (3 * n + 1), 10 + 27 * (n / 7), 5 * (n % 7) + 15, 9, 3 * n,
+			3 * n + 2, tabs[1], update_palette, 0, 63);
+		widget_create_thumbbar(widgets_palette + (3 * n + 2), 10 + 27 * (n / 7), 5 * (n % 7) + 16, 9, 3 * n + 1,
+			3 * n + 3, tabs[2], update_palette, 0, 63);
 	}
 	update_thumbbars();
 
-	widget_create_listbox(widgets_palette+48, palette_list_size_,
-		palette_list_toggled_, palette_list_name_, NULL,
-		palette_list_activate_, palette_list_handle_key_,
-		palette_list_focus_offsets_left_,
-		palette_list_focus_offsets_right_,
-		47, 49);
+	widget_create_listbox(widgets_palette + 48, palette_list_size_, palette_list_toggled_, palette_list_name_, NULL,
+		palette_list_activate_, palette_list_handle_key_, palette_list_focus_offsets_left_,
+		palette_list_focus_offsets_right_, 47, 49);
 	widgets_palette[48].x = 55;
 	widgets_palette[48].y = 26;
 	widgets_palette[48].width = 22;
@@ -302,8 +339,10 @@ void palette_load_page(struct page *page)
 	for (n = 6; n < 18; n++)
 		widgets_palette[n].next.backtab = 48;
 
-	widget_create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_current_to_clipboard, "Copy To Clipboard", 3);
-	widget_create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard, "Paste From Clipboard", 1);
+	widget_create_button(widgets_palette + 49, 55, 43, 20, 48, 50, 39, 18, 18, palette_copy_current_to_clipboard,
+		"Copy To Clipboard", 3);
+	widget_create_button(widgets_palette + 50, 55, 46, 20, 49, 0, 39, 18, 18, palette_paste_from_clipboard,
+		"Paste From Clipboard", 1);
 
 	widgets_palette[0].next.up = 50;
 	widgets_palette[39].next.tab = 49;

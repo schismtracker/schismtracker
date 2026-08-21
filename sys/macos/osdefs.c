@@ -24,21 +24,21 @@
 #include "headers.h"
 
 #include "it.h"
-#include "osdefs.h"
-#include "events.h"
-#include "song.h"
 #include "page.h"
+#include "song.h"
 #include "widget.h"
-#include "dmoz.h"
 #include "charset.h"
-#include "str.h"
-#include "config.h"
 #include "config-parser.h"
+#include "config.h"
+#include "dmoz.h"
+#include "events.h"
 #include "mem.h"
+#include "osdefs.h"
+#include "str.h"
 
+#include <Dialogs.h>
 #include <Files.h>
 #include <Folders.h>
-#include <Dialogs.h>
 #include <LowMem.h>
 
 #include <ctype.h>
@@ -50,35 +50,34 @@ static inline SCHISM_ALWAYS_INLINE time_t time_get_macintosh_epoch(void)
 	// This assumes the epoch is in UTC. This is only always true for Mac OS
 	// Extended partitions; I'm not sure about the time functions since I
 	// don't use those...
-    struct tm macintosh_epoch_tm = {
-        .tm_year = 4, // 1904
-        .tm_mon = 0,  // January
-        .tm_mday = 1, // 1st
-    };
+	struct tm macintosh_epoch_tm = {
+		.tm_year = 4, // 1904
+		.tm_mon = 0,  // January
+		.tm_mday = 1, // 1st
+	};
 
-    return mktime(&macintosh_epoch_tm);
+	return mktime(&macintosh_epoch_tm);
 }
 
 static inline SCHISM_ALWAYS_INLINE time_t time_convert_from_macintosh(uint32_t x)
 {
-    return ((time_t)x) + time_get_macintosh_epoch();
+	return ((time_t)x) + time_get_macintosh_epoch();
 }
 
 static inline SCHISM_ALWAYS_INLINE uint32_t time_convert_to_macintosh(time_t x)
 {
-    return (uint32_t)(x - time_get_macintosh_epoch());
+	return (uint32_t)(x - time_get_macintosh_epoch());
 }
 
 /* ------------------------------------------------------------------------ */
 
-static void macos_copy_to_pascal_convert_newlines(const char *o,
-	unsigned char s[256])
+static void macos_copy_to_pascal_convert_newlines(const char *o, unsigned char s[256])
 {
 	unsigned char i, n;
 
 	for (n = 1, i = 0; n < 256 && o[i]; i++, n++) {
 		/* newline conversion */
-		if (o[i] == '\r' && o[i+1] == '\n') {
+		if (o[i] == '\r' && o[i + 1] == '\n') {
 			s[n] = '\r';
 			i++; /* skip '\n' */
 		} else if (o[i] == '\n') {
@@ -138,14 +137,16 @@ int macos_get_key_repeat(int *pdelay, int *prate)
 	int delay, rate;
 
 	delay = LMGetKeyThresh();
-	rate  = LMGetKeyRepThresh();
+	rate = LMGetKeyRepThresh();
 
 	/* convert ticks (1/60 sec) to milliseconds */
 	delay = (int32_t)delay * 1000 / 60;
-	rate  = (int32_t)rate  * 1000 / 60;
+	rate = (int32_t)rate * 1000 / 60;
 
-	if (pdelay) *pdelay = delay;
-	if (prate)  *prate = rate;
+	if (pdelay)
+		*pdelay = delay;
+	if (prate)
+		*prate = rate;
 
 	return 1;
 }
@@ -167,7 +168,7 @@ int macos_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 		free(normal);
 		str_to_pascal(npath, mpath, &truncated);
 		free(npath);
-		
+
 		if (truncated) {
 			errno = ENAMETOOLONG;
 			return -1;
@@ -254,7 +255,7 @@ int macos_stat(const char *file, struct stat *st)
 			.st_mode = S_IFDIR,
 			.st_ino = -1,
 		};
-	} else {		
+	} else {
 		pb.hFileInfo.ioNamePtr = ppath;
 
 		OSErr err = PBGetCatInfoSync(&pb);
@@ -298,7 +299,7 @@ int macos_stat(const char *file, struct stat *st)
 	return -1;
 }
 
-FILE *macos_fopen(const char* path, const char* flags)
+FILE *macos_fopen(const char *path, const char *flags)
 {
 	char *npath;
 
@@ -311,7 +312,7 @@ FILE *macos_fopen(const char* path, const char* flags)
 	if (!npath)
 		return NULL;
 
-	FILE* ret = fopen(npath, flags);
+	FILE *ret = fopen(npath, flags);
 
 	free(npath);
 
@@ -348,20 +349,20 @@ FILE *macos_fopen(const char* path, const char* flags)
  */
 
 #include <Dialogs.h>
-#include <Fonts.h>
 #include <Events.h>
-#include <Resources.h>
 #include <Folders.h>
+#include <Fonts.h>
+#include <Resources.h>
 
 /* The standard output files */
-#define STDOUT_FILE	"stdout.txt"
-#define STDERR_FILE	"stderr.txt"
+#define STDOUT_FILE "stdout.txt"
+#define STDERR_FILE "stderr.txt"
 
 /* Structure for keeping prefs in 1 variable */
 typedef struct {
 	Str255 command_line;
 	Str255 video_driver_name;
-	int    output_to_file;
+	int output_to_file;
 } PrefsRecord;
 
 /* See if the command key is held down at startup */
@@ -412,7 +413,7 @@ static int ParseCommandLine(char *cmdline, char **argv)
 			while (*bufp && !isspace(*bufp))
 				++bufp;
 		}
-		if (*bufp ) {
+		if (*bufp) {
 			if (argv)
 				*bufp = '\0';
 
@@ -458,20 +459,20 @@ static void cleanup_output(void)
 static int get_app_file_name(char name[64])
 {
 	ProcessSerialNumber process;
-	ProcessInfoRec      process_info;
-	FSSpec              process_fsp;
+	ProcessInfoRec process_info;
+	FSSpec process_fsp;
 
 	// ok
 	name[0] = '\0';
 
 	process.highLongOfPSN = 0;
-	process.lowLongOfPSN  = kCurrentProcess;
+	process.lowLongOfPSN = kCurrentProcess;
 	process_info.processInfoLength = sizeof(process_info);
-	process_info.processName    = NULL;
+	process_info.processName = NULL;
 	process_info.processAppSpec = &process_fsp;
 
 	if (GetProcessInformation(&process, &process_info) != noErr)
-	   return 0;
+		return 0;
 
 	/* should never ever happen */
 	SCHISM_RUNTIME_ASSERT(process_fsp.name[0] < 64, "GetProcessInformation() returned an invalid filename");
@@ -524,8 +525,8 @@ static void macos_cfg_save(PrefsRecord *prefs)
 
 static char **args = NULL;
 
-#define DEFAULT_ARGUMENTS ""
-#define DEFAULT_VIDEO_DRIVER "toolbox"
+#define DEFAULT_ARGUMENTS      ""
+#define DEFAULT_VIDEO_DRIVER   "toolbox"
 #define DEFAULT_REDIRECT_STDIO 1
 
 /* called by main; */
@@ -558,16 +559,16 @@ void macos_sysinit(int *pargc, char ***pargv)
 	InitDialogs(nil);
 	InitCursor();
 	InitContextualMenus();
-	FlushEvents(everyEvent,0);
+	FlushEvents(everyEvent, 0);
 	MaxApplZone();
 	MoreMasters();
 	MoreMasters();
 
 	macos_cfg_load(&prefs);
 
-	if (memcmp(prefs.video_driver_name+1, "DSp", 3) == 0) {
+	if (memcmp(prefs.video_driver_name + 1, "DSp", 3) == 0) {
 		videodriver = VIDEO_ID_DRAWSPROCKET;
-	} else if (memcmp(prefs.video_driver_name+1, "toolbox", 7) == 0) {
+	} else if (memcmp(prefs.video_driver_name + 1, "toolbox", 7) == 0) {
 		videodriver = VIDEO_ID_TOOLBOX;
 	} else {
 		/* Where are we now ? */
@@ -611,11 +612,12 @@ void macos_sysinit(int *pargc, char ***pargv)
 
 		do {
 			ModalDialog(nil, &itemHit); /* wait for user response */
-			
-			/* Toggle command-line output checkbox */	
+
+			/* Toggle command-line output checkbox */
 			if (itemHit == kCL_File) {
 				GetDialogItem(commandDialog, kCL_File, &dummyType, &dummyHandle, &dummyRect); /* MJS */
-				SetControlValue((ControlHandle)dummyHandle, !GetControlValue((ControlHandle)dummyHandle));
+				SetControlValue(
+					(ControlHandle)dummyHandle, !GetControlValue((ControlHandle)dummyHandle));
 			}
 		} while (itemHit != kCL_OK && itemHit != kCL_Cancel);
 
@@ -634,10 +636,10 @@ void macos_sysinit(int *pargc, char ***pargv)
 		if (itemHit == kCL_Cancel)
 			exit(0);
 	}
-	
+
 	/* Set pseudo-environment variables for video driver, update prefs */
 	switch (videodriver) {
-	case VIDEO_ID_DRAWSPROCKET: 
+	case VIDEO_ID_DRAWSPROCKET:
 		setenv("SDL_VIDEODRIVER", "DSp", 1);
 		str_to_pascal("DSp", prefs.video_driver_name, NULL);
 		break;

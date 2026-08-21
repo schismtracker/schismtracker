@@ -23,9 +23,9 @@
 
 #include "headers.h"
 
-#include "test.h"
 #include "test-assertions.h"
 #include "test-vmem.h"
+#include "test.h"
 
 #include "video.h"
 
@@ -36,30 +36,28 @@ static const uint32_t dpal[256];
 	testresult_t test_video_blit##NAME(void) \
 	{ \
 		void *x = vmem_alloc((ALLOC), VMEM_WRITE); \
-		BLIT \
-		vmem_free(x); \
-	\
+		BLIT vmem_free(x); \
+\
 		RETURN_PASS; \
 	} \
-	\
+\
 	testresult_t test_video_blit##NAME##_overflow(void) \
 	{ \
 		uintptr_t pg, rem, sz, szrnd; \
 		void *a, *x; \
-	\
+\
 		/* TODO abstract this logic away */ \
 		pg = vmem_pagesize(); \
 		sz = (ALLOC); \
 		rem = (sz % pg); \
 		szrnd = (rem) ? (sz + pg - rem) : (sz); \
-	\
+\
 		a = vmem_alloc(szrnd, VMEM_WRITE); \
 		x = (char *)a + szrnd - sz; \
-		BLIT \
-		vmem_free(a); \
-	\
+		BLIT vmem_free(a); \
+\
 		RETURN_PASS; \
-	}	
+	}
 
 #define TEST_VIDEO_BLIT11(BPP) \
 	TEST_VIDEO_BLIT(11_##BPP##bpp, 640 * 400 * (BPP), { video_blit11(BPP, x, 640 * (BPP), dpal); })
@@ -81,8 +79,10 @@ static uint32_t maprgb(void *opaque, uint8_t r, uint8_t g, uint8_t b)
 }
 
 #define TEST_VIDEO_BLITSC_EX(BPP, WIDTH, HEIGHT) \
-	TEST_VIDEO_BLIT(NN_##BPP##bpp_##WIDTH##x##HEIGHT, (WIDTH) * (HEIGHT) * (BPP), { video_blitNN(BPP, x, (WIDTH) * (BPP), dpal, (WIDTH), (HEIGHT)); }) \
-	TEST_VIDEO_BLIT(LN_##BPP##bpp_##WIDTH##x##HEIGHT, (WIDTH) * (HEIGHT) * (BPP), { video_blitLN(BPP, x, (WIDTH) * (BPP), maprgb, NULL, (WIDTH), (HEIGHT)); })
+	TEST_VIDEO_BLIT(NN_##BPP##bpp_##WIDTH##x##HEIGHT, (WIDTH) * (HEIGHT) * (BPP), \
+		{ video_blitNN(BPP, x, (WIDTH) * (BPP), dpal, (WIDTH), (HEIGHT)); }) \
+	TEST_VIDEO_BLIT(LN_##BPP##bpp_##WIDTH##x##HEIGHT, (WIDTH) * (HEIGHT) * (BPP), \
+		{ video_blitLN(BPP, x, (WIDTH) * (BPP), maprgb, NULL, (WIDTH), (HEIGHT)); })
 
 #define TEST_VIDEO_BLITSC(WIDTH, HEIGHT) \
 	TEST_VIDEO_BLITSC_EX(1, WIDTH, HEIGHT) \

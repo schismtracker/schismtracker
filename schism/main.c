@@ -38,24 +38,24 @@
 #include "disko.h"
 #include "fakemem.h"
 
-#include "config.h"
-#include "version.h"
-#include "song.h"
-#include "midi.h"
-#include "dmoz.h"
-#include "charset.h"
-#include "keyboard.h"
-#include "palettes.h"
-#include "fonts.h"
 #include "dialog.h"
+#include "song.h"
 #include "widget.h"
-#include "fmt.h"
-#include "timer.h"
-#include "mt.h"
-#include "mem.h"
-#include "cpu.h"
 #include "atomic.h"
+#include "charset.h"
+#include "config.h"
+#include "cpu.h"
+#include "dmoz.h"
+#include "fmt.h"
+#include "fonts.h"
 #include "ieee-float.h"
+#include "keyboard.h"
+#include "mem.h"
+#include "midi.h"
+#include "mt.h"
+#include "palettes.h"
+#include "timer.h"
+#include "version.h"
 
 #include "osdefs.h"
 
@@ -67,8 +67,8 @@
 # define ENABLE_HOOKS 1
 #endif
 
-#define NATIVE_SCREEN_WIDTH     640
-#define NATIVE_SCREEN_HEIGHT    400
+#define NATIVE_SCREEN_WIDTH  640
+#define NATIVE_SCREEN_HEIGHT 400
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -151,21 +151,28 @@ enum {
 	// short options
 	O_SDL_AUDIODRIVER = 'a',
 	O_SDL_VIDEODRIVER = 'v',
-	O_FULLSCREEN = 'f', O_NO_FULLSCREEN = 'F',
-	O_PLAY = 'p', O_NO_PLAY = 'P',
+	O_FULLSCREEN = 'f',
+	O_NO_FULLSCREEN = 'F',
+	O_PLAY = 'p',
+	O_NO_PLAY = 'P',
 	O_HELP = 'h',
 	// ids for long options with no corresponding short option
 	O_VIDEO_YUVLAYOUT = 256,
 	O_VIDEO_RESOLUTION,
-	O_VIDEO_STRETCH, O_NO_VIDEO_STRETCH,
+	O_VIDEO_STRETCH,
+	O_NO_VIDEO_STRETCH,
 	O_VIDEO_DEPTH,
 #if USE_NETWORK
-	O_NETWORK, O_NO_NETWORK,
+	O_NETWORK,
+	O_NO_NETWORK,
 #endif
-	O_CLASSIC_MODE, O_NO_CLASSIC_MODE,
-	O_FONTEDIT, O_NO_FONTEDIT,
+	O_CLASSIC_MODE,
+	O_NO_CLASSIC_MODE,
+	O_FONTEDIT,
+	O_NO_FONTEDIT,
 #if ENABLE_HOOKS
-	O_HOOKS, O_NO_HOOKS,
+	O_HOOKS,
+	O_NO_HOOKS,
 #endif
 	O_DISKWRITE,
 	O_DEBUG,
@@ -180,30 +187,30 @@ enum {
 static void parse_options(int argc, char **argv)
 {
 	struct option long_options[] = {
-		{"audio-driver", 1, NULL, O_SDL_AUDIODRIVER},
-		{"video-driver", 1, NULL, O_SDL_VIDEODRIVER},
+		{"audio-driver",   1, NULL, O_SDL_AUDIODRIVER},
+		{"video-driver",   1, NULL, O_SDL_VIDEODRIVER},
 
 #if USE_NETWORK
-		{"network", 0, NULL, O_NETWORK},
-		{"no-network", 0, NULL, O_NO_NETWORK},
+		{"network",        0, NULL, O_NETWORK        },
+		{"no-network",     0, NULL, O_NO_NETWORK     },
 #endif
-		{"classic", 0, NULL, O_CLASSIC_MODE},
-		{"no-classic", 0, NULL, O_NO_CLASSIC_MODE},
-		{"fullscreen", 0, NULL, O_FULLSCREEN},
-		{"no-fullscreen", 0, NULL, O_NO_FULLSCREEN},
-		{"play", 0, NULL, O_PLAY},
-		{"no-play", 0, NULL, O_NO_PLAY},
-		{"diskwrite", 1, NULL, O_DISKWRITE},
-		{"font-editor", 0, NULL, O_FONTEDIT},
-		{"no-font-editor", 0, NULL, O_NO_FONTEDIT},
+		{"classic",        0, NULL, O_CLASSIC_MODE   },
+		{"no-classic",     0, NULL, O_NO_CLASSIC_MODE},
+		{"fullscreen",     0, NULL, O_FULLSCREEN     },
+		{"no-fullscreen",  0, NULL, O_NO_FULLSCREEN  },
+		{"play",           0, NULL, O_PLAY           },
+		{"no-play",        0, NULL, O_NO_PLAY        },
+		{"diskwrite",      1, NULL, O_DISKWRITE      },
+		{"font-editor",    0, NULL, O_FONTEDIT       },
+		{"no-font-editor", 0, NULL, O_NO_FONTEDIT    },
 #if ENABLE_HOOKS
-		{"hooks", 0, NULL, O_HOOKS},
-		{"no-hooks", 0, NULL, O_NO_HOOKS},
+		{"hooks",          0, NULL, O_HOOKS          },
+		{"no-hooks",       0, NULL, O_NO_HOOKS       },
 #endif
-		{"headless", 0, NULL, O_HEADLESS},
-		{"version", 0, NULL, O_VERSION},
-		{"help", 0, NULL, O_HELP},
-		{NULL, 0, NULL, 0},
+		{"headless",       0, NULL, O_HEADLESS       },
+		{"version",        0, NULL, O_VERSION        },
+		{"help",           0, NULL, O_HELP           },
+		{NULL,             0, NULL, 0                },
 	};
 	int opt;
 
@@ -212,7 +219,7 @@ static void parse_options(int argc, char **argv)
 	while ((opt = getopt_long(argc, argv, SHORT_OPTIONS, long_options, NULL)) != -1) {
 		switch (opt) {
 		case O_SDL_AUDIODRIVER:
-			audio_parse_driver_spec(optarg, (char**)&audio_driver, (char**)&audio_device);
+			audio_parse_driver_spec(optarg, (char **)&audio_driver, (char **)&audio_device);
 			break;
 		case O_SDL_VIDEODRIVER:
 			/* this is largely only here for historical reasons, as
@@ -286,21 +293,19 @@ static void parse_options(int argc, char **argv)
 		case O_HELP:
 			// XXX try to keep this stuff to one screen (78x20 or so)
 			printf(USAGE, argv[0]);
-			printf(
-				"  -a, --audio-driver=DRIVER\n"
-				"  -v, --video-driver=DRIVER\n"
-				"      --classic (--no-classic)\n"
-				"  -f, --fullscreen (-F, --no-fullscreen)\n"
-				"  -p, --play (-P, --no-play)\n"
-				"      --diskwrite=FILENAME\n"
-				"      --font-editor (--no-font-editor)\n"
+			printf("  -a, --audio-driver=DRIVER\n"
+			       "  -v, --video-driver=DRIVER\n"
+			       "      --classic (--no-classic)\n"
+			       "  -f, --fullscreen (-F, --no-fullscreen)\n"
+			       "  -p, --play (-P, --no-play)\n"
+			       "      --diskwrite=FILENAME\n"
+			       "      --font-editor (--no-font-editor)\n"
 #if ENABLE_HOOKS
-				"      --hooks (--no-hooks)\n"
+			       "      --hooks (--no-hooks)\n"
 #endif
-				"      --headless\n"
-				"      --version\n"
-				"  -h, --help\n"
-			);
+			       "      --headless\n"
+			       "      --version\n"
+			       "  -h, --help\n");
 			printf("Refer to the documentation for complete usage details.\n");
 			exit(0);
 		case '?': // unknown option
@@ -386,13 +391,11 @@ static void check_update(void)
 
 static void _do_clipboard_paste_op(schism_event_t *e)
 {
-	if (ACTIVE_WIDGET.clipboard_paste
-	&& ACTIVE_WIDGET.clipboard_paste(e->type,
-				e->clipboard.clipboard)) return;
+	if (ACTIVE_WIDGET.clipboard_paste && ACTIVE_WIDGET.clipboard_paste(e->type, e->clipboard.clipboard))
+		return;
 
-	if (ACTIVE_PAGE.clipboard_paste
-	&& ACTIVE_PAGE.clipboard_paste(e->type,
-				e->clipboard.clipboard)) return;
+	if (ACTIVE_PAGE.clipboard_paste && ACTIVE_PAGE.clipboard_paste(e->type, e->clipboard.clipboard))
+		return;
 
 	handle_text_input(e->clipboard.clipboard);
 }
@@ -487,8 +490,7 @@ SCHISM_NORETURN static void event_loop(void)
 				}
 
 				/* normalize the text for processing */
-				kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8,
-					CHARSET_UTF8);
+				kk.text = charset_compose_to_set(se.key.text, CHARSET_UTF8, CHARSET_UTF8);
 
 				SCHISM_FALLTHROUGH;
 			case SCHISM_KEYUP:
@@ -537,8 +539,7 @@ SCHISM_NORETURN static void event_loop(void)
 				if (se.type == SCHISM_KEYUP) {
 					/* only empty the key repeat if
 					 * the last keydown is the same sym */
-					if ((status.last_orig_keysym == kk.orig_sym)
-						|| kbd_is_modifier_key(&kk))
+					if ((status.last_orig_keysym == kk.orig_sym) || kbd_is_modifier_key(&kk))
 						kbd_empty_key_repeat();
 				} else {
 					kbd_cache_key_repeat(&kk);
@@ -579,8 +580,9 @@ SCHISM_NORETURN static void event_loop(void)
 					if (se.button.button == MOUSE_BUTTON_LEFT) {
 						/* macosx cruft: Ctrl-LeftClick = RightClick */
 						button = (status.keymod & SCHISM_KEYMOD_CTRL) ? (MOUSE_BUTTON_RIGHT)
-							: (status.keymod & (SCHISM_KEYMOD_ALT|SCHISM_KEYMOD_GUI)) ? (MOUSE_BUTTON_MIDDLE)
-							: MOUSE_BUTTON_LEFT;
+							 : (status.keymod & (SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI))
+								 ? (MOUSE_BUTTON_MIDDLE)
+								 : MOUSE_BUTTON_LEFT;
 					} else {
 						button = se.button.button;
 					}
@@ -593,7 +595,7 @@ SCHISM_NORETURN static void event_loop(void)
 				/* character resolution */
 				kk.x = kk.fx / kk.rx;
 				/* half-character selection */
-				if ((kk.fx / (kk.rx/2)) % 2 == 0) {
+				if ((kk.fx / (kk.rx / 2)) % 2 == 0) {
 					kk.hx = 0;
 				} else {
 					kk.hx = 1;
@@ -610,7 +612,8 @@ SCHISM_NORETURN static void event_loop(void)
 				}
 
 				// what?
-				if (startdown) startdown = 0;
+				if (startdown)
+					startdown = 0;
 
 				switch (button) {
 				case MOUSE_BUTTON_RIGHT:
@@ -637,11 +640,13 @@ SCHISM_NORETURN static void event_loop(void)
 					}
 					if (status.dialog_type == DIALOG_NONE) {
 						if (kk.y <= 9 && status.current_page != PAGE_FONT_EDIT) {
-							if (kk.state == KEY_RELEASE && kk.mouse_button == MOUSE_BUTTON_RIGHT) {
+							if (kk.state == KEY_RELEASE
+								&& kk.mouse_button == MOUSE_BUTTON_RIGHT) {
 								video_set_mousecursor_shape(CURSOR_SHAPE_ARROW);
 								menu_show();
 								break;
-							} else if (kk.state == KEY_PRESS && kk.mouse_button == MOUSE_BUTTON_LEFT) {
+							} else if (kk.state == KEY_PRESS
+								   && kk.mouse_button == MOUSE_BUTTON_LEFT) {
 								time(&startdown);
 							}
 						}
@@ -666,7 +671,7 @@ SCHISM_NORETURN static void event_loop(void)
 						break;
 					}
 					//if (se.type != SCHISM_MOUSEMOTION)
-						handle_key(&kk);
+					handle_key(&kk);
 					break;
 				default:
 					break;
@@ -699,7 +704,7 @@ SCHISM_NORETURN static void event_loop(void)
 				break;
 			case SCHISM_DROPFILE:
 				dialog_destroy();
-				switch(status.current_page) {
+				switch (status.current_page) {
 				case PAGE_SAMPLE_LIST:
 				case PAGE_LOAD_SAMPLE:
 				case PAGE_LIBRARY_SAMPLE:
@@ -749,61 +754,101 @@ SCHISM_NORETURN static void event_loop(void)
 				dialog_destroy();
 				if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "new", CHARSET_UTF8) == 0) {
 					new_song_dialog();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save", CHARSET_UTF8)
+					   == 0) {
 					save_song_or_save_as();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save_as", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "save_as", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_SAVE_MODULE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "export_song", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "export_song", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_EXPORT_MODULE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "logviewer", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "logviewer", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_LOG);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "font_editor", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "font_editor", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_FONT_EDIT);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "load", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "load", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_LOAD_MODULE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "help", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "help", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_HELP);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "pattern", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "pattern", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_PATTERN_EDITOR);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "orders", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "orders", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_ORDERLIST_PANNING);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "variables", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "variables", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_SONG_VARIABLES);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "message_edit", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "message_edit", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_MESSAGE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "info", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "info", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_INFO);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play", CHARSET_UTF8)
+					   == 0) {
 					song_start();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_pattern", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "play_pattern", CHARSET_UTF8)
+					   == 0) {
 					song_loop_pattern(get_current_pattern(), 0);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_order", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_order", CHARSET_UTF8)
+					   == 0) {
 					song_start_at_order(get_current_order(), 0);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_mark", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "play_mark", CHARSET_UTF8)
+					   == 0) {
 					play_song_from_mark();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "stop", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "stop", CHARSET_UTF8)
+					   == 0) {
 					song_stop();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "calc_length", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "calc_length", CHARSET_UTF8)
+					   == 0) {
 					show_song_length();
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_page", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "sample_page", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_SAMPLE_LIST);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "sample_library", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "sample_library", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_LIBRARY_SAMPLE);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "init_sound", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "init_sound", CHARSET_UTF8)
+					   == 0) {
 					/* does nothing :) */
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_page", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_page", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_INSTRUMENT_LIST);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "inst_library", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "inst_library", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_LIBRARY_INSTRUMENT);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "preferences", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "preferences", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_PREFERENCES);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "system_config", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "system_config", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_CONFIG);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "midi_config", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "midi_config", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_MIDI);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "palette_page", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(
+						   se.script.which, CHARSET_UTF8, "palette_page", CHARSET_UTF8)
+					   == 0) {
 					set_page(PAGE_PALETTE_EDITOR);
-				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "fullscreen", CHARSET_UTF8) == 0) {
+				} else if (charset_strcasecmp(se.script.which, CHARSET_UTF8, "fullscreen", CHARSET_UTF8)
+					   == 0) {
 					toggle_display_fullscreen();
 				}
 				free(se.script.which);
@@ -820,16 +865,14 @@ SCHISM_NORETURN static void event_loop(void)
 		time(&status.now);
 		localtime_r(&status.now, &status.tmnow);
 
-		if (status.dialog_type == DIALOG_NONE
-		    && startdown && (status.now - startdown) > 1) {
+		if (status.dialog_type == DIALOG_NONE && startdown && (status.now - startdown) > 1) {
 			menu_show();
 			startdown = 0;
 			downtrip = 1;
 		}
-		if (status.flags & (CLIPPY_PASTE_SELECTION|CLIPPY_PASTE_BUFFER)) {
-			clippy_paste((status.flags & CLIPPY_PASTE_BUFFER)
-				     ? CLIPPY_BUFFER : CLIPPY_SELECT);
-			status.flags &= ~(CLIPPY_PASTE_BUFFER|CLIPPY_PASTE_SELECTION);
+		if (status.flags & (CLIPPY_PASTE_SELECTION | CLIPPY_PASTE_BUFFER)) {
+			clippy_paste((status.flags & CLIPPY_PASTE_BUFFER) ? CLIPPY_BUFFER : CLIPPY_SELECT);
+			status.flags &= ~(CLIPPY_PASTE_BUFFER | CLIPPY_PASTE_SELECTION);
 		}
 
 		check_update();
@@ -886,7 +929,8 @@ SCHISM_NORETURN static void event_loop(void)
 			 * that would mean guarding it all behind mutexes. :( */
 			timer_ticks_t start = timer_ticks();
 
-			while (start + 10 > timer_ticks() && dmoz_worker() && !events_have_event());
+			while (start + 10 > timer_ticks() && dmoz_worker() && !events_have_event())
+				;
 		}
 
 		if (!events_have_event())
@@ -920,91 +964,90 @@ static void schism_assert_fail_log_cb(FILE *f, void *userdata)
 {
 	struct assert_log_cb_data_ *x = userdata;
 
-	const char *format =
-		"Assertion failed: \"%s\".\n"
-		"\n"
-		"File: %s\n"
-		"Line: %d\n"
-		"\n"
-		"Expression: %s\n"
-		"\n"
-		"Platform: "
-#if defined(SCHISM_WIN32)
-			"Windows"
-#elif defined(SCHISM_MACOS)
-			"Mac OS"
-#elif defined(SCHISM_MACOSX)
-			"Mac OS X"
-#elif defined(__linux__)
-			"Linux"
-#elif defined(SCHISM_OS2)
-			"OS/2"
-#elif defined(__WII__)
-			"Wii"
-#elif defined(__WIIU__)
-			"Wii U"
-#elif defined(__DragonFlyBSD__)
-			"DragonFlyBSD"
-#elif defined(__FreeBSD__)
-			"FreeBSD"
-#elif defined(__NetBSD__)
-			"NetBSD"
-#elif defined(__OpenBSD__)
-			"OpenBSD"
-#elif defined(__unix__) || defined(unix)
-			"Unknown *nix"
-#else
-			"Unknown"
-#endif
-		"\n"
-		"Architecture: "
-			/* This is probably enough */
-#if defined(__x86_64__) || defined(_M_X64)
-			"64-bit x86"
-#elif defined(_M_IX86) || defined(__i386__) || defined(i386) || defined(__i386)
-			"32-bit x86"
-#elif defined(__aarch64__) || defined(_M_ARM64)
-			"64-bit arm"
-#elif defined(_M_ARM64EC)
-			"ARM64EC" /* some stupid microsoft thing */
-#elif defined(__arm__)
-			"32-bit arm"
-#elif defined(__ppc64__) || defined(__PPC64__) || defined(_ARCH_PPC64)
-			"64-bit PowerPC"
-#elif defined(__ppc__) || defined(__powerpc__)
-			"32-bit PowerPC"
-#elif defined(__mips64)
-			"64-bit MIPS"
-#elif defined(mips) || defined(__mips) || defined(__mips__)
-			"32-bit MIPS"
-#elif defined(__m68k__)
-			"Motorola 68000"
-#elif defined(__sparc__) && defined(__arch64__)
-			"64-bit SPARC"
-#elif defined(__sparc__) || defined(__sparc)
-			"32-bit SPARC"
-#elif defined(__zarch__)
-			/* Yes, schism has actually run on this. */
-			"IBM z/Architecture"
-#elif defined(__s390x__)
-			"IBM s390x"
-#elif defined(__s390__)
-			"IBM s390"
-#elif defined(__riscv)
-# if defined(__riscv_xlen)
-#  define STRINGIFY_EX(x) #x
-#  define STRINGIFY(x) STRINGIFY_EX(x)
-			STRINGIFY(__riscv_xlen) "-bit RISC-V"
-#  undef STRINGIFY
-#  undef STRINGIFY_EX
+	const char *format = "Assertion failed: \"%s\".\n"
+			     "\n"
+			     "File: %s\n"
+			     "Line: %d\n"
+			     "\n"
+			     "Expression: %s\n"
+			     "\n"
+			     "Platform: "
+# if defined(SCHISM_WIN32)
+			     "Windows"
+# elif defined(SCHISM_MACOS)
+			     "Mac OS"
+# elif defined(SCHISM_MACOSX)
+			     "Mac OS X"
+# elif defined(__linux__)
+			     "Linux"
+# elif defined(SCHISM_OS2)
+			     "OS/2"
+# elif defined(__WII__)
+			     "Wii"
+# elif defined(__WIIU__)
+			     "Wii U"
+# elif defined(__DragonFlyBSD__)
+			     "DragonFlyBSD"
+# elif defined(__FreeBSD__)
+			     "FreeBSD"
+# elif defined(__NetBSD__)
+			     "NetBSD"
+# elif defined(__OpenBSD__)
+			     "OpenBSD"
+# elif defined(__unix__) || defined(unix)
+			     "Unknown *nix"
 # else
-			"RISC-V"
+			     "Unknown"
 # endif
-#else
-			"Unknown"
-#endif
-		"\n";
-	
+			     "\n"
+			     "Architecture: "
+	/* This is probably enough */
+# if defined(__x86_64__) || defined(_M_X64)
+			     "64-bit x86"
+# elif defined(_M_IX86) || defined(__i386__) || defined(i386) || defined(__i386)
+			     "32-bit x86"
+# elif defined(__aarch64__) || defined(_M_ARM64)
+			     "64-bit arm"
+# elif defined(_M_ARM64EC)
+			     "ARM64EC" /* some stupid microsoft thing */
+# elif defined(__arm__)
+			     "32-bit arm"
+# elif defined(__ppc64__) || defined(__PPC64__) || defined(_ARCH_PPC64)
+			     "64-bit PowerPC"
+# elif defined(__ppc__) || defined(__powerpc__)
+			     "32-bit PowerPC"
+# elif defined(__mips64)
+			     "64-bit MIPS"
+# elif defined(mips) || defined(__mips) || defined(__mips__)
+			     "32-bit MIPS"
+# elif defined(__m68k__)
+			     "Motorola 68000"
+# elif defined(__sparc__) && defined(__arch64__)
+			     "64-bit SPARC"
+# elif defined(__sparc__) || defined(__sparc)
+			     "32-bit SPARC"
+# elif defined(__zarch__)
+                        /* Yes, schism has actually run on this. */
+			     "IBM z/Architecture"
+# elif defined(__s390x__)
+			     "IBM s390x"
+# elif defined(__s390__)
+			     "IBM s390"
+# elif defined(__riscv)
+#  if defined(__riscv_xlen)
+#   define STRINGIFY_EX(x) #x
+#   define STRINGIFY(x)    STRINGIFY_EX(x)
+		STRINGIFY(__riscv_xlen) "-bit RISC-V"
+#   undef STRINGIFY
+#   undef STRINGIFY_EX
+#  else
+			     "RISC-V"
+#  endif
+# else
+			     "Unknown"
+# endif
+			     "\n";
+
 	fprintf(f, format, x->msg, x->file, x->line, x->exp);
 }
 
@@ -1049,7 +1092,8 @@ void schism_crash(void (*log_cb)(FILE *f, void *userdata), void *userdata)
 
 		/* TODO its more safe to shove it in LocalAppData or similar
 		 * make sure we have enough space to put in a file extension */
-		name_template_len = strftime(name_template, sizeof(name_template) - 16, "schism_crash_%Y-%m-%d_%H-%M-%S", &tm);
+		name_template_len
+			= strftime(name_template, sizeof(name_template) - 16, "schism_crash_%Y-%m-%d_%H-%M-%S", &tm);
 	}
 
 	if (log_cb) {
@@ -1305,9 +1349,8 @@ int schism_main(int argc, char **argv)
 		// Load and export song
 		if (song_load_unchecked(initial_song)) {
 			const char *multi = strcasestr(diskwrite_to, "%c");
-			const char *driver = (strcasestr(diskwrite_to, ".aif")
-					  ? (multi ? "MAIFF" : "AIFF")
-					  : (multi ? "MWAV" : "WAV"));
+			const char *driver = (strcasestr(diskwrite_to, ".aif") ? (multi ? "MAIFF" : "AIFF")
+									       : (multi ? "MWAV" : "WAV"));
 			if (song_export(diskwrite_to, driver) != SAVE_SUCCESS) {
 				schism_exit(1);
 			}
@@ -1400,9 +1443,8 @@ int schism_main(int argc, char **argv)
 			if (diskwrite_to) {
 				// make a guess?
 				const char *multi = strcasestr(diskwrite_to, "%c");
-				const char *driver = (strcasestr(diskwrite_to, ".aif")
-						      ? (multi ? "MAIFF" : "AIFF")
-						      : (multi ? "MWAV" : "WAV"));
+				const char *driver = (strcasestr(diskwrite_to, ".aif") ? (multi ? "MAIFF" : "AIFF")
+										       : (multi ? "MWAV" : "WAV"));
 				if (song_export(diskwrite_to, driver) != SAVE_SUCCESS) {
 					schism_exit(1);
 				}
@@ -1417,8 +1459,7 @@ int schism_main(int argc, char **argv)
 	}
 
 #if HAVE_NICE
-	if (nice(1) == -1) {
-	}
+	if (nice(1) == -1) {}
 #endif
 	/* poll once */
 	midi_engine_poll_ports();

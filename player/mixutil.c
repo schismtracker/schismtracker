@@ -26,20 +26,18 @@
 #include "bits.h"
 #include "util.h"
 
-#include "player/sndfile.h"
 #include "player/cmixer.h"
+#include "player/sndfile.h"
 
 #define OFSDECAYSHIFT 8
 #define OFSDECAYMASK  0xFF
-
 
 void init_mix_buffer(int32_t *buffer, uint32_t samples)
 {
 	memset(buffer, 0, samples * sizeof(int32_t));
 }
 
-
-void stereo_fill(int32_t *buffer, uint32_t samples, int32_t* profs, int32_t *plofs)
+void stereo_fill(int32_t *buffer, uint32_t samples, int32_t *profs, int32_t *plofs)
 {
 	int32_t rofs = *profs;
 	int32_t lofs = *plofs;
@@ -55,14 +53,13 @@ void stereo_fill(int32_t *buffer, uint32_t samples, int32_t* profs, int32_t *plo
 
 		rofs -= x_r;
 		lofs -= x_l;
-		buffer[i * 2 ]    = x_r;
+		buffer[i * 2] = x_r;
 		buffer[i * 2 + 1] = x_l;
 	}
 
 	*profs = rofs;
 	*plofs = lofs;
 }
-
 
 void end_channel_ofs(song_voice_t *channel, int32_t *buffer, uint32_t samples)
 {
@@ -78,14 +75,13 @@ void end_channel_ofs(song_voice_t *channel, int32_t *buffer, uint32_t samples)
 
 		rofs -= x_r;
 		lofs -= x_l;
-		buffer[i * 2]     += x_r;
+		buffer[i * 2] += x_r;
 		buffer[i * 2 + 1] += x_l;
 	}
 
 	channel->rofs = rofs;
 	channel->lofs = lofs;
 }
-
 
 void mono_from_stereo(int32_t *mix_buf, uint32_t samples)
 {
@@ -102,11 +98,11 @@ void mono_from_stereo(int32_t *mix_buf, uint32_t samples)
 //
 // The original C version was written by Rani Assaf <rani@magic.metawire.com>
 
-
-// Clip and convert to 8 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
+// Clip and convert to 8 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1]
+// right.
 uint32_t clip_32_to_8(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mins, int32_t *maxs)
 {
-	unsigned char *p = (unsigned char *) ptr;
+	unsigned char *p = (unsigned char *)ptr;
 	uint32_t i;
 
 	for (i = 0; i < samples; i++) {
@@ -124,11 +120,11 @@ uint32_t clip_32_to_8(void *ptr, int32_t *buffer, uint32_t samples, int32_t *min
 	return samples;
 }
 
-
-// Clip and convert to 16 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
+// Clip and convert to 16 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1]
+// right.
 uint32_t clip_32_to_16(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mins, int32_t *maxs)
 {
-	int16_t *p = (int16_t *) ptr;
+	int16_t *p = (int16_t *)ptr;
 	uint32_t i;
 
 	for (i = 0; i < samples; i++) {
@@ -146,13 +142,12 @@ uint32_t clip_32_to_16(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mi
 	return samples * 2;
 }
 
-
-// Clip and convert to 24 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
-// Note, this is 24bit, not 24-in-32bits. The former is used in .wav. The latter is used in audio IO
+// Clip and convert to 24 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1]
+// right. Note, this is 24bit, not 24-in-32bits. The former is used in .wav. The latter is used in audio IO
 uint32_t clip_32_to_24(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mins, int32_t *maxs)
 {
 	/* the inventor of 24bit anything should be shot */
-	unsigned char *p = (unsigned char *) ptr;
+	unsigned char *p = (unsigned char *)ptr;
 	uint32_t i;
 
 	for (i = 0; i < samples; i++) {
@@ -174,11 +169,11 @@ uint32_t clip_32_to_24(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mi
 	return samples * 3;
 }
 
-
-// Clip and convert to 32 bit(int). mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
+// Clip and convert to 32 bit(int). mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left,
+// mins[1] right.
 uint32_t clip_32_to_32(void *ptr, int32_t *buffer, uint32_t samples, int32_t *mins, int32_t *maxs)
 {
-	int32_t *p = (int32_t *) ptr;
+	int32_t *p = (int32_t *)ptr;
 	uint32_t i;
 
 	for (i = 0; i < samples; i++) {

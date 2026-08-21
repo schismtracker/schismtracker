@@ -23,14 +23,14 @@
 
 #include "headers.h"
 
-#include <sys/mman.h>
 #include <fcntl.h>
+#include <sys/mman.h>
 
 #include "slurp.h"
 
 static void munmap_slurp_(slurp_t *fp)
 {
-	(void)munmap((void*)fp->internal.memory.data, fp->internal.memory.length);
+	(void)munmap((void *)fp->internal.memory.data, fp->internal.memory.length);
 	(void)close(fp->internal.memory.interfaces.mmap.fd);
 }
 
@@ -41,16 +41,19 @@ int slurp_mmap(slurp_t *fp, const char *filename, uint64_t st)
 		return SLURP_OPEN_IGNORE;
 
 	int fd = open(filename, O_RDONLY);
-	if (fd == -1) return SLURP_OPEN_FAIL;
+	if (fd == -1)
+		return SLURP_OPEN_FAIL;
 
-	void *addr = mmap(NULL, st, PROT_READ, MAP_SHARED
+	void *addr = mmap(NULL, st, PROT_READ,
+		MAP_SHARED
 #if defined(MAP_POPULATE) && defined(MAP_NONBLOCK)
-		| MAP_POPULATE | MAP_NONBLOCK
+			| MAP_POPULATE | MAP_NONBLOCK
 #endif
 #if defined(MAP_NORESERVE)
-		| MAP_NORESERVE
+			| MAP_NORESERVE
 #endif
-		, fd, 0);
+		,
+		fd, 0);
 
 	if (addr == MAP_FAILED) {
 		(void)close(fd);

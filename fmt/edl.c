@@ -24,8 +24,8 @@
 #include "headers.h"
 #include "bits.h"
 #include "fmt.h"
-#include "util.h"
 #include "mem.h"
+#include "util.h"
 
 static int edl_load_file(slurp_t *fp, slurp_t *fakefp)
 {

@@ -23,14 +23,14 @@
 
 #include "headers.h"
 
-#include "dmoz.h"
-#include "osdefs.h"
 #include "charset.h"
-#include "slurp.h"
-#include "util.h"
-#include "mem.h"
-#include "str.h"
 #include "config-parser.h"
+#include "dmoz.h"
+#include "mem.h"
+#include "osdefs.h"
+#include "slurp.h"
+#include "str.h"
+#include "util.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* some utilities for reading the config structure in memory */
@@ -190,8 +190,8 @@ static int _parse_keyval(cfg_file_t *cfg, char *line, struct cfg_section *cur_se
 
 	key = _get_key(cur_section, k, 1);
 	if (key->value) {
-		fprintf(stderr, "%s: duplicate key \"%s\" in section \"%s\"; overwriting\n",
-			cfg->filename, k, cur_section->name);
+		fprintf(stderr, "%s: duplicate key \"%s\" in section \"%s\"; overwriting\n", cfg->filename, k,
+			cur_section->name);
 		free(key->value);
 	}
 	key->value = str_unescape(v);
@@ -284,7 +284,7 @@ static int cfg_read_slurp(cfg_file_t *cfg, slurp_t *fp)
 			str_trim(line);
 
 			if (_parse_section(cfg, line, &cur_section, &comments)
-					|| _parse_keyval(cfg, line, cur_section, &comments)) {
+				|| _parse_keyval(cfg, line, cur_section, &comments)) {
 				/* nothing */
 			} else {
 				/* broken line: add it as a comment. */
@@ -403,8 +403,8 @@ int cfg_write(cfg_file_t *cfg)
 	return 0;
 }
 
-const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char *key_name,
-	char *value, size_t len, const char *def)
+const char *cfg_get_string(
+	cfg_file_t *cfg, const char *section_name, const char *key_name, char *value, size_t len, const char *def)
 {
 	struct cfg_section *section;
 	struct cfg_key *key;
@@ -418,8 +418,8 @@ const char *cfg_get_string(cfg_file_t *cfg, const char *section_name, const char
 	}
 	if (value && r && len > 0) {
 		/* copy len-1 chars, and append a NUL terminator */
-		strncpy(value, r, len-1);
-		value[len-1] = 0;
+		strncpy(value, r, len - 1);
+		value[len - 1] = 0;
 	}
 	return r;
 }

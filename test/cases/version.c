@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
 #include "test-assertions.h"
+#include "test.h"
 
 #include "version.h"
 
@@ -37,7 +37,6 @@ testresult_t test_ver_mktime(void)
 
 	RETURN_PASS;
 }
-
 
 testresult_t test_ver_to_date(void)
 {

@@ -27,7 +27,7 @@
 
 #include "init.h"
 
-static const char * (SDLCALL *sdl3_GetBasePath)(void);
+static const char *(SDLCALL *sdl3_GetBasePath)(void);
 
 static char *sdl3_dmoz_get_exe_path(void)
 {

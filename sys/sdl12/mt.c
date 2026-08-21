@@ -22,8 +22,8 @@
  */
 
 #include "headers.h"
-#include "mem.h"
 #include "backend/mt.h"
+#include "mem.h"
 
 #include "init.h"
 
@@ -34,12 +34,13 @@
 /* ------------------------------------ */
 
 #ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
-static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread begin pfnSDL_CurrentEndThread);
+static SDL_Thread *(SDLCALL *sdl12_CreateThread)(
+	int(SDLCALL *fn)(void *), void *data, pfnSDL_CurrentBeginThread begin pfnSDL_CurrentEndThread);
 #else
-static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int (SDLCALL *fn)(void *), void *data);
+static SDL_Thread *(SDLCALL *sdl12_CreateThread)(int(SDLCALL *fn)(void *), void *data);
 #endif
-static void (SDLCALL *sdl12_WaitThread)(SDL_Thread *thread, int *status);
-static uint32_t (SDLCALL *sdl12_ThreadID)(void);
+static void(SDLCALL *sdl12_WaitThread)(SDL_Thread *thread, int *status);
+static uint32_t(SDLCALL *sdl12_ThreadID)(void);
 
 struct mt_thread {
 	SDL_Thread *thread;
@@ -99,13 +100,17 @@ static void sdl12_thread_set_priority(SCHISM_UNUSED int priority)
 	int npri;
 
 	switch (priority) {
-#define PRIORITY(x, y) case MT_THREAD_PRIORITY_##x: npri = THREAD_PRIORITY_##y; break 
-	PRIORITY(LOW, LOWEST);
-	PRIORITY(NORMAL, NORMAL);
-	PRIORITY(HIGH, HIGHEST);
-	PRIORITY(TIME_CRITICAL, TIME_CRITICAL);
-	default: return;
-#undef PRIORITY
+# define PRIORITY(x, y) \
+ case MT_THREAD_PRIORITY_##x: \
+	 npri = THREAD_PRIORITY_##y; \
+	 break
+		PRIORITY(LOW, LOWEST);
+		PRIORITY(NORMAL, NORMAL);
+		PRIORITY(HIGH, HIGHEST);
+		PRIORITY(TIME_CRITICAL, TIME_CRITICAL);
+	default:
+		return;
+# undef PRIORITY
 	}
 
 	SetThreadPriority(GetCurrentThread(), npri);
@@ -124,9 +129,9 @@ static mt_thread_id_t sdl12_thread_id(void)
 /* mutexes */
 
 static SDL_mutex *(SDLCALL *sdl12_CreateMutex)(void);
-static void (SDLCALL *sdl12_DestroyMutex)(SDL_mutex *mutex);
-static int (SDLCALL *sdl12_mutexP)(SDL_mutex *mutex);
-static int (SDLCALL *sdl12_mutexV)(SDL_mutex *mutex);
+static void(SDLCALL *sdl12_DestroyMutex)(SDL_mutex *mutex);
+static int(SDLCALL *sdl12_mutexP)(SDL_mutex *mutex);
+static int(SDLCALL *sdl12_mutexV)(SDL_mutex *mutex);
 
 struct mt_mutex {
 	SDL_mutex *mutex;
@@ -164,10 +169,10 @@ static void sdl12_mutex_unlock(mt_mutex_t *mutex)
 /* -------------------------------------------------------------- */
 
 static SDL_cond *(SDLCALL *sdl12_CreateCond)(void);
-static void (SDLCALL *sdl12_DestroyCond)(SDL_cond *cond);
-static int (SDLCALL *sdl12_CondSignal)(SDL_cond *cond);
-static int (SDLCALL *sdl12_CondWait)(SDL_cond *cond, SDL_mutex *mut);
-static int (SDLCALL *sdl12_CondWaitTimeout)(SDL_cond *cond, SDL_mutex *mut, uint32_t timeout);
+static void(SDLCALL *sdl12_DestroyCond)(SDL_cond *cond);
+static int(SDLCALL *sdl12_CondSignal)(SDL_cond *cond);
+static int(SDLCALL *sdl12_CondWait)(SDL_cond *cond, SDL_mutex *mut);
+static int(SDLCALL *sdl12_CondWaitTimeout)(SDL_cond *cond, SDL_mutex *mut, uint32_t timeout);
 
 struct mt_cond {
 	SDL_cond *cond;
@@ -210,10 +215,10 @@ static void sdl12_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t
 //////////////////////////////////////////////////////////////////////////////
 
 static SDL_sem *(SDLCALL *sdl12_CreateSemaphore)(Uint32 initial) = NULL;
-static void (SDLCALL *sdl12_DestroySemaphore)(SDL_sem *sem) = NULL;
-static int (SDLCALL *sdl12_SemPost)(SDL_sem *sem) = NULL;
-static int (SDLCALL *sdl12_SemWait)(SDL_sem *sem) = NULL;
-static int (SDLCALL *sdl12_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
+static void(SDLCALL *sdl12_DestroySemaphore)(SDL_sem *sem) = NULL;
+static int(SDLCALL *sdl12_SemPost)(SDL_sem *sem) = NULL;
+static int(SDLCALL *sdl12_SemWait)(SDL_sem *sem) = NULL;
+static int(SDLCALL *sdl12_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
 
 struct mt_sem {
 	SDL_sem *sem;

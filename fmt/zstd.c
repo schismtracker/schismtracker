@@ -29,9 +29,9 @@
 #include "headers.h"
 
 #include "fmt.h"
-#include "slurp.h"
-#include "mem.h"
 #include "loadso.h"
+#include "mem.h"
+#include "slurp.h"
 
 #include <zstd.h>
 
@@ -48,9 +48,9 @@ struct slurp_zstd {
 	ZSTD_outBuffer outbuf;
 };
 
-static ZSTD_DStream* (*pZSTD_createDStream)(void);
-static size_t (*pZSTD_freeDStream)(ZSTD_DStream* zds);
-static size_t (*pZSTD_decompressStream)(ZSTD_DStream* zds, ZSTD_outBuffer* output, ZSTD_inBuffer* input);
+static ZSTD_DStream *(*pZSTD_createDStream)(void);
+static size_t (*pZSTD_freeDStream)(ZSTD_DStream *zds);
+static size_t (*pZSTD_decompressStream)(ZSTD_DStream *zds, ZSTD_outBuffer *output, ZSTD_inBuffer *input);
 static size_t (*pZSTD_DStreamInSize)(void);
 static size_t (*pZSTD_DStreamOutSize)(void);
 static unsigned (*pZSTD_versionNumber)(void);
@@ -66,7 +66,7 @@ static void *slurp_zstd_start(void)
 		return NULL;
 	}
 
-	return zl;	
+	return zl;
 }
 
 static int slurp_zstd_inflate(void *opaque)
@@ -162,17 +162,26 @@ int slurp_zstd(slurp_t *src)
 # define ZSTD_SYM(x) pZSTD_##x = x
 # define ZSTD_END
 #else
-# define ZSTD_GLOBALS \
-	static void *lib_zstd;
+# define ZSTD_GLOBALS static void *lib_zstd;
 # define ZSTD_START \
-	do { lib_zstd = library_load("zstd", ZSTD_VERSION_MAJOR, 0); if (!lib_zstd) return -2; } while (0)
+	 do { \
+		 lib_zstd = library_load("zstd", ZSTD_VERSION_MAJOR, 0); \
+		 if (!lib_zstd) \
+			 return -2; \
+	 } while (0)
 # define ZSTD_SYM(x) \
-	do { pZSTD_##x = loadso_function_load(lib_zstd, "ZSTD_" #x); if (!pZSTD_##x) { printf("%s\n", #x); return -1; } } while (0)
+	 do { \
+		 pZSTD_##x = loadso_function_load(lib_zstd, "ZSTD_" #x); \
+		 if (!pZSTD_##x) { \
+			 printf("%s\n", #x); \
+			 return -1; \
+		 } \
+	 } while (0)
 # define ZSTD_END \
-do { \
-	loadso_object_unload(lib_zstd); \
-	lib_zstd = NULL; \
-} while (0)
+	 do { \
+		 loadso_object_unload(lib_zstd); \
+		 lib_zstd = NULL; \
+	 } while (0)
 #endif
 
 ZSTD_GLOBALS
@@ -214,7 +223,7 @@ int zstd_init(void)
 	if (r < 0)
 		return -1;
 
-	if ((pZSTD_versionNumber()/10000) != ZSTD_VERSION_MAJOR)
+	if ((pZSTD_versionNumber() / 10000) != ZSTD_VERSION_MAJOR)
 		return -1;
 
 	zstd_isinit = 1;

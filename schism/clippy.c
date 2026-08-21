@@ -40,9 +40,9 @@ static const schism_clippy_backend_t *backend = NULL;
  * or maybe, we should replicate the windows behavior,
  * and have a separate clipboard for each "type" of
  * data (such as pattern data, text, etc) */
-static char* _current_selection = NULL;
-static char* _current_clipboard = NULL;
-static struct widget* _widget_owner[16] = {NULL};
+static char *_current_selection = NULL;
+static char *_current_clipboard = NULL;
+static struct widget *_widget_owner[16] = {NULL};
 
 static void _free_current_selection(void)
 {
@@ -68,7 +68,7 @@ static void _clippy_copy_to_sys(int cb)
 	/* use calloc() here because we aren't guaranteed to actually
 	 * fill the whole buffer */
 	size_t sel_len = strlen(_current_selection);
-	uint8_t* out = mem_alloc((sel_len + 1) * sizeof(char));
+	uint8_t *out = mem_alloc((sel_len + 1) * sizeof(char));
 
 	/* normalize line breaks
 	 *
@@ -129,7 +129,7 @@ static char *_internal_clippy_paste(int cb)
 		if (backend && backend->have_selection()) {
 			_free_current_selection();
 
-			char* sel = backend->get_selection();
+			char *sel = backend->get_selection();
 
 			if (charset_iconv(sel, &_current_selection, CHARSET_UTF8, CHARSET_CP437, SIZE_MAX))
 				_current_selection = str_dup(sel);
@@ -155,7 +155,8 @@ static char *_internal_clippy_paste(int cb)
 		}
 
 		return _current_clipboard;
-	default: break;
+	default:
+		break;
 	}
 
 	return NULL;
@@ -164,7 +165,8 @@ static char *_internal_clippy_paste(int cb)
 void clippy_paste(int cb)
 {
 	char *q = _internal_clippy_paste(cb);
-	if (!q) return;
+	if (!q)
+		return;
 	_string_paste(cb, q);
 }
 

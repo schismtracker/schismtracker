@@ -24,14 +24,14 @@
 #include "headers.h"
 
 #include "it.h"
-#include "config.h"
 #include "page.h"
-#include "widget.h"
-#include "vgamem.h"
-#include "keyboard.h"
 #include "song.h"
+#include "widget.h"
+#include "config.h"
+#include "keyboard.h"
 #include "mem.h"
 #include "str.h"
+#include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -51,7 +51,7 @@ static void timeinfo_draw_const(void)
 	draw_text("Total time:", 7, 16, 0, 2);
 }
 
-static int timeinfo_handle_key(struct key_event * k)
+static int timeinfo_handle_key(struct key_event *k)
 {
 	switch (k->sym) {
 	case SCHISM_KEYSYM_BACKQUOTE:

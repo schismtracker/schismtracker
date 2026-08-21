@@ -24,19 +24,20 @@
 #include "init.h"
 
 #include "headers.h"
-#include "mem.h"
 #include "backend/mt.h"
+#include "mem.h"
 
 /* ------------------------------------ */
 
 #ifdef SDL_PASSED_BEGINTHREAD_ENDTHREAD
-static SDL_Thread *(SDLCALL *sdl2_CreateThread)(SDL_ThreadFunction fn, const char *name, void *data, pfnSDL_CurrentBeginThread begin, pfnSDL_CurrentEndThread end) = NULL;
+static SDL_Thread *(SDLCALL *sdl2_CreateThread)(SDL_ThreadFunction fn, const char *name, void *data,
+	pfnSDL_CurrentBeginThread begin, pfnSDL_CurrentEndThread end) = NULL;
 #else
 static SDL_Thread *(SDLCALL *sdl2_CreateThread)(SDL_ThreadFunction fn, const char *name, void *data) = NULL;
 #endif
-static void (SDLCALL *sdl2_WaitThread)(SDL_Thread * thread, int *status) = NULL;
-static int (SDLCALL *sdl2_SetThreadPriority)(SDL_ThreadPriority priority) = NULL;
-static SDL_threadID (SDLCALL *sdl2_ThreadID)(void) = NULL;
+static void(SDLCALL *sdl2_WaitThread)(SDL_Thread *thread, int *status) = NULL;
+static int(SDLCALL *sdl2_SetThreadPriority)(SDL_ThreadPriority priority) = NULL;
+static SDL_threadID(SDLCALL *sdl2_ThreadID)(void) = NULL;
 
 struct mt_thread {
 	SDL_Thread *thread;
@@ -104,9 +105,9 @@ static mt_thread_id_t sdl2_thread_id(void)
 /* mutexes */
 
 static SDL_mutex *(SDLCALL *sdl2_CreateMutex)(void) = NULL;
-static void (SDLCALL *sdl2_DestroyMutex)(SDL_mutex * mutex) = NULL;
-static int (SDLCALL *sdl2_LockMutex)(SDL_mutex * mutex) = NULL;
-static int (SDLCALL *sdl2_UnlockMutex)(SDL_mutex * mutex) = NULL;
+static void(SDLCALL *sdl2_DestroyMutex)(SDL_mutex *mutex) = NULL;
+static int(SDLCALL *sdl2_LockMutex)(SDL_mutex *mutex) = NULL;
+static int(SDLCALL *sdl2_UnlockMutex)(SDL_mutex *mutex) = NULL;
 
 struct mt_mutex {
 	SDL_mutex *mutex;
@@ -144,10 +145,10 @@ static void sdl2_mutex_unlock(mt_mutex_t *mutex)
 /* -------------------------------------------------------------- */
 
 static SDL_cond *(SDLCALL *sdl2_CreateCond)(void) = NULL;
-static void (SDLCALL *sdl2_DestroyCond)(SDL_cond *cond) = NULL;
-static int (SDLCALL *sdl2_CondSignal)(SDL_cond *cond) = NULL;
-static int (SDLCALL *sdl2_CondWait)(SDL_cond *cond, SDL_mutex *mutex) = NULL;
-static int (SDLCALL *sdl2_CondWaitTimeout)(SDL_cond *cond, SDL_mutex *mutex, uint32_t timeout) = NULL;
+static void(SDLCALL *sdl2_DestroyCond)(SDL_cond *cond) = NULL;
+static int(SDLCALL *sdl2_CondSignal)(SDL_cond *cond) = NULL;
+static int(SDLCALL *sdl2_CondWait)(SDL_cond *cond, SDL_mutex *mutex) = NULL;
+static int(SDLCALL *sdl2_CondWaitTimeout)(SDL_cond *cond, SDL_mutex *mutex, uint32_t timeout) = NULL;
 
 struct mt_cond {
 	SDL_cond *cond;
@@ -190,10 +191,10 @@ static void sdl2_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t 
 //////////////////////////////////////////////////////////////////////////////
 
 static SDL_sem *(SDLCALL *sdl2_CreateSemaphore)(Uint32 initial_value) = NULL;
-static void (SDLCALL *sdl2_DestroySemaphore)(SDL_sem *sem) = NULL;
-static int (SDLCALL *sdl2_SemPost)(SDL_sem *sem) = NULL;
-static int (SDLCALL *sdl2_SemWait)(SDL_sem *sem) = NULL;
-static int (SDLCALL *sdl2_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
+static void(SDLCALL *sdl2_DestroySemaphore)(SDL_sem *sem) = NULL;
+static int(SDLCALL *sdl2_SemPost)(SDL_sem *sem) = NULL;
+static int(SDLCALL *sdl2_SemWait)(SDL_sem *sem) = NULL;
+static int(SDLCALL *sdl2_SemWaitTimeout)(SDL_sem *sem, Uint32 timeout) = NULL;
 
 struct mt_sem {
 	SDL_sem *sem;

@@ -23,8 +23,8 @@
 
 /* assert helper */
 
-#include "test.h"
 #include "test-assertions.h"
+#include "test.h"
 
 void test_assert(const char *file, long line, const char *cond, const char *msg, const char *fmt, ...)
 {

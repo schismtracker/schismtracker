@@ -22,28 +22,27 @@
  */
 
 #include "headers.h"
-#include "osdefs.h"
-#include "song.h"
 #include "it.h" // need for kbd_get_alnum
-#include "log.h"
+#include "song.h"
+#include "osdefs.h"
 #include "dmoz.h"
-#include "util.h"
+#include "log.h"
 #include "mem.h"
+#include "util.h"
 
+#include "isfs.h"
 #include <di/di.h>
+#include <dirent.h>
 #include <fat.h>
-#include <ogc/machine/processor.h>
-#include <ogc/system.h>
 #include <ogc/es.h>
 #include <ogc/ios.h>
+#include <ogc/machine/processor.h>
+#include <ogc/system.h>
 #include <ogc/usbmouse.h>
 #include <ogcsys.h>
+#include <sys/dir.h>
 #include <wiikeyboard/keyboard.h>
 #include <wiiuse/wpad.h>
-#include <sys/dir.h>
-#include <dirent.h>
-#include "isfs.h"
-#include <fat.h>
 
 /*
 Turn this on to bypass SDL weak-linking and allow OpenGL to be used.
@@ -144,15 +143,17 @@ static void RestartHomebrewChannel(void)
 
 void Terminate(void)
 {
-	if (ShutdownRequested) ShutdownWii();
-	else if (ResetRequested) RestartHomebrewChannel();
+	if (ShutdownRequested)
+		ShutdownWii();
+	else if (ResetRequested)
+		RestartHomebrewChannel();
 }
 #else
 static void ShutdownCB(void)
 {
-    schism_event_t e;
-   	e.type = SCHISM_QUIT;
-   	events_push_event(&e);
+	schism_event_t e;
+	e.type = SCHISM_QUIT;
+	events_push_event(&e);
 }
 
 static void ResetCB(SCHISM_UNUSED u32 irq, SCHISM_UNUSED void *ctx)
@@ -199,12 +200,12 @@ void wii_sysinit(int *pargc, char ***pargv)
 		SYS_SetPowerCallback(ShutdownCB);
 		SYS_SetResetCallback(ResetCB);
 
-#ifdef SCHISM_SDL12
+# ifdef SCHISM_SDL12
 		/* this is specific to SDL 1.2 */
 		PAD_Init();
 		/* why is this not in SDL_InitSubSystem ??? */
 		OGC_InitVideoSystem();
-#endif
+# endif
 
 		WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
 		WPAD_SetVRes(WPAD_CHAN_ALL, 640, 480);
@@ -214,8 +215,8 @@ void wii_sysinit(int *pargc, char ***pargv)
 	}
 #endif
 
-	log_appendf(1, "[Wii] This is IOS%d v%X, and AHBPROT is %s",
-		IOS_GetVersion(), IOS_GetRevision(), _check_ahbprot() > 0 ? "enabled" : "disabled");
+	log_appendf(1, "[Wii] This is IOS%d v%X, and AHBPROT is %s", IOS_GetVersion(), IOS_GetRevision(),
+		_check_ahbprot() > 0 ? "enabled" : "disabled");
 	if (*pargc == 0 && *pargv == NULL) {
 		// I don't know if any other loaders provide similarly broken environments
 		log_appendf(1, "[Wii] Was I just bannerbombed? Prepare for crash at exit...");
@@ -251,7 +252,7 @@ void wii_sysinit(int *pargc, char ***pargv)
 		ptr = str_dup("sd:/apps/schismtracker");
 	}
 	if (chdir(ptr) != 0) {
-		DIR* dir = opendir("sd:/");
+		DIR *dir = opendir("sd:/");
 		free(ptr);
 		if (dir) {
 			// Ok at least the sd card works, there's some other dysfunction

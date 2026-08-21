@@ -23,9 +23,9 @@
 #ifndef SCHISM_EVENTS_H_
 #define SCHISM_EVENTS_H_
 
+#include "backend/events.h" // for the backend typedef
 #include "keyboard.h"
 #include "timer.h" // timer_ticks_t
-#include "backend/events.h" // for the backend typedef
 
 /* types of events delivered by the current backend */
 enum {
@@ -55,7 +55,8 @@ enum {
 	SCHISM_MOUSEWHEEL, /* Mouse wheel motion */
 
 	/* Clipboard events */
-	SCHISM_CLIPBOARDUPDATE = 0x900, /* The clipboard or primary selection changed (I don't think this is actually used anywhere) */
+	SCHISM_CLIPBOARDUPDATE
+		= 0x900, /* The clipboard or primary selection changed (I don't think this is actually used anywhere) */
 
 	/* Drag and drop */
 	SCHISM_DROPFILE = 0x1000, /* The system requests a file open */
@@ -65,7 +66,8 @@ enum {
 	SCHISM_AUDIODEVICEREMOVED, /* An audio device has been removed */
 
 	/* Render events */
-	SCHISM_RENDER_TARGETS_RESET = 0x2000, /* The render targets have been reset and their contents need to be updated */
+	SCHISM_RENDER_TARGETS_RESET
+		= 0x2000, /* The render targets have been reset and their contents need to be updated */
 	SCHISM_RENDER_DEVICE_RESET, /* The device has been reset and all textures need to be recreated */
 
 	/* Schism internal events */
@@ -254,8 +256,8 @@ typedef struct {
 	union {
 		// use generic types when possible, please
 		struct {
-			void *hwnd;       // `HWND' in Win32
-			uint32_t msg;     // `DWORD' in Win32
+			void *hwnd; // `HWND' in Win32
+			uint32_t msg; // `DWORD' in Win32
 			uintptr_t wparam; // `WPARAM' in Win32
 			uintptr_t lparam; // `LPARAM' in Win32
 		} win;
@@ -270,14 +272,14 @@ typedef struct {
 				struct {
 					int type;
 					uint32_t serial;
-					int send_event;     // `Bool' in Xlib
-					void *display;      // `Display *' in Xlib
-					uint32_t owner;     // `Window' in Xlib
+					int send_event; // `Bool' in Xlib
+					void *display; // `Display *' in Xlib
+					uint32_t owner; // `Window' in Xlib
 					uint32_t requestor; // `Window' in Xlib
 					uint32_t selection; // `Atom' in Xlib
-					uint32_t target;    // `Atom' in Xlib
-					uint32_t property;  // `Atom' in Xlib
-					uint32_t time;      // `Time' in Xlib
+					uint32_t target; // `Atom' in Xlib
+					uint32_t property; // `Atom' in Xlib
+					uint32_t time; // `Time' in Xlib
 				} selection_request;
 			} event;
 		} x11;

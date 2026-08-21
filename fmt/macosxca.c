@@ -23,117 +23,152 @@
 
 #include "headers.h"
 
+#include "bits.h"
 #include "fmt.h"
 #include "mem.h"
-#include "bits.h"
 #include "osdefs.h"
 
 #include <AudioToolbox/AudioToolbox.h>
 
 #define MACOSXCA_BUFFER_SIZE (4096)
-#define MACOSXCA_TITLE_SIZE (128) /* this is more than we'll ever need */
+#define MACOSXCA_TITLE_SIZE  (128) /* this is more than we'll ever need */
 
 /* many of these aren't defined in old SDKs, and this fixes the build
  * apple defines these in an enum so we're good to #define over them */
-#define kAudioFormat60958AC3 'cac3'
-#define kAudioFormatAC3 'ac-3'
-#define kAudioFormatAES3 'aes3'
-#define kAudioFormatALaw 'alaw'
-#define kAudioFormatAMR 'samr'
-#define kAudioFormatAMR_WB 'sawb'
-#define kAudioFormatAppleIMA4 'ima4'
-#define kAudioFormatAppleLossless 'alac'
-#define kAudioFormatAudible 'AUDB'
-#define kAudioFormatDVIIntelIMA 'ms'
-#define kAudioFormatEnhancedAC3 'ec-3'
-#define kAudioFormatFLAC 'flac'
-#define kAudioFormatLinearPCM 'lpcm'
-#define kAudioFormatMACE3 'MAC3'
-#define kAudioFormatMACE6 'MAC6'
-#define kAudioFormatMIDIStream 'midi'
-#define kAudioFormatMPEG4AAC 'aac '
-#define kAudioFormatMPEG4AAC_ELD_SBR 'aacf'
-#define kAudioFormatMPEG4AAC_ELD_V2 'aacg'
-#define kAudioFormatMPEG4AAC_ELD 'aace'
-#define kAudioFormatMPEG4AAC_HE 'aach'
-#define kAudioFormatMPEG4AAC_HE_V2 'aacp'
-#define kAudioFormatMPEG4AAC_LD 'aacl'
-#define kAudioFormatMPEG4AAC_Spatial 'aacs'
-#define kAudioFormatMPEG4CELP 'celp'
-#define kAudioFormatMPEG4HVXC 'hvxc'
-#define kAudioFormatMPEG4TwinVQ 'twvq'
-#define kAudioFormatMPEGD_USAC 'usac'
-#define kAudioFormatMPEGLayer1 '.mp1'
-#define kAudioFormatMPEGLayer2 '.mp2'
-#define kAudioFormatMPEGLayer3 '.mp3'
-#define kAudioFormatMicrosoftGSM 'ms1'
-#define kAudioFormatOpus 'opus'
+#define kAudioFormat60958AC3             'cac3'
+#define kAudioFormatAC3                  'ac-3'
+#define kAudioFormatAES3                 'aes3'
+#define kAudioFormatALaw                 'alaw'
+#define kAudioFormatAMR                  'samr'
+#define kAudioFormatAMR_WB               'sawb'
+#define kAudioFormatAppleIMA4            'ima4'
+#define kAudioFormatAppleLossless        'alac'
+#define kAudioFormatAudible              'AUDB'
+#define kAudioFormatDVIIntelIMA          'ms'
+#define kAudioFormatEnhancedAC3          'ec-3'
+#define kAudioFormatFLAC                 'flac'
+#define kAudioFormatLinearPCM            'lpcm'
+#define kAudioFormatMACE3                'MAC3'
+#define kAudioFormatMACE6                'MAC6'
+#define kAudioFormatMIDIStream           'midi'
+#define kAudioFormatMPEG4AAC             'aac '
+#define kAudioFormatMPEG4AAC_ELD_SBR     'aacf'
+#define kAudioFormatMPEG4AAC_ELD_V2      'aacg'
+#define kAudioFormatMPEG4AAC_ELD         'aace'
+#define kAudioFormatMPEG4AAC_HE          'aach'
+#define kAudioFormatMPEG4AAC_HE_V2       'aacp'
+#define kAudioFormatMPEG4AAC_LD          'aacl'
+#define kAudioFormatMPEG4AAC_Spatial     'aacs'
+#define kAudioFormatMPEG4CELP            'celp'
+#define kAudioFormatMPEG4HVXC            'hvxc'
+#define kAudioFormatMPEG4TwinVQ          'twvq'
+#define kAudioFormatMPEGD_USAC           'usac'
+#define kAudioFormatMPEGLayer1           '.mp1'
+#define kAudioFormatMPEGLayer2           '.mp2'
+#define kAudioFormatMPEGLayer3           '.mp3'
+#define kAudioFormatMicrosoftGSM         'ms1'
+#define kAudioFormatOpus                 'opus'
 #define kAudioFormatParameterValueStream 'apvs'
-#define kAudioFormatQDesign 'QDMC'
-#define kAudioFormatQDesign2 'QDM2'
-#define kAudioFormatQUALCOMM 'Qclp'
-#define kAudioFormatTimeCode 'time'
-#define kAudioFormatULaw 'ulaw'
-#define kAudioFormatiLBC 'ilbc'
+#define kAudioFormatQDesign              'QDMC'
+#define kAudioFormatQDesign2             'QDM2'
+#define kAudioFormatQUALCOMM             'Qclp'
+#define kAudioFormatTimeCode             'time'
+#define kAudioFormatULaw                 'ulaw'
+#define kAudioFormatiLBC                 'ilbc'
 
 #define kAudioFilePropertyEstimatedDuration 'edur'
 
 static const char *ca_type_id_description(UInt32 format)
 {
 #if 0 /* uncomment this code to print out all the values for redefinition */
-#define PRINT_VALUE(x) \
-	do { \
-		uint32_t i = bswapBE32(x); \
-		char *s = (char *)&i; \
-	\
-		fprintf(stderr, "#define %s '%c%c%c%c'\n", #x, s[0], s[1], s[2], s[3]); \
-	} while (0)
+# define PRINT_VALUE(x) \
+	 do { \
+		 uint32_t i = bswapBE32(x); \
+		 char *s = (char *)&i; \
+\
+		 fprintf(stderr, "#define %s '%c%c%c%c'\n", #x, s[0], s[1], s[2], s[3]); \
+	 } while (0)
 	PRINT_VALUE(kAudioFormatiLBC);
-#undef PRINT_VALUE
+# undef PRINT_VALUE
 #endif
 
 	switch (format) {
 	case kAudioFormat60958AC3:
-	case kAudioFormatAC3: return "AC-3";
-	case kAudioFormatAES3: return "AES3-2003";
-	case kAudioFormatALaw: return "A-law 2:1";
-	case kAudioFormatAMR: return "Adaptive Multi-Rate";
-	case kAudioFormatAMR_WB: return "AMR Wideband";
-	case kAudioFormatAppleIMA4: return "Apple IMA 4:1 ADPCM";
-	case kAudioFormatAppleLossless: return "Apple Lossless Audio Codec";
-	case kAudioFormatAudible: return "Audible";
-	case kAudioFormatDVIIntelIMA: return "DVI/Intel IMA ADPCM";
-	case kAudioFormatEnhancedAC3: return "Enhanced AC-3";
-	case kAudioFormatFLAC: return "Free Lossless Audio Codec";
-	case kAudioFormatLinearPCM: return "Linear PCM";
-	case kAudioFormatMACE3: return "MACE 3:1";
-	case kAudioFormatMACE6: return "MACE C:1";
-	case kAudioFormatMIDIStream: return "MIDI Stream";
-	case kAudioFormatMPEG4AAC: return "MPEG-4 AAC Low Complexity";
+	case kAudioFormatAC3:
+		return "AC-3";
+	case kAudioFormatAES3:
+		return "AES3-2003";
+	case kAudioFormatALaw:
+		return "A-law 2:1";
+	case kAudioFormatAMR:
+		return "Adaptive Multi-Rate";
+	case kAudioFormatAMR_WB:
+		return "AMR Wideband";
+	case kAudioFormatAppleIMA4:
+		return "Apple IMA 4:1 ADPCM";
+	case kAudioFormatAppleLossless:
+		return "Apple Lossless Audio Codec";
+	case kAudioFormatAudible:
+		return "Audible";
+	case kAudioFormatDVIIntelIMA:
+		return "DVI/Intel IMA ADPCM";
+	case kAudioFormatEnhancedAC3:
+		return "Enhanced AC-3";
+	case kAudioFormatFLAC:
+		return "Free Lossless Audio Codec";
+	case kAudioFormatLinearPCM:
+		return "Linear PCM";
+	case kAudioFormatMACE3:
+		return "MACE 3:1";
+	case kAudioFormatMACE6:
+		return "MACE C:1";
+	case kAudioFormatMIDIStream:
+		return "MIDI Stream";
+	case kAudioFormatMPEG4AAC:
+		return "MPEG-4 AAC Low Complexity";
 	case kAudioFormatMPEG4AAC_ELD_SBR:
 	case kAudioFormatMPEG4AAC_ELD_V2:
-	case kAudioFormatMPEG4AAC_ELD: return "MPEG-4 Enhanced Low Delay AAC";
+	case kAudioFormatMPEG4AAC_ELD:
+		return "MPEG-4 Enhanced Low Delay AAC";
 	case kAudioFormatMPEG4AAC_HE:
-	case kAudioFormatMPEG4AAC_HE_V2: return "MPEG-4 High-Efficiency AAC";
-	case kAudioFormatMPEG4AAC_LD: return "MPEG-4 Low Delay AAC";
-	case kAudioFormatMPEG4AAC_Spatial: return "MPEG-4 Spatial Audio Coding";
-	case kAudioFormatMPEG4CELP: return "MPEG-4 CELP";
-	case kAudioFormatMPEG4HVXC: return "MPEG-4 HVXC";
-	case kAudioFormatMPEG4TwinVQ: return "MPEG-4 TwinVQ";
-	case kAudioFormatMPEGD_USAC: return "MPEG-D Unified Speech and Audio Coding";
-	case kAudioFormatMPEGLayer1: return "MPEG-1/2, Layer I";
-	case kAudioFormatMPEGLayer2: return "MPEG-1/2, Layer II";
-	case kAudioFormatMPEGLayer3: return "MPEG-1/2, Layer III";
-	case kAudioFormatMicrosoftGSM: return "Microsoft GSM 6.10 - ACM code 49";
-	case kAudioFormatOpus: return "Xiph Opus";
+	case kAudioFormatMPEG4AAC_HE_V2:
+		return "MPEG-4 High-Efficiency AAC";
+	case kAudioFormatMPEG4AAC_LD:
+		return "MPEG-4 Low Delay AAC";
+	case kAudioFormatMPEG4AAC_Spatial:
+		return "MPEG-4 Spatial Audio Coding";
+	case kAudioFormatMPEG4CELP:
+		return "MPEG-4 CELP";
+	case kAudioFormatMPEG4HVXC:
+		return "MPEG-4 HVXC";
+	case kAudioFormatMPEG4TwinVQ:
+		return "MPEG-4 TwinVQ";
+	case kAudioFormatMPEGD_USAC:
+		return "MPEG-D Unified Speech and Audio Coding";
+	case kAudioFormatMPEGLayer1:
+		return "MPEG-1/2, Layer I";
+	case kAudioFormatMPEGLayer2:
+		return "MPEG-1/2, Layer II";
+	case kAudioFormatMPEGLayer3:
+		return "MPEG-1/2, Layer III";
+	case kAudioFormatMicrosoftGSM:
+		return "Microsoft GSM 6.10 - ACM code 49";
+	case kAudioFormatOpus:
+		return "Xiph Opus";
 	/* case kAudioFormatParameterValueStream: return "???"; */
-	case kAudioFormatQDesign: return "QDesign";
-	case kAudioFormatQDesign2: return "QDesign 2";
-	case kAudioFormatQUALCOMM: return "Qualcomm PureVoice";
+	case kAudioFormatQDesign:
+		return "QDesign";
+	case kAudioFormatQDesign2:
+		return "QDesign 2";
+	case kAudioFormatQUALCOMM:
+		return "Qualcomm PureVoice";
 	/* case kAudioFormatTimeCode: return "???"; */
-	case kAudioFormatULaw: return "\xE6-Law 2:1"; /* mu-law */
-	case kAudioFormatiLBC: return "Internet Low Bitrate Codec";
-	default: return "CoreAudio";
+	case kAudioFormatULaw:
+		return "\xE6-Law 2:1"; /* mu-law */
+	case kAudioFormatiLBC:
+		return "Internet Low Bitrate Codec";
+	default:
+		return "CoreAudio";
 	}
 }
 
@@ -147,8 +182,7 @@ static SInt64 macosxca_size_cb(void *userdata)
 	return slurp_length(fp);
 }
 
-static OSStatus macosxca_read_cb(void *userdata, SInt64 pos,
-	UInt32 request_count, void *buffer, UInt32 *actual_count)
+static OSStatus macosxca_read_cb(void *userdata, SInt64 pos, UInt32 request_count, void *buffer, UInt32 *actual_count)
 {
 	slurp_t *fp = userdata;
 	slurp_seek(fp, pos, SEEK_SET);
@@ -167,16 +201,14 @@ static int macosxca_read(slurp_t *fp, dmoz_file_t *file, song_sample_t *smp)
 
 	title[0] = 0;
 
-	err = AudioFileOpenWithCallbacks(fp, macosxca_read_cb, NULL,
-		macosxca_size_cb, NULL, 0, &fid);
+	err = AudioFileOpenWithCallbacks(fp, macosxca_read_cb, NULL, macosxca_size_cb, NULL, 0, &fid);
 	if (err != noErr)
 		return 0;
 
 	/* XXX we also have kAudioFilePropertyFileFormat, maybe that would
 	 * be more useful ? */
 	prop_size = sizeof(format);
-	err = AudioFileGetProperty(fid, kAudioFilePropertyDataFormat, &prop_size,
-		&format);
+	err = AudioFileGetProperty(fid, kAudioFilePropertyDataFormat, &prop_size, &format);
 	if (err != noErr) {
 		AudioFileClose(fid);
 		return 0;
@@ -184,8 +216,7 @@ static int macosxca_read(slurp_t *fp, dmoz_file_t *file, song_sample_t *smp)
 
 	/* grab the title, we use this for both file and smp */
 	prop_size = sizeof(info);
-	err = AudioFileGetProperty(fid, kAudioFilePropertyInfoDictionary, &prop_size,
-		&info);
+	err = AudioFileGetProperty(fid, kAudioFilePropertyInfoDictionary, &prop_size, &info);
 	if (err == noErr) {
 		CFStringRef titleref;
 
@@ -194,7 +225,7 @@ static int macosxca_read(slurp_t *fp, dmoz_file_t *file, song_sample_t *smp)
 			/* FIXME this should be UTF-8, but oh well */
 			CFStringGetCString(titleref, title, sizeof(title), kCFStringEncodingDOSLatinUS);
 			/* for completeness's sake */
-			title[sizeof(title)-1] = 0;
+			title[sizeof(title) - 1] = 0;
 		}
 		CFRelease(info);
 	}
@@ -210,8 +241,7 @@ static int macosxca_read(slurp_t *fp, dmoz_file_t *file, song_sample_t *smp)
 		file->smp_speed = format.mSampleRate;
 
 		prop_size = sizeof(estimated_duration);
-		err = AudioFileGetProperty(fid, kAudioFilePropertyEstimatedDuration,
-			&prop_size, &estimated_duration);
+		err = AudioFileGetProperty(fid, kAudioFilePropertyEstimatedDuration, &prop_size, &estimated_duration);
 		if (err == noErr)
 			file->smp_length = estimated_duration * file->smp_speed;
 	}
@@ -248,7 +278,8 @@ static int macosxca_read(slurp_t *fp, dmoz_file_t *file, song_sample_t *smp)
 		output_format.mBytesPerPacket = (output_format.mBitsPerChannel / 8) * output_format.mChannelsPerFrame;
 		output_format.mBytesPerFrame = (output_format.mBitsPerChannel / 8) * output_format.mChannelsPerFrame;
 
-		err = ExtAudioFileSetProperty(efid, kExtAudioFileProperty_ClientDataFormat, sizeof(output_format), &output_format);
+		err = ExtAudioFileSetProperty(
+			efid, kExtAudioFileProperty_ClientDataFormat, sizeof(output_format), &output_format);
 		if (err != noErr) {
 			ExtAudioFileDispose(efid);
 			AudioFileClose(fid);
@@ -269,7 +300,8 @@ static int macosxca_read(slurp_t *fp, dmoz_file_t *file, song_sample_t *smp)
 		/* keep going until we run out of audio to process
 		 * (note: this is a waste of memory; we could make a slurp wrapper but im too lazy) */
 		while (((err = ExtAudioFileRead(efid, &bufsmps, &buflist)) == noErr) && bufsmps > 0) {
-			disko_write(&ds, buf, bufsmps * (output_format.mBitsPerChannel / 8) * output_format.mChannelsPerFrame);
+			disko_write(&ds, buf,
+				bufsmps * (output_format.mBitsPerChannel / 8) * output_format.mChannelsPerFrame);
 			total_samples += bufsmps;
 		}
 
@@ -282,19 +314,20 @@ static int macosxca_read(slurp_t *fp, dmoz_file_t *file, song_sample_t *smp)
 		smp->length = total_samples;
 		smp->c5speed = format.mSampleRate;
 		/* yay */
-		strncpy(smp->name, title, sizeof(smp->name)-1);
-		smp->name[sizeof(smp->name)-1] = 0;
+		strncpy(smp->name, title, sizeof(smp->name) - 1);
+		smp->name[sizeof(smp->name) - 1] = 0;
 
 		slurp_memstream(&fakefp, ds.data, ds.length);
 
-		csf_read_sample(smp, SF_PCMS
+		csf_read_sample(smp,
+			SF_PCMS
 #ifdef WORDS_BIGENDIAN
-			| SF_BE
+				| SF_BE
 #else
-			| SF_LE
+				| SF_LE
 #endif
-			| ((output_format.mChannelsPerFrame >= 2) ? SF_SI : SF_M)
-			| ((output_format.mBitsPerChannel == 16) ? SF_16 : SF_8),
+				| ((output_format.mChannelsPerFrame >= 2) ? SF_SI : SF_M)
+				| ((output_format.mBitsPerChannel == 16) ? SF_16 : SF_8),
 			&fakefp);
 
 		ExtAudioFileDispose(efid);

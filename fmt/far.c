@@ -23,9 +23,9 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -61,7 +61,8 @@ struct far_sample {
 static int far_read_header(struct far_header *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) \
+	return 0
 
 	READ_VALUE(magic);
 	READ_VALUE(title);
@@ -88,7 +89,8 @@ static int far_read_header(struct far_header *hdr, slurp_t *fp)
 static int far_read_sample(struct far_sample *smp, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) return 0
+	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) \
+	return 0
 
 	READ_VALUE(name);
 	READ_VALUE(length);
@@ -173,7 +175,6 @@ static void far_import_note(song_note_t *note, const uint8_t data[4])
 	}
 	note->effect = far_effects[data[3] >> 4];
 }
-
 
 int fmt_far_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
@@ -289,4 +290,3 @@ int fmt_far_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 	return LOAD_SUCCESS;
 }
-

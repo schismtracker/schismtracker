@@ -23,11 +23,11 @@
 
 #include "headers.h"
 
-#include "player/sndfile.h"
+#include "bits.h"
+#include "player/cmixer.h"
 #include "player/snd_fm.h"
 #include "player/snd_gm.h"
-#include "player/cmixer.h"
-#include "bits.h"
+#include "player/sndfile.h"
 #include "util.h"   // for CLAMP
 
 // For pingpong loops that work like most of Impulse Tracker's drivers
@@ -43,51 +43,50 @@
  * MUST also regenerate the arrays. */
 
 // number of bits used to scale spline coefs
-#define SPLINE_QUANTBITS        14
-#define SPLINE_QUANTSCALE       (1L << SPLINE_QUANTBITS)
-#define SPLINE_8SHIFT           (SPLINE_QUANTBITS - 8)
-#define SPLINE_16SHIFT          (SPLINE_QUANTBITS)
+#define SPLINE_QUANTBITS  14
+#define SPLINE_QUANTSCALE (1L << SPLINE_QUANTBITS)
+#define SPLINE_8SHIFT     (SPLINE_QUANTBITS - 8)
+#define SPLINE_16SHIFT    (SPLINE_QUANTBITS)
 
 // forces coefsset to unity gain
 #define SPLINE_CLAMPFORUNITY
 
 // log2(number) of precalculated splines (range is [4..14])
 #define SPLINE_FRACBITS 10
-#define SPLINE_LUTLEN (1L<<SPLINE_FRACBITS)
-
+#define SPLINE_LUTLEN   (1L << SPLINE_FRACBITS)
 
 // quantizer scale of window coefs
-#define WFIR_QUANTBITS          15
-#define WFIR_QUANTSCALE         (1L << WFIR_QUANTBITS)
-#define WFIR_8SHIFT             (WFIR_QUANTBITS - 8)
-#define WFIR_16SHIFT            (WFIR_QUANTBITS)
+#define WFIR_QUANTBITS  15
+#define WFIR_QUANTSCALE (1L << WFIR_QUANTBITS)
+#define WFIR_8SHIFT     (WFIR_QUANTBITS - 8)
+#define WFIR_16SHIFT    (WFIR_QUANTBITS)
 
 // log2(number)-1 of precalculated taps range is [4..12]
-#define WFIR_FRACBITS           10
-#define WFIR_LUTLEN             ((1L << (WFIR_FRACBITS + 1)) + 1)
+#define WFIR_FRACBITS 10
+#define WFIR_LUTLEN   ((1L << (WFIR_FRACBITS + 1)) + 1)
 
 // number of samples in window
-#define WFIR_LOG2WIDTH          3
-#define WFIR_WIDTH              (1L << WFIR_LOG2WIDTH)
-#define WFIR_SMPSPERWING        ((WFIR_WIDTH-1)>>1)
+#define WFIR_LOG2WIDTH   3
+#define WFIR_WIDTH       (1L << WFIR_LOG2WIDTH)
+#define WFIR_SMPSPERWING ((WFIR_WIDTH - 1) >> 1)
 // cutoff (1.0 == pi/2)
-#define WFIR_CUTOFF             0.90f
+#define WFIR_CUTOFF 0.90f
 // wfir type
-#define WFIR_HANN               0
-#define WFIR_HAMMING            1
-#define WFIR_BLACKMANEXACT      2
-#define WFIR_BLACKMAN3T61       3
-#define WFIR_BLACKMAN3T67       4
-#define WFIR_BLACKMAN4T92       5
-#define WFIR_BLACKMAN4T74       6
-#define WFIR_KAISER4T           7
-#define WFIR_TYPE               WFIR_BLACKMANEXACT
+#define WFIR_HANN          0
+#define WFIR_HAMMING       1
+#define WFIR_BLACKMANEXACT 2
+#define WFIR_BLACKMAN3T61  3
+#define WFIR_BLACKMAN3T67  4
+#define WFIR_BLACKMAN4T92  5
+#define WFIR_BLACKMAN4T74  6
+#define WFIR_KAISER4T      7
+#define WFIR_TYPE          WFIR_BLACKMANEXACT
 // wfir help
 #ifndef M_zPI
-#define M_zPI           3.1415926535897932384626433832795
+# define M_zPI 3.1415926535897932384626433832795
 #endif
-#define M_zEPS          1e-8
-#define M_zBESSELEPS    1e-21
+#define M_zEPS       1e-8
+#define M_zBESSELEPS 1e-21
 
 #define SPLINE_FRACSHIFT ((16 - SPLINE_FRACBITS) - 2)
 #define SPLINE_FRACMASK  (((1L << (16 - SPLINE_FRACSHIFT)) - 1) & ~3)
@@ -103,20 +102,21 @@
 // ----------------------------------------------------------------------------
 
 #define SNDMIX_BEGINSAMPLELOOP(bits) \
-	register song_voice_t * const chan = channel; \
+	register song_voice_t *const chan = channel; \
 	position = chan->position; \
 	const int##bits##_t *p = (int##bits##_t *)chan->current_sample_data; \
 	int32_t *pvol = pbuffer; \
 	uint32_t max = chan->vu_meter; \
 	do {
 
-
 #define SNDMIX_ENDSAMPLELOOP \
-		pvol[0] += vol_lx; \
-		pvol[1] += vol_rx; \
-		pvol += 2; \
-		position = csf_smp_pos_add(position, chan->increment); \
-	} while (pvol < pbufmax); \
+	pvol[0] += vol_lx; \
+	pvol[1] += vol_rx; \
+	pvol += 2; \
+	position = csf_smp_pos_add(position, chan->increment); \
+	} \
+	while (pvol < pbufmax) \
+		; \
 	chan->vu_meter = max; \
 	chan->position = position;
 
@@ -126,53 +126,50 @@
 #define SNDMIX_GETNOIDOPOS /* nothing */
 
 #define SNDMIX_GETLINEARPOS \
-	int32_t poshi   = csf_smp_pos_get_whole(position); \
-	int32_t poslo   = csf_smp_pos_get_frac(position) >> 24;
+	int32_t poshi = csf_smp_pos_get_whole(position); \
+	int32_t poslo = csf_smp_pos_get_frac(position) >> 24;
 
 #define SNDMIX_GETSPLINEPOS \
 	int32_t poshi = csf_smp_pos_get_whole(position); \
 	/* FIXME this is stupid */ \
-	int32_t poslo = rshift_signed(rshift_signed(csf_smp_pos_get_full(position), 16), SPLINE_FRACSHIFT) & SPLINE_FRACMASK;
+	int32_t poslo = rshift_signed(rshift_signed(csf_smp_pos_get_full(position), 16), SPLINE_FRACSHIFT) \
+			& SPLINE_FRACMASK;
 
 #define SNDMIX_GETFIRFILTERPOS \
-	int32_t poshi  = csf_smp_pos_get_whole(position); \
-	int32_t poslo  = csf_smp_pos_get_frac(position) >> 16;
+	int32_t poshi = csf_smp_pos_get_whole(position); \
+	int32_t poslo = csf_smp_pos_get_frac(position) >> 16;
 
 // No interpolation
-#define SNDMIX_GETMONOVOLNOIDO(bits) \
-	int32_t vol = lshift_signed(p[csf_smp_pos_get_whole(position)], -bits + 16);
+#define SNDMIX_GETMONOVOLNOIDO(bits) int32_t vol = lshift_signed(p[csf_smp_pos_get_whole(position)], -bits + 16);
 
 // Linear Interpolation
 #define SNDMIX_GETMONOVOLLINEAR(bits) \
-	int32_t srcvol  = p[poshi]; \
+	int32_t srcvol = p[poshi]; \
 	int32_t destvol = p[poshi + 1]; \
-	int32_t vol     = lshift_signed(srcvol, -bits + 16) + rshift_signed(poslo * (destvol - srcvol), bits - 8);
+	int32_t vol = lshift_signed(srcvol, -bits + 16) + rshift_signed(poslo * (destvol - srcvol), bits - 8);
 
 // spline interpolation (2 guard bits should be enough???)
 #define SNDMIX_GETMONOVOLSPLINE(bits) \
-	int32_t vol   = rshift_signed( \
-		  cubic_spline_lut[poslo + 0] * (int32_t)p[poshi - 1] \
-		+ cubic_spline_lut[poslo + 1] * (int32_t)p[poshi + 0] \
-		+ cubic_spline_lut[poslo + 2] * (int32_t)p[poshi + 1] \
-		+ cubic_spline_lut[poslo + 3] * (int32_t)p[poshi + 2], \
+	int32_t vol = rshift_signed(cubic_spline_lut[poslo + 0] * (int32_t)p[poshi - 1] \
+					    + cubic_spline_lut[poslo + 1] * (int32_t)p[poshi + 0] \
+					    + cubic_spline_lut[poslo + 2] * (int32_t)p[poshi + 1] \
+					    + cubic_spline_lut[poslo + 3] * (int32_t)p[poshi + 2], \
 		SPLINE_##bits##SHIFT);
 
 // fir interpolation
 #define SNDMIX_GETMONOVOLFIRFILTER(bits) \
 	int32_t firidx = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
 	int32_t vol = rshift_signed( \
-		rshift_signed( \
-			(windowed_fir_lut[firidx + 0] * (int32_t)p[poshi + 1 - 4]) + \
-			(windowed_fir_lut[firidx + 1] * (int32_t)p[poshi + 2 - 4]) + \
-			(windowed_fir_lut[firidx + 2] * (int32_t)p[poshi + 3 - 4]) + \
-			(windowed_fir_lut[firidx + 3] * (int32_t)p[poshi + 4 - 4]) \
-			, 1) + \
-		rshift_signed( \
-			(windowed_fir_lut[firidx + 4] * (int32_t)p[poshi + 5 - 4]) + \
-			(windowed_fir_lut[firidx + 5] * (int32_t)p[poshi + 6 - 4]) + \
-			(windowed_fir_lut[firidx + 6] * (int32_t)p[poshi + 7 - 4]) + \
-			(windowed_fir_lut[firidx + 7] * (int32_t)p[poshi + 8 - 4]) \
-			, 1), \
+		rshift_signed((windowed_fir_lut[firidx + 0] * (int32_t)p[poshi + 1 - 4]) \
+				      + (windowed_fir_lut[firidx + 1] * (int32_t)p[poshi + 2 - 4]) \
+				      + (windowed_fir_lut[firidx + 2] * (int32_t)p[poshi + 3 - 4]) \
+				      + (windowed_fir_lut[firidx + 3] * (int32_t)p[poshi + 4 - 4]), \
+			1) \
+			+ rshift_signed((windowed_fir_lut[firidx + 4] * (int32_t)p[poshi + 5 - 4]) \
+						+ (windowed_fir_lut[firidx + 5] * (int32_t)p[poshi + 6 - 4]) \
+						+ (windowed_fir_lut[firidx + 6] * (int32_t)p[poshi + 7 - 4]) \
+						+ (windowed_fir_lut[firidx + 7] * (int32_t)p[poshi + 8 - 4]), \
+				1), \
 		WFIR_##bits##SHIFT - 1);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -185,59 +182,56 @@
 #define SNDMIX_GETSTEREOVOLLINEAR(bits) \
 	int32_t srcvol_l = p[poshi * 2 + 0]; \
 	int32_t srcvol_r = p[poshi * 2 + 1]; \
-	int32_t vol_l    = lshift_signed(srcvol_l, -bits + 16) + rshift_signed(poslo * (p[poshi * 2 + 2] - srcvol_l), bits - 8); \
-	int32_t vol_r    = lshift_signed(srcvol_r, -bits + 16) + rshift_signed(poslo * (p[poshi * 2 + 3] - srcvol_r), bits - 8);
+	int32_t vol_l = lshift_signed(srcvol_l, -bits + 16) \
+			+ rshift_signed(poslo * (p[poshi * 2 + 2] - srcvol_l), bits - 8); \
+	int32_t vol_r = lshift_signed(srcvol_r, -bits + 16) \
+			+ rshift_signed(poslo * (p[poshi * 2 + 3] - srcvol_r), bits - 8);
 
 // Spline Interpolation
 #define SNDMIX_GETSTEREOVOLSPLINE(bits) \
-	int32_t vol_l   = rshift_signed( \
-			cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2] + \
-			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2] + \
-			cubic_spline_lut[poslo + 2] * (int32_t)p[(poshi + 1) * 2] + \
-			cubic_spline_lut[poslo + 3] * (int32_t)p[(poshi + 2) * 2], \
-			SPLINE_##bits##SHIFT); \
-	int32_t vol_r   = rshift_signed( \
-			cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2 + 1] + \
-			cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2 + 1] + \
-			cubic_spline_lut[poslo + 2] * (int32_t)p[(poshi + 1) * 2 + 1] + \
-			cubic_spline_lut[poslo + 3] * (int32_t)p[(poshi + 2) * 2 + 1], \
-			SPLINE_##bits##SHIFT);
+	int32_t vol_l = rshift_signed(cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2] \
+					      + cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2] \
+					      + cubic_spline_lut[poslo + 2] * (int32_t)p[(poshi + 1) * 2] \
+					      + cubic_spline_lut[poslo + 3] * (int32_t)p[(poshi + 2) * 2], \
+		SPLINE_##bits##SHIFT); \
+	int32_t vol_r = rshift_signed(cubic_spline_lut[poslo + 0] * (int32_t)p[(poshi - 1) * 2 + 1] \
+					      + cubic_spline_lut[poslo + 1] * (int32_t)p[(poshi + 0) * 2 + 1] \
+					      + cubic_spline_lut[poslo + 2] * (int32_t)p[(poshi + 1) * 2 + 1] \
+					      + cubic_spline_lut[poslo + 3] * (int32_t)p[(poshi + 2) * 2 + 1], \
+		SPLINE_##bits##SHIFT);
 
 // fir interpolation
 #define SNDMIX_GETSTEREOVOLFIRFILTER(bits) \
-	int32_t firidx  = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
+	int32_t firidx = rshift_signed(poslo + WFIR_FRACHALVE, WFIR_FRACSHIFT) & WFIR_FRACMASK; \
 	int32_t vol_l = rshift_signed( \
-		rshift_signed( \
-			(windowed_fir_lut[firidx + 0] * p[(poshi + 1 - 4) * 2]) + \
-			(windowed_fir_lut[firidx + 1] * p[(poshi + 2 - 4) * 2]) + \
-			(windowed_fir_lut[firidx + 2] * p[(poshi + 3 - 4) * 2]) + \
-			(windowed_fir_lut[firidx + 3] * p[(poshi + 4 - 4) * 2]) \
-			, 1) + \
-		rshift_signed( \
-			(windowed_fir_lut[firidx + 4] * p[(poshi + 5 - 4) * 2]) + \
-			(windowed_fir_lut[firidx + 5] * p[(poshi + 6 - 4) * 2]) + \
-			(windowed_fir_lut[firidx + 6] * p[(poshi + 7 - 4) * 2]) + \
-			(windowed_fir_lut[firidx + 7] * p[(poshi + 8 - 4) * 2]) \
-			, 1), \
+		rshift_signed((windowed_fir_lut[firidx + 0] * p[(poshi + 1 - 4) * 2]) \
+				      + (windowed_fir_lut[firidx + 1] * p[(poshi + 2 - 4) * 2]) \
+				      + (windowed_fir_lut[firidx + 2] * p[(poshi + 3 - 4) * 2]) \
+				      + (windowed_fir_lut[firidx + 3] * p[(poshi + 4 - 4) * 2]), \
+			1) \
+			+ rshift_signed((windowed_fir_lut[firidx + 4] * p[(poshi + 5 - 4) * 2]) \
+						+ (windowed_fir_lut[firidx + 5] * p[(poshi + 6 - 4) * 2]) \
+						+ (windowed_fir_lut[firidx + 6] * p[(poshi + 7 - 4) * 2]) \
+						+ (windowed_fir_lut[firidx + 7] * p[(poshi + 8 - 4) * 2]), \
+				1), \
 		WFIR_##bits##SHIFT - 1); \
 	int32_t vol_r = rshift_signed( \
-		rshift_signed( \
-			(windowed_fir_lut[firidx + 0] * p[(poshi + 1 - 4) * 2 + 1]) + \
-			(windowed_fir_lut[firidx + 1] * p[(poshi + 2 - 4) * 2 + 1]) + \
-			(windowed_fir_lut[firidx + 2] * p[(poshi + 3 - 4) * 2 + 1]) + \
-			(windowed_fir_lut[firidx + 3] * p[(poshi + 4 - 4) * 2 + 1]) \
-			, 1) + \
-		rshift_signed( \
-			(windowed_fir_lut[firidx + 4] * p[(poshi + 5 - 4) * 2 + 1]) + \
-			(windowed_fir_lut[firidx + 5] * p[(poshi + 6 - 4) * 2 + 1]) + \
-			(windowed_fir_lut[firidx + 6] * p[(poshi + 7 - 4) * 2 + 1]) + \
-			(windowed_fir_lut[firidx + 7] * p[(poshi + 8 - 4) * 2 + 1]) \
-			, 1), \
+		rshift_signed((windowed_fir_lut[firidx + 0] * p[(poshi + 1 - 4) * 2 + 1]) \
+				      + (windowed_fir_lut[firidx + 1] * p[(poshi + 2 - 4) * 2 + 1]) \
+				      + (windowed_fir_lut[firidx + 2] * p[(poshi + 3 - 4) * 2 + 1]) \
+				      + (windowed_fir_lut[firidx + 3] * p[(poshi + 4 - 4) * 2 + 1]), \
+			1) \
+			+ rshift_signed((windowed_fir_lut[firidx + 4] * p[(poshi + 5 - 4) * 2 + 1]) \
+						+ (windowed_fir_lut[firidx + 5] * p[(poshi + 6 - 4) * 2 + 1]) \
+						+ (windowed_fir_lut[firidx + 6] * p[(poshi + 7 - 4) * 2 + 1]) \
+						+ (windowed_fir_lut[firidx + 7] * p[(poshi + 8 - 4) * 2 + 1]), \
+				1), \
 		WFIR_##bits##SHIFT - 1);
 
 #define SNDMIX_STOREVUMETER \
 	uint32_t vol_avg = avg_u32(safe_abs_32(vol_lx), safe_abs_32(vol_rx)); \
-	if (max < vol_avg) max = vol_avg;
+	if (max < vol_avg) \
+		max = vol_avg;
 
 // FIXME why are these backwards? what?
 #define SNDMIX_STOREMONOVOL \
@@ -263,14 +257,12 @@
 ///////////////////////////////////////////////////
 // Resonant Filters
 
-static inline SCHISM_ALWAYS_INLINE
-int64_t MixerMul32To64(int32_t x, int32_t y)
+static inline SCHISM_ALWAYS_INLINE int64_t MixerMul32To64(int32_t x, int32_t y)
 {
 	return (int64_t)x * y;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int32_t FlitClip(int32_t x)
+static inline SCHISM_ALWAYS_INLINE int32_t FlitClip(int32_t x)
 {
 	return CLAMP(x, -65536, 65534);
 }
@@ -281,82 +273,83 @@ int32_t FlitClip(int32_t x)
 	int32_t t##chn;
 
 #define SNDMIX_PROCESSFILTER(outchn, volume) \
-	t##outchn = rshift_signed( \
-		MixerMul32To64(volume, chan->filter_a0) \
-			+ MixerMul32To64(FlitClip(fy##outchn##1), chan->filter_b0) \
-			+ MixerMul32To64(FlitClip(fy##outchn##2), chan->filter_b1) \
-			+ lshift_signed(1, FILTERPRECISION - 1), \
+	t##outchn = rshift_signed(MixerMul32To64(volume, chan->filter_a0) \
+					  + MixerMul32To64(FlitClip(fy##outchn##1), chan->filter_b0) \
+					  + MixerMul32To64(FlitClip(fy##outchn##2), chan->filter_b1) \
+					  + lshift_signed(1, FILTERPRECISION - 1), \
 		FILTERPRECISION); \
-	fy##outchn##2 = fy##outchn##1; fy##outchn##1 = t##outchn; volume = t##outchn;
+	fy##outchn##2 = fy##outchn##1; \
+	fy##outchn##1 = t##outchn; \
+	volume = t##outchn;
 
 #define MIX_END_FILTER(chn) \
 	channel->filter_y[chn][0] = fy##chn##1; \
 	channel->filter_y[chn][1] = fy##chn##2;
 
 // aliases
-#define MIX_BEGIN_MONO_FILTER MIX_BEGIN_FILTER(0)
-#define MIX_END_MONO_FILTER MIX_END_FILTER(0)
+#define MIX_BEGIN_MONO_FILTER    MIX_BEGIN_FILTER(0)
+#define MIX_END_MONO_FILTER      MIX_END_FILTER(0)
 #define SNDMIX_PROCESSMONOFILTER SNDMIX_PROCESSFILTER(0, vol)
 
-#define MIX_BEGIN_STEREO_FILTER MIX_BEGIN_FILTER(0) MIX_BEGIN_FILTER(1)
-#define MIX_END_STEREO_FILTER MIX_END_FILTER(0) MIX_END_FILTER(1)
+#define MIX_BEGIN_STEREO_FILTER    MIX_BEGIN_FILTER(0) MIX_BEGIN_FILTER(1)
+#define MIX_END_STEREO_FILTER      MIX_END_FILTER(0) MIX_END_FILTER(1)
 #define SNDMIX_PROCESSSTEREOFILTER SNDMIX_PROCESSFILTER(0, vol_l) SNDMIX_PROCESSFILTER(1, vol_r)
 
 #define MIX_BEGIN_RAMP \
 	int32_t right_ramp_volume = channel->right_ramp_volume; \
-	int32_t left_ramp_volume  = channel->left_ramp_volume;
+	int32_t left_ramp_volume = channel->left_ramp_volume;
 
 #define MIX_END_RAMP \
 	channel->right_ramp_volume = right_ramp_volume; \
-	channel->right_volume      = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
-	channel->left_ramp_volume  = left_ramp_volume; \
-	channel->left_volume       = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION);
+	channel->right_volume = rshift_signed(right_ramp_volume, VOLUMERAMPPRECISION); \
+	channel->left_ramp_volume = left_ramp_volume; \
+	channel->left_volume = rshift_signed(left_ramp_volume, VOLUMERAMPPRECISION);
 
 //////////////////////////////////////////////////////////
 // Interfaces
 
-typedef void(* mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
+typedef void (*mix_interface_t)(song_voice_t *, int32_t *, int32_t *);
 
 /* this is the big one */
-#define DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, RAMP, RAMPUPPER, BEGINRAMP, ENDRAMP) \
-	static void FLTNAM##CHNS##BITS##Bit##RESAMPLING##RAMP##Mix(song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
+#define DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, \
+	ENDFILTER, RAMP, RAMPUPPER, BEGINRAMP, ENDRAMP) \
+	static void FLTNAM##CHNS##BITS##Bit##RESAMPLING##RAMP##Mix( \
+		song_voice_t *channel, int32_t *pbuffer, int32_t *pbufmax) \
 	{ \
 		struct song_smp_pos position; \
 		BEGINRAMP \
 		BEGINFILTER \
 		SNDMIX_BEGINSAMPLELOOP(BITS) \
-		SNDMIX_GET##RESAMPUPPER##POS \
-		SNDMIX_GET##CHNSUPPER##VOL##RESAMPUPPER(BITS) \
-		FILTER \
-		SNDMIX_##RAMPUPPER##CHNSUPPER##VOL \
-		SNDMIX_STOREVUMETER \
-		SNDMIX_ENDSAMPLELOOP \
-		ENDFILTER \
-		ENDRAMP \
+		SNDMIX_GET##RESAMPUPPER##POS SNDMIX_GET##CHNSUPPER##VOL##RESAMPUPPER(BITS) \
+			FILTER SNDMIX_##RAMPUPPER##CHNSUPPER##VOL SNDMIX_STOREVUMETER SNDMIX_ENDSAMPLELOOP ENDFILTER \
+				ENDRAMP \
 	}
 
-#define DEFINE_MIX_INTERFACE_RAMP(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER) \
-	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
-		/* nothing */, STORE, /* nothing */,  /* nothing */) \
-	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER, \
-		Ramp,          RAMP,  MIX_BEGIN_RAMP, MIX_END_RAMP)
+#define DEFINE_MIX_INTERFACE_RAMP( \
+	BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, ENDFILTER) \
+	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, \
+		ENDFILTER, /* nothing */, STORE, /* nothing */, \
+		/* nothing */) \
+	DEFINE_MIX_INTERFACE_ALL(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, FLTNAM, FILTER, BEGINFILTER, \
+		ENDFILTER, Ramp, RAMP, MIX_BEGIN_RAMP, MIX_END_RAMP)
 
 /* defines all resampling variations */
 #define DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER) \
-	DEFINE_MIX_INTERFACE_RAMP(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, \
-		/* nothing */, /* nothing */, /* nothing */, /* nothing */) \
-	DEFINE_MIX_INTERFACE_RAMP(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, \
-		Filter, SNDMIX_PROCESS##CHNSUPPER##FILTER, MIX_BEGIN_##CHNSUPPER##_FILTER, MIX_END_##CHNSUPPER##_FILTER)
+	DEFINE_MIX_INTERFACE_RAMP( \
+		BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, /* nothing */, /* nothing */, /* nothing */, \
+		/* nothing */) \
+	DEFINE_MIX_INTERFACE_RAMP(BITS, CHNS, CHNSUPPER, RESAMPLING, RESAMPUPPER, Filter, \
+		SNDMIX_PROCESS##CHNSUPPER##FILTER, MIX_BEGIN_##CHNSUPPER##_FILTER, MIX_END_##CHNSUPPER##_FILTER)
 
 #define DEFINE_MIX_INTERFACE_RESAMPLING(BITS, CHNS, CHNSUPPER) \
 	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, /* none */, NOIDO) \
-	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Linear,     LINEAR) \
-	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Spline,     SPLINE) \
-	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, FirFilter,  FIRFILTER)
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Linear, LINEAR) \
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, Spline, SPLINE) \
+	DEFINE_MIX_INTERFACE_FILTER(BITS, CHNS, CHNSUPPER, FirFilter, FIRFILTER)
 
 #define DEFINE_MIX_INTERFACE_CHANNELS(BITS) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(BITS, Mono,   MONO) \
-	DEFINE_MIX_INTERFACE_RESAMPLING(BITS, Stereo, STEREO) \
+	DEFINE_MIX_INTERFACE_RESAMPLING(BITS, Mono, MONO) \
+	DEFINE_MIX_INTERFACE_RESAMPLING(BITS, Stereo, STEREO)
 
 DEFINE_MIX_INTERFACE_CHANNELS(8)
 DEFINE_MIX_INTERFACE_CHANNELS(16)
@@ -367,7 +360,7 @@ DEFINE_MIX_INTERFACE_CHANNELS(16)
 #define BEGIN_RESAMPLE_INTERFACE(FUNC, SAMPLETYPE, NUMCHANNELS) \
 	void FUNC(SAMPLETYPE *oldbuf, SAMPLETYPE *newbuf, uint32_t oldlen, uint32_t newlen) \
 	{ \
-		struct song_smp_pos position = csf_smp_pos(0,0); \
+		struct song_smp_pos position = csf_smp_pos(0, 0); \
 		const SAMPLETYPE *p = oldbuf; \
 		SAMPLETYPE *pvol = newbuf; \
 		const SAMPLETYPE *pbufmax = &newbuf[newlen * NUMCHANNELS]; \
@@ -375,37 +368,44 @@ DEFINE_MIX_INTERFACE_CHANNELS(16)
 		do {
 
 #define END_RESAMPLE_INTERFACE_MONO \
-			*pvol = vol; \
-			pvol++; \
-			position = csf_smp_pos_add(position, increment); \
-		} while (pvol < pbufmax); \
+	*pvol = vol; \
+	pvol++; \
+	position = csf_smp_pos_add(position, increment); \
+	} \
+	while (pvol < pbufmax) \
+		; \
 	}
 
 #define END_RESAMPLE_INTERFACE_STEREO \
-			pvol[0] = vol_l; \
-			pvol[1] = vol_r; \
-			pvol += 2; \
-			position = csf_smp_pos_add(position, increment); \
-		} while (pvol < pbufmax); \
+	pvol[0] = vol_l; \
+	pvol[1] = vol_r; \
+	pvol += 2; \
+	position = csf_smp_pos_add(position, increment); \
+	} \
+	while (pvol < pbufmax) \
+		; \
 	}
 
 // Public Resampling Methods
 #define DEFINE_MONO_RESAMPLE_INTERFACE(bits) \
 	BEGIN_RESAMPLE_INTERFACE(ResampleMono##bits##BitFirFilter, int##bits##_t, 1) \
-		SNDMIX_GETFIRFILTERPOS \
-		SNDMIX_GETMONOVOLFIRFILTER(bits) \
-		vol  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
-		vol = CLAMP(vol, INT##bits##_MIN, INT##bits##_MAX); \
+	SNDMIX_GETFIRFILTERPOS \
+	SNDMIX_GETMONOVOLFIRFILTER(bits) \
+	vol >>= (WFIR_16SHIFT - WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it \
+						      always outputs to 16bits */ \
+	vol = CLAMP(vol, INT##bits##_MIN, INT##bits##_MAX); \
 	END_RESAMPLE_INTERFACE_MONO
 
 #define DEFINE_STEREO_RESAMPLE_INTERFACE(bits) \
 	BEGIN_RESAMPLE_INTERFACE(ResampleStereo##bits##BitFirFilter, int##bits##_t, 2) \
-		SNDMIX_GETFIRFILTERPOS \
-		SNDMIX_GETSTEREOVOLFIRFILTER(bits) \
-		vol_l  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
-		vol_r  >>= (WFIR_16SHIFT-WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it always outputs to 16bits */ \
-		vol_l = CLAMP(vol_l, INT##bits##_MIN, INT##bits##_MAX); \
-		vol_r = CLAMP(vol_r, INT##bits##_MIN, INT##bits##_MAX); \
+	SNDMIX_GETFIRFILTERPOS \
+	SNDMIX_GETSTEREOVOLFIRFILTER(bits) \
+	vol_l >>= (WFIR_16SHIFT - WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it \
+							always outputs to 16bits */ \
+	vol_r >>= (WFIR_16SHIFT - WFIR_##bits##SHIFT);  /* This is used to compensate, since the code assumes that it \
+							always outputs to 16bits */ \
+	vol_l = CLAMP(vol_l, INT##bits##_MIN, INT##bits##_MAX); \
+	vol_r = CLAMP(vol_r, INT##bits##_MIN, INT##bits##_MAX); \
 	END_RESAMPLE_INTERFACE_STEREO
 
 DEFINE_MONO_RESAMPLE_INTERFACE(8)
@@ -425,19 +425,17 @@ DEFINE_STEREO_RESAMPLE_INTERFACE(16)
 //      [b3]    filter
 //      [b5-b4] src type
 
-#define MIXNDX_16BIT        0x01
-#define MIXNDX_STEREO       0x02
-#define MIXNDX_RAMP         0x04
-#define MIXNDX_FILTER       0x08
-#define MIXNDX_LINEARSRC    0x10
-#define MIXNDX_SPLINESRC    0x20
-#define MIXNDX_FIRSRC       0x30
+#define MIXNDX_16BIT     0x01
+#define MIXNDX_STEREO    0x02
+#define MIXNDX_RAMP      0x04
+#define MIXNDX_FILTER    0x08
+#define MIXNDX_LINEARSRC 0x10
+#define MIXNDX_SPLINESRC 0x20
+#define MIXNDX_FIRSRC    0x30
 
 #define BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, ramp) \
-	filter##Mono8Bit##resampling##ramp##Mix, \
-	filter##Mono16Bit##resampling##ramp##Mix, \
-	filter##Stereo8Bit##resampling##ramp##Mix, \
-	filter##Stereo16Bit##resampling##ramp##Mix,
+	filter##Mono8Bit##resampling##ramp##Mix, filter##Mono16Bit##resampling##ramp##Mix, \
+		filter##Stereo8Bit##resampling##ramp##Mix, filter##Stereo16Bit##resampling##ramp##Mix,
 
 #define BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, filter) \
 	BUILD_MIX_FUNCTION_TABLE_RAMP(resampling, filter, /* none */) \
@@ -448,20 +446,18 @@ DEFINE_STEREO_RESAMPLE_INTERFACE(16)
 	BUILD_MIX_FUNCTION_TABLE_FILTER(resampling, Filter)
 
 // mix_(bits)(m/s)[_filt]_(interp/spline/fir/whatever)[_ramp]
-static const mix_interface_t mix_functions[2 * 2 * 16] = {
-	BUILD_MIX_FUNCTION_TABLE(/* none */)
-	BUILD_MIX_FUNCTION_TABLE(Linear)
-	BUILD_MIX_FUNCTION_TABLE(Spline)
-	BUILD_MIX_FUNCTION_TABLE(FirFilter)
-};
+static const mix_interface_t mix_functions[2 * 2 * 16] = {BUILD_MIX_FUNCTION_TABLE(/* none */)
+		BUILD_MIX_FUNCTION_TABLE(Linear) BUILD_MIX_FUNCTION_TABLE(Spline) BUILD_MIX_FUNCTION_TABLE(FirFilter)};
 
 /* yap */
-static inline SCHISM_ALWAYS_INLINE
-uint32_t distance_to_buffer_length(struct song_smp_pos from, struct song_smp_pos to, struct song_smp_pos increment)
+static inline SCHISM_ALWAYS_INLINE uint32_t distance_to_buffer_length(
+	struct song_smp_pos from, struct song_smp_pos to, struct song_smp_pos increment)
 {
 	return (csf_smp_pos_lt(from, to))
-	     ? (((uint32_t)csf_smp_pos_div(csf_smp_pos_sub(csf_smp_pos_sub(to, from), csf_smp_pos(1,0)), increment)) + 1)
-		 : 1;
+		       ? (((uint32_t)csf_smp_pos_div(
+				  csf_smp_pos_sub(csf_smp_pos_sub(to, from), csf_smp_pos(1, 0)), increment))
+				 + 1)
+		       : 1;
 }
 
 struct mix_loop_state {
@@ -486,21 +482,23 @@ static void mix_loop_state_update_lookahead_ptrs(struct mix_loop_state *mls, son
 	// - The loop lookahead stuff might still fail for samples with backward loops.
 	mls->smp_ptr = channel->ptr_sample ? (int8_t *const)(channel->ptr_sample->data) : NULL;
 	mls->lookahead_ptr = NULL;
-	mls->lookahead_start = (channel->loop_end < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
-		? channel->loop_start
-		: MAX(channel->loop_start, channel->loop_end - MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
+	mls->lookahead_start
+		= (channel->loop_end < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
+			  ? channel->loop_start
+			  : MAX(channel->loop_start, channel->loop_end - MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE);
 	// This shouldn't be necessary with interpolation disabled but with that conditional
 	// it causes weird precision loss within the sample, hence why I've removed it. This
 	// shouldn't be that heavy anyway :p
 	if (channel->ptr_sample && (channel->flags & CHN_LOOP)) {
 		song_sample_t *pins = channel->ptr_sample;
 
-		uint32_t lookahead_offset = (((channel->flags & CHN_SUSTAINLOOP) ? 7 : 3) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
-			+ (pins->length - channel->loop_end);
+		uint32_t lookahead_offset
+			= (((channel->flags & CHN_SUSTAINLOOP) ? 7 : 3) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE)
+			  + (pins->length - channel->loop_end);
 
-		mls->lookahead_ptr = mls->smp_ptr + (lookahead_offset
-			* ((pins->flags & CHN_STEREO) ? 2 : 1)
-			* ((pins->flags & CHN_16BIT)  ? 2 : 1));
+		mls->lookahead_ptr = mls->smp_ptr
+				     + (lookahead_offset * ((pins->flags & CHN_STEREO) ? 2 : 1)
+					     * ((pins->flags & CHN_16BIT) ? 2 : 1));
 	}
 }
 
@@ -537,7 +535,7 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 	if (csf_smp_pos_lt(chan->position, csf_smp_pos(loop_start, 0))) {
 		if (csf_smp_pos_is_negative(increment)) {
 			// Invert loop for bidi loops
-			struct song_smp_pos delta = csf_smp_pos_sub(csf_smp_pos(loop_start, 0), chan->position); 
+			struct song_smp_pos delta = csf_smp_pos_sub(csf_smp_pos(loop_start, 0), chan->position);
 			chan->position = csf_smp_pos_add(csf_smp_pos(loop_start, 0), delta);
 
 			if (csf_smp_pos_lt(chan->position, csf_smp_pos(loop_start, 0))
@@ -550,8 +548,8 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 			// go forward
 			chan->flags &= ~(CHN_PINGPONGFLAG);
 
-			if ((!(chan->flags & CHN_LOOP)) ||
-				(csf_smp_pos_ge(chan->position, csf_smp_pos(chan->length, 0)))) {
+			if ((!(chan->flags & CHN_LOOP))
+				|| (csf_smp_pos_ge(chan->position, csf_smp_pos(chan->length, 0)))) {
 				chan->position = csf_smp_pos(chan->length, 0);
 				return 0;
 			}
@@ -577,11 +575,14 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 			chan->flags |= CHN_PINGPONGFLAG;
 			// adjust loop position
 			struct song_smp_pos overshoot = csf_smp_pos_sub(chan->position, csf_smp_pos(chan->length, 0));
-			struct song_smp_pos loop_length = csf_smp_pos(chan->loop_end - chan->loop_start - PINGPONG_OFFSET, 0);
+			struct song_smp_pos loop_length
+				= csf_smp_pos(chan->loop_end - chan->loop_start - PINGPONG_OFFSET, 0);
 			if (csf_smp_pos_lt(overshoot, loop_length)) {
-				chan->position = csf_smp_pos_sub(csf_smp_pos(chan->length - PINGPONG_OFFSET, 0), overshoot);
+				chan->position
+					= csf_smp_pos_sub(csf_smp_pos(chan->length - PINGPONG_OFFSET, 0), overshoot);
 			} else {
-				/* not 100% accurate, but only matters for extremely small loops played at extremely high frequencies */
+				/* not 100% accurate, but only matters for extremely small loops played at extremely
+				 * high frequencies */
 				chan->position = csf_smp_pos(chan->loop_start, 0);
 			}
 		} else {
@@ -625,7 +626,8 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 	int32_t pos_dest = csf_smp_pos_get_whole(csf_smp_pos_add(chan->position, inc_samples));
 
 	const int at_loop_start = (csf_smp_pos_ge(chan->position, csf_smp_pos(chan->loop_start, 0))
-		&& csf_smp_pos_lt(chan->position, csf_smp_pos(chan->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE, 0)));
+				   && csf_smp_pos_lt(chan->position,
+					   csf_smp_pos(chan->loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE, 0)));
 	if (!at_loop_start)
 		chan->flags &= ~(CHN_LOOP_WRAPPED);
 
@@ -636,25 +638,34 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 			if (csf_smp_pos_is_negative(chan->increment)) {
 				// going backwards and we're in the loop. We have to set the sample count
 				// from the position from lookahead buffer start...
-				sample_count = distance_to_buffer_length(csf_smp_pos(mls->lookahead_start, 0), chan->position, inv);
+				sample_count = distance_to_buffer_length(
+					csf_smp_pos(mls->lookahead_start, 0), chan->position, inv);
 				chan->current_sample_data = mls->lookahead_ptr;
 			} else if (csf_smp_pos_le(chan->position, csf_smp_pos(chan->loop_end, 0))) {
 				// going forwards, and we're in the loop
-				sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(chan->loop_end, 0), inv);
+				sample_count = distance_to_buffer_length(
+					chan->position, csf_smp_pos(chan->loop_end, 0), inv);
 				chan->current_sample_data = mls->lookahead_ptr;
 			} else {
 				// loop has ended, fix the position and keep going
-				sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(chan->length, 0), inv);
+				sample_count
+					= distance_to_buffer_length(chan->position, csf_smp_pos(chan->length, 0), inv);
 			}
 			checkdest = 0;
 		} else if ((chan->flags & CHN_LOOP_WRAPPED) && at_loop_start) {
 			// Interpolate properly after looping
-			sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE, 0), inv);
-			chan->current_sample_data = mls->lookahead_ptr + ((chan->loop_end - loop_start) * ((chan->ptr_sample->flags & CHN_STEREO) ? 2 : 1) * ((chan->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
+			sample_count = distance_to_buffer_length(chan->position,
+				csf_smp_pos(loop_start + MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE, 0), inv);
+			chan->current_sample_data
+				= mls->lookahead_ptr
+				  + ((chan->loop_end - loop_start) * ((chan->ptr_sample->flags & CHN_STEREO) ? 2 : 1)
+					  * ((chan->ptr_sample->flags & CHN_16BIT) ? 2 : 1));
 			checkdest = 0;
-		} else if (csf_smp_pos_is_positive(chan->increment) && pos_dest >= (int32_t)mls->lookahead_start && sample_count > 1) {
+		} else if (csf_smp_pos_is_positive(chan->increment) && pos_dest >= (int32_t)mls->lookahead_start
+			   && sample_count > 1) {
 			// Don't go past the loop start!
-			sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(mls->lookahead_start, 0), inv);
+			sample_count
+				= distance_to_buffer_length(chan->position, csf_smp_pos(mls->lookahead_start, 0), inv);
 			checkdest = 0;
 		}
 	}
@@ -662,10 +673,12 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 	if (checkdest) {
 		if (csf_smp_pos_is_negative(increment)) {
 			if (pos_dest < loop_start)
-				sample_count = distance_to_buffer_length(csf_smp_pos(loop_start, 0), chan->position, inv);
+				sample_count
+					= distance_to_buffer_length(csf_smp_pos(loop_start, 0), chan->position, inv);
 		} else {
 			if (pos_dest >= (int32_t)chan->length)
-				sample_count = distance_to_buffer_length(chan->position, csf_smp_pos(chan->length, 0), inv);
+				sample_count
+					= distance_to_buffer_length(chan->position, csf_smp_pos(chan->length, 0), inv);
 		}
 	}
 
@@ -683,7 +696,8 @@ static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_
 	size_t buflen;
 	int32_t lenwhole;
 
-	buf = (char *)channel->current_sample_data + (csf_smp_pos_get_whole(channel->position) * (1 + !!(channel->flags & CHN_16BIT)));
+	buf = (char *)channel->current_sample_data
+	      + (csf_smp_pos_get_whole(channel->position) * (1 + !!(channel->flags & CHN_16BIT)));
 
 	lenwhole = csf_smp_pos_get_whole(len);
 
@@ -749,7 +763,7 @@ static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_
 
 uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 {
-	int32_t* ofsl, *ofsr;
+	int32_t *ofsl, *ofsr;
 	unsigned int nchused, nchmixed;
 
 	if (!count)
@@ -770,8 +784,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		int32_t nsamples;
 		int32_t *pbuffer;
 
-		if ((!channel->current_sample_data || !channel->ptr_sample /* HAX */)
-			&& !channel->lofs
+		if ((!channel->current_sample_data || !channel->ptr_sample /* HAX */) && !channel->lofs
 			&& !channel->rofs)
 			continue;
 
@@ -802,9 +815,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 		nsamples = count;
 
 		if (csf->multi_write) {
-			int32_t master = (csf->voice_mix[nchan] < MAX_CHANNELS)
-				? csf->voice_mix[nchan]
-				: (channel->master_channel - 1);
+			int32_t master = (csf->voice_mix[nchan] < MAX_CHANNELS) ? csf->voice_mix[nchan]
+										: (channel->master_channel - 1);
 			pbuffer = csf->multi_write[master].buffer;
 			csf->multi_write[master].used = 1;
 		} else {
@@ -841,7 +853,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 				// Stopping the channel
 				channel->current_sample_data = NULL;
 				channel->length = 0;
-				channel->position = csf_smp_pos(0,0);
+				channel->position = csf_smp_pos(0, 0);
 				channel->ramp_length = 0;
 				end_channel_ofs(channel, pbuffer, nsamples);
 				*ofsr += channel->rofs;
@@ -869,9 +881,8 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 				// Choose function for mixing
 				mix_interface_t mix_func;
-				mix_func = channel->ramp_length
-					? mix_functions[flags | MIXNDX_RAMP]
-					: mix_functions[flags];
+				mix_func = channel->ramp_length ? mix_functions[flags | MIXNDX_RAMP]
+								: mix_functions[flags];
 
 				int32_t *pbufmax = pbuffer + (smpcount * 2);
 				channel->rofs = -*(pbufmax - 2);
@@ -894,8 +905,7 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 					channel->left_volume = channel->left_volume_new;
 					channel->right_ramp = channel->left_ramp = 0;
 
-					if ((channel->flags & CHN_NOTEFADE)
-						&& (!(channel->fadeout_volume))) {
+					if ((channel->flags & CHN_NOTEFADE) && (!(channel->fadeout_volume))) {
 						channel->length = 0;
 						channel->current_sample_data = NULL;
 					}

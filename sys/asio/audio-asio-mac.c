@@ -1,7 +1,7 @@
 /**
  * Incomplete ASIO interface definitions -- reverse-engineered from existing
  * binaries and various public sources.
- * 
+ *
  * Copyright (C) 2025-2026 Paper
  *
  * This software is provided 'as-is', without any express or implied
@@ -19,23 +19,23 @@
  * 2. Altered source versions must be plainly marked as such, and must not be
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
-**/
+ **/
 
 /* Mac OS ASIO functions */
 
 #include "audio-asio.h"
 
+#include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 
-#include <Files.h>
 #include <CodeFragments.h>
-#include <Resources.h>
-#include <TextUtils.h>
+#include <Files.h>
 #include <Folders.h>
 #include <Processes.h>
+#include <Resources.h>
+#include <TextUtils.h>
 
 /* Macintosh ASIO structure.. */
 struct IAsio {
@@ -58,7 +58,8 @@ struct IAsio {
 	AsioError (*SetClockSource)(uint32_t src);
 	AsioError (*GetSamplePosition)(uint64_t *unk1, uint64_t *unk2);
 	AsioError (*GetChannelInfo)(struct AsioChannelInfo *pinfo);
-	AsioError (*CreateBuffers)(struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs);
+	AsioError (*CreateBuffers)(struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size,
+		struct AsioCreateBufferCallbacks *cbs);
 	AsioError (*DestroyBuffers)(void);
 	AsioError (*ControlPanel)(void);
 	AsioError (*Future)(uint32_t which);
@@ -152,8 +153,7 @@ static int Asio_Mac_GetParentPath(FSSpec *spec)
 }
 
 /* 'len' can be zero, in which case strlen is called on data */
-static int Asio_Mac_PascalStrAppend(unsigned char pstr[256],
-	const char *data, size_t len)
+static int Asio_Mac_PascalStrAppend(unsigned char pstr[256], const char *data, size_t len)
 {
 	if (!len)
 		return 0; /* do nothing */
@@ -168,15 +168,13 @@ static int Asio_Mac_PascalStrAppend(unsigned char pstr[256],
 
 /* Specialization of PascalStrAppend for pascal strings as
  * a source */
-static int Asio_Mac_PascalStrAppendP(unsigned char pdst[256],
-	const unsigned char psrc[256])
+static int Asio_Mac_PascalStrAppendP(unsigned char pdst[256], const unsigned char psrc[256])
 {
 	return Asio_Mac_PascalStrAppend(pdst, psrc + 1, psrc[0]);
 }
 
 /* Copy data into a Pascal string */
-static int Asio_Mac_PascalStrCopy(unsigned char pstr[256],
-	const char *data, size_t len)
+static int Asio_Mac_PascalStrCopy(unsigned char pstr[256], const char *data, size_t len)
 {
 	pstr[0] = 0;
 	return Asio_Mac_PascalStrAppend(pstr, data, len);
@@ -196,12 +194,9 @@ static char *Asio_Mac_PascalStrDup(unsigned char *pstr)
 
 void Asio_DriverPoll(void)
 {
-	char DriverDirName[] = {
-		13, /* length */
+	char DriverDirName[] = {13, /* length */
 		':', /* partial path */
-		'A', 'S', 'I', 'O', ' ',
-		'D', 'r', 'i', 'v', 'e', 'r', 's'
-	};
+		'A', 'S', 'I', 'O', ' ', 'D', 'r', 'i', 'v', 'e', 'r', 's'};
 	FSSpec spec;
 	WDPBRec pb;
 
@@ -241,10 +236,9 @@ void Asio_DriverPoll(void)
 			 * If we don't have any drivers, this will just
 			 * allocate 4 (probably more than enough anyway) */
 			if (drivers_size >= drivers_alloc) {
-				drivers_alloc = (drivers_alloc)
-					? (drivers_alloc * 2)
-					/* sane default value I guess */
-					: 4;
+				drivers_alloc = (drivers_alloc) ? (drivers_alloc * 2)
+								/* sane default value I guess */
+								: 4;
 
 				dev = realloc(drivers, drivers_alloc * sizeof(struct asio_device));
 				if (!dev)
@@ -333,8 +327,9 @@ IAsio *Asio_DriverGet(uint32_t x)
 	}
 	HLock(res);
 	err = GetMemFragment(*res, GetHandleSize(res),
-		"\xd" "ASIO fragment", kReferenceCFrag, &conn,
-		(Ptr *)&mainfunc, errname);
+		"\xd"
+		"ASIO fragment",
+		kReferenceCFrag, &conn, (Ptr *)&mainfunc, errname);
 	HUnlock(res);
 
 	/* We can do a little bit less redundant cleanup
@@ -342,9 +337,7 @@ IAsio *Asio_DriverGet(uint32_t x)
 	 * failure conditions next */
 	asio = calloc(1, sizeof(*asio));
 
-	if ((err != noErr)
-			|| (mainfunc && mainfunc() != 0x4153494F /* 'ASIO' */)
-			|| !asio) {
+	if ((err != noErr) || (mainfunc && mainfunc() != 0x4153494F /* 'ASIO' */) || !asio) {
 		free(asio);
 		ReleaseResource(res);
 		CloseResFile(resfile);
@@ -352,22 +345,22 @@ IAsio *Asio_DriverGet(uint32_t x)
 	}
 
 #define LOAD_SYMBOL(name, namemangled) \
-do { \
-	unsigned char pname[256]; \
-	CFragSymbolClass cls; \
+	do { \
+		unsigned char pname[256]; \
+		CFragSymbolClass cls; \
 \
-	/* TODO check 'cls' and make sure we have the Right Thing */ \
-	Asio_Mac_PascalStrCopy(pname, #namemangled, sizeof(#namemangled) - 1); \
-	err = FindSymbol(conn, pname, (Ptr *)&asio->name, &cls); \
+		/* TODO check 'cls' and make sure we have the Right Thing */ \
+		Asio_Mac_PascalStrCopy(pname, #namemangled, sizeof(#namemangled) - 1); \
+		err = FindSymbol(conn, pname, (Ptr *)&asio->name, &cls); \
 \
-	if (err != noErr) { \
-		free(asio); \
-		CloseConnection(&conn); \
-		ReleaseResource(res); \
-		CloseResFile(resfile); \
-		return NULL; \
-	} \
-} while (0)
+		if (err != noErr) { \
+			free(asio); \
+			CloseConnection(&conn); \
+			ReleaseResource(res); \
+			CloseResFile(resfile); \
+			return NULL; \
+		} \
+	} while (0)
 
 	LOAD_SYMBOL(OutputReady, ASIOOutputReady__Fv);
 	LOAD_SYMBOL(Future, ASIOFuture__FlPv);
@@ -510,7 +503,8 @@ AsioError IAsio_GetChannelInfo(IAsio *This, struct AsioChannelInfo *pinfo)
 	return This->GetChannelInfo(pinfo);
 }
 
-AsioError IAsio_CreateBuffers(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs)
+AsioError IAsio_CreateBuffers(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size,
+	struct AsioCreateBufferCallbacks *cbs)
 {
 	return This->CreateBuffers(bufs, numbufs, buffer_size, cbs);
 }
@@ -535,7 +529,10 @@ AsioError IAsio_OutputReady(IAsio *This)
 	return This->OutputReady();
 }
 
-int32_t Asio_Init(void) { return 0; }
+int32_t Asio_Init(void)
+{
+	return 0;
+}
 void Asio_Quit(void)
 {
 	Asio_Mac_FreeDrivers();

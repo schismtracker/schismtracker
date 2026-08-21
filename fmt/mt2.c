@@ -37,8 +37,7 @@ int fmt_mt2_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	unsigned char magic[4];
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "MT20", 4))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "MT20", 4))
 		return 0;
 
 	unsigned char title[64];

@@ -265,8 +265,8 @@ enum {
 
 typedef uint32_t schism_scancode_t;
 
-#define SCHISM_KEYSYM_SCANCODE_MASK (0x40000000U)
-#define SCHISM_SCANCODE_TO_KEYSYM(X)  ((X) | SCHISM_KEYSYM_SCANCODE_MASK)
+#define SCHISM_KEYSYM_SCANCODE_MASK  (0x40000000U)
+#define SCHISM_SCANCODE_TO_KEYSYM(X) ((X) | SCHISM_KEYSYM_SCANCODE_MASK)
 
 enum {
 	SCHISM_KEYSYM_UNKNOWN = 0,
@@ -606,7 +606,7 @@ int kbd_is_modifier_key(struct key_event *k);
 
 int kbd_key_repeat_enabled(void);
 void kbd_handle_key_repeat(void);
-void kbd_cache_key_repeat(struct key_event* kk);
+void kbd_cache_key_repeat(struct key_event *kk);
 void kbd_empty_key_repeat(void);
 
 /* use 0 for delay to (re)set the default rate. */

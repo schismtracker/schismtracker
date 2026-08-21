@@ -36,9 +36,9 @@ enum {
 };
 
 enum {
-	S3I_PCM_FLAG_LOOP   = 0x01,
+	S3I_PCM_FLAG_LOOP = 0x01,
 	S3I_PCM_FLAG_STEREO = 0x02,
-	S3I_PCM_FLAG_16BIT  = 0x04,
+	S3I_PCM_FLAG_16BIT = 0x04,
 };
 
 /* TODO: s3m.c should use this */
@@ -125,7 +125,7 @@ static int load_s3i_sample(slurp_t *fp, song_sample_t *smp, int with_data)
 		}
 	} else if (type == S3I_TYPE_ADLIB) {
 		smp->flags |= CHN_ADLIB;
-		smp->flags &= ~(CHN_LOOP|CHN_16BIT);
+		smp->flags &= ~(CHN_LOOP | CHN_16BIT);
 
 		slurp_seek(fp, 16, SEEK_SET);
 		if (slurp_read(fp, smp->adlib_bytes, sizeof(smp->adlib_bytes)) != sizeof(smp->adlib_bytes))
@@ -205,9 +205,8 @@ void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
 		hdr.spec.pcm.length = bswapLE32(smp->length);
 		hdr.spec.pcm.loop_start = bswapLE32(smp->loop_start);
 		hdr.spec.pcm.loop_end = bswapLE32(smp->loop_end);
-		hdr.flags = ((smp->flags & CHN_LOOP) ? 1 : 0)
-			| ((smp->flags & CHN_STEREO) ? 2 : 0)
-			| ((smp->flags & CHN_16BIT) ? 4 : 0);
+		hdr.flags = ((smp->flags & CHN_LOOP) ? 1 : 0) | ((smp->flags & CHN_STEREO) ? 2 : 0)
+			    | ((smp->flags & CHN_16BIT) ? 4 : 0);
 		memcpy(hdr.tag, "SCRS", 4);
 	} else {
 		hdr.type = S3I_TYPE_NONE;
@@ -223,7 +222,10 @@ void s3i_write_header(disko_t *fp, song_sample_t *smp, uint32_t sdata)
 	for (; n >= 0; n--)
 		hdr.name[n] = smp->name[n] ? smp->name[n] : 32;
 
-#define WRITE_VALUE(x) do { disko_write(fp, &hdr.x, sizeof(hdr.x)); } while (0)
+#define WRITE_VALUE(x) \
+	do { \
+		disko_write(fp, &hdr.x, sizeof(hdr.x)); \
+	} while (0)
 
 	WRITE_VALUE(type);
 	WRITE_VALUE(filename);

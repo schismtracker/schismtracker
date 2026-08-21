@@ -24,26 +24,26 @@
 #include "headers.h"
 
 #include "it.h"
-#include "config.h"
 #include "page.h"
 #include "song.h"
-#include "slurp.h"
-#include "config-parser.h"
-#include "mem.h"
-#include "str.h"
-#include "mt.h"
 #include "atomic.h"
+#include "config-parser.h"
+#include "config.h"
+#include "mem.h"
+#include "mt.h"
+#include "slurp.h"
+#include "str.h"
 
-#include "disko.h"
 #include "backend/audio.h"
+#include "disko.h"
 #include "events.h"
 
 #include "midi.h"
 
 #include "player/cmixer.h"
-#include "player/sndfile.h"
 #include "player/snd_fm.h"
 #include "player/snd_gm.h"
+#include "player/sndfile.h"
 
 // Default audio configuration
 
@@ -91,12 +91,12 @@ static char *device_name = NULL;
 static uint32_t device_id = 0;
 
 /* Whatever was in the config file. This is used if no driver is given to audio_setup. */
-static char cfg_audio_driver[256] = { 0 };
-static char cfg_audio_device[256] = { 0 };
+static char cfg_audio_driver[256] = {0};
+static char cfg_audio_device[256] = {0};
 
 // ------------------------------------------------------------------------
 
-struct audio_device* audio_device_list = NULL;
+struct audio_device *audio_device_list = NULL;
 size_t audio_device_list_size = 0;
 
 static schism_audio_device_t *current_audio_device = NULL;
@@ -116,8 +116,7 @@ static const schism_audio_backend_t *backends[] = {
 	&schism_audio_backend_sdl2,
 #endif
 #if defined(SCHISM_WIN32)
-	&schism_audio_backend_dsound,
-	&schism_audio_backend_waveout,
+	&schism_audio_backend_dsound, &schism_audio_backend_waveout,
 #endif
 #ifdef SCHISM_MACOS
 	&schism_audio_backend_sndmgr,
@@ -129,9 +128,7 @@ static const schism_audio_backend_t *backends[] = {
 	/* all the way at the bottom... */
 	&schism_audio_backend_asio,
 #endif
-	&schism_audio_backend_dummy,
-	NULL
-};
+	&schism_audio_backend_dummy, NULL};
 
 // A list of all currently initialized backends
 static const schism_audio_backend_t *inited_backends[ARRAY_SIZE(backends) - 1] = {0};
@@ -144,8 +141,7 @@ static const schism_audio_backend_t *backend = NULL;
 // page_patedit.c
 extern int midi_last_bend_hit[MAX_CHANNELS];
 
-static inline SCHISM_ALWAYS_INLINE
-uint32_t s32_to_f32(void *ptr, const int32_t *buffer, uint32_t samples)
+static inline SCHISM_ALWAYS_INLINE uint32_t s32_to_f32(void *ptr, const int32_t *buffer, uint32_t samples)
 {
 	float *p = (float *)ptr;
 	uint32_t i;
@@ -156,8 +152,7 @@ uint32_t s32_to_f32(void *ptr, const int32_t *buffer, uint32_t samples)
 	return samples * 4;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-uint32_t s32_to_f64(void *ptr, const int32_t *buffer, uint32_t samples)
+static inline SCHISM_ALWAYS_INLINE uint32_t s32_to_f64(void *ptr, const int32_t *buffer, uint32_t samples)
 {
 	/* TODO there's a clever trick I came up with to do lossless fast
 	 * s32 to f64 conversion. Basically it just involves setting up
@@ -179,8 +174,7 @@ uint32_t s32_to_f64(void *ptr, const int32_t *buffer, uint32_t samples)
 	return samples * 8;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-uint32_t s32_to_s24(void *ptr, const int32_t *buffer, uint32_t samples)
+static inline SCHISM_ALWAYS_INLINE uint32_t s32_to_s24(void *ptr, const int32_t *buffer, uint32_t samples)
 {
 	unsigned char *p = (unsigned char *)ptr;
 	uint32_t i;
@@ -249,8 +243,8 @@ static void audio_callback(uint8_t *stream, uint32_t len)
 	if (audio_output_bits_real == 24) {
 		s32_to_s24(stream, (int32_t *)audio_buffer, n * audio_output_channels);
 	} else if (audio_output_fp) {
-		((audio_output_bits_real == 64) ? s32_to_f64 : s32_to_f32)(stream,
-			(int32_t *)audio_buffer, n * audio_output_channels);
+		((audio_output_bits_real == 64) ? s32_to_f64 : s32_to_f32)(
+			stream, (int32_t *)audio_buffer, n * audio_output_channels);
 	} else {
 		memcpy(stream, audio_buffer, n * audio_sample_size);
 	}
@@ -262,10 +256,17 @@ static void audio_callback(uint8_t *stream, uint32_t len)
 	if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT) {
 		// I don't really like this...
 		switch (audio_output_bits) {
-#define BITSCASE(BITS) case BITS: if (audio_output_channels == 2) { vis_work_##BITS##s(audio_buffer, n / 2); } else { vis_work_##BITS##m(audio_buffer, n); } break;
-		BITSCASE(8)
-		BITSCASE(16)
-		BITSCASE(32)
+#define BITSCASE(BITS) \
+	case BITS: \
+		if (audio_output_channels == 2) { \
+			vis_work_##BITS##s(audio_buffer, n / 2); \
+		} else { \
+			vis_work_##BITS##m(audio_buffer, n); \
+		} \
+		break;
+			BITSCASE(8)
+			BITSCASE(16)
+			BITSCASE(32)
 #undef BITSCASE
 		}
 	}
@@ -276,8 +277,7 @@ POST_EVENT:
 	audio_writeout_count++;
 	if (audio_writeout_count > audio_buffers_per_second) {
 		audio_writeout_count = 0;
-	} else if (waspat == current_song->current_order && wasrow == current_song->row
-			&& !midi_need_flush()) {
+	} else if (waspat == current_song->current_order && wasrow == current_song->row && !midi_need_flush()) {
 		/* skip it */
 		return;
 	}
@@ -293,7 +293,8 @@ POST_EVENT:
 // ------------------------------------------------------------------------------------------------------------
 // audio device list
 
-void free_audio_device_list(void) {
+void free_audio_device_list(void)
+{
 	for (size_t count = 0; count < audio_device_list_size; count++)
 		free(audio_device_list[count].name);
 
@@ -304,7 +305,8 @@ void free_audio_device_list(void) {
 }
 
 /* called when SCHISM_AUDIODEVICEADDED/SCHISM_AUDIODEVICEREMOVED event received */
-int refresh_audio_device_list(void) {
+int refresh_audio_device_list(void)
+{
 	free_audio_device_list();
 
 	const uint32_t count = backend ? backend->device_count(0) : 0;
@@ -368,7 +370,8 @@ static void _audio_create_drivers_list(void)
 
 			// Skip known duplicate drivers
 			if (!strcmp(n, "pulse") || !strcmp(n, "pulseaudio")) {
-				if (drivers & DRIVER_PULSE) continue;
+				if (drivers & DRIVER_PULSE)
+					continue;
 				drivers |= DRIVER_PULSE;
 			} else if (!strcmp(n, "dummy")) {
 				drivers |= DRIVER_DUMMY;
@@ -408,8 +411,10 @@ static void _audio_create_drivers_list(void)
 		}
 	}
 
-	if (drivers & DRIVER_DISK)  full_drivers.list[full_drivers.size++] = disk;
-	if (drivers & DRIVER_DUMMY) full_drivers.list[full_drivers.size++] = dummy;
+	if (drivers & DRIVER_DISK)
+		full_drivers.list[full_drivers.size++] = disk;
+	if (drivers & DRIVER_DUMMY)
+		full_drivers.list[full_drivers.size++] = dummy;
 }
 
 int audio_driver_count(void)
@@ -438,7 +443,6 @@ static void main_song_mode_changed_cb(void)
 			pages[n].song_mode_changed_cb();
 	}
 }
-
 
 static int current_play_channel = 1;
 static int multichannel_mode = 0;
@@ -557,7 +561,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 			// the weirdness here the default value here is to mimic IT behavior: we want to use
 			// the sample corresponding to the instrument number if in sample mode and no sample
 			// is defined for the note in the instrument's note map.
-			s = csf_translate_keyboard(current_song, i, note, ins_mode ? NULL : (current_song->samples + ins));
+			s = csf_translate_keyboard(
+				current_song, i, note, ins_mode ? NULL : (current_song->samples + ins));
 		}
 	}
 
@@ -588,19 +593,26 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		if (i) {
 			c->ptr_instrument = i;
 
-			if (!(i->flags & ENV_VOLCARRY)) c->vol_env_position = 0;
-			if (!(i->flags & ENV_PANCARRY)) c->pan_env_position = 0;
-			if (!(i->flags & ENV_PITCHCARRY)) c->pitch_env_position = 0;
-			if (i->flags & ENV_VOLUME) c->flags |= CHN_VOLENV;
-			if (i->flags & ENV_PANNING) c->flags |= CHN_PANENV;
-			if (i->flags & ENV_PITCH) c->flags |= CHN_PITCHENV;
+			if (!(i->flags & ENV_VOLCARRY))
+				c->vol_env_position = 0;
+			if (!(i->flags & ENV_PANCARRY))
+				c->pan_env_position = 0;
+			if (!(i->flags & ENV_PITCHCARRY))
+				c->pitch_env_position = 0;
+			if (i->flags & ENV_VOLUME)
+				c->flags |= CHN_VOLENV;
+			if (i->flags & ENV_PANNING)
+				c->flags |= CHN_PANENV;
+			if (i->flags & ENV_PITCH)
+				c->flags |= CHN_PITCHENV;
 
 			i->played = 1;
 
 			if ((status.flags & MIDI_LIKE_TRACKER) && i) {
 				if (i->midi_channel_mask) {
 					GM_KeyOff(current_song, chan_internal);
-					GM_DPatch(current_song, chan_internal, i->midi_program, i->midi_bank, i->midi_channel_mask);
+					GM_DPatch(current_song, chan_internal, i->midi_program, i->midi_bank,
+						i->midi_channel_mask);
 				}
 			}
 
@@ -630,7 +642,7 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->ptr_sample = s;
 		c->length = 0;
 		// ... but it doesn't copy the volumes, for somewhat obvious reasons.
-		c->volume = (vol == KEYJAZZ_DEFAULTVOL) ? s->volume : (((unsigned) vol) << 2);
+		c->volume = (vol == KEYJAZZ_DEFAULTVOL) ? s->volume : (((unsigned)vol) << 2);
 		c->instrument_volume = s->global_volume;
 		if (i)
 			c->instrument_volume = (c->instrument_volume * i->global_volume) >> 7;
@@ -714,7 +726,8 @@ int song_keyup(int samp, int ins, int note)
 	return song_keyup_channel(samp, ins, note, chan);
 }
 
-int song_keyup_channel(int samp, int ins, int note, int chan) {
+int song_keyup_channel(int samp, int ins, int note, int chan)
+{
 	if (keyjazz_chan_to_note[chan] != note) {
 		return -1;
 	}
@@ -731,12 +744,14 @@ void song_single_step(int patno, int row)
 	song_voice_t *cx;
 
 	total_rows = song_get_pattern(patno, &pattern);
-	if (!pattern || row >= total_rows) return;
+	if (!pattern || row >= total_rows)
+		return;
 
 	cur_note = pattern + MAX_CHANNELS * row;
 	cx = song_get_mix_channel(0);
 	for (i = 1; i <= MAX_CHANNELS; i++, cx++, cur_note++) {
-		if (cx && (cx->flags & CHN_MUTE)) continue; /* ick */
+		if (cx && (cx->flags & CHN_MUTE))
+			continue; /* ick */
 		if (cur_note->voleffect == VOLFX_VOLUME) {
 			vol = cur_note->volparam;
 		} else {
@@ -756,8 +771,7 @@ void song_single_step(int patno, int row)
 			ins = -1;
 		}
 
-		song_keyrecord(smp, ins, cur_note->note,
-			vol, i, cur_note->effect, cur_note->param);
+		song_keyrecord(smp, ins, cur_note->note, vol, i, cur_note->effect, cur_note->param);
 	}
 }
 
@@ -836,7 +850,8 @@ void song_stop(void)
 
 void song_stop_unlocked(int quitting)
 {
-	if (!current_song) return;
+	if (!current_song)
+		return;
 
 	if (current_song->midi_playing) {
 		unsigned char moff[4];
@@ -845,30 +860,29 @@ void song_stop_unlocked(int quitting)
 		for (int chan = 0; chan < MAX_CHANNELS; chan++) {
 			if (current_song->midi_note_tracker[chan] != 0) {
 				for (int j = 0; j < MAX_MIDI_CHANNELS; j++) {
-					csf_process_midi_macro(current_song, chan,
-						current_song->midi_config.note_off,
+					csf_process_midi_macro(current_song, chan, current_song->midi_config.note_off,
 						0, current_song->midi_note_tracker[chan], 0, j);
 				}
 				moff[0] = 0x80 + chan;
 				moff[1] = current_song->midi_note_tracker[chan];
-				csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
+				csf_midi_send(current_song, (unsigned char *)moff, 2, 0, 0);
 			}
 		}
 		for (int j = 0; j < MAX_MIDI_CHANNELS; j++) {
 			moff[0] = 0xe0 + j;
 			moff[1] = 0;
-			csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
+			csf_midi_send(current_song, (unsigned char *)moff, 2, 0, 0);
 
-			moff[0] = 0xb0 + j;	/* channel mode message */
-			moff[1] = 0x78;		/* all sound off */
+			moff[0] = 0xb0 + j; /* channel mode message */
+			moff[1] = 0x78;  /* all sound off */
 			moff[2] = 0;
-			csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
+			csf_midi_send(current_song, (unsigned char *)moff, 3, 0, 0);
 
-			moff[1] = 0x79;		/* reset all controllers */
-			csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
+			moff[1] = 0x79;  /* reset all controllers */
+			csf_midi_send(current_song, (unsigned char *)moff, 3, 0, 0);
 
-			moff[1] = 0x7b;		/* all notes off */
-			csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
+			moff[1] = 0x7b;  /* all notes off */
+			csf_midi_send(current_song, (unsigned char *)moff, 3, 0, 0);
 		}
 
 		csf_process_midi_macro(current_song, 0, current_song->midi_config.stop, 0, 0, 0, 0); // STOP!
@@ -881,15 +895,15 @@ void song_stop_unlocked(int quitting)
 	GM_Reset(current_song, quitting);
 	GM_SendSongStopCode(current_song);
 
-	memset(current_song->midi_last_row,0,sizeof(current_song->midi_last_row));
+	memset(current_song->midi_last_row, 0, sizeof(current_song->midi_last_row));
 	current_song->midi_last_row_number = -1;
 
-	memset(current_song->midi_note_tracker,0,sizeof(current_song->midi_note_tracker));
-	memset(current_song->midi_vol_tracker,0,sizeof(current_song->midi_vol_tracker));
-	memset(current_song->midi_ins_tracker,0,sizeof(current_song->midi_ins_tracker));
-	memset(current_song->midi_was_program,0,sizeof(current_song->midi_was_program));
-	memset(current_song->midi_was_banklo,0,sizeof(current_song->midi_was_banklo));
-	memset(current_song->midi_was_bankhi,0,sizeof(current_song->midi_was_bankhi));
+	memset(current_song->midi_note_tracker, 0, sizeof(current_song->midi_note_tracker));
+	memset(current_song->midi_vol_tracker, 0, sizeof(current_song->midi_vol_tracker));
+	memset(current_song->midi_ins_tracker, 0, sizeof(current_song->midi_ins_tracker));
+	memset(current_song->midi_was_program, 0, sizeof(current_song->midi_was_program));
+	memset(current_song->midi_was_banklo, 0, sizeof(current_song->midi_was_banklo));
+	memset(current_song->midi_was_bankhi, 0, sizeof(current_song->midi_was_bankhi));
 
 	playback_tracing = midi_playback_tracing;
 
@@ -1026,8 +1040,8 @@ int song_get_max_channels(void)
 // Returns the max value in dBs, scaled as 0 = -40dB and 128 = 0dB.
 void song_get_vu_meter(int *left, int *right)
 {
-	*left = dB_s(40, current_song->vu_left/256.f, 0.f);
-	*right = dB_s(40, current_song->vu_right/256.f, 0.f);
+	*left = dB_s(40, current_song->vu_left / 256.f, 0.f);
+	*right = dB_s(40, current_song->vu_right / 256.f, 0.f);
 }
 
 /* Can all this crap just be in the player? It really doesn't belong here
@@ -1079,7 +1093,7 @@ void song_get_playing_instruments(int instruments[])
 	int n = MIN(current_song->num_voices, current_song->max_voices);
 	while (n--) {
 		channel = current_song->voices + current_song->voice_mix[n];
-		int ins = song_get_instrument_number((song_instrument_t *) channel->ptr_instrument);
+		int ins = song_get_instrument_number((song_instrument_t *)channel->ptr_instrument);
 		if (ins > 0 && ins < MAX_INSTRUMENTS) {
 			instruments[ins] = MAX(instruments[ins], 1 + channel->strike);
 		}
@@ -1160,15 +1174,16 @@ void song_set_surround(int on)
 // well this is certainly a dopey place to put this, config having nothing to do with playback... maybe i
 // should put all the cfg_ stuff in config.c :/
 
-void audio_parse_driver_spec(const char* spec, char** driver, char** device) {
+void audio_parse_driver_spec(const char *spec, char **driver, char **device)
+{
 	if (!str_break(spec, ':', driver, device)) {
 		*driver = str_dup(spec);
 		*device = NULL;
 	}
 }
 
-#define CFG_GET_A(v,d) audio_settings.v = cfg_get_number(cfg, "Audio", #v, d)
-#define CFG_GET_M(v,d) audio_settings.v = cfg_get_number(cfg, "Mixer Settings", #v, d)
+#define CFG_GET_A(v, d) audio_settings.v = cfg_get_number(cfg, "Audio", #v, d)
+#define CFG_GET_M(v, d) audio_settings.v = cfg_get_number(cfg, "Mixer Settings", #v, d)
 void cfg_load_audio(cfg_file_t *cfg)
 {
 	CFG_GET_A(sample_rate, DEF_SAMPLE_RATE);
@@ -1200,15 +1215,19 @@ void cfg_load_audio(cfg_file_t *cfg)
 
 	switch (audio_settings.channels) {
 	case 1:
-	case 2: break;
-	default: audio_settings.channels = 2;
+	case 2:
+		break;
+	default:
+		audio_settings.channels = 2;
 	}
 
 	switch (audio_settings.bits) {
 	case 8:
 	case 16:
-	case 32: break;
-	default: audio_settings.bits = 16;
+	case 32:
+		break;
+	default:
+		audio_settings.bits = 16;
 	}
 
 	audio_settings.channel_limit = CLAMP(audio_settings.channel_limit, 4, MAX_VOICES);
@@ -1284,34 +1303,35 @@ void cfg_save_audio(cfg_file_t *cfg)
 
 static void _schism_midi_out_raw(song_t *csf, const unsigned char *data, uint32_t len, uint32_t pos)
 {
-	SCHISM_RUNTIME_ASSERT(current_song == csf, "Hardware MIDI out should only be processed for the current playing song"); // AGH!
+	SCHISM_RUNTIME_ASSERT(
+		current_song == csf, "Hardware MIDI out should only be processed for the current playing song"); // AGH!
 
 #ifdef SCHISM_MIDI_DEBUG
 	/* prints all of the raw midi messages into the terminal; useful for debugging output */
 	//int i = (8000*(audio_buffer_samples)) / (current_song->mix_frequency);
 
-	for (int i=0; i < len; i++) {
-		printf("%02x ",data[i]);
+	for (int i = 0; i < len; i++) {
+		printf("%02x ", data[i]);
 	}
 	puts(""); /* newline */
 #endif
 
 	//if (!_disko_writemidi(data,len,pos)) -- not needed
-		midi_send_buffer(data,len,pos);
+	midi_send_buffer(data, len, pos);
 }
-
-
 
 // ------------------------------------------------------------------------------------------------------------
 
 // for threaded backends
 void song_lock_audio(void)
 {
-	if (backend) backend->lock_device(current_audio_device);
+	if (backend)
+		backend->lock_device(current_audio_device);
 }
 void song_unlock_audio(void)
 {
-	if (backend) backend->unlock_device(current_audio_device);
+	if (backend)
+		backend->unlock_device(current_audio_device);
 }
 
 // makes the backend simply fill the buffer with silence.
@@ -1319,11 +1339,13 @@ void song_unlock_audio(void)
 // already zeroed.
 void song_start_audio(void)
 {
-	if (backend) backend->pause_device(current_audio_device, 0);
+	if (backend)
+		backend->pause_device(current_audio_device, 0);
 }
 void song_stop_audio(void)
 {
-	if (backend) backend->pause_device(current_audio_device, 1);
+	if (backend)
+		backend->pause_device(current_audio_device, 1);
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -1355,7 +1377,8 @@ static int audio_lookup_device_name(const char *device, uint32_t *pdevid)
 
 	for (i = 0; i < devices_size; i++) {
 		const char *n = backend->device_name(i);
-		if (!n) continue; // should never happen, hopefully...
+		if (!n)
+			continue; // should never happen, hopefully...
 
 		if (!strcmp(n, device)) {
 			*pdevid = i;
@@ -1411,11 +1434,11 @@ static int _audio_open_device(uint32_t device, int verbose)
 	 * issue, it can be uncommented.
 	 *  - paper */
 
-//	if (!strcmp(driver_name, "alsa")) {
-//		char *dev = getenv("AUDIODEV");
-//		if (!dev || !*dev)
-//			put_env_var("AUDIODEV", "hw");
-//	}
+	//	if (!strcmp(driver_name, "alsa")) {
+	//		char *dev = getenv("AUDIODEV");
+	//		if (!dev || !*dev)
+	//			put_env_var("AUDIODEV", "hw");
+	//	}
 
 	memset(&desired, 0, sizeof(desired));
 	desired.freq = audio_settings.sample_rate;
@@ -1451,10 +1474,15 @@ success:
 
 	switch (obtained.bits) {
 	/* 24-bit int */
-	case 24: SCHISM_FALLTHROUGH;
+	case 24:
+		SCHISM_FALLTHROUGH;
 	/* float 64-bit */
-	case 64: audio_output_bits = 32; break;
-	default: audio_output_bits = obtained.bits; break;
+	case 64:
+		audio_output_bits = 32;
+		break;
+	default:
+		audio_output_bits = obtained.bits;
+		break;
 	}
 
 	audio_output_bits_real = obtained.bits;
@@ -1462,9 +1490,7 @@ success:
 	audio_sample_size = audio_output_channels * (audio_output_bits / 8);
 	audio_reallocate_buffer(obtained.samples);
 
-	csf_set_wave_config(current_song, obtained.freq,
-		audio_output_bits,
-		obtained.channels);
+	csf_set_wave_config(current_song, obtained.freq, audio_output_bits, obtained.channels);
 
 	if (verbose) {
 		log_nl();
@@ -1472,15 +1498,15 @@ success:
 		log_underline();
 		log_appendf(5, " Using driver '%s'", driver_name);
 		log_appendf(5, " %d Hz, %d bit%s, %s", obtained.freq, obtained.bits,
-			obtained.fp ? " IEEE floating point" : "",
-			obtained.channels == 1 ? "mono" : "stereo");
+			obtained.fp ? " IEEE floating point" : "", obtained.channels == 1 ? "mono" : "stereo");
 		log_appendf(5, " Buffer size: %d samples", obtained.samples);
 	}
 
 	return 1;
 }
 
-static int _audio_try_driver(const schism_audio_backend_t *backend_passed, const char *driver, const char *device, int verbose)
+static int _audio_try_driver(
+	const schism_audio_backend_t *backend_passed, const char *driver, const char *device, int verbose)
 {
 	const schism_audio_backend_t *backend_restore = backend;
 
@@ -1523,7 +1549,8 @@ static void _audio_quit(void)
 		_cleanup_audio_device();
 		free(driver_name);
 		driver_name = NULL;
-		if (backend) backend->quit_driver();
+		if (backend)
+			backend->quit_driver();
 		audio_was_init = 0;
 	}
 }
@@ -1538,11 +1565,11 @@ static void _audio_init_tail(void)
 	song_start_audio();
 }
 
-void audio_flash_reinitialized_text(int success) {
+void audio_flash_reinitialized_text(int success)
+{
 	if (success) {
-		status_text_flash((status.flags & CLASSIC_MODE)
-			? "Sound Blaster 16 reinitialised"
-			: "Audio output reinitialised");
+		status_text_flash((status.flags & CLASSIC_MODE) ? "Sound Blaster 16 reinitialised"
+								: "Audio output reinitialised");
 	} else {
 		/* ... */
 		status_text_flash("Failed to reinitialise audio!");
@@ -1576,16 +1603,17 @@ int audio_init(const char *driver, const char *device)
 	if (!device || !*device)
 		device = cfg_audio_device;
 
-	driver = !strcmp(driver, "oss") ? "dsp"
-		: (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
-		: (!strcmp(driver, "winmm")) ? "waveout"
-		: (!strcmp(driver, "directsound")) ? "dsound"
-		: driver;
+	driver = !strcmp(driver, "oss")                                    ? "dsp"
+		 : (!strcmp(driver, "nosound") || !strcmp(driver, "none")) ? "dummy"
+		 : (!strcmp(driver, "winmm"))                              ? "waveout"
+		 : (!strcmp(driver, "directsound"))                        ? "dsound"
+									   : driver;
 
 #ifdef SCHISM_SDL3
 	if (!*driver) {
 		const char *n = getenv("SDL_AUDIO_DRIVER");
-		if (n) driver = n;
+		if (n)
+			driver = n;
 	}
 #endif
 
@@ -1593,7 +1621,8 @@ int audio_init(const char *driver, const char *device)
 	/* we ought to allow this envvar to work under SDL. */
 	if (!*driver) {
 		const char *n = getenv("SDL_AUDIODRIVER");
-		if (n) driver = n;
+		if (n)
+			driver = n;
 	}
 #endif
 
@@ -1608,7 +1637,8 @@ int audio_init(const char *driver, const char *device)
 	}
 
 	if (full_drivers.size > 0) {
-		const schism_audio_backend_t *backend_driver = (driver && *driver) ? audio_driver_in_list_(driver) : NULL;
+		const schism_audio_backend_t *backend_driver
+			= (driver && *driver) ? audio_driver_in_list_(driver) : NULL;
 
 		if (backend_driver) {
 			if ((success = _audio_try_driver(backend_driver, driver, device, 1)))
@@ -1619,10 +1649,12 @@ int audio_init(const char *driver, const char *device)
 		}
 
 		for (i = 0; i < full_drivers.size; i++) {
-			if ((success = _audio_try_driver(full_drivers.list[i].backend, full_drivers.list[i].name, device, 1)))
+			if ((success = _audio_try_driver(
+				     full_drivers.list[i].backend, full_drivers.list[i].name, device, 1)))
 				goto agh;
 
-			if ((success = _audio_try_driver(full_drivers.list[i].backend, full_drivers.list[i].name, "", 1)))
+			if ((success = _audio_try_driver(
+				     full_drivers.list[i].backend, full_drivers.list[i].name, "", 1)))
 				goto agh;
 		}
 
@@ -1646,7 +1678,7 @@ agh:
 // device is optional and can be NULL
 int audio_reinit(uint32_t *device)
 {
-	if (status.flags & (DISKWRITER_ACTIVE|DISKWRITER_ACTIVE_PATTERN)) {
+	if (status.flags & (DISKWRITER_ACTIVE | DISKWRITER_ACTIVE_PATTERN)) {
 		/* never allowed */
 		return 0;
 	}
@@ -1702,13 +1734,11 @@ void song_init_eq(int do_reset, uint32_t mix_freq)
 
 	for (i = 0; i < 4; i++) {
 		pg[i] = audio_settings.eq_gain[i];
-		pf[i] = 120 + (((i*128) * audio_settings.eq_freq[i])
-			* (mix_freq / 128) / 1024);
+		pf[i] = 120 + (((i * 128) * audio_settings.eq_freq[i]) * (mix_freq / 128) / 1024);
 	}
 
 	set_eq_gains(pg, 4, pf, do_reset, mix_freq);
 }
-
 
 void song_init_modplug(void)
 {
@@ -1733,7 +1763,8 @@ void song_init_modplug(void)
 	{
 		const int divisor = audio_buffer_samples * 8 * audio_sample_size;
 		audio_buffers_per_second = (divisor) ? (current_song->mix_frequency / divisor) : 0;
-		if (audio_buffers_per_second > 1) audio_buffers_per_second--;
+		if (audio_buffers_per_second > 1)
+			audio_buffers_per_second--;
 	}
 
 	csf_init_midi(current_song, _schism_midi_out_raw);
@@ -1871,10 +1902,8 @@ static int simple_thread_func_(void *userdata)
 }
 #endif
 
-int audio_simple_init(schism_audio_device_t *dev_,
-	const struct schism_audio_device_simple_vtable *vtbl,
-	void (*callback)(uint8_t *stream, uint32_t len),
-	uint8_t silence)
+int audio_simple_init(schism_audio_device_t *dev_, const struct schism_audio_device_simple_vtable *vtbl,
+	void (*callback)(uint8_t *stream, uint32_t len), uint8_t silence)
 {
 	struct schism_audio_device_simple *dev = (void *)dev_;
 
@@ -1896,8 +1925,7 @@ int audio_simple_init(schism_audio_device_t *dev_,
 	/* START! */
 	dev->thread = mt_thread_create(simple_thread_func_,
 		/* XXX include the name of the driver */
-		"Audio thread",
-		dev);
+		"Audio thread", dev);
 	if (!dev->thread) {
 		mt_mutex_delete(dev->mutex);
 		return -1;
@@ -2019,7 +2047,8 @@ static int dummy_driver_count(void)
 static const char *dummy_driver_name(int i)
 {
 	switch (i) {
-	case 0: return "dummy";
+	case 0:
+		return "dummy";
 	}
 
 	return NULL;
@@ -2080,8 +2109,8 @@ static const struct schism_audio_device_simple_vtable dummy_vtbl = {
 
 /* ------------------------------------------------------------------------ */
 
-static schism_audio_device_t *dummy_open_device(uint32_t id,
-	const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *dummy_open_device(
+	uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	int64_t us;
 	size_t buflen;

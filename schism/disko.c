@@ -23,28 +23,29 @@
 
 #include "headers.h"
 
-#include "config-parser.h"
-#include "config.h"
 #include "dialog.h"
-#include "disko.h"
-#include "dmoz.h"
 #include "it.h"
 #include "page.h"
 #include "song.h"
+#include "config-parser.h"
+#include "config.h"
+#include "disko.h"
+#include "dmoz.h"
+#include "mem.h"
+#include "osdefs.h"
+#include "str.h"
 #include "util.h"
 #include "vgamem.h"
-#include "osdefs.h"
-#include "mem.h"
-#include "str.h"
 
-#include "player/sndfile.h"
 #include "player/cmixer.h"
-#include "player/snd_gm.h"
 #include "player/snd_fm.h"
+#include "player/snd_gm.h"
+#include "player/sndfile.h"
 
 #define DW_BUFFER_SIZE 65536
 
-static void _disko_midi_out_raw(SCHISM_UNUSED song_t *csf, SCHISM_UNUSED const unsigned char *data, SCHISM_UNUSED uint32_t len, SCHISM_UNUSED uint32_t delay);
+static void _disko_midi_out_raw(SCHISM_UNUSED song_t *csf, SCHISM_UNUSED const unsigned char *data,
+	SCHISM_UNUSED uint32_t len, SCHISM_UNUSED uint32_t delay);
 
 // ---------------------------------------------------------------------------
 
@@ -179,20 +180,18 @@ static void _dw_stdio_seek(disko_t *ds, int64_t pos, int whence)
  * so I won't lay out the code here. :) */
 static uint64_t next_fib64(uint64_t x)
 {
-	static const uint64_t fib_tab[] = {
-		/*1,*/2,3,5,8,13,21,34,
-		55,89,144,233,377,610,987,1597,
-		2584,4181,6765,10946,17711,28657,46368,75025,
-		121393,196418,317811,514229,832040,1346269,2178309,3524578,
-		5702887,9227465,14930352,24157817,39088169,63245986,102334155,165580141,
-		267914296,433494437,701408733,1134903170,1836311903,2971215073,4807526976,7778742049,
-		12586269025,20365011074,32951280099,53316291173,86267571272,139583862445,225851433717,365435296162,
-		591286729879,956722026041,1548008755920,2504730781961,4052739537881,6557470319842,10610209857723,17167680177565,
-		27777890035288,44945570212853,72723460248141,117669030460994,190392490709135,308061521170129,498454011879264,806515533049393,
-		1304969544928657,2111485077978050,3416454622906707,5527939700884757,8944394323791464,14472334024676221,23416728348467685,37889062373143906,
-		61305790721611591,99194853094755497,160500643816367088,259695496911122585,420196140727489673,679891637638612258,1100087778366101931,1779979416004714189,
-		2880067194370816120,4660046610375530309,7540113804746346429,12200160415121876738
-	};
+	static const uint64_t fib_tab[] = {/*1,*/ 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584,
+		4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309,
+		3524578, 5702887, 9227465, 14930352, 24157817, 39088169, 63245986, 102334155, 165580141, 267914296,
+		433494437, 701408733, 1134903170, 1836311903, 2971215073, 4807526976, 7778742049, 12586269025,
+		20365011074, 32951280099, 53316291173, 86267571272, 139583862445, 225851433717, 365435296162,
+		591286729879, 956722026041, 1548008755920, 2504730781961, 4052739537881, 6557470319842, 10610209857723,
+		17167680177565, 27777890035288, 44945570212853, 72723460248141, 117669030460994, 190392490709135,
+		308061521170129, 498454011879264, 806515533049393, 1304969544928657, 2111485077978050, 3416454622906707,
+		5527939700884757, 8944394323791464, 14472334024676221, 23416728348467685, 37889062373143906,
+		61305790721611591, 99194853094755497, 160500643816367088, 259695496911122585, 420196140727489673,
+		679891637638612258, 1100087778366101931, 1779979416004714189, 2880067194370816120, 4660046610375530309,
+		7540113804746346429, 12200160415121876738};
 	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(fib_tab); i++)
@@ -568,7 +567,8 @@ static void _export_setup(song_t *dwsong, int *bps)
 	dwsong->multi_write = NULL; /* should be null already, but to be sure... */
 
 	csf_set_current_order(dwsong, 0); /* rather indirect way of resetting playback variables */
-	csf_set_wave_config(dwsong, disko_output_rate, disko_output_bits, (dwsong->flags & SONG_NOSTEREO) ? 1 : disko_output_channels);
+	csf_set_wave_config(dwsong, disko_output_rate, disko_output_bits,
+		(dwsong->flags & SONG_NOSTEREO) ? 1 : disko_output_channels);
 
 	dwsong->mix_flags |= (SNDMIX_DIRECTTODISK | SNDMIX_NOBACKWARDJUMPS);
 
@@ -612,18 +612,34 @@ static int close_and_bind(song_t *dwsong, disko_t *ds, song_sample_t *sample, in
 	flags = SF_LE;
 #endif
 	switch (dwsong->mix_channels) {
-	case 1: flags |= SF_M;  break;
-	case 2: flags |= SF_SI; break;
-	default: free(dsshadow.data); return DW_ERROR;
+	case 1:
+		flags |= SF_M;
+		break;
+	case 2:
+		flags |= SF_SI;
+		break;
+	default:
+		free(dsshadow.data);
+		return DW_ERROR;
 	}
 
 	// I think this is right? IDFK
 	switch (dwsong->mix_bits_per_sample) {
-	case 8:  flags |= SF_PCMU | SF_8;  break;
-	case 16: flags |= SF_PCMS | SF_16; break;
-	case 24: flags |= SF_PCMS | SF_24; break;
-	case 32: flags |= SF_PCMS | SF_32; break;
-	default: free(dsshadow.data); return DW_ERROR;
+	case 8:
+		flags |= SF_PCMU | SF_8;
+		break;
+	case 16:
+		flags |= SF_PCMS | SF_16;
+		break;
+	case 24:
+		flags |= SF_PCMS | SF_24;
+		break;
+	case 32:
+		flags |= SF_PCMS | SF_32;
+		break;
+	default:
+		free(dsshadow.data);
+		return DW_ERROR;
 	}
 
 	sample->length = dsshadow.length / bps;
@@ -664,7 +680,7 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 
 	do {
 		disko_write(&ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * bps);
-		if (ds.length >= (size_t) (MAX_SAMPLE_LENGTH * bps)) {
+		if (ds.length >= (size_t)(MAX_SAMPLE_LENGTH * bps)) {
 			/* roughly 3 minutes at 44khz -- surely big enough (?) */
 			ds.length = MAX_SAMPLE_LENGTH * bps;
 			dwsong.flags |= SONG_ENDREACHED;
@@ -956,8 +972,10 @@ int disko_export_song(const char *filename, const struct save_format *format)
 			export_ds[n] = calloc(1, sizeof(*export_ds[n]));
 			disko_open(export_ds[n], filename);
 		}
-		if (!(export_ds[n] && format->f.export.head(export_ds[n], export_dwsong.mix_bits_per_sample,
-				export_dwsong.mix_channels, export_dwsong.mix_frequency, export_dwsong.title) == DW_OK)) {
+		if (!(export_ds[n]
+			    && format->f.export.head(export_ds[n], export_dwsong.mix_bits_per_sample,
+				       export_dwsong.mix_channels, export_dwsong.mix_frequency, export_dwsong.title)
+				       == DW_OK)) {
 			err = errno ? errno : EINVAL;
 			break;
 		}
@@ -983,9 +1001,8 @@ int disko_export_song(const char *filename, const struct save_format *format)
 		}
 	}
 
-	log_appendf(5, " %" PRIu32 " Hz, %" PRIu32 " bit, %s",
-		export_dwsong.mix_frequency, export_dwsong.mix_bits_per_sample,
-		export_dwsong.mix_channels == 1 ? "mono" : "stereo");
+	log_appendf(5, " %" PRIu32 " Hz, %" PRIu32 " bit, %s", export_dwsong.mix_frequency,
+		export_dwsong.mix_bits_per_sample, export_dwsong.mix_channels == 1 ? "mono" : "stereo");
 	export_format = format;
 	status.flags |= DISKWRITER_ACTIVE; /* tell main to care about us */
 
@@ -994,7 +1011,6 @@ int disko_export_song(const char *filename, const struct save_format *format)
 
 	return DW_OK;
 }
-
 
 /* main calls this periodically when the .wav exporter is busy */
 int disko_sync(void)
@@ -1080,9 +1096,9 @@ static int disko_finish(void)
 		const timer_ticks_t elapsed_ms = (timer_ticks() - export_start_time);
 
 		log_appendf(5, " %.2f MiB (%" PRIuSZ ":%02" PRIuSZ ") written in %" PRIu64 ".%02" PRIu64 " sec",
-			total_size / 1048576.0,
-			samples_0 / disko_output_rate / 60, (samples_0 / disko_output_rate) % 60,
-			(uint64_t)(elapsed_ms / 1000), (uint64_t)(elapsed_ms / 10 % 100));
+			total_size / 1048576.0, samples_0 / disko_output_rate / 60,
+			(samples_0 / disko_output_rate) % 60, (uint64_t)(elapsed_ms / 1000),
+			(uint64_t)(elapsed_ms / 10 % 100));
 		break;
 	}
 	case DW_ERROR:
@@ -1150,9 +1166,12 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 	/* this is horrid */
 	for (n = 1; n < MAX_SAMPLES; n++) {
 		song_sample_t *samp = song_get_sample(n);
-		if (!samp) continue;
-		if (((unsigned char) samp->name[23]) != 0xFF) continue;
-		if (((unsigned char) samp->name[24]) != pattern) continue;
+		if (!samp)
+			continue;
+		if (((unsigned char)samp->name[23]) != 0xFF)
+			continue;
+		if (((unsigned char)samp->name[24]) != pattern)
+			continue;
 		status_text_flash("Pattern %d already linked to sample %d", pattern, n);
 		return;
 	}
@@ -1172,8 +1191,8 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 		if (current_song->samples[ps->sample].data == NULL) {
 			pat2smp_single(ps);
 		} else {
-			dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
-				pat2smp_single, free, 1, ps);
+			dialog_create(
+				DIALOG_OK_CANCEL, "This will replace the current sample.", pat2smp_single, free, 1, ps);
 		}
 	}
 }
@@ -1181,7 +1200,8 @@ void song_pattern_to_sample(int pattern, int split, int bind)
 // ---------------------------------------------------------------------------
 // MIDI export (unused for now)
 
-static void _disko_midi_out_raw(SCHISM_UNUSED song_t *csf, SCHISM_UNUSED const unsigned char *data, SCHISM_UNUSED uint32_t len, SCHISM_UNUSED uint32_t delay)
+static void _disko_midi_out_raw(SCHISM_UNUSED song_t *csf, SCHISM_UNUSED const unsigned char *data,
+	SCHISM_UNUSED uint32_t len, SCHISM_UNUSED uint32_t delay)
 {
 	// nothing
 }

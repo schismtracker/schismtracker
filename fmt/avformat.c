@@ -22,17 +22,17 @@
  */
 
 #include "headers.h"
-#include "fmt.h"
 #include "bits.h"
+#include "fmt.h"
 #include "log.h"
-#include "str.h"
 #include "mem.h"
+#include "str.h"
 
-#include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 
 #ifndef FF_API_OLD_CHANNEL_LAYOUT
-# define FF_API_OLD_CHANNEL_LAYOUT   (LIBAVUTIL_VERSION_MAJOR < 59)
+# define FF_API_OLD_CHANNEL_LAYOUT (LIBAVUTIL_VERSION_MAJOR < 59)
 #endif
 
 /* avio buffer size, in bytes */
@@ -41,19 +41,15 @@
 /* support for ffmpeg's libavformat. this gives us basically any file format
  * imaginable :) */
 
-static AVIOContext *(*schism_avio_alloc_context)(unsigned char *, int, int,
-	void *, int (*)(void *, uint8_t *, int),
-	int (*)(void *, const uint8_t *, int),
-	int64_t (*)(void *, int64_t, int));
+static AVIOContext *(*schism_avio_alloc_context)(unsigned char *, int, int, void *, int (*)(void *, uint8_t *, int),
+	int (*)(void *, const uint8_t *, int), int64_t (*)(void *, int64_t, int));
 static void *(*schism_av_malloc)(size_t);
 static void (*schism_av_free)(void *);
 static AVFormatContext *(*schism_avformat_alloc_context)(void);
 static void (*schism_avformat_free_context)(AVFormatContext *);
-static int (*schism_avformat_open_input)(AVFormatContext **, const char *,
-	const AVInputFormat *, AVDictionary **);
+static int (*schism_avformat_open_input)(AVFormatContext **, const char *, const AVInputFormat *, AVDictionary **);
 static void (*schism_avformat_close_input)(AVFormatContext **);
-static int (*schism_avformat_find_stream_info)(AVFormatContext *,
-	AVDictionary **);
+static int (*schism_avformat_find_stream_info)(AVFormatContext *, AVDictionary **);
 static void (*schism_av_log_set_callback)(void (*)(void *, int, const char *, va_list));
 static const AVCodec *(*schism_avcodec_find_decoder)(enum AVCodecID id);
 static AVCodecContext *(*schism_avcodec_alloc_context3)(const AVCodec *codec);
@@ -62,17 +58,18 @@ static int (*schism_avcodec_open2)(AVCodecContext *avctx, const AVCodec *codec, 
 
 static AVPacket *(*schism_av_packet_alloc)(void);
 static void (*schism_av_packet_free)(AVPacket **pkt);
-static AVFrame *(*schism_av_frame_alloc)(void); 
+static AVFrame *(*schism_av_frame_alloc)(void);
 static void (*schism_av_frame_free)(AVFrame **frame);
 static void (*schism_av_packet_unref)(AVPacket *pkt);
 static int (*schism_av_read_frame)(AVFormatContext *s, AVPacket *pkt);
-static int (*schism_avcodec_send_packet)(AVCodecContext *avctx, const AVPacket *avpkt);	
+static int (*schism_avcodec_send_packet)(AVCodecContext *avctx, const AVPacket *avpkt);
 static int (*schism_avcodec_receive_frame)(AVCodecContext *avctx, AVFrame *frame);
 static int (*schism_av_get_bytes_per_sample)(enum AVSampleFormat sample_fmt);
 static void (*schism_avcodec_free_context)(AVCodecContext **avctx);
 static void (*schism_avio_context_free)(AVIOContext **s);
 
-static AVDictionaryEntry *(*schism_av_dict_get)(const AVDictionary *, const char *, const AVDictionaryEntry *, int flags);
+static AVDictionaryEntry *(*schism_av_dict_get)(
+	const AVDictionary *, const char *, const AVDictionaryEntry *, int flags);
 
 static int avformat_wasinit = 0;
 
@@ -101,9 +98,8 @@ static uint32_t schism_avfmt_get_length_estimate(AVFormatContext *fmtctx, int as
 	if (fmtctx->streams[astr]->duration > 0) {
 		/* log_appendf(1, "FFMPEG: using stream duration"); */
 
-		duration_secs = (double)fmtctx->streams[astr]->duration
-			* fmtctx->streams[astr]->time_base.num
-			/ fmtctx->streams[astr]->time_base.den;
+		duration_secs = (double)fmtctx->streams[astr]->duration * fmtctx->streams[astr]->time_base.num
+				/ fmtctx->streams[astr]->time_base.den;
 
 		length = duration_secs * fmtctx->streams[astr]->codecpar->sample_rate;
 	} else if (fmtctx->duration > 0) {
@@ -133,16 +129,24 @@ static void schism_av_vlog(void *ptr, int level, const char *fmt, va_list ap)
 	avc = ptr ? *(AVClass **)ptr : NULL;
 
 	switch (level) {
-	case AV_LOG_FATAL: SCHISM_FALLTHROUGH;
-	case AV_LOG_ERROR: color = 4; break;
-	case AV_LOG_WARNING: color = 5; break;
-	case AV_LOG_INFO: color = 2; break;
+	case AV_LOG_FATAL:
+		SCHISM_FALLTHROUGH;
+	case AV_LOG_ERROR:
+		color = 4;
+		break;
+	case AV_LOG_WARNING:
+		color = 5;
+		break;
+	case AV_LOG_INFO:
+		color = 2;
+		break;
 	/*
 	case AV_LOG_PANIC: -- supposedly this is for crashes?
 	case AV_LOG_VERBOSE: -- excessive verboseness
 	case AV_LOG_DEBUG: -- only useful for libav* devs
 	*/
-	default: return;
+	default:
+		return;
 	}
 
 	if (vasprintf(&s, fmt, ap) < 0)
@@ -211,26 +215,47 @@ static int sample_fmt_to_sfflags(enum AVSampleFormat fmt, int channels, uint32_t
 	*flags = 0;
 
 	switch (fmt) {
-	case AV_SAMPLE_FMT_U8P: split = 1; SCHISM_FALLTHROUGH;
-	case AV_SAMPLE_FMT_U8: *flags |= SF_8 | SF_PCMU; break;
+	case AV_SAMPLE_FMT_U8P:
+		split = 1;
+		SCHISM_FALLTHROUGH;
+	case AV_SAMPLE_FMT_U8:
+		*flags |= SF_8 | SF_PCMU;
+		break;
 
-	case AV_SAMPLE_FMT_S16P: split = 1; SCHISM_FALLTHROUGH;
-	case AV_SAMPLE_FMT_S16: *flags |= SF_16 | SF_PCMS; break;
+	case AV_SAMPLE_FMT_S16P:
+		split = 1;
+		SCHISM_FALLTHROUGH;
+	case AV_SAMPLE_FMT_S16:
+		*flags |= SF_16 | SF_PCMS;
+		break;
 
-	case AV_SAMPLE_FMT_S32P: split = 1; SCHISM_FALLTHROUGH;
-	case AV_SAMPLE_FMT_S32: *flags |= SF_32 | SF_PCMS; break;
+	case AV_SAMPLE_FMT_S32P:
+		split = 1;
+		SCHISM_FALLTHROUGH;
+	case AV_SAMPLE_FMT_S32:
+		*flags |= SF_32 | SF_PCMS;
+		break;
 #if 0
 	/* TODO */
 	case AV_SAMPLE_FMT_S64P: split = 1; SCHISM_FALLTHROUGH;
 	case AV_SAMPLE_FMT_S64: *flags |= SF_64 | SF_PCMS; break;
 #endif
-	case AV_SAMPLE_FMT_FLTP: split = 1; SCHISM_FALLTHROUGH;
-	case AV_SAMPLE_FMT_FLT: *flags |= SF_32 | SF_IEEE; break;
+	case AV_SAMPLE_FMT_FLTP:
+		split = 1;
+		SCHISM_FALLTHROUGH;
+	case AV_SAMPLE_FMT_FLT:
+		*flags |= SF_32 | SF_IEEE;
+		break;
 
-	case AV_SAMPLE_FMT_DBLP: split = 1; SCHISM_FALLTHROUGH;
-	case AV_SAMPLE_FMT_DBL: *flags |= SF_64 | SF_IEEE; break;
+	case AV_SAMPLE_FMT_DBLP:
+		split = 1;
+		SCHISM_FALLTHROUGH;
+	case AV_SAMPLE_FMT_DBL:
+		*flags |= SF_64 | SF_IEEE;
+		break;
 
-	default: return 0;
+	default:
+		return 0;
 	}
 
 	switch (channels) {
@@ -255,8 +280,6 @@ static int sample_fmt_to_sfflags(enum AVSampleFormat fmt, int channels, uint32_t
 	return 1;
 }
 
-
-
 static int avfmt_find_audio_stream(AVFormatContext *fmtctx)
 {
 	unsigned int i;
@@ -277,11 +300,11 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 
 	if (!sample_fmt_to_sfflags(fmtctx->streams[astr]->codecpar->format,
 #if FF_API_OLD_CHANNEL_LAYOUT
-			fmtctx->streams[astr]->codecpar->channels,
+		    fmtctx->streams[astr]->codecpar->channels,
 #else
-			fmtctx->streams[astr]->codecpar->ch_layout.nb_channels,
+		    fmtctx->streams[astr]->codecpar->ch_layout.nb_channels,
 #endif
-			&flags))
+		    &flags))
 		goto fail;
 
 	codec = schism_avcodec_find_decoder(fmtctx->streams[astr]->codecpar->codec_id);
@@ -322,9 +345,9 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 			case SF_SI: {
 				disko_memopen_estimate(&ds[0], bpc *
 #if FF_API_OLD_CHANNEL_LAYOUT
-					cctx->channels
+								       cctx->channels
 #else
-					cctx->ch_layout.nb_channels
+								       cctx->ch_layout.nb_channels
 #endif
 				);
 				break;
@@ -347,7 +370,8 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 			}
 		}
 
-		for (; schism_av_read_frame(fmtctx, packet) >= 0 && total_samples <= MAX_SAMPLE_LENGTH; schism_av_packet_unref(packet)) {
+		for (; schism_av_read_frame(fmtctx, packet) >= 0 && total_samples <= MAX_SAMPLE_LENGTH;
+			schism_av_packet_unref(packet)) {
 			int finished = 0;
 
 			if (packet->stream_index != astr)
@@ -367,11 +391,12 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 				case SF_M:
 				case SF_SI:
 					/* all data is in frame->data[0] */
-					disko_write(&ds[0], frame->data[0], bps * frame->nb_samples *
+					disko_write(&ds[0], frame->data[0],
+						bps * frame->nb_samples *
 #if FF_API_OLD_CHANNEL_LAYOUT
-						cctx->channels
+							cctx->channels
 #else
-						cctx->ch_layout.nb_channels
+							cctx->ch_layout.nb_channels
 #endif
 					);
 					break;
@@ -396,7 +421,8 @@ static int avfmt_read_to_sample(AVFormatContext *fmtctx, int astr, song_sample_t
 		disko_memclose(&ds[0], 1);
 		disko_memclose(&ds[1], 1);
 
-		SCHISM_RUNTIME_ASSERT(ds[0].length == ds[1].length || !ds[1].length, "memory streams should have the same length, or the latter should have nothing at all");
+		SCHISM_RUNTIME_ASSERT(ds[0].length == ds[1].length || !ds[1].length,
+			"memory streams should have the same length, or the latter should have nothing at all");
 
 		/* okaaay, now read in everything :) */
 		if ((flags & SF_CHN_MASK) == SF_SS) {
@@ -439,7 +465,8 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 	if (!buffer)
 		goto fail;
 
-	ioctx = schism_avio_alloc_context(buffer, SCHISM_AVFORMAT_BUFFER_SIZE, 0, s, avfmt_read_packet, NULL, avfmt_seek);
+	ioctx = schism_avio_alloc_context(
+		buffer, SCHISM_AVFORMAT_BUFFER_SIZE, 0, s, avfmt_read_packet, NULL, avfmt_seek);
 	if (!ioctx)
 		goto fail;
 
@@ -453,8 +480,7 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 		goto fail;
 
 	/* tracker-ception! :) */
-	if (!strcmp(fmtctx->iformat->name, "libopenmpt")
-		|| !strcmp(fmtctx->iformat->name, "libmodplug")
+	if (!strcmp(fmtctx->iformat->name, "libopenmpt") || !strcmp(fmtctx->iformat->name, "libmodplug")
 		|| !strcmp(fmtctx->iformat->name, "libmikmod")
 		|| !strcmp(fmtctx->iformat->name, "flac") /* ignore flac, causes infinite loop */)
 		goto fail;
@@ -471,7 +497,7 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 		const AVDictionary *meta = fmtctx->metadata;
 		AVDictionaryEntry *ent;
 
-		ent = schism_av_dict_get(meta, "title", NULL, 0/*AV_DICT_MATCH_CASE*/);
+		ent = schism_av_dict_get(meta, "title", NULL, 0 /*AV_DICT_MATCH_CASE*/);
 		if (ent) {
 			if (file)
 				file->title = str_dup(ent->value);
@@ -484,8 +510,9 @@ static int avfmt_read(slurp_t *s, dmoz_file_t *file, song_sample_t *smp)
 
 		if (file) {
 			/* only useful for files */
-			ent = schism_av_dict_get(meta, "artist", NULL, 0/*AV_DICT_MATCH_CASE*/);
-			if (ent) file->artist = str_dup(ent->value);
+			ent = schism_av_dict_get(meta, "artist", NULL, 0 /*AV_DICT_MATCH_CASE*/);
+			if (ent)
+				file->artist = str_dup(ent->value);
 		}
 	}
 
@@ -524,7 +551,6 @@ fail:
 	}
 
 	return success;
-
 }
 
 int fmt_avformat_read_info(dmoz_file_t *file, slurp_t *s)
@@ -552,7 +578,7 @@ static int load_avformat_syms(void);
 
 #ifdef AVFORMAT_DYNAMIC_LOAD
 
-#include "loadso.h"
+# include "loadso.h"
 
 enum {
 	DLIB_AVFORMAT,
@@ -568,8 +594,8 @@ static struct {
 	void *handle;
 } handles[] = {
 	[DLIB_AVFORMAT] = {"avformat", LIBAVFORMAT_VERSION_MAJOR, NULL},
-	[DLIB_AVCODEC]  = {"avcodec",  LIBAVCODEC_VERSION_MAJOR,  NULL},
-	[DLIB_AVUTIL]   = {"avutil",   LIBAVUTIL_VERSION_MAJOR,   NULL},
+	[DLIB_AVCODEC] = {"avcodec",  LIBAVCODEC_VERSION_MAJOR,  NULL},
+	[DLIB_AVUTIL] = {"avutil",   LIBAVUTIL_VERSION_MAJOR,   NULL},
 };
 
 static void avformat_dlend(void)
@@ -605,7 +631,8 @@ static int avformat_dlinit(void)
 }
 
 // this is always true under SDL but I'm paranoid
-SCHISM_STATIC_ASSERT(sizeof(void (*)(void)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+SCHISM_STATIC_ASSERT(sizeof(void (*)(void)) == sizeof(void *),
+	"dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 static int load_avformat_sym(int dlib, const char *fn, void *addr)
 {
@@ -618,12 +645,15 @@ static int load_avformat_sym(int dlib, const char *fn, void *addr)
 	return 1;
 }
 
-#define SCHISM_AVFORMAT_SYM(dlib, x) \
-	if (!load_avformat_sym(dlib, #x, &schism_##x)) { printf("%s", #x); return -1; }
+# define SCHISM_AVFORMAT_SYM(dlib, x) \
+	 if (!load_avformat_sym(dlib, #x, &schism_##x)) { \
+		 printf("%s", #x); \
+		 return -1; \
+	 }
 
 #else
 
-#define SCHISM_AVFORMAT_SYM(dlib, x) schism_##x = x
+# define SCHISM_AVFORMAT_SYM(dlib, x) schism_##x = x
 
 static int avformat_dlinit(void)
 {

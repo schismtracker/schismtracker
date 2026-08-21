@@ -24,15 +24,15 @@
 #include "headers.h"
 
 #include "it.h"
-#include "config.h"
-#include "vgamem.h"
-#include "song.h"
 #include "page.h"
-#include "widget.h"
+#include "song.h"
 #include "pattern-view.h"
+#include "widget.h"
 #include "config-parser.h"
+#include "config.h"
 #include "keyboard.h"
 #include "str.h"
+#include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -50,8 +50,8 @@ static int instrument_names = 0;
 struct info_window_type {
 	const char *id;
 
-	void (*draw) (int base, int height, int active, int first_channel);
-	void (*click) (int x, int y, int num_vis_channel, int first_channel);
+	void (*draw)(int base, int height, int active, int first_channel);
+	void (*click)(int x, int y, int num_vis_channel, int first_channel);
 
 	/* if this is set, the first row contains actual text (not just the top part of a box) */
 	int first_row;
@@ -78,9 +78,9 @@ static int selected_channel = 1;
 /* five, because that's Impulse Tracker's maximum */
 #define MAX_WINDOWS 5
 static struct info_window windows[MAX_WINDOWS] = {
-	{0, 19, 1},     /* samples (18 channels displayed) */
-	{8, 3, 1},      /* active channels */
-	{5, 15, 1},     /* 24chn track view */
+	{0, 19, 1}, /* samples (18 channels displayed) */
+	{8, 3,  1}, /* active channels */
+	{5, 15, 1}, /* 24chn track view */
 };
 
 /* --------------------------------------------------------------------- */
@@ -118,13 +118,13 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 	draw_fill_chars(32, base + 1, 56, base + height - 2, DEFAULT_FG, 0);
 	draw_box(31, base, 57, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	draw_text("FVl", 32, base, 2, 1);
-	draw_text("Vl",  36, base, 2, 1);
-	draw_text("CV",  39, base, 2, 1);
-	draw_text("SV",  42, base, 2, 1);
-	draw_text("VE",  45, base, 2, 1);
+	draw_text("Vl", 36, base, 2, 1);
+	draw_text("CV", 39, base, 2, 1);
+	draw_text("SV", 42, base, 2, 1);
+	draw_text("VE", 45, base, 2, 1);
 	draw_text("Fde", 48, base, 2, 1);
-	draw_text("Pn",  52, base, 2, 1);
-	draw_text("PE",  55, base, 2, 1);
+	draw_text("Pn", 52, base, 2, 1);
+	draw_text("PE", 55, base, 2, 1);
 
 	if (song_is_instrument_mode()) {
 		draw_fill_chars(59, base + 1, 65, base + height - 2, DEFAULT_FG, 0);
@@ -164,7 +164,8 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 			int nv, tot;
 			for (nv = tot = 0; nv < MAX_VOICES; nv++) {
 				song_voice_t *v = current_song->voices + nv;
-				if (v->master_channel == (unsigned int) c && ((v->current_sample_data && v->length) || (v->flags & CHN_ADLIB)))
+				if (v->master_channel == (unsigned int)c
+					&& ((v->current_sample_data && v->length) || (v->flags & CHN_ADLIB)))
 					tot++;
 			}
 			if ((voice->current_sample_data && voice->length) || (voice->flags & CHN_ADLIB))
@@ -172,7 +173,8 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 			draw_text(str_from_num(3, tot, buf), 63, pos, 2, 0);
 		}
 
-		if (((voice->current_sample_data && voice->length) || (voice->flags & CHN_ADLIB)) && voice->ptr_sample) {
+		if (((voice->current_sample_data && voice->length) || (voice->flags & CHN_ADLIB))
+			&& voice->ptr_sample) {
 			// again with the hacks...
 			smp = voice->ptr_sample - current_song->samples;
 			if (smp <= 0 || smp >= MAX_SAMPLES)
@@ -193,7 +195,7 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 		draw_text(str_from_num(2, voice->volume >> 2, buf), 36, pos, 2, 0); // Vl
 		draw_text(str_from_num(2, voice->global_volume, buf), 39, pos, 2, 0); // CV
 		draw_text(str_from_num(2, voice->ptr_sample->global_volume, buf), 42, pos, 2, 0); // SV
-        // FIXME: VE means volume envelope. Also, voice->instrument_volume is actually sample global volume
+		// FIXME: VE means volume envelope. Also, voice->instrument_volume is actually sample global volume
 		draw_text(str_from_num(2, voice->instrument_volume, buf), 45, pos, 2, 0); // VE
 		draw_text(str_from_num(3, voice->fadeout_volume / 128, buf), 48, pos, 2, 0); // Fde
 
@@ -207,11 +209,21 @@ static void info_draw_technical(int base, int height, int active, int first_chan
 
 		if (song_is_instrument_mode()) {
 			switch (voice->nna) {
-				case NNA_NOTECUT: ptr = "Cut"; break;
-				case NNA_CONTINUE: ptr = "Con"; break;
-				case NNA_NOTEOFF: ptr = "Off"; break;
-				case NNA_NOTEFADE: ptr = "Fde"; break;
-				default: ptr = "???"; break;
+			case NNA_NOTECUT:
+				ptr = "Cut";
+				break;
+			case NNA_CONTINUE:
+				ptr = "Con";
+				break;
+			case NNA_NOTEOFF:
+				ptr = "Off";
+				break;
+			case NNA_NOTEFADE:
+				ptr = "Fde";
+				break;
+			default:
+				ptr = "???";
+				break;
 			};
 			draw_text(ptr, 59, pos, 2, 0);
 		}
@@ -277,9 +289,11 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			vu = vus[c - 1] * 64.0f;
 
 		if (voice->flags & CHN_MUTE) {
-			fg = 1; fg2 = 2;
+			fg = 1;
+			fg2 = 2;
 		} else {
-			fg = 5; fg2 = 4;
+			fg = 5;
+			fg2 = 4;
 		}
 		draw_vu_meter(5, pos, 24, vu, fg, fg2);
 
@@ -292,7 +306,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 			smp = voice->ptr_sample - current_song->samples;
 		else
 			smp = ins = 0;
-		if(smp < 0 || smp >= MAX_SAMPLES)
+		if (smp < 0 || smp >= MAX_SAMPLES)
 			smp = ins = 0; /* This sample is not in the sample array */
 
 		if (smp) {
@@ -320,10 +334,11 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 		} else if (ins && voice->ptr_instrument && voice->ptr_instrument->midi_channel_mask) {
 			// XXX why? what?
 			if (voice->ptr_instrument->midi_channel_mask >= 0x10000) {
-				draw_text(str_from_num(2, ((c-1) % 16)+1, buf), 31, pos, 6, 0);
+				draw_text(str_from_num(2, ((c - 1) % 16) + 1, buf), 31, pos, 6, 0);
 			} else {
 				int ch = 0;
-				while(!(voice->ptr_instrument->midi_channel_mask & (1 << ch))) ++ch;
+				while (!(voice->ptr_instrument->midi_channel_mask & (1 << ch)))
+					++ch;
 				draw_text(str_from_num(2, ch, buf), 31, pos, 6, 0);
 			}
 			draw_char('/', 33, pos, 6, 0);
@@ -337,7 +352,7 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 				fg = 6;
 			draw_char(':', n++, pos, fg, 0);
 			ptr = voice->ptr_instrument->name;
-			draw_text_len( ptr, 25, n, pos, 6, 0);
+			draw_text_len(ptr, 25, n, pos, 6, 0);
 		} else {
 			continue;
 		}
@@ -360,8 +375,8 @@ static void info_draw_samples(int base, int height, int active, int first_channe
 	}
 }
 
-static void _draw_fill_notes(int col, int first_row, int height, int num_channels,
-			     int channel_width, int separator, draw_note_func draw_note, int bg)
+static void _draw_fill_notes(int col, int first_row, int height, int num_channels, int channel_width, int separator,
+	draw_note_func draw_note, int bg)
 {
 	int row_pos, chan_pos;
 
@@ -375,8 +390,8 @@ static void _draw_fill_notes(int col, int first_row, int height, int num_channel
 	}
 }
 
-static void _draw_track_view(int base, int height, int first_channel, int num_channels,
-			     int channel_width, int separator, draw_note_func draw_note)
+static void _draw_track_view(int base, int height, int first_channel, int num_channels, int channel_width,
+	int separator, draw_note_func draw_note)
 {
 	/* way too many variables */
 	int current_row = song_get_current_row();
@@ -409,21 +424,19 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 		if (current_song->orderlist[current_order] >= 200) {
 			/* this does, in fact, happen. just pretend that
 			 * it's stopped :P */
-	default:
+		default:
 			/* stopped */
-			draw_fill_chars(5, base + 1, 4 + num_channels * channel_width - !!separator,
-					base + height - 2, DEFAULT_FG, 0);
+			draw_fill_chars(5, base + 1, 4 + num_channels * channel_width - !!separator, base + height - 2,
+				DEFAULT_FG, 0);
 			return;
 		}
 		cur_pattern_rows = song_get_pattern(current_song->orderlist[current_order], &cur_pattern);
 		if (current_order > 0 && current_song->orderlist[current_order - 1] < 200)
-			prev_pattern_rows = song_get_pattern(current_song->orderlist[current_order - 1],
-								&prev_pattern);
+			prev_pattern_rows = song_get_pattern(current_song->orderlist[current_order - 1], &prev_pattern);
 		else
 			prev_pattern = NULL;
 		if (current_order < 255 && current_song->orderlist[current_order + 1] < 200)
-			next_pattern_rows = song_get_pattern(current_song->orderlist[current_order + 1],
-								&next_pattern);
+			next_pattern_rows = song_get_pattern(current_song->orderlist[current_order + 1], &next_pattern);
 		else
 			next_pattern = NULL;
 		break;
@@ -435,10 +448,10 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 
 	/* "fake" channels (hack for 64-channel view) */
 	if (num_channels > 64) {
-		_draw_fill_notes(5 + 64, base + 1, height - 2,
-				 num_channels - 64, channel_width, separator, draw_note, 0);
-		_draw_fill_notes(5 + 64, base + 1 + rows_before, 1,
-				 num_channels - 64, channel_width, separator, draw_note, 14);
+		_draw_fill_notes(
+			5 + 64, base + 1, height - 2, num_channels - 64, channel_width, separator, draw_note, 0);
+		_draw_fill_notes(
+			5 + 64, base + 1 + rows_before, 1, num_channels - 64, channel_width, separator, draw_note, 14);
 		num_channels = 64;
 	}
 
@@ -450,8 +463,8 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 	while (row_pos > base) {
 		if (row < 0) {
 			if (prev_pattern == NULL) {
-				_draw_fill_notes(5, base + 1, row_pos - base,
-						 num_channels, channel_width, separator, draw_note, 0);
+				_draw_fill_notes(5, base + 1, row_pos - base, num_channels, channel_width, separator,
+					draw_note, 0);
 				break;
 			}
 			pattern = prev_pattern;
@@ -491,8 +504,8 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 	while (row_pos < base + height - 1) {
 		if (row >= total_rows) {
 			if (next_pattern == NULL) {
-				_draw_fill_notes(5, row_pos, base + height - row_pos - 1,
-						 num_channels, channel_width, separator, draw_note, 0);
+				_draw_fill_notes(5, row_pos, base + height - row_pos - 1, num_channels, channel_width,
+					separator, draw_note, 0);
 				break;
 			}
 			pattern = next_pattern;
@@ -642,7 +655,8 @@ static void info_draw_track_64(int base, int height, int active, int first_chann
 	/* IT draws nine more blank "channels" on the right */
 	int nchan = (status.flags & CLASSIC_MODE) ? 73 : 64;
 
-	SCHISM_RUNTIME_ASSERT(first_channel == 1, "Only 64 channels allowed; first channel must always be the real first channel.");
+	SCHISM_RUNTIME_ASSERT(
+		first_channel == 1, "Only 64 channels allowed; first channel must always be the real first channel.");
 
 	draw_box(4, base, nchan + 5, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
 	for (chan = first_channel, chan_pos = 0; chan_pos < 64; chan++, chan_pos++) {
@@ -670,7 +684,6 @@ static void info_draw_channels(int base, SCHISM_UNUSED int height, int active, S
 	draw_text(buf, 4, base + 1, fg, 2);
 }
 
-
 /* Yay it works, only took me forever and a day to get it right. */
 static void info_draw_note_dots(int base, int height, int active, int first_channel)
 {
@@ -680,7 +693,7 @@ static void info_draw_note_dots(int base, int height, int active, int first_chan
 	song_voice_t *voice;
 	char buf[11];
 	uint8_t d, dn;
-	uint8_t dot_field[73][36] = { {0} }; // f#2 -> f#8 = 73 columns
+	uint8_t dot_field[73][36] = {{0}}; // f#2 -> f#8 = 73 columns
 
 	draw_fill_chars(5, base + 1, 77, base + height - 2, DEFAULT_FG, 0);
 	draw_box(4, base, 78, base + height - 1, BOX_THICK | BOX_INNER | BOX_INSET);
@@ -751,7 +764,8 @@ static void click_chn_x(int x, int w, int skip, int fc)
 
 static void click_chn_is_x(int x, SCHISM_UNUSED int y, int nc, int fc)
 {
-	if (x < 5) return;
+	if (x < 5)
+		return;
 	x -= 4;
 	switch (nc) {
 	case 5:
@@ -780,13 +794,14 @@ static void click_chn_is_x(int x, SCHISM_UNUSED int y, int nc, int fc)
 
 static void click_chn_is_y_nohead(SCHISM_UNUSED int x, int y, SCHISM_UNUSED int nc, int fc)
 {
-	selected_channel = CLAMP(y+fc, 1, 64);
+	selected_channel = CLAMP(y + fc, 1, 64);
 }
 
 static void click_chn_is_y(SCHISM_UNUSED int x, int y, SCHISM_UNUSED int nc, int fc)
 {
-	if (!y) return;
-	selected_channel = CLAMP((y+fc)-1, 1, 64);
+	if (!y)
+		return;
+	selected_channel = CLAMP((y + fc) - 1, 1, 64);
 }
 
 static void click_chn_nil(SCHISM_UNUSED int x, SCHISM_UNUSED int y, SCHISM_UNUSED int nc, SCHISM_UNUSED int fc)
@@ -797,9 +812,9 @@ static void click_chn_nil(SCHISM_UNUSED int x, SCHISM_UNUSED int y, SCHISM_UNUSE
 /* --------------------------------------------------------------------- */
 /* declarations of the window types */
 
-#define TRACK_VIEW(n) {"track" # n, info_draw_track_##n, click_chn_is_x, 1, n}
+#define TRACK_VIEW(n) {"track" #n, info_draw_track_##n, click_chn_is_x, 1, n}
 static const struct info_window_type window_types[] = {
-	{"samples", info_draw_samples, click_chn_is_y_nohead, 0, -2},
+	{"samples", info_draw_samples,   click_chn_is_y_nohead, 0, -2},
 	TRACK_VIEW(5),
 	TRACK_VIEW(8),
 	TRACK_VIEW(10),
@@ -808,9 +823,9 @@ static const struct info_window_type window_types[] = {
 	TRACK_VIEW(24),
 	TRACK_VIEW(36),
 	TRACK_VIEW(64),
-	{"global", info_draw_channels, click_chn_nil, 1, 0},
-	{"dots", info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
-	{"tech", info_draw_technical, click_chn_is_y, 1, -2},
+	{"global",  info_draw_channels,  click_chn_nil,         1, 0 },
+	{"dots",    info_draw_note_dots, click_chn_is_y_nohead, 0, -2},
+	{"tech",    info_draw_technical, click_chn_is_y,        1, -2},
 };
 #undef TRACK_VIEW
 
@@ -843,15 +858,14 @@ static void _fix_channels(int n)
 static int info_handle_click(int x, int y)
 {
 	int n;
-	if (y < 13) return 0; /* NA */
+	if (y < 13)
+		return 0; /* NA */
 	y -= 13;
 	for (n = 0; n < num_windows; n++) {
 		if (y < windows[n].height) {
-			window_types[windows[n].type].click(
-				x, y,
+			window_types[windows[n].type].click(x, y,
 
-				window_types[windows[n].type].channels,
-				windows[n].first_channel);
+				window_types[windows[n].type].channels, windows[n].first_channel);
 			return 1;
 		}
 		y -= windows[n].height;
@@ -939,11 +953,11 @@ static void cfg_load_info_old(cfg_file_t *cfg)
 	if (num_windows == -1) {
 		/* Fall back to defaults */
 		num_windows = 3;
-		windows[0].type = 0;    /* samples */
+		windows[0].type = 0; /* samples */
 		windows[0].height = 19;
-		windows[1].type = 9;    /* active channels */
+		windows[1].type = 9; /* active channels */
 		windows[1].height = 3;
-		windows[2].type = 6;    /* 24chn track view */
+		windows[2].type = 6; /* 24chn track view */
 		windows[2].height = 15;
 	}
 
@@ -1015,8 +1029,7 @@ static void info_page_redraw(void)
 		height = windows[n].height;
 		if (pos == 12)
 			height++;
-		window_types[windows[n].type].draw(pos, height, (n == selected_window),
-						   windows[n].first_channel);
+		window_types[windows[n].type].draw(pos, height, (n == selected_window), windows[n].first_channel);
 		pos += height;
 	}
 	/* the last window takes up all the rest of the screen */
@@ -1025,7 +1038,7 @@ static void info_page_redraw(void)
 
 /* --------------------------------------------------------------------- */
 
-static int info_page_handle_key(struct key_event * k)
+static int info_page_handle_key(struct key_event *k)
 {
 	int n, p, order;
 
@@ -1041,9 +1054,8 @@ static int info_page_handle_key(struct key_event * k)
 				set_current_channel(selected_channel);
 				order = song_get_current_order();
 
-				playing_pattern = (song_get_mode() == MODE_PLAYING)
-					? current_song->orderlist[order]
-					: song_get_playing_pattern();
+				playing_pattern = (song_get_mode() == MODE_PLAYING) ? current_song->orderlist[order]
+										    : song_get_playing_pattern();
 
 				if (playing_pattern < 200) {
 					set_current_order(order);
@@ -1084,7 +1096,7 @@ static int info_page_handle_key(struct key_event * k)
 			set_current_row(song_get_current_row());
 			set_page(PAGE_PATTERN_EDITOR);
 		}
-	       return 1;
+		return 1;
 	case SCHISM_KEYSYM_v:
 		if (k->state == KEY_RELEASE)
 			return 1;
@@ -1142,8 +1154,7 @@ static int info_page_handle_key(struct key_event * k)
 
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			song_toggle_stereo();
-			status_text_flash("Stereo %s", song_is_stereo()
-					  ? "Enabled" : "Disabled");
+			status_text_flash("Stereo %s", song_is_stereo() ? "Enabled" : "Disabled");
 		} else {
 			song_handle_channel_solo(selected_channel - 1);
 			orderpan_recheck_muted_channels();
@@ -1195,8 +1206,7 @@ static int info_page_handle_key(struct key_event * k)
 			 * (a) this is the last window, or (b) the next
 			 * window is already as small as it can be (three
 			 * lines). */
-			if (selected_window == num_windows - 1
-			    || windows[selected_window + 1].height == 3) {
+			if (selected_window == num_windows - 1 || windows[selected_window + 1].height == 3) {
 				return 1;
 			}
 			windows[selected_window].height++;

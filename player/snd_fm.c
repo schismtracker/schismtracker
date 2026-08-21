@@ -23,32 +23,32 @@
 
 #include "headers.h"
 
+#include "log.h"
 #include "player/fmopl.h"
 #include "player/snd_fm.h"
 #include "player/sndfile.h"
-#include "log.h"
 #include "util.h" /* for clamp */
 
 #define OPLRATEBASE 49716 // It's not a good idea to deviate from this.
 
 #if OPLSOURCE == 2
-	#define OPLNew(x,r)  ym3812_init(x, r)
-	#define OPLResetChip ym3812_reset_chip
-	#define OPLWrite     ym3812_write
-	#define OPLReadChip     ym3812_read
-	#define OPLUpdateMulti ym3812_update_multi
-	#define OPLCloseChip     ym3812_shutdown
+# define OPLNew(x, r)   ym3812_init(x, r)
+# define OPLResetChip   ym3812_reset_chip
+# define OPLWrite       ym3812_write
+# define OPLReadChip    ym3812_read
+# define OPLUpdateMulti ym3812_update_multi
+# define OPLCloseChip   ym3812_shutdown
 	// OPL2 = 3579552Hz
-	#define OPLRATEDIVISOR 72
+# define OPLRATEDIVISOR 72
 #elif OPLSOURCE == 3
-	#define OPLNew(x,r)  ymf262_init(x, r)
-	#define OPLResetChip ymf262_reset_chip
-	#define OPLWrite     ymf262_write
-	#define OPLReadChip     ymf262_read
-	#define OPLUpdateMulti ymf262_update_multi
-	#define OPLCloseChip     ymf262_shutdown
+# define OPLNew(x, r)   ymf262_init(x, r)
+# define OPLResetChip   ymf262_reset_chip
+# define OPLWrite       ymf262_write
+# define OPLReadChip    ymf262_read
+# define OPLUpdateMulti ymf262_update_multi
+# define OPLCloseChip   ymf262_shutdown
 	// OPL3 = 14318208Hz
-	#define OPLRATEDIVISOR 288
+# define OPLRATEDIVISOR 288
 #else
 # error "The current value of OPLSOURCE isn't supported! Check build-config.h."
 #endif
@@ -83,19 +83,19 @@ to Jeffrey S. Lee's article:
 
 /// Convert the given f-number and block into a note frequency.
 /**
-* @param fnum
-* Input frequency number, between 0 and 1023 inclusive. Values outside this
-* range will cause assertion failures.
-*
-* @param block
-* Input block number, between 0 and 7 inclusive. Values outside this range
-* will cause assertion failures.
-*
-* @param conversionFactor
-* Conversion factor to use. Normally will be 49716 and occasionally 50000.
-*
-* @return The converted frequency in milliHertz.
-*/
+ * @param fnum
+ * Input frequency number, between 0 and 1023 inclusive. Values outside this
+ * range will cause assertion failures.
+ *
+ * @param block
+ * Input block number, between 0 and 7 inclusive. Values outside this range
+ * will cause assertion failures.
+ *
+ * @param conversionFactor
+ * Conversion factor to use. Normally will be 49716 and occasionally 50000.
+ *
+ * @return The converted frequency in milliHertz.
+ */
 SCHISM_UNUSED static int32_t fnumToMilliHertz(uint32_t fnum, uint32_t block, uint32_t conversionFactor)
 {
 	// Original formula
@@ -107,30 +107,30 @@ SCHISM_UNUSED static int32_t fnumToMilliHertz(uint32_t fnum, uint32_t block, uin
 
 /// Convert a frequency into an OPL f-number
 /**
-* @param milliHertz
-* Input frequency.
-*
-* @param fnum
-* Output frequency number for OPL chip. This is a 10-bit number, so it will
-* always be between 0 and 1023 inclusive.
-*
-* @param block
-* Output block number for OPL chip. This is a 3-bit number, so it will
-* always be between 0 and 7 inclusive.
-*
-* @param conversionFactor
-* Conversion factor to use. Normally will be 49716 and occasionally 50000.
-*
-* @post fnum will be set to a value between 0 and 1023 inclusive. block will
-* be set to a value between 0 and 7 inclusive. assert() calls inside this
-* function ensure this will always be the case.
-*
-* @note As the block value increases, the frequency difference between two
-* adjacent fnum values increases. This means the higher the frequency,
-* the less precision is available to represent it. Therefore, converting
-* a value to fnum/block and back to milliHertz is not guaranteed to reproduce
-* the original value.
-*/
+ * @param milliHertz
+ * Input frequency.
+ *
+ * @param fnum
+ * Output frequency number for OPL chip. This is a 10-bit number, so it will
+ * always be between 0 and 1023 inclusive.
+ *
+ * @param block
+ * Output block number for OPL chip. This is a 3-bit number, so it will
+ * always be between 0 and 7 inclusive.
+ *
+ * @param conversionFactor
+ * Conversion factor to use. Normally will be 49716 and occasionally 50000.
+ *
+ * @post fnum will be set to a value between 0 and 1023 inclusive. block will
+ * be set to a value between 0 and 7 inclusive. assert() calls inside this
+ * function ensure this will always be the case.
+ *
+ * @note As the block value increases, the frequency difference between two
+ * adjacent fnum values increases. This means the higher the frequency,
+ * the less precision is available to represent it. Therefore, converting
+ * a value to fnum/block and back to milliHertz is not guaranteed to reproduce
+ * the original value.
+ */
 static void milliHertzToFnum(uint32_t milliHertz, uint32_t *fnum, uint32_t *block, uint32_t conversionFactor)
 {
 	// Special case to avoid divide by zero
@@ -163,14 +163,22 @@ static void milliHertzToFnum(uint32_t milliHertz, uint32_t *fnum, uint32_t *bloc
 	//*block = 7 - invertedBlock;
 
 	// This is a bit more efficient and doesn't need log2() from math.h
-	if (milliHertz > 3104215) *block = 7;
-	else if (milliHertz > 1552107) *block = 6;
-	else if (milliHertz > 776053) *block = 5;
-	else if (milliHertz > 388026) *block = 4;
-	else if (milliHertz > 194013) *block = 3;
-	else if (milliHertz > 97006) *block = 2;
-	else if (milliHertz > 48503) *block = 1;
-	else *block = 0;
+	if (milliHertz > 3104215)
+		*block = 7;
+	else if (milliHertz > 1552107)
+		*block = 6;
+	else if (milliHertz > 776053)
+		*block = 5;
+	else if (milliHertz > 388026)
+		*block = 4;
+	else if (milliHertz > 194013)
+		*block = 3;
+	else if (milliHertz > 97006)
+		*block = 2;
+	else if (milliHertz > 48503)
+		*block = 1;
+	else
+		*block = 0;
 
 	// Original formula
 	//*fnum = milliHertz * pow(2, 20 - *block) / 1000 / conversionFactor + 0.5;
@@ -188,9 +196,7 @@ static void milliHertzToFnum(uint32_t milliHertz, uint32_t *fnum, uint32_t *bloc
 
 static void Fmdrv_Outportb(song_t *csf, uint32_t port, uint32_t value)
 {
-	if (csf->opl == NULL ||
-		((int32_t) port) < OPL_BASE ||
-		((int32_t) port) >= OPL_BASE + 4)
+	if (csf->opl == NULL || ((int32_t)port) < OPL_BASE || ((int32_t)port) >= OPL_BASE + 4)
 		return;
 
 	uint32_t ind = port - OPL_BASE;
@@ -203,18 +209,14 @@ static void Fmdrv_Outportb(song_t *csf, uint32_t port, uint32_t value)
 			else if (value == 0x21)
 				csf->oplretval = 0xC0;
 		}
-	}
-	else
+	} else
 		csf->oplregno = value;
 }
 
-
 static unsigned char Fmdrv_Inportb(song_t *csf, uint32_t port)
 {
-	return (((int32_t) port) >= OPL_BASE &&
-		((int32_t) port) < OPL_BASE + 4) ? csf->oplretval : 0;
+	return (((int32_t)port) >= OPL_BASE && ((int32_t)port) < OPL_BASE + 4) ? csf->oplretval : 0;
 }
-
 
 void Fmdrv_Init(song_t *csf, int32_t mixfreq)
 {
@@ -291,7 +293,6 @@ void Fmdrv_Mix(song_t *csf, uint32_t count)
 	}
 }
 
-
 /***************************************/
 
 #if OPL_BANK_SIZE != 9
@@ -323,7 +324,7 @@ static int32_t SetVoice(song_t *csf, int32_t c)
 		if (csf->opl_from_chan[c] == -1) {
 			// Search for note-released chans
 			for (a = 0; a < OPL_CHANNELS; a++) {
-				if ((csf->opl_keyontab[a]&KEYON_BIT) == 0) {
+				if ((csf->opl_keyontab[a] & KEYON_BIT) == 0) {
 					csf->opl_from_chan[csf->opl_to_chan[a]] = -1;
 					csf->opl_to_chan[a] = c;
 					csf->opl_from_chan[c] = a;
@@ -358,7 +359,6 @@ static void OPL_Byte_RightSide(song_t *csf, uint32_t idx, unsigned char data)
 	Fmdrv_Outportb(csf, OPL_BASE + 3, data); // for(a = 0; a < 35; a++) Fmdrv_Inportb(OPL_BASE);
 }
 
-
 void OPL_NoteOff(song_t *csf, int32_t c)
 {
 	int32_t oplc = GetVoice(csf, c);
@@ -372,7 +372,6 @@ void OPL_NoteOff(song_t *csf, int32_t c)
 	else
 		OPL_Byte_RightSide(csf, KEYON_BLOCK + oplc - OPL_BANK_SIZE, csf->opl_keyontab[oplc]);
 }
-
 
 /* OPL_NoteOn changes the frequency on specified
 	 channel and guarantees the key is on. (Doesn't
@@ -388,34 +387,32 @@ void OPL_HertzTouch(song_t *csf, int32_t c, int32_t milliHertz, int32_t keyoff)
 	csf->opl_fm_active = 1;
 
 /*
-	Bytes A0-B8 - Octave / F-Number / Key-On
+				Bytes A0-B8 - Octave / F-Number / Key-On
 
-	7     6     5     4     3     2     1     0
-	 +-----+-----+-----+-----+-----+-----+-----+-----+
-	 |        F-Number (least significant byte)      |  (A0-A8)
-	 +-----+-----+-----+-----+-----+-----+-----+-----+
-	 |  Unused   | Key |    Octave       | F-Number  |  (B0-B8)
-	 |           | On  |                 | most sig. |
-	 +-----+-----+-----+-----+-----+-----+-----+-----+
-*/
+				7     6     5     4     3     2     1     0
+				 +-----+-----+-----+-----+-----+-----+-----+-----+
+				 |        F-Number (least significant byte)      |  (A0-A8)
+				 +-----+-----+-----+-----+-----+-----+-----+-----+
+				 |  Unused   | Key |    Octave       | F-Number  |  (B0-B8)
+				 |           | On  |                 | most sig. |
+				 +-----+-----+-----+-----+-----+-----+-----+-----+
+			*/
 	uint32_t outfnum;
 	uint32_t outblock;
 	const int32_t conversion_factor = OPLRATEBASE; // Frequency of OPL.
 	milliHertzToFnum(milliHertz, &outfnum, &outblock, conversion_factor);
 	csf->opl_keyontab[oplc] = (keyoff ? 0 : KEYON_BIT)      // Key on
-				| (outblock << 2)                    // Octave
-				| ((outfnum >> 8) & FNUM_HIGH_MASK); // F-number high 2 bits
+				  | (outblock << 2)                    // Octave
+				  | ((outfnum >> 8) & FNUM_HIGH_MASK); // F-number high 2 bits
 
 	if (oplc < OPL_BANK_SIZE) {
-		OPL_Byte(csf, FNUM_LOW +    oplc, outfnum & 0xFF);  // F-Number low 8 bits
+		OPL_Byte(csf, FNUM_LOW + oplc, outfnum & 0xFF);  // F-Number low 8 bits
 		OPL_Byte(csf, KEYON_BLOCK + oplc, csf->opl_keyontab[oplc]);
-	}
-	else {
-		OPL_Byte_RightSide(csf, FNUM_LOW +    oplc - OPL_BANK_SIZE, outfnum & 0xFF);  // F-Number low 8 bits
+	} else {
+		OPL_Byte_RightSide(csf, FNUM_LOW + oplc - OPL_BANK_SIZE, outfnum & 0xFF);  // F-Number low 8 bits
 		OPL_Byte_RightSide(csf, KEYON_BLOCK + oplc - OPL_BANK_SIZE, csf->opl_keyontab[oplc]);
 	}
 }
-
 
 void OPL_Touch(song_t *csf, int32_t c, uint32_t vol)
 {
@@ -433,29 +430,28 @@ void OPL_Touch(song_t *csf, int32_t c, uint32_t vol)
 
 	if (oplc < OPL_BANK_SIZE) {
 		SendByte = OPL_Byte;
-	}
-	else {
+	} else {
 		SendByte = OPL_Byte_RightSide;
 	}
 
 /*
-	Bytes 40-55 - Level Key Scaling / Total Level
+				Bytes 40-55 - Level Key Scaling / Total Level
 
-	7     6     5     4     3     2     1     0
-	 +-----+-----+-----+-----+-----+-----+-----+-----+
-	 |  Scaling  |             Total Level           |
-	 |   Level   | 24    12     6     3    1.5   .75 | <-- dB
-	 +-----+-----+-----+-----+-----+-----+-----+-----+
-		bits 7-6 - causes output levels to decrease as the frequency
-			 rises:
-				00   -  no change
-				10   -  1.5 dB/8ve
-				01   -  3 dB/8ve
-				11   -  6 dB/8ve
-		bits 5-0 - controls the total output level of the operator.
-			 all bits CLEAR is loudest; all bits SET is the
-			 softest.  Don't ask me why.
-*/
+				7     6     5     4     3     2     1     0
+				 +-----+-----+-----+-----+-----+-----+-----+-----+
+				 |  Scaling  |             Total Level           |
+				 |   Level   | 24    12     6     3    1.5   .75 | <-- dB
+				 +-----+-----+-----+-----+-----+-----+-----+-----+
+					bits 7-6 - causes output levels to decrease as the frequency
+						 rises:
+							00   -  no change
+							10   -  1.5 dB/8ve
+							01   -  3 dB/8ve
+							11   -  6 dB/8ve
+					bits 5-0 - controls the total output level of the operator.
+						 all bits CLEAR is loudest; all bits SET is the
+						 softest.  Don't ask me why.
+			*/
 	/* 2008-09-27 Bisqwit:
 	 * Did tests in ST3: The value poked
 	 * to 0x43, minus from 63, is:
@@ -498,17 +494,11 @@ void OPL_Touch(song_t *csf, int32_t c, uint32_t vol)
 	// vol is previously converted to the 0..63 range.
 
 	// Set volume of both operators in additive mode
-	if(D[10] & CONNECTION_BIT)
-		SendByte(csf, KSL_LEVEL + Ope, (D[2] & KSL_MASK) |
-			(63 + ( (D[2]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
-		);
+	if (D[10] & CONNECTION_BIT)
+		SendByte(csf, KSL_LEVEL + Ope, (D[2] & KSL_MASK) | (63 + ((D[2] & TOTAL_LEVEL_MASK) * vol / 63) - vol));
 
-	SendByte(csf, KSL_LEVEL+   3+Ope, (D[3] & KSL_MASK) |
-		(63 + ( (D[3]&TOTAL_LEVEL_MASK)*vol / 63) - vol)
-	);
-
+	SendByte(csf, KSL_LEVEL + 3 + Ope, (D[3] & KSL_MASK) | (63 + ((D[3] & TOTAL_LEVEL_MASK) * vol / 63) - vol));
 }
-
 
 void OPL_Pan(song_t *csf, int32_t c, int32_t val)
 {
@@ -524,20 +514,17 @@ void OPL_Pan(song_t *csf, int32_t c, int32_t val)
 
 	if (oplc < OPL_BANK_SIZE) {
 		SendByte = OPL_Byte;
-	}
-	else {
+	} else {
 		SendByte = OPL_Byte_RightSide;
 	}
 
 	/* feedback, additive synthesis and Panning... */
-	SendByte(csf, FEEDBACK_CONNECTION+(oplc % OPL_BANK_SIZE),
+	SendByte(csf, FEEDBACK_CONNECTION + (oplc % OPL_BANK_SIZE),
 		(D[10] & ~STEREO_BITS)
-		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
-			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
-			: (VOICE_TO_LEFT | VOICE_TO_RIGHT))
-	);
+			| (csf->opl_pans[c] < 85         ? VOICE_TO_LEFT
+				: csf->opl_pans[c] > 170 ? VOICE_TO_RIGHT
+							 : (VOICE_TO_LEFT | VOICE_TO_RIGHT)));
 }
-
 
 void OPL_Patch(song_t *csf, int32_t c, const unsigned char *D)
 {
@@ -552,32 +539,29 @@ void OPL_Patch(song_t *csf, int32_t c, const unsigned char *D)
 
 	if (oplc < OPL_BANK_SIZE) {
 		SendByte = OPL_Byte;
-	}
-	else {
+	} else {
 		SendByte = OPL_Byte_RightSide;
 	}
 
-	SendByte(csf, AM_VIB+           Ope, D[0]);
-	SendByte(csf, KSL_LEVEL+        Ope, D[2]);
-	SendByte(csf, ATTACK_DECAY+     Ope, D[4]);
-	SendByte(csf, SUSTAIN_RELEASE+  Ope, D[6]);
-	SendByte(csf, WAVE_SELECT+      Ope, D[8]&7);// 5 high bits used elsewhere
+	SendByte(csf, AM_VIB + Ope, D[0]);
+	SendByte(csf, KSL_LEVEL + Ope, D[2]);
+	SendByte(csf, ATTACK_DECAY + Ope, D[4]);
+	SendByte(csf, SUSTAIN_RELEASE + Ope, D[6]);
+	SendByte(csf, WAVE_SELECT + Ope, D[8] & 7);// 5 high bits used elsewhere
 
-	SendByte(csf, AM_VIB+         3+Ope, D[1]);
-	SendByte(csf, KSL_LEVEL+      3+Ope, D[3]);
-	SendByte(csf, ATTACK_DECAY+   3+Ope, D[5]);
-	SendByte(csf, SUSTAIN_RELEASE+3+Ope, D[7]);
-	SendByte(csf, WAVE_SELECT+    3+Ope, D[9]&7);// 5 high bits used elsewhere
+	SendByte(csf, AM_VIB + 3 + Ope, D[1]);
+	SendByte(csf, KSL_LEVEL + 3 + Ope, D[3]);
+	SendByte(csf, ATTACK_DECAY + 3 + Ope, D[5]);
+	SendByte(csf, SUSTAIN_RELEASE + 3 + Ope, D[7]);
+	SendByte(csf, WAVE_SELECT + 3 + Ope, D[9] & 7);// 5 high bits used elsewhere
 
 	/* feedback, additive synthesis and Panning... */
-	SendByte(csf, FEEDBACK_CONNECTION+oplc,
+	SendByte(csf, FEEDBACK_CONNECTION + oplc,
 		(D[10] & ~STEREO_BITS)
-		| (csf->opl_pans[c]<85 ? VOICE_TO_LEFT
-			: csf->opl_pans[c]>170 ? VOICE_TO_RIGHT
-			: (VOICE_TO_LEFT | VOICE_TO_RIGHT))
-	);
+			| (csf->opl_pans[c] < 85         ? VOICE_TO_LEFT
+				: csf->opl_pans[c] > 170 ? VOICE_TO_RIGHT
+							 : (VOICE_TO_LEFT | VOICE_TO_RIGHT)));
 }
-
 
 void OPL_Reset(song_t *csf)
 {
@@ -588,11 +572,11 @@ void OPL_Reset(song_t *csf)
 	OPLResetChip(csf->opl);
 	OPL_Detect(csf);
 
-	for(a = 0; a < MAX_VOICES; ++a) {
-		csf->opl_from_chan[a]=-1;
+	for (a = 0; a < MAX_VOICES; ++a) {
+		csf->opl_from_chan[a] = -1;
 	}
-	for(a = 0; a < OPL_CHANNELS; ++a) {
-		csf->opl_to_chan[a]= -1;
+	for (a = 0; a < OPL_CHANNELS; ++a) {
+		csf->opl_to_chan[a] = -1;
 		csf->opl_dtab[a] = NULL;
 	}
 
@@ -604,7 +588,6 @@ void OPL_Reset(song_t *csf)
 
 	csf->opl_fm_active = 0;
 }
-
 
 int32_t OPL_Detect(song_t *csf)
 {

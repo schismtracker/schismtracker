@@ -25,15 +25,15 @@
 
 #include "charset.h"
 #include "loadso.h"
-#include "osdefs.h"
 #include "mem.h"
+#include "osdefs.h"
 
 #ifdef SCHISM_WIN32
 # include <windows.h>
 #elif defined(SCHISM_OS2)
 # define INCL_DOS
-# include <os2.h>
 # include <meerror.h>
+# include <os2.h>
 #elif defined(SCHISM_WIIU)
 # include <coreinit/dynload.h>
 #elif defined(HAVE_LIBDL)
@@ -51,23 +51,25 @@ void *loadso_object_load(const char *sofile)
 		em = SetErrorMode(0);
 		SetErrorMode(em | SEM_FAILCRITICALERRORS);
 
-		SCHISM_ANSI_UNICODE({
-			/* Windows 9x */
-			char *ansi;
+		SCHISM_ANSI_UNICODE(
+			{
+                        /* Windows 9x */
+				char *ansi;
 
-			if (!charset_iconv(sofile, &ansi, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
-				module = LoadLibraryA(ansi);
-				free(ansi);
-			}
-		}, {
-			/* Windows NT */
-			wchar_t *unicode;
+				if (!charset_iconv(sofile, &ansi, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX)) {
+					module = LoadLibraryA(ansi);
+					free(ansi);
+				}
+			},
+			{
+                        /* Windows NT */
+				wchar_t *unicode;
 
-			if (!charset_iconv(sofile, &unicode, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
-				module = LoadLibraryW(unicode);
-				free(unicode);
-			}
-		})
+				if (!charset_iconv(sofile, &unicode, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX)) {
+					module = LoadLibraryW(unicode);
+					free(unicode);
+				}
+			})
 
 		/* maybe it was just ANSI all along */
 		if (!module)
@@ -204,25 +206,20 @@ void loadso_object_unload(void *object)
 
 static const char *loadso_libtool_fmts[] = {
 #ifdef SCHISM_WIN32
-	"lib%s-%d.dll",
-	"%s-%d.dll", /* avformat-61.dll */
+	"lib%s-%d.dll", "%s-%d.dll", /* avformat-61.dll */
 	"%slib%d.dll", /* zlib1.dll */
 #elif defined(SCHISM_MACOSX)
 	/* ripped from sdl2-compat with minor changes; most notably,
 	 * we put the raw dylib within the Resources directory, while
 	 * sdl2-compat expects it to be in a framework (stupid Xcode) */
-	"@loader_path/lib%s.%d.dylib",
-	"@loader_path/../Resources/lib%s.%d.dylib",
-	"@executable_path/lib%s.%d.dylib",
-	"@executable_path/../Resources/lib%s.%d.dylib",
-	"lib%s.%d.dylib",
+	"@loader_path/lib%s.%d.dylib", "@loader_path/../Resources/lib%s.%d.dylib", "@executable_path/lib%s.%d.dylib",
+	"@executable_path/../Resources/lib%s.%d.dylib", "lib%s.%d.dylib",
 #elif defined(SCHISM_WIIU)
 	/* none */
 #else
 	"lib%s.so.%d",
 #endif
-	NULL
-};
+	NULL};
 
 static void *library_load_revision(const char *name, int revision)
 {
@@ -271,7 +268,7 @@ static const char *loadso_lib_fmts[] = {
 	"%s.rpl",
 #else
 	/* NOTE: this is apparently required for Android; see issue #767
-	 * "lib%s.so", */
+ * "lib%s.so", */
 #endif
 	NULL,
 };

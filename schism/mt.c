@@ -91,9 +91,9 @@ void mt_mutex_delete(mt_mutex_t *mutex)
 	}
 #endif
 /*
-	SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
-		"make sure we're actually a mutex?");
-*/
+				SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
+					"make sure we're actually a mutex?");
+			*/
 }
 
 #ifdef __clang__
@@ -110,9 +110,9 @@ void mt_mutex_lock(mt_mutex_t *mutex)
 #endif
 
 /*
-	SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
-		"make sure we're actually a mutex?");
-*/
+				SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
+					"make sure we're actually a mutex?");
+			*/
 }
 
 void mt_mutex_unlock(mt_mutex_t *mutex)
@@ -125,9 +125,9 @@ void mt_mutex_unlock(mt_mutex_t *mutex)
 #endif
 
 /*
-	SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
-		"make sure we're actually a mutex?");
-*/
+				SCHISM_RUNTIME_ASSERT(mutex == MT_DUMMY_ADDR,
+					"make sure we're actually a mutex?");
+			*/
 }
 #ifdef __clang__
 # pragma clang diagnostic pop
@@ -147,7 +147,7 @@ mt_cond_t *mt_cond_create(void)
 	return NULL;
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
@@ -158,7 +158,7 @@ void mt_cond_delete(mt_cond_t *cond)
 		mt_backend->cond_delete(cond);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
@@ -168,7 +168,7 @@ void mt_cond_signal(mt_cond_t *cond)
 	mt_backend->cond_signal(cond);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
@@ -178,7 +178,7 @@ void mt_cond_wait(mt_cond_t *cond, mt_mutex_t *mutex)
 	mt_backend->cond_wait(cond, mutex);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
@@ -188,7 +188,7 @@ void mt_cond_wait_timeout(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t timeout)
 	mt_backend->cond_wait_timeout(cond, mutex, timeout);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
@@ -203,47 +203,51 @@ mt_sem_t *mt_sem_create(void)
 	return NULL;
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
 void mt_sem_delete(mt_sem_t *sem)
 {
 #ifdef USE_THREADS
-	if (mt_backend) mt_backend->sem_delete(sem);
+	if (mt_backend)
+		mt_backend->sem_delete(sem);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
 void mt_sem_post(mt_sem_t *sem)
 {
 #ifdef USE_THREADS
-	if (mt_backend) mt_backend->sem_post(sem);
+	if (mt_backend)
+		mt_backend->sem_post(sem);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
 void mt_sem_wait(mt_sem_t *sem)
 {
 #ifdef USE_THREADS
-	if (mt_backend) mt_backend->sem_wait(sem);
+	if (mt_backend)
+		mt_backend->sem_wait(sem);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
 void mt_sem_wait_timeout(mt_sem_t *sem, uint32_t timeout_ms)
 {
 #ifdef USE_THREADS
-	if (mt_backend) mt_backend->sem_wait_timeout(sem, timeout_ms);
+	if (mt_backend)
+		mt_backend->sem_wait_timeout(sem, timeout_ms);
 #else
 	SCHISM_RUNTIME_ASSERT(0, "this should never be called, since the way"
-		"it works is incompatible with non-threaded models");
+				 "it works is incompatible with non-threaded models");
 #endif
 }
 
@@ -259,18 +263,18 @@ int mt_init(void)
 #ifdef USE_THREADS
 	static const schism_mt_backend_t *backends[] = {
 		/* ordered by preference */
-#if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
+# if defined(SCHISM_WIN32) || defined(SCHISM_XBOX)
 		&schism_mt_backend_win32,
-#endif
-#ifdef SCHISM_SDL3
+# endif
+# ifdef SCHISM_SDL3
 		&schism_mt_backend_sdl3,
-#endif
-#ifdef SCHISM_SDL2
+# endif
+# ifdef SCHISM_SDL2
 		&schism_mt_backend_sdl2,
-#endif
-#if defined(SCHISM_SDL12) && !defined(SCHISM_MACOS)
+# endif
+# if defined(SCHISM_SDL12) && !defined(SCHISM_MACOS)
 		&schism_mt_backend_sdl12,
-#endif
+# endif
 		NULL,
 	};
 

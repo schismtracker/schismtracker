@@ -33,8 +33,7 @@ int fmt_f2r_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char magic[3];
 
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "F2R", 3))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "F2R", 3))
 		return 0;
 
 	unsigned char title[40];

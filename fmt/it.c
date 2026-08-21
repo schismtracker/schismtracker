@@ -24,15 +24,15 @@
 #include "headers.h"
 #include "bits.h"
 #include "charset.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "log.h"
-#include "version.h"
 #include "mem.h"
+#include "slurp.h"
 #include "str.h"
+#include "version.h"
 
-#include "player/sndfile.h"
 #include "midi.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -72,7 +72,12 @@ static int it_load_header(struct it_file *hdr, slurp_t *fp)
 {
 	size_t n;
 
-#define LOAD_VALUE(name) do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+#define LOAD_VALUE(name) \
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	LOAD_VALUE(id);
 	LOAD_VALUE(songname);
@@ -125,7 +130,10 @@ static int it_load_header(struct it_file *hdr, slurp_t *fp)
 
 static int it_write_header(struct it_file *hdr, disko_t *fp)
 {
-#define WRITE_VALUE(name) do { disko_write(fp, &hdr->name, sizeof(hdr->name)); } while (0)
+#define WRITE_VALUE(name) \
+	do { \
+		disko_write(fp, &hdr->name, sizeof(hdr->name)); \
+	} while (0)
 
 	WRITE_VALUE(id);
 	WRITE_VALUE(songname);
@@ -163,7 +171,7 @@ int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 	int n;
 	uint32_t para_smp[MAX_SAMPLES];
 	struct it_file hdr;
-	
+
 	if (!it_load_header(&hdr, fp))
 		return 0;
 
@@ -175,9 +183,8 @@ int fmt_it_read_info(dmoz_file_t *file, slurp_t *fp)
 	slurp_seek(fp, sizeof(uint32_t) * hdr.insnum, SEEK_CUR);
 	slurp_read(fp, para_smp, sizeof(uint32_t) * hdr.smpnum);
 
-	uint32_t para_min = ((hdr.special & 1) && hdr.msglength)
-		? hdr.msgoffset
-		: UINT32_C(0xFFFFFFFF); /* ?????????? */
+	uint32_t para_min
+		= ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : UINT32_C(0xFFFFFFFF); /* ?????????? */
 	for (n = 0; n < hdr.smpnum; n++) {
 		para_smp[n] = bswapLE32(para_smp[n]);
 		if (para_smp[n] < para_min)
@@ -229,17 +236,39 @@ static void it_import_voleffect(song_note_t *note, uint8_t v)
 {
 	uint8_t adj;
 
-	if (v <= 64)                   { adj =   0; note->voleffect = VOLFX_VOLUME; }
-	else if (v >= 128 && v <= 192) { adj = 128; note->voleffect = VOLFX_PANNING; }
-	else if (v >= 65 && v <= 74)   { adj =  65; note->voleffect = VOLFX_FINEVOLUP; }
-	else if (v >= 75 && v <= 84)   { adj =  75; note->voleffect = VOLFX_FINEVOLDOWN; }
-	else if (v >= 85 && v <= 94)   { adj =  85; note->voleffect = VOLFX_VOLSLIDEUP; }
-	else if (v >= 95 && v <= 104)  { adj =  95; note->voleffect = VOLFX_VOLSLIDEDOWN; }
-	else if (v >= 105 && v <= 114) { adj = 105; note->voleffect = VOLFX_PORTADOWN; }
-	else if (v >= 115 && v <= 124) { adj = 115; note->voleffect = VOLFX_PORTAUP; }
-	else if (v >= 193 && v <= 202) { adj = 193; note->voleffect = VOLFX_TONEPORTAMENTO; }
-	else if (v >= 203 && v <= 212) { adj = 203; note->voleffect = VOLFX_VIBRATODEPTH; }
-	else { return; }
+	if (v <= 64) {
+		adj = 0;
+		note->voleffect = VOLFX_VOLUME;
+	} else if (v >= 128 && v <= 192) {
+		adj = 128;
+		note->voleffect = VOLFX_PANNING;
+	} else if (v >= 65 && v <= 74) {
+		adj = 65;
+		note->voleffect = VOLFX_FINEVOLUP;
+	} else if (v >= 75 && v <= 84) {
+		adj = 75;
+		note->voleffect = VOLFX_FINEVOLDOWN;
+	} else if (v >= 85 && v <= 94) {
+		adj = 85;
+		note->voleffect = VOLFX_VOLSLIDEUP;
+	} else if (v >= 95 && v <= 104) {
+		adj = 95;
+		note->voleffect = VOLFX_VOLSLIDEDOWN;
+	} else if (v >= 105 && v <= 114) {
+		adj = 105;
+		note->voleffect = VOLFX_PORTADOWN;
+	} else if (v >= 115 && v <= 124) {
+		adj = 115;
+		note->voleffect = VOLFX_PORTAUP;
+	} else if (v >= 193 && v <= 202) {
+		adj = 193;
+		note->voleffect = VOLFX_TONEPORTAMENTO;
+	} else if (v >= 203 && v <= 212) {
+		adj = 203;
+		note->voleffect = VOLFX_VIBRATODEPTH;
+	} else {
+		return;
+	}
 
 	note->volparam = v - adj;
 }
@@ -248,7 +277,7 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t c
 {
 	song_note_t last_note[IT_CHANNELS];
 	int chan, row = 0;
-	uint8_t last_mask[IT_CHANNELS] = { 0 };
+	uint8_t last_mask[IT_CHANNELS] = {0};
 	uint8_t chanvar, maskvar, c;
 
 	while (row < rows) {
@@ -305,9 +334,11 @@ static void load_it_pattern(song_note_t *note, slurp_t *fp, int rows, uint16_t c
 			if (note[chan].effect == FX_SPECIAL && (note[chan].param & 0xf0) == 0xa0 && cwtv < 0x0200) {
 				// IT 1.xx does not support high offset command
 				note[chan].effect = FX_NONE;
-			} else if (note[chan].effect == FX_GLOBALVOLUME && note[chan].param > 0x80 && cwtv >= 0x1000 && cwtv <= 0x1050) {
+			} else if (note[chan].effect == FX_GLOBALVOLUME && note[chan].param > 0x80 && cwtv >= 0x1000
+				   && cwtv <= 0x1050) {
 				// Fix handling of commands V81-VFF in ITs made with old Schism Tracker versions
-				// (fixed in commit ab5517d4730d4c717f7ebffb401445679bd30888 - one of the last versions to identify as v0.50)
+				// (fixed in commit ab5517d4730d4c717f7ebffb401445679bd30888 - one of the last versions
+				// to identify as v0.50)
 				note[chan].param = 0x80;
 			}
 
@@ -338,7 +369,10 @@ int it_read_midi_config(midi_config_t *midi, slurp_t *fp)
 		return 0;
 
 #define READ_VALUE(x) \
-	do { if (slurp_read(fp, midi->x, sizeof(midi->x)) != sizeof(midi->x)) return 0; } while (0)
+	do { \
+		if (slurp_read(fp, midi->x, sizeof(midi->x)) != sizeof(midi->x)) \
+			return 0; \
+	} while (0)
 
 	/* everything in this structure *should* be word
 	 * aligned on basically every platform imaginable,
@@ -378,8 +412,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		return LOAD_UNSUPPORTED;
 
 	// Screwy limits?
-	if (hdr.insnum > MAX_INSTRUMENTS || hdr.smpnum > MAX_SAMPLES
-		|| hdr.patnum > MAX_PATTERNS) {
+	if (hdr.insnum > MAX_INSTRUMENTS || hdr.smpnum > MAX_SAMPLES || hdr.patnum > MAX_PATTERNS) {
 		return LOAD_FORMAT_ERROR;
 	}
 
@@ -468,9 +501,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	slurp_read(fp, para_smp, 4 * hdr.smpnum);
 	slurp_read(fp, para_pat, 4 * hdr.patnum);
 
-	para_min = ((hdr.special & 1) && hdr.msglength)
-		? hdr.msgoffset
-		: UINT32_C(0xFFFFFFFF);
+	para_min = ((hdr.special & 1) && hdr.msglength) ? hdr.msgoffset : UINT32_C(0xFFFFFFFF);
 	for (n = 0; n < hdr.insnum; n++) {
 		para_ins[n] = bswapLE32(para_ins[n]);
 		if (para_ins[n] < para_min)
@@ -490,7 +521,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	if (hdr.special & 2) {
 		slurp_read(fp, &hist, 2);
 		hist = bswapLE16(hist);
-		if (para_min < (uint32_t) slurp_tell(fp) + 8 * hist) {
+		if (para_min < (uint32_t)slurp_tell(fp) + 8 * hist) {
 			/* History data overlaps the parapointers. Discard it, it's probably broken.
 			Some programs, notably older versions of Schism Tracker, set the history flag
 			but didn't actually write any data, so the "length" we just read is actually
@@ -552,7 +583,6 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		song->message[msg_len] = '\0';
 	}
 
-
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 0; n < hdr.insnum; n++) {
 			song_instrument_t *inst;
@@ -561,7 +591,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 				continue;
 			slurp_seek(fp, para_ins[n], SEEK_SET);
 			inst = song->instruments[n + 1] = csf_allocate_instrument();
-			
+
 			if (hdr.cmwt >= 0x0200)
 				load_it_instrument(NULL, inst, fp);
 			else
@@ -592,12 +622,12 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			load_it_pattern(song->patterns[n], fp, rows, hdr.cwtv);
 			got = slurp_tell(fp) - para_pat[n] - 8;
 			if (bytes != got)
-				log_appendf(4, " Warning: Pattern %d: size mismatch"
+				log_appendf(4,
+					" Warning: Pattern %d: size mismatch"
 					" (expected %d bytes, got %lu)",
-					n, bytes, (unsigned long) got);
+					n, bytes, (unsigned long)got);
 		}
 	}
-
 
 	// XXX 32 CHARACTER MAX XXX
 
@@ -612,10 +642,9 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	} else if ((hdr.cwtv >> 12) == 0 && hist != 0 && hdr.reserved != 0) {
 		// early catch to exclude possible false positives without repeating a bunch of stuff.
 	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0200 && hdr.flags == 9 && hdr.special == 0
-		   && hdr.hilight_major == 0 && hdr.hilight_minor == 0
-		   && hdr.insnum == 0 && hdr.patnum + 1 == hdr.ordnum
-		   && hdr.globalvol == 128 && hdr.mv == 100 && hdr.speed == 1 && hdr.sep == 128 && hdr.pwd == 0
-		   && hdr.msglength == 0 && hdr.msgoffset == 0 && hdr.reserved == 0) {
+		   && hdr.hilight_major == 0 && hdr.hilight_minor == 0 && hdr.insnum == 0
+		   && hdr.patnum + 1 == hdr.ordnum && hdr.globalvol == 128 && hdr.mv == 100 && hdr.speed == 1
+		   && hdr.sep == 128 && hdr.pwd == 0 && hdr.msglength == 0 && hdr.msgoffset == 0 && hdr.reserved == 0) {
 		// :)
 		tid = "OpenSPC conversion";
 	} else if ((hdr.cwtv >> 12) == 5) {
@@ -624,21 +653,19 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		else if (hdr.cwtv < 0x5129 || !(hdr.reserved & 0xffff))
 			tid = "OpenMPT %d.%02x (compat.)";
 		else
-			snprintf(song->tracker_id, sizeof(song->tracker_id),
-				"OpenMPT %d.%02x.%02x.%02x (compat.)",
-				(hdr.cwtv & 0xf00) >> 8,
-				hdr.cwtv & 0xff,
-				(hdr.reserved >> 8) & 0xff, 
+			snprintf(song->tracker_id, sizeof(song->tracker_id), "OpenMPT %d.%02x.%02x.%02x (compat.)",
+				(hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff, (hdr.reserved >> 8) & 0xff,
 				(hdr.reserved & 0xff));
 		modplug = 1;
-	} else if (hdr.cwtv == 0x0888 && hdr.cmwt == 0x0888 && hdr.reserved == 0/* && hdr.ordnum == 256*/) {
+	} else if (hdr.cwtv == 0x0888 && hdr.cmwt == 0x0888 && hdr.reserved == 0 /* && hdr.ordnum == 256*/) {
 		// erh.
 		// There's a way to identify the exact version apparently, but it seems too much trouble
 		// (ordinarily ordnum == 256, but I have encountered at least one file for which this is NOT
 		// the case (trackit_r2.it by dsck) and no other trackers I know of use 0x0888)
 		tid = "OpenMPT 1.17+";
 		modplug = 1;
-	} else if (hdr.cwtv == 0x0300 && hdr.cmwt == 0x0300 && hdr.reserved == 0 && hdr.ordnum == 256 && hdr.sep == 128 && hdr.pwd == 0) {
+	} else if (hdr.cwtv == 0x0300 && hdr.cmwt == 0x0300 && hdr.reserved == 0 && hdr.ordnum == 256 && hdr.sep == 128
+		   && hdr.pwd == 0) {
 		tid = "OpenMPT 1.17.02.20 - 1.17.02.25";
 		modplug = 1;
 	} else if (hdr.cwtv == 0x0217 && hdr.cmwt == 0x0200 && hdr.reserved == 0) {
@@ -658,9 +685,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			// -- but then again, who would use 64 channels and not instrument mode?
 			ompt = 1;
 		}
-		tid = (ompt
-			? "OpenMPT (compatibility mode)"
-			: "Modplug Tracker 1.09 - 1.16");
+		tid = (ompt ? "OpenMPT (compatibility mode)" : "Modplug Tracker 1.09 - 1.16");
 		modplug = 1;
 	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0200 && hdr.reserved == 0) {
 		// instruments 560 bytes apart
@@ -675,7 +700,8 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		// all sample/instrument filenames say "-DEPRECATED-"
 		// 0xa for message newlines instead of 0xd
 		tid = "ChibiTracker";
-	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0214 && (hdr.flags & 0x10C6) == 4 && hdr.special <= 1 && hdr.reserved == 0) {
+	} else if (hdr.cwtv == 0x0214 && hdr.cmwt == 0x0214 && (hdr.flags & 0x10C6) == 4 && hdr.special <= 1
+		   && hdr.reserved == 0) {
 		// sample data stored directly after header
 		// all sample/instrument filenames say "XXXXXXXX.YYY"
 		tid = "CheeseTracker?";
@@ -695,9 +721,9 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			hdr.cwtv = 0x0215;
 		} else if (hdr.cwtv >= 0x0215 && hdr.cwtv <= 0x0217) {
 			tid = NULL;
-			const char *versions[] = { "1-2", "3", "4-5" };
-			snprintf(song->tracker_id, sizeof(song->tracker_id),
-				"Impulse Tracker 2.14p%s", versions[hdr.cwtv - 0x0215]);
+			const char *versions[] = {"1-2", "3", "4-5"};
+			snprintf(song->tracker_id, sizeof(song->tracker_id), "Impulse Tracker 2.14p%s",
+				versions[hdr.cwtv - 0x0215]);
 		}
 
 		if (hdr.cwtv >= 0x0207 && !song->histlen && hdr.reserved) {
@@ -713,8 +739,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		//"saved %d time%s", hist, (hist == 1) ? "" : "s"
 	}
 	if (tid) {
-		snprintf(song->tracker_id, sizeof(song->tracker_id),
-			tid, (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff);
+		snprintf(song->tracker_id, sizeof(song->tracker_id), tid, (hdr.cwtv & 0xf00) >> 8, hdr.cwtv & 0xff);
 	}
 
 	if (modplug) {
@@ -731,7 +756,7 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		 *  - paper */
 		char *tmp;
 
-#define CONVERT(X, SIZE)  \
+#define CONVERT(X, SIZE) \
 	do { \
 		if (!charset_iconv((X), &tmp, CHARSET_WINDOWS1252, CHARSET_CP437, SIZE)) { \
 			strncpy((X), tmp, (SIZE) - 1); \
@@ -761,9 +786,9 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 #undef CONVERT
 	}
 
-//	if (ferror(fp)) {
-//		return LOAD_FILE_ERROR;
-//	}
+	//	if (ferror(fp)) {
+	//		return LOAD_FILE_ERROR;
+	//	}
 
 	return LOAD_SUCCESS;
 }
@@ -795,7 +820,7 @@ static void save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 
 	for (int row = 0; row < patsize; row++) {
 		for (int chan = 0; chan < IT_CHANNELS; chan++, noteptr++) {
-			uint8_t m = 0;  // current mask
+			uint8_t m = 0; // current mask
 			int vol = -1;
 			unsigned int note = noteptr->note;
 			uint8_t effect = noteptr->effect, param = noteptr->param;
@@ -805,25 +830,52 @@ static void save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 				if (note < 0x80)
 					note--;
 			}
-			if (noteptr->instrument) m |= 2;
+			if (noteptr->instrument)
+				m |= 2;
 			switch (noteptr->voleffect) {
-			default:                                                       break;
-			case VOLFX_VOLUME:         vol = MIN(noteptr->volparam, 64);       break;
-			case VOLFX_FINEVOLUP:      vol = MIN(noteptr->volparam,  9) +  65; break;
-			case VOLFX_FINEVOLDOWN:    vol = MIN(noteptr->volparam,  9) +  75; break;
-			case VOLFX_VOLSLIDEUP:     vol = MIN(noteptr->volparam,  9) +  85; break;
-			case VOLFX_VOLSLIDEDOWN:   vol = MIN(noteptr->volparam,  9) +  95; break;
-			case VOLFX_PORTADOWN:      vol = MIN(noteptr->volparam,  9) + 105; break;
-			case VOLFX_PORTAUP:        vol = MIN(noteptr->volparam,  9) + 115; break;
-			case VOLFX_PANNING:        vol = MIN(noteptr->volparam, 64) + 128; break;
-			case VOLFX_VIBRATODEPTH:   vol = MIN(noteptr->volparam,  9) + 203; break;
-			case VOLFX_VIBRATOSPEED:   vol = 203;                         break;
-			case VOLFX_TONEPORTAMENTO: vol = MIN(noteptr->volparam,  9) + 193; break;
+			default:
+				break;
+			case VOLFX_VOLUME:
+				vol = MIN(noteptr->volparam, 64);
+				break;
+			case VOLFX_FINEVOLUP:
+				vol = MIN(noteptr->volparam, 9) + 65;
+				break;
+			case VOLFX_FINEVOLDOWN:
+				vol = MIN(noteptr->volparam, 9) + 75;
+				break;
+			case VOLFX_VOLSLIDEUP:
+				vol = MIN(noteptr->volparam, 9) + 85;
+				break;
+			case VOLFX_VOLSLIDEDOWN:
+				vol = MIN(noteptr->volparam, 9) + 95;
+				break;
+			case VOLFX_PORTADOWN:
+				vol = MIN(noteptr->volparam, 9) + 105;
+				break;
+			case VOLFX_PORTAUP:
+				vol = MIN(noteptr->volparam, 9) + 115;
+				break;
+			case VOLFX_PANNING:
+				vol = MIN(noteptr->volparam, 64) + 128;
+				break;
+			case VOLFX_VIBRATODEPTH:
+				vol = MIN(noteptr->volparam, 9) + 203;
+				break;
+			case VOLFX_VIBRATOSPEED:
+				vol = 203;
+				break;
+			case VOLFX_TONEPORTAMENTO:
+				vol = MIN(noteptr->volparam, 9) + 193;
+				break;
 			}
-			if (vol != -1) m |= 4;
+			if (vol != -1)
+				m |= 4;
 			csf_export_s3m_effect(&effect, &param, 1);
-			if (effect || param) m |= 8;
-			if (!m) continue;
+			if (effect || param)
+				m |= 8;
+			if (!m)
+				continue;
 
 			if (m & 1) {
 				if ((note == lastnote[chan].note) && (initmask[chan] & 1)) {
@@ -857,7 +909,7 @@ static void save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 
 			if (m & 8) {
 				if ((effect == lastnote[chan].effect) && (param == lastnote[chan].param)
-				    && (initmask[chan] & 8)) {
+					&& (initmask[chan] & 8)) {
 					m &= ~8;
 					m |= 0x80;
 				} else {
@@ -875,10 +927,16 @@ static void save_it_pattern(disko_t *fp, song_note_t *pat, int patsize)
 				data[pos++] = m;
 			}
 
-			if (m & 1) data[pos++] = note;
-			if (m & 2) data[pos++] = noteptr->instrument;
-			if (m & 4) data[pos++] = vol;
-			if (m & 8) { data[pos++] = effect; data[pos++] = param; }
+			if (m & 1)
+				data[pos++] = note;
+			if (m & 2)
+				data[pos++] = noteptr->instrument;
+			if (m & 4)
+				data[pos++] = vol;
+			if (m & 8) {
+				data[pos++] = effect;
+				data[pos++] = param;
+			}
 		} // end channel
 		data[pos++] = 0;
 	} // end row
@@ -924,7 +982,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 		npat = 1;
 
 	hdr.id = bswapLE32(0x4D504D49); // IMPM
-	strncpy((char *) hdr.songname, song->title, 25);
+	strncpy((char *)hdr.songname, song->title, 25);
 	hdr.songname[25] = 0; // why ?
 	hdr.hilight_major = song->row_highlight_major;
 	hdr.hilight_minor = song->row_highlight_minor;
@@ -943,10 +1001,11 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	//     row highlight = 2.13 (doesn't necessarily affect cmwt)
 	//     compressed samples = 2.14
 	//     instrument filters = 2.17
-	hdr.cmwt = bswapLE16(0x0214);   // compatible with IT 2.14
+	hdr.cmwt = bswapLE16(0x0214); // compatible with IT 2.14
 	for (n = 1; n < nins; n++) {
 		song_instrument_t *i = song->instruments[n];
-		if (!i) continue;
+		if (!i)
+			continue;
 		if (i->flags & ENV_FILTER) {
 			hdr.cmwt = bswapLE16(0x0217);
 			break;
@@ -954,13 +1013,18 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	}
 
 	hdr.flags = 0;
-	hdr.special = 2 | 4;            // 2 = edit history, 4 = row highlight
+	hdr.special = 2 | 4; // 2 = edit history, 4 = row highlight
 
-	if (!(song->flags & SONG_NOSTEREO))    hdr.flags |= 1;
-	if (song->flags & SONG_INSTRUMENTMODE) hdr.flags |= 4;
-	if (song->flags & SONG_LINEARSLIDES)   hdr.flags |= 8;
-	if (song->flags & SONG_ITOLDEFFECTS)   hdr.flags |= 16;
-	if (song->flags & SONG_COMPATGXX)      hdr.flags |= 32;
+	if (!(song->flags & SONG_NOSTEREO))
+		hdr.flags |= 1;
+	if (song->flags & SONG_INSTRUMENTMODE)
+		hdr.flags |= 4;
+	if (song->flags & SONG_LINEARSLIDES)
+		hdr.flags |= 8;
+	if (song->flags & SONG_ITOLDEFFECTS)
+		hdr.flags |= 16;
+	if (song->flags & SONG_COMPATGXX)
+		hdr.flags |= 32;
 	if (midi_flags & MIDI_PITCHBEND) {
 		hdr.flags |= 64;
 		hdr.pwd = midi_pitch_depth;
@@ -990,8 +1054,7 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	hdr.reserved = bswapLE32(ver_reserved);
 
 	for (n = 0; n < IT_CHANNELS; n++) {
-		hdr.chnpan[n] = ((song->channels[n].flags & CHN_SURROUND)
-				 ? 100 : (song->channels[n].panning / 4));
+		hdr.chnpan[n] = ((song->channels[n].flags & CHN_SURROUND) ? 100 : (song->channels[n].panning / 4));
 		hdr.chnvol[n] = song->channels[n].volume;
 		if (song->channels[n].flags & CHN_MUTE)
 			hdr.chnpan[n] += 128;
@@ -1001,10 +1064,9 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 	disko_write(fp, song->orderlist, nord);
 
 	// we'll get back to these later
-	disko_write(fp, para_ins, 4*nins);
-	disko_write(fp, para_smp, 4*nsmp);
-	disko_write(fp, para_pat, 4*npat);
-
+	disko_write(fp, para_ins, 4 * nins);
+	disko_write(fp, para_smp, 4 * nsmp);
+	disko_write(fp, para_pat, 4 * npat);
 
 	uint16_t h;
 
@@ -1085,14 +1147,14 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 		// Always save the data pointer, even if there's not actually any data being pointed to
 		op = disko_tell(fp);
 		tmp = bswapLE32(op);
-		disko_seek(fp, para_smp[n]+0x48, SEEK_SET);
+		disko_seek(fp, para_smp[n] + 0x48, SEEK_SET);
 		disko_write(fp, &tmp, 4);
 		disko_seek(fp, op, SEEK_SET);
 		if (smp->data)
-			csf_write_sample(fp, smp, SF_LE | SF_PCMS
-					| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+			csf_write_sample(fp, smp,
+				SF_LE | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
 					| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
-					UINT32_MAX);
+				UINT32_MAX);
 		// done using the pointer internally, so *now* swap it
 		para_smp[n] = bswapLE32(para_smp[n]);
 
@@ -1106,9 +1168,9 @@ int fmt_it_save_song(disko_t *fp, song_t *song)
 
 	// rewrite the parapointers
 	disko_seek(fp, 0xc0 + nord, SEEK_SET);
-	disko_write(fp, para_ins, 4*nins);
-	disko_write(fp, para_smp, 4*nsmp);
-	disko_write(fp, para_pat, 4*npat);
+	disko_write(fp, para_ins, 4 * nins);
+	disko_write(fp, para_smp, 4 * nsmp);
+	disko_write(fp, para_pat, 4 * npat);
 
 	return SAVE_SUCCESS;
 }

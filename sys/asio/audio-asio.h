@@ -1,7 +1,7 @@
 /**
  * Incomplete ASIO interface definitions -- reverse-engineered from existing
  * binaries and various public sources.
- * 
+ *
  * Copyright (C) 2025-2026 Paper
  *
  * This software is provided 'as-is', without any express or implied
@@ -19,7 +19,7 @@
  * 2. Altered source versions must be plainly marked as such, and must not be
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
-**/
+ **/
 
 #ifndef ASIO_INCL_H_
 #define ASIO_INCL_H_
@@ -55,7 +55,7 @@ typedef uint32_t AsioBool; /* always 0 or 1 */
  * I'm assuming it's success, because it's positive :) */
 #define ASIO_ERROR_FUTURE_SUCCESS (1061701536)
 /* this gets returned with an invalid future selector ? */
-#define ASIO_ERROR_FUTURE_INVALID (-1000)
+#define ASIO_ERROR_FUTURE_INVALID    (-1000)
 #define ASIO_ERROR_INVALID_PARAMETER (-998)
 
 /* caused by calling some functions without properly calling Asio_Init() */
@@ -74,9 +74,9 @@ typedef int32_t AsioError;
 /* ------------------------------------------------------------------------ */
 
 /* USB ASIO driver on Mac OS 9 */
-#define ASIO_SAMPLE_TYPE_INT16BE   (0)
-#define ASIO_SAMPLE_TYPE_INT24BE   (1)
-#define ASIO_SAMPLE_TYPE_INT32BE   (2)
+#define ASIO_SAMPLE_TYPE_INT16BE (0)
+#define ASIO_SAMPLE_TYPE_INT24BE (1)
+#define ASIO_SAMPLE_TYPE_INT32BE (2)
 
 //#define ASIO_SAMPLE_TYPE_INT8LE (15) // ?
 
@@ -146,16 +146,15 @@ struct AsioCreateBufferCallbacks {
 	 *
 	 * buf: the buffer to fill
 	 * unknown1: TODO */
-	void (ASIO_CDECL *buffer_flip)(uint32_t buf, uint32_t unknown1);
+	void(ASIO_CDECL *buffer_flip)(uint32_t buf, uint32_t unknown1);
 	/* no idea what this one is; nothing I have calls it */
-	void (ASIO_CDECL *unk2)(void);
+	void(ASIO_CDECL *unk2)(void);
 	/* message handler:
 	 * cls: class of message 'ASIO_CLASS_*'
 	 * msg: the actual message itself
 	 * unknown1: TODO
 	 * unknown2: TODO */
-	uint32_t (ASIO_CDECL *msg)(uint32_t cls, uint32_t msg, void *unknown1,
-		void *unknown2);
+	uint32_t(ASIO_CDECL *msg)(uint32_t cls, uint32_t msg, void *unknown1, void *unknown2);
 	/* an expanded form of buffer_flip; takes in a pointer
 	 * and returns one. I don't really know what it's for though. */
 	void *(ASIO_CDECL *buffer_flip_ex)(void *unk1, uint32_t buf, uint32_t unk2);
@@ -235,7 +234,8 @@ AsioError IAsio_GetChannelInfo(IAsio *This, struct AsioChannelInfo *pinfo);
  * of the IAsio. Many drivers do NOT copy the data inside the pointer, but
  * simply copy the pointer itself. You should probably store this data as
  * a global or alongside the IAsio. */
-AsioError IAsio_CreateBuffers(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs);
+AsioError IAsio_CreateBuffers(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size,
+	struct AsioCreateBufferCallbacks *cbs);
 /* Destroys buffers previously allocated with IAsio_CreateBuffers. */
 AsioError IAsio_DestroyBuffers(IAsio *This);
 /* Opens the driver control panel. */

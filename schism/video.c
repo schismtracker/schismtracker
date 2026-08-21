@@ -20,21 +20,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#define NATIVE_SCREEN_WIDTH		640
-#define NATIVE_SCREEN_HEIGHT	400
-#define WINDOW_TITLE			"Schism Tracker"
+#define NATIVE_SCREEN_WIDTH  640
+#define NATIVE_SCREEN_HEIGHT 400
+#define WINDOW_TITLE         "Schism Tracker"
 
 #include "headers.h"
 
 #include "it.h"
-#include "charset.h"
 #include "bits.h"
+#include "charset.h"
 #include "config.h"
-#include "video.h"
-#include "osdefs.h"
-#include "vgamem.h"
 #include "mem.h"
+#include "osdefs.h"
 #include "palettes.h"
+#include "vgamem.h"
+#include "video.h"
 
 #include "backend/video.h"
 
@@ -177,9 +177,9 @@ void video_rgb_to_yuv(uint32_t *y, uint32_t *u, uint32_t *v, unsigned char rgb[3
 	/* YCbCr. This results in somewhat less saturated colors when
 	 * using SDL 1.2 software overlays, but this is the official
 	 * translation. */
-	*y =  0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] +  16;
+	*y = 0.257 * rgb[0] + 0.504 * rgb[1] + 0.098 * rgb[2] + 16;
 	*u = -0.148 * rgb[0] - 0.291 * rgb[1] + 0.439 * rgb[2] + 128;
-	*v =  0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
+	*v = 0.439 * rgb[0] - 0.368 * rgb[1] - 0.071 * rgb[2] + 128;
 }
 
 void video_refresh(void)
@@ -232,8 +232,7 @@ void video_mousecursor(int vis)
 /* ------------------------------------------------------------------------ */
 /* mouse drawing */
 
-static void make_mouseline(uint32_t y, uint32_t mouseline[80],
-	uint32_t mouseline_mask[80])
+static void make_mouseline(uint32_t y, uint32_t mouseline[80], uint32_t mouseline_mask[80])
 {
 	const struct mouse_cursor *cursor = &cursors[video.mouse.shape];
 	uint32_t i;
@@ -245,22 +244,20 @@ static void make_mouseline(uint32_t y, uint32_t mouseline[80],
 	uint32_t z, zm;
 	uint32_t temp;
 
-	memset(mouseline,      0, 80 * sizeof(*mouseline));
+	memset(mouseline, 0, 80 * sizeof(*mouseline));
 	memset(mouseline_mask, 0, 80 * sizeof(*mouseline));
 
-	if (video_mousecursor_visible() != MOUSE_EMULATED
-		|| !video_is_focused()
-		|| (video.mouse.y >= cursor->center_y && y < video.mouse.y - cursor->center_y)
-		|| y < cursor->center_y
+	if (video_mousecursor_visible() != MOUSE_EMULATED || !video_is_focused()
+		|| (video.mouse.y >= cursor->center_y && y < video.mouse.y - cursor->center_y) || y < cursor->center_y
 		|| y >= video.mouse.y + cursor->height - cursor->center_y) {
 		return;
 	}
 
 	scenter = (cursor->center_x / 8) + (cursor->center_x % 8 != 0);
-	swidth  = (cursor->width    / 8) + (cursor->width    % 8 != 0);
+	swidth = (cursor->width / 8) + (cursor->width % 8 != 0);
 	centeroffset = cursor->center_x % 8;
 
-	z  = cursor->pointer[y - video.mouse.y + cursor->center_y];
+	z = cursor->pointer[y - video.mouse.y + cursor->center_y];
 	zm = cursor->mask[y - video.mouse.y + cursor->center_y];
 
 	z <<= 8;
@@ -274,21 +271,21 @@ static void make_mouseline(uint32_t y, uint32_t mouseline[80],
 	}
 
 	// always fill the cell the mouse coordinates are in
-	mouseline[x]      = z  >> (8 * (swidth - scenter + 1)) & 0xFF;
+	mouseline[x] = z >> (8 * (swidth - scenter + 1)) & 0xFF;
 	mouseline_mask[x] = zm >> (8 * (swidth - scenter + 1)) & 0xFF;
 
 	// draw the parts of the cursor sticking out to the left
 	temp = (cursor->center_x < v) ? 0 : ((cursor->center_x - v) / 8) + ((cursor->center_x - v) % 8 != 0);
 	for (i = 1; i <= temp && x >= i; i++) {
-		mouseline[x-i]      = z  >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
-		mouseline_mask[x-i] = zm >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
+		mouseline[x - i] = z >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
+		mouseline_mask[x - i] = zm >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 	}
 
 	// and to the right
 	temp = swidth - scenter + 1;
 	for (i = 1; (i <= temp) && (x + i < 80); i++) {
-		mouseline[x+i]      = z  >> (8 * (swidth - scenter + 1 - i)) & 0xff;
-		mouseline_mask[x+i] = zm >> (8 * (swidth - scenter + 1 - i)) & 0xff;
+		mouseline[x + i] = z >> (8 * (swidth - scenter + 1 - i)) & 0xff;
+		mouseline_mask[x + i] = zm >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 	}
 }
 
@@ -296,14 +293,15 @@ static void make_mouseline(uint32_t y, uint32_t mouseline[80],
 /* blitters */
 
 /* Video with linear interpolation. */
-#define FIXED_BITS 8
-#define FIXED_MASK ((1 << FIXED_BITS) - 1)
+#define FIXED_BITS     8
+#define FIXED_MASK     ((1 << FIXED_BITS) - 1)
 #define ONE_HALF_FIXED (1 << (FIXED_BITS - 1))
-#define INT2FIXED(x) ((x) << FIXED_BITS)
-#define FIXED2INT(x) ((x) >> FIXED_BITS)
-#define FRAC(x) ((x) & FIXED_MASK)
+#define INT2FIXED(x)   ((x) << FIXED_BITS)
+#define FIXED2INT(x)   ((x) >> FIXED_BITS)
+#define FRAC(x)        ((x) & FIXED_MASK)
 
-void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, uint32_t width, uint32_t height)
+void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data,
+	uint32_t width, uint32_t height)
 {
 	uint32_t cv32backing[NATIVE_SCREEN_WIDTH * 2];
 	uint32_t *csp, *esp;
@@ -330,18 +328,18 @@ void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_ma
 				uint32_t *dp;
 
 				/* move up one line */
-				make_mouseline(iny+1, mouseline, mouseline_mask);
-				vgamem_scan32(iny+1, csp, video.tc_bgr32, mouseline, mouseline_mask);
+				make_mouseline(iny + 1, mouseline, mouseline_mask);
+				vgamem_scan32(iny + 1, csp, video.tc_bgr32, mouseline, mouseline_mask);
 
 				/* only need to swap the buffer pointers */
-				dp  = esp;
+				dp = esp;
 				esp = csp;
 				csp = dp;
 			} else {
-				make_mouseline(iny,   mouseline, mouseline_mask);
-				vgamem_scan32(iny,   csp, video.tc_bgr32, mouseline, mouseline_mask);
-				make_mouseline(iny+1, mouseline, mouseline_mask);
-				vgamem_scan32(iny+1, esp, video.tc_bgr32, mouseline, mouseline_mask);
+				make_mouseline(iny, mouseline, mouseline_mask);
+				vgamem_scan32(iny, csp, video.tc_bgr32, mouseline, mouseline_mask);
+				make_mouseline(iny + 1, mouseline, mouseline_mask);
+				vgamem_scan32(iny + 1, esp, video.tc_bgr32, mouseline, mouseline_mask);
 			}
 
 			lasty = iny;
@@ -366,45 +364,49 @@ void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_ma
 			 * red, do the RB channels together
 			 * See http://www.virtualdub.org/blog/pivot/entry.php?id=117
 			 * for a quick explanation */
-#define REDBLUE(Q) ((Q) & 0x00FF00FF)
-#define GREEN(Q) ((Q) & 0x0000FF00)
-			t1 = REDBLUE((((REDBLUE(c01)-REDBLUE(c00))*ex) >> FIXED_BITS)+REDBLUE(c00));
-			t2 = REDBLUE((((REDBLUE(c11)-REDBLUE(c10))*ex) >> FIXED_BITS)+REDBLUE(c10));
-			outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+# define REDBLUE(Q) ((Q) & 0x00FF00FF)
+# define GREEN(Q)   ((Q) & 0x0000FF00)
+			t1 = REDBLUE((((REDBLUE(c01) - REDBLUE(c00)) * ex) >> FIXED_BITS) + REDBLUE(c00));
+			t2 = REDBLUE((((REDBLUE(c11) - REDBLUE(c10)) * ex) >> FIXED_BITS) + REDBLUE(c10));
+			outb = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
 
-			t1 = GREEN((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00));
-			t2 = GREEN((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10));
-			outg = (((((t2-t1)*ey) >> FIXED_BITS) + t1) >> 8) & 0xFF;
+			t1 = GREEN((((GREEN(c01) - GREEN(c00)) * ex) >> FIXED_BITS) + GREEN(c00));
+			t2 = GREEN((((GREEN(c11) - GREEN(c10)) * ex) >> FIXED_BITS) + GREEN(c10));
+			outg = (((((t2 - t1) * ey) >> FIXED_BITS) + t1) >> 8) & 0xFF;
 
 			outr = (outb >> 16) & 0xFF;
 			outb &= 0xFF;
-#undef REDBLUE
-#undef GREEN
+# undef REDBLUE
+# undef GREEN
 #else
-#define BLUE(Q) (Q & 255)
-#define GREEN(Q) ((Q >> 8) & 255)
-#define RED(Q) ((Q >> 16) & 255)
-			t1 = ((((BLUE(c01)-BLUE(c00))*ex) >> FIXED_BITS)+BLUE(c00)) & 0xFF;
-			t2 = ((((BLUE(c11)-BLUE(c10))*ex) >> FIXED_BITS)+BLUE(c10)) & 0xFF;
-			outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+# define BLUE(Q)  (Q & 255)
+# define GREEN(Q) ((Q >> 8) & 255)
+# define RED(Q)   ((Q >> 16) & 255)
+			t1 = ((((BLUE(c01) - BLUE(c00)) * ex) >> FIXED_BITS) + BLUE(c00)) & 0xFF;
+			t2 = ((((BLUE(c11) - BLUE(c10)) * ex) >> FIXED_BITS) + BLUE(c10)) & 0xFF;
+			outb = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
 
-			t1 = ((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00)) & 0xFF;
-			t2 = ((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10)) & 0xFF;
-			outg = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+			t1 = ((((GREEN(c01) - GREEN(c00)) * ex) >> FIXED_BITS) + GREEN(c00)) & 0xFF;
+			t2 = ((((GREEN(c11) - GREEN(c10)) * ex) >> FIXED_BITS) + GREEN(c10)) & 0xFF;
+			outg = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
 
-			t1 = ((((RED(c01)-RED(c00))*ex) >> FIXED_BITS)+RED(c00)) & 0xFF;
-			t2 = ((((RED(c11)-RED(c10))*ex) >> FIXED_BITS)+RED(c10)) & 0xFF;
-			outr = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
-#undef RED
-#undef GREEN
-#undef BLUE
+			t1 = ((((RED(c01) - RED(c00)) * ex) >> FIXED_BITS) + RED(c00)) & 0xFF;
+			t2 = ((((RED(c11) - RED(c10)) * ex) >> FIXED_BITS) + RED(c10)) & 0xFF;
+			outr = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
+# undef RED
+# undef GREEN
+# undef BLUE
 #endif
 
 			uint32_t c = map_rgb(map_rgb_data, outr, outg, outb);
 
 			switch (bpp) {
-			case 1: *(uint8_t*)pixels = c; break;
-			case 2: *(uint16_t*)pixels = c; break;
+			case 1:
+				*(uint8_t *)pixels = c;
+				break;
+			case 2:
+				*(uint16_t *)pixels = c;
+				break;
 			case 3:
 				// convert 32-bit to 24-bit
 #ifdef WORDS_BIGENDIAN
@@ -417,8 +419,11 @@ void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_ma
 				pixels[2] = ((char *)&c)[2];
 #endif
 				break;
-			case 4: *(uint32_t*)pixels = c; break;
-			default: break;
+			case 4:
+				*(uint32_t *)pixels = c;
+				break;
+			default:
+				break;
 			}
 
 			pixels += bpp;
@@ -428,7 +433,8 @@ void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_ma
 }
 
 /* Fast nearest neighbor blitter */
-void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256], uint32_t width, uint32_t height)
+void video_blitNN(
+	uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256], uint32_t width, uint32_t height)
 {
 	// at most 32-bits...
 	union {
@@ -484,8 +490,12 @@ void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uin
 			scaled_x = CLAMP(scaled_x, 0, 639);
 
 			switch (bpp) {
-			case 1: *pixels = pixels_u.uc[scaled_x]; break;
-			case 2: *(uint16_t *)pixels = pixels_u.us[scaled_x]; break;
+			case 1:
+				*pixels = pixels_u.uc[scaled_x];
+				break;
+			case 2:
+				*(uint16_t *)pixels = pixels_u.us[scaled_x];
+				break;
 			case 3:
 				// convert 32-bit to 24-bit
 #ifdef WORDS_BIGENDIAN
@@ -498,8 +508,11 @@ void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uin
 				pixels[2] = pixels_u.uc[(scaled_x) * 4 + 2];
 #endif
 				break;
-			case 4:  *(uint32_t *)pixels = pixels_u.ui[scaled_x]; break;
-			default: break; // should never happen
+			case 4:
+				*(uint32_t *)pixels = pixels_u.ui[scaled_x];
+				break;
+			default:
+				break; // should never happen
 			}
 
 			pixels += bpp;
@@ -549,7 +562,7 @@ void video_blitTV(unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256
 		make_mouseline(y, mouseline, mouseline_mask);
 		vgamem_scan8(y, cv8backing, tpal, mouseline, mouseline_mask);
 		for (x = 0; x < len; x += 2)
-			pixels[x >> 1] = cv8backing[x+1] | (cv8backing[x] << 4);
+			pixels[x >> 1] = cv8backing[x + 1] | (cv8backing[x] << 4);
 		pixels += (pitch >> 1);
 	}
 }
@@ -597,7 +610,8 @@ void video_blit11(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uin
 }
 
 /* scaled blit, according to user settings (lots of params here) */
-void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
+void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t pal[256], schism_map_rgb_spec fun,
+	void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
 	pixels += y * pitch;
 	pixels += x * bpp;
@@ -719,7 +733,7 @@ void video_resize(uint32_t width, uint32_t height)
 void video_colors_iterate(unsigned char palette[16][3], video_colors_callback_spec fun)
 {
 	/* this handles all of the ACTUAL color stuff, and the callback handles the backend-specific stuff */
-	static const unsigned int lastmap[] = { 0, 1, 2, 3, 5 };
+	static const unsigned int lastmap[] = {0, 1, 2, 3, 5};
 	uint32_t i, p;
 
 	/* make our "base" space */
@@ -736,10 +750,10 @@ void video_colors_iterate(unsigned char palette[16][3], video_colors_callback_sp
 		size_t j;
 		unsigned char rgb[3];
 
-		p = lastmap[(i>>5)];
+		p = lastmap[(i >> 5)];
 
 		for (j = 0; j < ARRAY_SIZE(rgb); j++)
-			rgb[j] = (int)palette[p][j] + (((int)(palette[p+1][j] - palette[p][j]) * (i & 0x1F)) / 0x20);
+			rgb[j] = (int)palette[p][j] + (((int)(palette[p + 1][j] - palette[p][j]) * (i & 0x1F)) / 0x20);
 
 		fun(i + 128, rgb);
 	}
@@ -747,10 +761,7 @@ void video_colors_iterate(unsigned char palette[16][3], video_colors_callback_sp
 
 static uint32_t bgr32_fun_impl_(unsigned int i, unsigned char rgb[3])
 {
-	return ((uint32_t)rgb[2] << 0)
-	     | ((uint32_t)rgb[1] << 8)
-	     | ((uint32_t)rgb[0] << 16)
-	     | ((uint32_t)0xFF   << 24);
+	return ((uint32_t)rgb[2] << 0) | ((uint32_t)rgb[1] << 8) | ((uint32_t)rgb[0] << 16) | ((uint32_t)0xFF << 24);
 }
 
 static void bgr32_fun_(unsigned int i, unsigned char rgb[3])
@@ -819,8 +830,10 @@ void video_translate_calculate(uint32_t vx, uint32_t vy,
 {
 	/* handle negative mouse coordinates when the mouse is
 	 * dragged outside of window bounds */
-	if ((int32_t)vx < 0) vx = 0;
-	if ((int32_t)vy < 0) vy = 0;
+	if ((int32_t)vx < 0)
+		vx = 0;
+	if ((int32_t)vy < 0)
+		vy = 0;
 
 	/* I'm 99% sure this can be done simpler, but hey, whatever. :) */
 	vx = MAX(vx, cx);
@@ -846,8 +859,10 @@ void video_translate_calculate(uint32_t vx, uint32_t vy,
 	video.mouse.ml_x = (vx / 8);
 	video.mouse.ml_v = (vx % 8);
 
-	if (x) *x = vx;
-	if (y) *y = vy;
+	if (x)
+		*x = vx;
+	if (y)
+		*y = vy;
 }
 
 void video_translate(uint32_t vx, uint32_t vy, uint32_t *x, uint32_t *y)
@@ -878,8 +893,10 @@ void video_warp_mouse(uint32_t x, uint32_t y)
 
 void video_get_mouse_coordinates(uint32_t *x, uint32_t *y)
 {
-	if (x) *x = video.mouse.x;
-	if (y) *y = video.mouse.y;
+	if (x)
+		*x = video.mouse.x;
+	if (y)
+		*y = video.mouse.y;
 
 	//backend->get_mouse_coordinates(x, y);
 }
@@ -901,7 +918,8 @@ void video_toggle_menu(int on)
 
 void video_blit(void)
 {
-	if (backend) backend->blit();
+	if (backend)
+		backend->blit();
 }
 
 /* ------------------------------------------------------------ */
@@ -923,8 +941,7 @@ void video_show_cursor(int enabled)
 /* takes in a width and height, and calculates clip from it.
  * NOTE this uses global config variables (kind of evil, but most
  * of the video stuff is already evil) */
-void video_calculate_clip(uint32_t w, uint32_t h,
-	uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph)
+void video_calculate_clip(uint32_t w, uint32_t h, uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph)
 {
 	if (cfg_video_want_fixed) {
 		const double ratio_w = (double)w / (double)cfg_video_want_fixed_width;
@@ -1043,8 +1060,8 @@ void video_yuv_pal(unsigned int i, unsigned char rgb[3])
  * the number of planes depends on the YUV format.
  * for example, IYUV has three planes, in the order Y + U + V.
  * NV12 has two planes, Y and then U/V interleaved. */
-void video_yuv_blit(unsigned char *plane0, unsigned char *plane1, unsigned char *plane2,
-	uint32_t pitch0, uint32_t pitch1, uint32_t pitch2)
+void video_yuv_blit(unsigned char *plane0, unsigned char *plane1, unsigned char *plane2, uint32_t pitch0,
+	uint32_t pitch1, uint32_t pitch2)
 {
 	switch (yuvformat) {
 	case VIDEO_YUV_IYUV:
@@ -1078,17 +1095,15 @@ void video_yuv_blit_sequenced(unsigned char *pixels, uint32_t pitch)
 	switch (yuvformat) {
 	case VIDEO_YUV_IYUV:
 	case VIDEO_YUV_YV12:
-		video_yuv_blit(pixels,
-			pixels + ((NATIVE_SCREEN_HEIGHT * pitch) << 1),
-			pixels + ((NATIVE_SCREEN_HEIGHT * pitch) << 1) + ((NATIVE_SCREEN_HEIGHT * pitch) >> 1),
-			pitch, pitch >> 1, pitch >> 1);
+		video_yuv_blit(pixels, pixels + ((NATIVE_SCREEN_HEIGHT * pitch) << 1),
+			pixels + ((NATIVE_SCREEN_HEIGHT * pitch) << 1) + ((NATIVE_SCREEN_HEIGHT * pitch) >> 1), pitch,
+			pitch >> 1, pitch >> 1);
 		break;
 	case VIDEO_YUV_IYUV_TV:
 	case VIDEO_YUV_YV12_TV:
-		video_yuv_blit(pixels,
-			pixels + (NATIVE_SCREEN_HEIGHT * pitch),
-			pixels + (NATIVE_SCREEN_HEIGHT * pitch) + ((NATIVE_SCREEN_HEIGHT * pitch) >> 2),
-			pitch, pitch >> 1, pitch >> 1);
+		video_yuv_blit(pixels, pixels + (NATIVE_SCREEN_HEIGHT * pitch),
+			pixels + (NATIVE_SCREEN_HEIGHT * pitch) + ((NATIVE_SCREEN_HEIGHT * pitch) >> 2), pitch,
+			pitch >> 1, pitch >> 1);
 		break;
 	case VIDEO_YUV_NV12:
 	case VIDEO_YUV_NV21:
@@ -1157,7 +1172,7 @@ typedef int32_t GLsizei;
 typedef uint32_t GLenum;
 typedef intptr_t GLintptr;
 typedef intptr_t GLsizeiptr;
-typedef /*u?*/intptr_t GLsync;
+typedef /*u?*/ intptr_t GLsync;
 typedef uint32_t GLbitfield;
 typedef uint16_t GLhalf; /* 16-bit floating point ??? */
 typedef float GLfloat;
@@ -1167,11 +1182,11 @@ typedef double GLclampd;
 typedef void GLvoid;
 
 /* hm? */
-#define GL_BGRA_EXT                       0x80E1
-#define GL_UNSIGNED_INT_8_8_8_8_REV       0x8367
-#define GL_COLOR_BUFFER_BIT			0x00004000
-#define GL_UNSIGNED_BYTE			0x1401
-#define GL_RGBA8				0x8058
+#define GL_BGRA_EXT                 0x80E1
+#define GL_UNSIGNED_INT_8_8_8_8_REV 0x8367
+#define GL_COLOR_BUFFER_BIT         0x00004000
+#define GL_UNSIGNED_BYTE            0x1401
+#define GL_RGBA8                    0x8058
 #define GL_MAX_TEXTURE_SIZE         0x0D33
 #define GL_TEXTURE_2D               0x0DE1
 #define GL_TEXTURE_WRAP_S           0x2802
@@ -1179,24 +1194,24 @@ typedef void GLvoid;
 #define GL_TEXTURE_MAG_FILTER       0x2800
 #define GL_TEXTURE_MIN_FILTER       0x2801
 #define GL_NEAREST                  0x2600
-#define GL_TRIANGLES				0x0004
-#define GL_QUADS				0x0007
-#define GL_COMPILE				0x1300
-#define GL_MODELVIEW				0x1700
-#define GL_CULL_FACE				0x0B44
-#define GL_LIGHTING				0x0B50
-#define GL_DEPTH_TEST				0x0B71
-#define GL_FLAT					0x1D00
-#define GL_LINEAR				0x2601
-#define GL_PROJECTION				0x1701
-#define GL_CLAMP				0x2900
-#define GL_EXTENSIONS				0x1F03
-#define GL_INVALID_ENUM 0x0500
-#define GL_VERSION				0x1F02
-#define GL_MAJOR_VERSION                  0x821B
-#define GL_MINOR_VERSION                  0x821C
-#define GL_NUM_EXTENSIONS 0x821D
-#define GL_NO_ERROR 0
+#define GL_TRIANGLES                0x0004
+#define GL_QUADS                    0x0007
+#define GL_COMPILE                  0x1300
+#define GL_MODELVIEW                0x1700
+#define GL_CULL_FACE                0x0B44
+#define GL_LIGHTING                 0x0B50
+#define GL_DEPTH_TEST               0x0B71
+#define GL_FLAT                     0x1D00
+#define GL_LINEAR                   0x2601
+#define GL_PROJECTION               0x1701
+#define GL_CLAMP                    0x2900
+#define GL_EXTENSIONS               0x1F03
+#define GL_INVALID_ENUM             0x0500
+#define GL_VERSION                  0x1F02
+#define GL_MAJOR_VERSION            0x821B
+#define GL_MINOR_VERSION            0x821C
+#define GL_NUM_EXTENSIONS           0x821D
+#define GL_NO_ERROR                 0
 
 #define SCHISM_NVIDIA_PIXELDATARANGE 1
 
@@ -1206,13 +1221,13 @@ typedef void GLvoid;
 #define SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT 1
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
-# define GL_WRITE_PIXEL_DATA_RANGE_NV      0x8878
+# define GL_WRITE_PIXEL_DATA_RANGE_NV 0x8878
 #endif
 
 #ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
 # define GL_PIXEL_UNPACK_BUFFER 0x88EC
-#define GL_WRITE_ONLY                     0x88B9
-#define GL_STREAM_DRAW                    0x88E0
+# define GL_WRITE_ONLY          0x88B9
+# define GL_STREAM_DRAW         0x88E0
 #endif
 
 #define VIDEO_GL_PITCH (NATIVE_SCREEN_WIDTH * 4) /* bruh */
@@ -1220,54 +1235,53 @@ typedef void GLvoid;
 /* Dynamically loaded OpenGL functions */
 struct video_opengl_funcs {
 	/* TODO put these in a header so they don't get out of sync */
-	void (APIENTRY *glCallList)(GLuint);
-	void (APIENTRY *glTexSubImage2D)(GLenum,GLint,GLint,GLint,GLsizei,GLsizei,GLenum,GLenum,const GLvoid *);
-	void (APIENTRY *glDeleteLists)(GLuint,GLsizei);
-	void (APIENTRY *glTexParameteri)(GLenum,GLenum,GLint);
-	void (APIENTRY *glBegin)(GLenum);
-	void (APIENTRY *glEnd)(void);
-	void (APIENTRY *glEndList)(void);
-	void (APIENTRY *glTexCoord2f)(GLfloat,GLfloat);
-	void (APIENTRY *glVertex2f)(GLfloat,GLfloat);
-	void (APIENTRY *glNewList)(GLuint, GLenum);
-	GLboolean (APIENTRY *glIsList)(GLuint);
-	GLuint (APIENTRY *glGenLists)(GLsizei);
-	void (APIENTRY *glLoadIdentity)(void);
-	void (APIENTRY *glMatrixMode)(GLenum);
-	void (APIENTRY *glEnable)(GLenum);
-	void (APIENTRY *glDisable)(GLenum);
-	void (APIENTRY *glBindTexture)(GLenum,GLuint);
-	void (APIENTRY *glClear)(GLbitfield mask);
-	void (APIENTRY *glClearColor)(GLclampf,GLclampf,GLclampf,GLclampf);
-	const GLubyte* (APIENTRY *glGetString)(GLenum);
-	void (APIENTRY *glTexImage2D)(GLenum,GLint,GLint,GLsizei,GLsizei,GLint,GLenum,GLenum,const GLvoid *);
-	void (APIENTRY *glShadeModel)(GLenum);
-	void (APIENTRY *glGenTextures)(GLsizei,GLuint*);
-	void (APIENTRY *glDeleteTextures)(GLsizei, const GLuint *);
-	void (APIENTRY *glViewport)(GLint,GLint,GLsizei,GLsizei);
-	void (APIENTRY *glEnableClientState)(GLenum);
-	GLenum (APIENTRY *glGetError)(void);
+	void(APIENTRY *glCallList)(GLuint);
+	void(APIENTRY *glTexSubImage2D)(GLenum, GLint, GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, const GLvoid *);
+	void(APIENTRY *glDeleteLists)(GLuint, GLsizei);
+	void(APIENTRY *glTexParameteri)(GLenum, GLenum, GLint);
+	void(APIENTRY *glBegin)(GLenum);
+	void(APIENTRY *glEnd)(void);
+	void(APIENTRY *glEndList)(void);
+	void(APIENTRY *glTexCoord2f)(GLfloat, GLfloat);
+	void(APIENTRY *glVertex2f)(GLfloat, GLfloat);
+	void(APIENTRY *glNewList)(GLuint, GLenum);
+	GLboolean(APIENTRY *glIsList)(GLuint);
+	GLuint(APIENTRY *glGenLists)(GLsizei);
+	void(APIENTRY *glLoadIdentity)(void);
+	void(APIENTRY *glMatrixMode)(GLenum);
+	void(APIENTRY *glEnable)(GLenum);
+	void(APIENTRY *glDisable)(GLenum);
+	void(APIENTRY *glBindTexture)(GLenum, GLuint);
+	void(APIENTRY *glClear)(GLbitfield mask);
+	void(APIENTRY *glClearColor)(GLclampf, GLclampf, GLclampf, GLclampf);
+	const GLubyte *(APIENTRY *glGetString)(GLenum);
+	void(APIENTRY *glTexImage2D)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid *);
+	void(APIENTRY *glShadeModel)(GLenum);
+	void(APIENTRY *glGenTextures)(GLsizei, GLuint *);
+	void(APIENTRY *glDeleteTextures)(GLsizei, const GLuint *);
+	void(APIENTRY *glViewport)(GLint, GLint, GLsizei, GLsizei);
+	void(APIENTRY *glEnableClientState)(GLenum);
+	GLenum(APIENTRY *glGetError)(void);
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	/* I think these are Windows-specific? */
 	void *(APIENTRY *wglAllocateMemoryNV)(int, float, float, float);
-	void (APIENTRY *wglFreeMemoryNV)(void *);
+	void(APIENTRY *wglFreeMemoryNV)(void *);
 
-	void (APIENTRY *glPixelDataRangeNV)(GLenum, GLsizei, GLvoid *);
+	void(APIENTRY *glPixelDataRangeNV)(GLenum, GLsizei, GLvoid *);
 	/* void (APIENTRY *glFlushPixelDataRangeNV)(GLenum); */
 #endif
 
 #ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
-	void (APIENTRY *glGenBuffers)(GLsizei n, GLuint *buffers);
-	void (APIENTRY *glBindBuffer)(GLenum target, GLuint buffer);
-	void (APIENTRY *glBufferData)(GLenum,GLsizeiptr,const void *,GLenum);
-	void *(APIENTRY *glMapBuffer)(GLenum,GLenum);
-	GLboolean (APIENTRY *glUnmapBuffer)(GLenum);
+	void(APIENTRY *glGenBuffers)(GLsizei n, GLuint *buffers);
+	void(APIENTRY *glBindBuffer)(GLenum target, GLuint buffer);
+	void(APIENTRY *glBufferData)(GLenum, GLsizeiptr, const void *, GLenum);
+	void *(APIENTRY *glMapBuffer)(GLenum, GLenum);
+	GLboolean(APIENTRY *glUnmapBuffer)(GLenum);
 #endif
 };
 
-static int video_opengl_reload_funcs(struct video_opengl_funcs *f,
-	video_opengl_function_load_spec function_load)
+static int video_opengl_reload_funcs(struct video_opengl_funcs *f, video_opengl_function_load_spec function_load)
 {
 	/* Probably not really necessary */
 	memset(f, 0, sizeof(*f));
@@ -1310,8 +1324,7 @@ static int video_opengl_reload_funcs(struct video_opengl_funcs *f,
 #undef Z
 
 		/* Optional OpenGL extensions */
-#define Z(q) \
-	f->q = function_load(#q)
+#define Z(q) f->q = function_load(#q)
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	Z(glPixelDataRangeNV);
@@ -1337,7 +1350,7 @@ static int video_opengl_reload_funcs(struct video_opengl_funcs *f,
 static struct {
 	video_opengl_object_unload_spec object_unload;
 	video_opengl_set_attribute_spec set_attribute;
-	video_opengl_swap_buffers_spec  swap_buffers;
+	video_opengl_swap_buffers_spec swap_buffers;
 	video_opengl_extension_supported_spec extension_supported;
 	video_opengl_function_load_spec function_load;
 
@@ -1361,7 +1374,8 @@ static struct {
 #endif
 } video_gl = {0};
 
-static int32_t int32_log2(int32_t val) {
+static int32_t int32_log2(int32_t val)
+{
 	int32_t l = 0;
 	while ((val >>= 1) != 0)
 		l++;
@@ -1403,12 +1417,9 @@ static int opengl_extension_supported_default(const char *extension)
 	return 0;
 }
 
-int video_opengl_init(video_opengl_object_load_spec object_load,
-	video_opengl_function_load_spec function_load,
-	video_opengl_extension_supported_spec extension_supported,
-	video_opengl_object_unload_spec object_unload,
-	video_opengl_set_attribute_spec set_attribute,
-	video_opengl_swap_buffers_spec swap_buffers)
+int video_opengl_init(video_opengl_object_load_spec object_load, video_opengl_function_load_spec function_load,
+	video_opengl_extension_supported_spec extension_supported, video_opengl_object_unload_spec object_unload,
+	video_opengl_set_attribute_spec set_attribute, video_opengl_swap_buffers_spec swap_buffers)
 {
 	if (video_gl.init)
 		return 0; /* already init */
@@ -1430,7 +1441,7 @@ int video_opengl_init(video_opengl_object_load_spec object_load,
 	) {
 		video_gl.object_unload = object_unload;
 		video_gl.set_attribute = set_attribute;
-		video_gl.swap_buffers  = swap_buffers;
+		video_gl.swap_buffers = swap_buffers;
 		video_gl.function_load = function_load;
 
 		video_gl.init = 1;
@@ -1474,25 +1485,24 @@ static void opengl_set_attributes(void)
 	video_gl.set_attribute(VIDEO_GL_SWAP_CONTROL, 0);
 }
 
-int video_opengl_setup(uint32_t w, uint32_t h,
-	int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph))
+int video_opengl_setup(uint32_t w, uint32_t h, int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph))
 {
 	GLfloat tex_width, tex_height;
 	GLsizei texsize;
 	uint32_t x, y;
 
 #define GL_ASSERT(X) \
-do { \
-	GLenum err; \
+	do { \
+		GLenum err; \
 \
-	X; \
+		X; \
 \
-	err = video_gl.f.glGetError(); \
-	if (err != GL_NO_ERROR) { \
-		log_appendf(4, "OpenGL error: `" #X "`: %d", (int)err); \
-		return 0; \
-	} \
-} while (0)
+		err = video_gl.f.glGetError(); \
+		if (err != GL_NO_ERROR) { \
+			log_appendf(4, "OpenGL error: `" #X "`: %d", (int)err); \
+			return 0; \
+		} \
+	} while (0)
 
 	if (!video_gl.init)
 		return 0;
@@ -1508,21 +1518,18 @@ do { \
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	/* check if nvidia pixel data crap is supported */
 	if (video_gl.extension_supported("GL_NV_pixel_data_range")) {
-		video_gl.pixel_data_range = (video_gl.f.glPixelDataRangeNV
-			&& video_gl.f.wglAllocateMemoryNV
-			&& video_gl.f.wglFreeMemoryNV);
+		video_gl.pixel_data_range = (video_gl.f.glPixelDataRangeNV && video_gl.f.wglAllocateMemoryNV
+					     && video_gl.f.wglFreeMemoryNV);
 	}
 #endif
 
 #ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
 	/* ARB and EXT are functionally equivalent */
 	if (video_gl.extension_supported("GL_ARB_pixel_buffer_object")
-			|| video_gl.extension_supported("GL_EXT_pixel_buffer_object")) {
-		video_gl.pixel_buffer_object = (video_gl.f.glGenBuffers
-			&& video_gl.f.glBindBuffer
-			&& video_gl.f.glBufferData
-			&& video_gl.f.glMapBuffer
-			&& video_gl.f.glUnmapBuffer);
+		|| video_gl.extension_supported("GL_EXT_pixel_buffer_object")) {
+		video_gl.pixel_buffer_object
+			= (video_gl.f.glGenBuffers && video_gl.f.glBindBuffer && video_gl.f.glBufferData
+				&& video_gl.f.glMapBuffer && video_gl.f.glUnmapBuffer);
 	}
 #endif
 
@@ -1534,13 +1541,18 @@ do { \
 	if (video_gl.pixel_buffer_object) {
 		/* ehhhhhh... */
 		video_gl.f.glGenBuffers(1, &video_gl.pbo);
-		if (video_gl.f.glGetError()) video_gl.pixel_buffer_object = 0;
+		if (video_gl.f.glGetError())
+			video_gl.pixel_buffer_object = 0;
 		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, video_gl.pbo);
-		if (video_gl.f.glGetError()) video_gl.pixel_buffer_object = 0;
-		video_gl.f.glBufferData(GL_PIXEL_UNPACK_BUFFER, NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4, NULL, GL_STREAM_DRAW);
-		if (video_gl.f.glGetError()) video_gl.pixel_buffer_object = 0;
+		if (video_gl.f.glGetError())
+			video_gl.pixel_buffer_object = 0;
+		video_gl.f.glBufferData(
+			GL_PIXEL_UNPACK_BUFFER, NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4, NULL, GL_STREAM_DRAW);
+		if (video_gl.f.glGetError())
+			video_gl.pixel_buffer_object = 0;
 		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-		if (video_gl.f.glGetError()) video_gl.pixel_buffer_object = 0;
+		if (video_gl.f.glGetError())
+			video_gl.pixel_buffer_object = 0;
 	}
 #endif
 
@@ -1548,12 +1560,10 @@ do { \
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 		if (video_gl.pixel_data_range) {
 			video_gl.framebuffer = video_gl.f.wglAllocateMemoryNV(
-				NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4,
-				0.0, 1.0, 1.0);
+				NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4, 0.0, 1.0, 1.0);
 			if (video_gl.framebuffer) {
 				video_gl.f.glPixelDataRangeNV(GL_WRITE_PIXEL_DATA_RANGE_NV,
-					NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4,
-					video_gl.framebuffer);
+					NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4, video_gl.framebuffer);
 				video_gl.f.glEnableClientState(GL_WRITE_PIXEL_DATA_RANGE_NV);
 			} else {
 				video_gl.pixel_data_range = 0;
@@ -1562,8 +1572,7 @@ do { \
 #endif
 
 		if (!video_gl.framebuffer)
-			video_gl.framebuffer = mem_alloc(NATIVE_SCREEN_WIDTH
-				* NATIVE_SCREEN_HEIGHT * 4);
+			video_gl.framebuffer = mem_alloc(NATIVE_SCREEN_WIDTH * NATIVE_SCREEN_HEIGHT * 4);
 
 		if (!video_gl.framebuffer)
 			return 0; /* okay */
@@ -1578,8 +1587,8 @@ do { \
 
 	video_opengl_reset_interpolation();
 
-	GL_ASSERT(video_gl.f.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
-		0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0));
+	GL_ASSERT(video_gl.f.glTexImage2D(
+		GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0));
 
 	GL_ASSERT(video_gl.f.glClearColor(0.0, 0.0, 0.0, 1.0));
 	GL_ASSERT(video_gl.f.glClear(GL_COLOR_BUFFER_BIT));
@@ -1638,10 +1647,8 @@ SCHISM_HOT void video_opengl_blit(void)
 		video_gl.f.glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 
 		video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
-		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-			GL_BGRA_EXT,
-			GL_UNSIGNED_INT_8_8_8_8_REV, 0);
+		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
+			GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, 0);
 
 		/* Unbind -- equally as important */
 		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -1655,11 +1662,8 @@ SCHISM_HOT void video_opengl_blit(void)
 		video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video.tc_bgr32);
 
 		video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
-		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-			GL_BGRA_EXT,
-			GL_UNSIGNED_INT_8_8_8_8_REV,
-			video_gl.framebuffer);
+		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
+			GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, video_gl.framebuffer);
 	}
 
 	video_gl.f.glCallList(video_gl.displaylist);
@@ -1697,11 +1701,10 @@ void video_opengl_report(void)
 	log_appendf(5, " OpenGL interface");
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	if (video_gl.pixel_data_range)
-		log_append(5,0, " NVidia pixel range extensions available");
+		log_append(5, 0, " NVidia pixel range extensions available");
 #endif
 #ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
 	if (video_gl.pixel_buffer_object)
-		log_append(5,0, " Pixel buffer object extensions available");
+		log_append(5, 0, " Pixel buffer object extensions available");
 #endif
 }
-

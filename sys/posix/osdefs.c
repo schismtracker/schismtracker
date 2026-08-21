@@ -23,26 +23,26 @@
 
 #include "headers.h"
 #include "osdefs.h"
-#include "mem.h"
 #include "dmoz.h"
+#include "mem.h"
 
 /* WOW NICE */
-#if ((defined(HAVE_EXECL) && defined(HAVE_FORK)) || defined(HAVE_POSIX_SPAWN)) && \
-	(defined(HAVE_WAITID) || defined(HAVE_WAITPID)) && !defined(SCHISM_WIN32)
-#include <sys/wait.h>
-#if defined(HAVE_POSIX_SPAWN)
-# include <spawn.h>
-#endif
+#if ((defined(HAVE_EXECL) && defined(HAVE_FORK)) || defined(HAVE_POSIX_SPAWN)) \
+	&& (defined(HAVE_WAITID) || defined(HAVE_WAITPID)) && !defined(SCHISM_WIN32)
+# include <sys/wait.h>
+# if defined(HAVE_POSIX_SPAWN)
+#  include <spawn.h>
+# endif
 
 /* This is an older name for the same function. Since most
  * implementations just have this as a stub that calls _np,
  * or vice versa, and the latter is older, prefer it over the
  * standard version. */
-#if defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP)
-# undef HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR
-# define HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR 1
-# define posix_spawn_file_actions_addchdir posix_spawn_file_actions_addchdir_np
-#endif
+# if defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP)
+#  undef HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR
+#  define HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR 1
+#  define posix_spawn_file_actions_addchdir      posix_spawn_file_actions_addchdir_np
+# endif
 
 /* ugh */
 extern char **environ;
@@ -79,10 +79,10 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 		va_end(ap);
 	}
 
-#if defined(HAVE_POSIX_SPAWN)
+# if defined(HAVE_POSIX_SPAWN)
 	{
 		if (dir) {
-#if defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR)
+#  if defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR)
 			/* When this function is available we can use it
 			 * to avoid an extra chdir() at the end */
 			posix_spawn_file_actions_t actions;
@@ -98,7 +98,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 			posix_spawn_file_actions_destroy(&actions);
 			if (r != 0)
 				goto fail;
-#else
+#  else
 			char *owd = dmoz_get_current_directory();
 
 			if (chdir(dir) == -1)
@@ -109,14 +109,14 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 
 			/* hm */
 			(void)chdir(owd);
-#endif
+#  endif
 		} else {
 			/* This is simple in comparison */
 			if (posix_spawn(&pid, name, NULL, NULL, argv, environ) != 0)
 				goto fail;
 		}
 	}
-#elif defined(HAVE_FORK) && defined(HAVE_EXEC)
+# elif defined(HAVE_FORK) && defined(HAVE_EXEC)
 	pid = fork();
 	switch (pid) {
 	case -1:
@@ -130,7 +130,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 		 * couldn't exec the specified command name */
 		_exit(255);
 	};
-#endif
+# endif
 
 	/* wait for the child process to finish
 	 *
@@ -138,12 +138,13 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 	 * if the process ended before the call to waitpid()/waitid(), so we
 	 * check for EINTR in errno explicitly. (we should have probably been
 	 * doing that in the first place) */
-#if defined(HAVE_WAITID)
+# if defined(HAVE_WAITID)
 	{
 		siginfo_t info;
 
 		/* newer API; POSIX.1-2001 */
-		while (waitid(P_PID, pid, &info, WEXITED) == -1 && errno == EINTR);
+		while (waitid(P_PID, pid, &info, WEXITED) == -1 && errno == EINTR)
+			;
 
 		/* if the child terminated abnormally, well, the exec call is still technically a success */
 		switch (info.si_code) {
@@ -160,12 +161,13 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 			break;
 		}
 	}
-#elif defined(HAVE_WAITPID)
+# elif defined(HAVE_WAITPID)
 	{
 		int st;
 
 		/* older API; in virtually all POSIX versions */
-		while (waitpid(pid, &st, 0) == -1 && errno == EINTR);
+		while (waitpid(pid, &st, 0) == -1 && errno == EINTR)
+			;
 
 		if (WIFEXITED(st)) {
 			if (status)
@@ -184,7 +186,7 @@ int posix_exec(int *status, int *abnormal_exit, const char *dir, const char *nam
 
 		r = 1;
 	}
-#endif
+# endif
 
 fail: /* do NOT jump here in the child process in case of fork() */
 	return r;

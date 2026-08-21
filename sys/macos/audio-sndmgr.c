@@ -22,18 +22,18 @@
  */
 
 #include "headers.h"
-#include "mem.h"
-#include "util.h"
 #include "backend/audio.h"
-#include "loadso.h"
 #include "charset.h"
-#include "str.h"
+#include "loadso.h"
 #include "log.h"
+#include "mem.h"
+#include "str.h"
+#include "util.h"
 
-#include <Sound.h>
-#include <Gestalt.h>
 #include <Components.h>
 #include <DriverServices.h>
+#include <Gestalt.h>
+#include <Sound.h>
 
 /* SDL 1.2 doesn't have audio device selection.
  * For a while I thought the Sound Manager never supported it at all.
@@ -48,7 +48,7 @@
 /* Portions of this code were written by Ryan C. Gordon (icculus)
  * for SDL 1.2, under the LGPL-2.1. */
 
-#pragma options align=power
+#pragma options align = power
 
 #define NUM_BUFFERS 2
 #if NUM_BUFFERS < 2
@@ -123,8 +123,10 @@ static int sndmgr_audio_driver_count(void)
 static const char *sndmgr_audio_driver_name(int x)
 {
 	switch (x) {
-	case 0: return "sndmgr";
-	default: break;
+	case 0:
+		return "sndmgr";
+	default:
+		break;
 	}
 
 	/* if we're here we're already screwed, and there's a bug.
@@ -195,8 +197,7 @@ static uint32_t sndmgr_audio_device_count(uint32_t flags)
 				HUnlock(hname);
 
 				/* Audio device names are UTF-8 internally */
-				devices[i].desc = charset_iconv_easy(cstr,
-					CHARSET_SYSTEMSCRIPT, CHARSET_UTF8);
+				devices[i].desc = charset_iconv_easy(cstr, CHARSET_SYSTEMSCRIPT, CHARSET_UTF8);
 			}
 
 			DisposeHandle(hname);
@@ -225,7 +226,7 @@ static void *sndmgr_get_buffer(schism_audio_device_t *dev, size_t *buflen)
 		dev->hdr.samplePtr = (Ptr)dev->buf[dev->fill_me];
 
 		cmd.cmd = bufferCmd;
-		cmd.param1 = 0; 
+		cmd.param1 = 0;
 		cmd.param2 = (long)&dev->hdr;
 		SndDoCommand(dev->chn, &cmd, 0);
 	}
@@ -258,11 +259,7 @@ static int sndmgr_wait(schism_audio_device_t *dev)
 	return 0;
 }
 
-static const struct schism_audio_device_simple_vtable sndmgr_vtbl = {
-	sndmgr_get_buffer,
-	sndmgr_play,
-	sndmgr_wait
-};
+static const struct schism_audio_device_simple_vtable sndmgr_vtbl = {sndmgr_get_buffer, sndmgr_play, sndmgr_wait};
 
 static pascal void cbproc(SndChannel *chan, SndCommand *cmd_passed)
 {
@@ -273,7 +270,8 @@ static pascal void cbproc(SndChannel *chan, SndCommand *cmd_passed)
 
 static void sndmgr_audio_close_device(schism_audio_device_t *dev);
 
-static schism_audio_device_t *sndmgr_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *sndmgr_audio_open_device(
+	uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	SndCallBackUPP callback;
 	int i;
@@ -292,17 +290,17 @@ static schism_audio_device_t *sndmgr_audio_open_device(uint32_t id, const schism
 
 	/* prepare bufferCmd header */
 	dev->hdr.numChannels = desired->channels;
-	dev->hdr.sampleSize  = (desired->bits > 8) ? 16 : 8;
-	dev->hdr.sampleRate  = desired->freq << 16;
-	dev->hdr.numFrames   = desired->samples;
-	dev->hdr.encode      = cmpSH;
+	dev->hdr.sampleSize = (desired->bits > 8) ? 16 : 8;
+	dev->hdr.sampleRate = desired->freq << 16;
+	dev->hdr.numFrames = desired->samples;
+	dev->hdr.encode = cmpSH;
 
 #ifdef USE_ONE_BUF_ALLOCATION
 	dev->buf[0] = mem_alloc(NUM_BUFFERS * dev->size);
 
 	for (i = 1; i < NUM_BUFFERS; i++) {
 		/* find this pointer from the last */
-		dev->buf[i] = dev->buf[i-1] + dev->size;
+		dev->buf[i] = dev->buf[i - 1] + dev->size;
 	}
 #else
 	for (i = 0; i < NUM_BUFFERS; i++)
@@ -315,15 +313,14 @@ static schism_audio_device_t *sndmgr_audio_open_device(uint32_t id, const schism
 	dev->chn->qLength = 128;
 
 	if (id == AUDIO_BACKEND_DEFAULT) {
-		err = SndNewChannel(&dev->chn, sampledSynth,
-			(desired->channels >= 2) ? initStereo : initMono, callback);
+		err = SndNewChannel(
+			&dev->chn, sampledSynth, (desired->channels >= 2) ? initStereo : initMono, callback);
 		if (err != noErr) {
 			log_appendf(4, "SndNewChannel: %" PRId32, (int32_t)err);
 			goto err;
 		}
 	} else {
-		err = SndNewChannel(&dev->chn, kUseOptionalOutputDevice,
-			(long)devices[id].cpnt, callback);
+		err = SndNewChannel(&dev->chn, kUseOptionalOutputDevice, (long)devices[id].cpnt, callback);
 		if (err != noErr) {
 			log_appendf(4, "SndNewChannel: %" PRId32 ", Component: %p", (int32_t)err, devices[id].cpnt);
 			goto err;

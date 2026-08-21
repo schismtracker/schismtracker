@@ -23,10 +23,10 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -42,12 +42,11 @@ static struct sfxfmt {
 	int dunno;
 	const char *id;
 } sfxfmts[] = {
-	{124, "SO31", 31, 4, "SoundFX 2"},
+	{124, "SO31", 31, 4, "SoundFX 2"    },
 	{124, "SONG", 31, 0, "SoundFX 2 (?)"},
-	{ 60, "SONG", 15, 0, "SoundFX"},
-	{  0, ""    ,  0, 0, NULL},
+	{60,  "SONG", 15, 0, "SoundFX"      },
+	{0,   "",     0,  0, NULL           },
 };
-
 
 int fmt_sfx_read_info(dmoz_file_t *file, slurp_t *fp)
 {
@@ -56,8 +55,7 @@ int fmt_sfx_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	for (n = 0; sfxfmts[n].nsmp; n++) {
 		slurp_seek(fp, sfxfmts[n].tagpos, SEEK_SET);
-		if (slurp_read(fp, tag, sizeof(tag)) == sizeof(tag)
-			&& !memcmp(tag, sfxfmts[n].tag, 4)) {
+		if (slurp_read(fp, tag, sizeof(tag)) == sizeof(tag) && !memcmp(tag, sfxfmts[n].tag, 4)) {
 			file->description = sfxfmts[n].id;
 			/*file->extension = str_dup("sfx");*/
 			file->title = str_dup(""); // whatever
@@ -98,7 +96,6 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 	if (!nsmp)
 		return LOAD_UNSUPPORTED;
-
 
 	slurp_rewind(fp);
 	slurp_read(fp, smpsize, 4 * nsmp);
@@ -265,7 +262,6 @@ int fmt_sfx_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	return LOAD_SUCCESS;
 }
 
-
 /*
 most of modland's sfx files have all zeroes for those 14 "unknown" bytes, with the following exceptions:
 
@@ -273,13 +269,11 @@ most of modland's sfx files have all zeroes for those 14 "unknown" bytes, with t
 74 63 68 33 00 00 00 00 00 00 00 00 00 00  tch3.......... - unknown/axel f.sfx
 61 6c 6b 00 00 00 00 00 00 00 00 00 00 00  alk........... Andreas Hommel/cyberblast-intro.sfx
 21 00 00 00 00 00 00 00 00 00 00 00 00 00  !............. - unknown/dugger.sfx
-00 00 00 00 00 0d 00 00 00 00 00 00 00 00  .............. Jean Baudlot/future wars - time travellers - dugger (title).sfx
-00 00 00 00 00 00 00 00 0d 00 00 00 00 00  .............. Jean Baudlot/future wars - time travellers - escalator.sfx
-6d 65 31 34 00 00 00 00 00 00 00 00 00 00  me14.......... - unknown/melodious.sfx
-0d 0d 0d 53 46 58 56 31 2e 38 00 00 00 00  ...SFXV1.8.... AM-FM/sunday morning.sfx
-61 6c 6b 00 00 00 00 00 00 00 00 00 00 00  alk........... - unknown/sunday morning.sfx
-6f 67 00 00 00 00 00 00 00 00 00 00 00 00  og............ Philip Jespersen/supaplex.sfx
-6e 74 20 73 6f 6e 67 00 00 00 00 00 00 00  nt song....... - unknown/sweety.sfx
-61 6c 6b 00 00 00 00 00 00 00 00 00 00 00  alk........... - unknown/thrust.sfx
+00 00 00 00 00 0d 00 00 00 00 00 00 00 00  .............. Jean Baudlot/future wars - time travellers - dugger
+(title).sfx 00 00 00 00 00 00 00 00 0d 00 00 00 00 00  .............. Jean Baudlot/future wars - time travellers -
+escalator.sfx 6d 65 31 34 00 00 00 00 00 00 00 00 00 00  me14.......... - unknown/melodious.sfx 0d 0d 0d 53 46 58 56 31
+2e 38 00 00 00 00  ...SFXV1.8.... AM-FM/sunday morning.sfx 61 6c 6b 00 00 00 00 00 00 00 00 00 00 00  alk........... -
+unknown/sunday morning.sfx 6f 67 00 00 00 00 00 00 00 00 00 00 00 00  og............ Philip Jespersen/supaplex.sfx 6e 74
+20 73 6f 6e 67 00 00 00 00 00 00 00  nt song....... - unknown/sweety.sfx 61 6c 6b 00 00 00 00 00 00 00 00 00 00 00
+alk........... - unknown/thrust.sfx
 */
-

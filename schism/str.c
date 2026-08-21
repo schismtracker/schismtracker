@@ -23,10 +23,10 @@
 
 #include "headers.h"
 
+#include "bits.h"
 #include "mem.h"
 #include "str.h"
 #include "util.h"
-#include "bits.h"
 
 /* --------------------------------------------------------------------- */
 /* FORMATTING FUNCTIONS */
@@ -92,7 +92,8 @@ char *str_time_from_tm(struct tm *tm, char buf[27], str_time_format_t format)
 	default:
 	case STR_TIME_FORMAT_DEFAULT:
 	case STR_TIME_FORMAT_12HR:
-		snprintf(buf, 27, "%d:%02d%s", (tm->tm_hour % 12) ? (tm->tm_hour % 12) : 12, tm->tm_min, tm->tm_hour < 12 ? "am" : "pm");
+		snprintf(buf, 27, "%d:%02d%s", (tm->tm_hour % 12) ? (tm->tm_hour % 12) : 12, tm->tm_min,
+			tm->tm_hour < 12 ? "am" : "pm");
 		break;
 	case STR_TIME_FORMAT_24HR:
 		// so much easier
@@ -132,8 +133,7 @@ char *str_from_num99(int32_t n, char buf[3])
 		snprintf(buf, 3, "%02d", n);
 	} else if (n <= 256) {
 		n -= 100;
-		snprintf(buf, 3, "%c%d",
-			qv[(n/10)], (n % 10));
+		snprintf(buf, 3, "%c%d", qv[(n / 10)], (n % 10));
 	}
 	return buf;
 }
@@ -144,8 +144,7 @@ char *str_from_num(int digits, uint32_t n, char buf[11])
 	if (digits > 0) {
 		char fmt[] = "%03" PRIu32;
 
-		SCHISM_RUNTIME_ASSERT(digits >= 0 && digits <= 9,
-			"# of digits must fit in one decimal digit");
+		SCHISM_RUNTIME_ASSERT(digits >= 0 && digits <= 9, "# of digits must fit in one decimal digit");
 		digits %= 10;
 
 		fmt[2] = '0' + digits;
@@ -163,8 +162,7 @@ char *str_from_num_signed(int digits, int32_t n, char buf[12])
 	if (digits > 0) {
 		char fmt[] = "%03" PRId32;
 
-		SCHISM_RUNTIME_ASSERT(digits >= 0 && digits <= 9,
-			"# of digits must fit in one decimal digit");
+		SCHISM_RUNTIME_ASSERT(digits >= 0 && digits <= 9, "# of digits must fit in one decimal digit");
 		digits %= 10;
 
 		fmt[2] = '0' + digits;
@@ -203,7 +201,8 @@ char *str_from_num_thousands(int32_t n, char buf[15])
 		*--ptr = (un % 10) + '0';
 		un /= 10;
 
-		if (!un) break;
+		if (!un)
+			break;
 
 		place++;
 
@@ -249,7 +248,6 @@ int str_trim(char *s)
 	str_ltrim(s);
 	return str_rtrim(s);
 }
-
 
 /* break the string 's' with the character 'c', placing the two parts in 'first' and 'second'.
 return: 1 if the string contained the character (and thus could be split), 0 if not.
@@ -312,18 +310,20 @@ char *str_escape(const char *s, int space)
 			*d++ = '\\';
 			*d++ = 'v';
 			break;
-		case '\\': case '"':
+		case '\\':
+		case '"':
 			*d++ = '\\';
 			*d++ = *s;
 			break;
 
 		default:
 			if (*s < ' ' || *s >= 127 || (space && *s == ' ' && s[1] == '\0')) {
-		case '#': case ';':
+			case '#':
+			case ';':
 				*d++ = '\\';
-				*d++ = '0' + ((((uint8_t) *s) >> 6) & 7);
-				*d++ = '0' + ((((uint8_t) *s) >> 3) & 7);
-				*d++ = '0' + ( ((uint8_t) *s)       & 7);
+				*d++ = '0' + ((((uint8_t)*s) >> 6) & 7);
+				*d++ = '0' + ((((uint8_t)*s) >> 3) & 7);
+				*d++ = '0' + (((uint8_t)*s) & 7);
 			} else {
 				*d++ = *s;
 			}
@@ -343,22 +343,36 @@ static inline int readhex(const char *s, int w)
 	while (w--) {
 		o <<= 4;
 		switch (*s) {
-			case '0': case '1': case '2':
-			case '3': case '4': case '5':
-			case '6': case '7': case '8':
-			case '9':
-				o |= *s - '0';
-				break;
-			case 'a': case 'b': case 'c':
-			case 'd': case 'e': case 'f':
-				o |= *s - 'a' + 10;
-				break;
-			case 'A': case 'B': case 'C':
-			case 'D': case 'E': case 'F':
-				o |= *s - 'A' + 10;
-				break;
-			default:
-				return -1;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			o |= *s - '0';
+			break;
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f':
+			o |= *s - 'a' + 10;
+			break;
+		case 'A':
+		case 'B':
+		case 'C':
+		case 'D':
+		case 'E':
+		case 'F':
+			o |= *s - 'A' + 10;
+			break;
+		default:
+			return -1;
 		}
 		s++;
 	}
@@ -377,9 +391,14 @@ char *str_unescape(const char *s)
 		if (*s == '\\') {
 			s++;
 			switch (*s) {
-			case '0': case '1': case '2':
-			case '3': case '4': case '5':
-			case '6': case '7':
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
 				*d = 0;
 				end = s + 3;
 				while (s < end && *s >= '0' && *s <= '7') {
@@ -478,7 +497,8 @@ char *str_concat(const char *s, ...)
 	va_copy(ap3, ap);
 
 	/* first check how many strings we have */
-	for (i = 0, n = s; n; n = va_arg(ap, const char *), i++);
+	for (i = 0, n = s; n; n = va_arg(ap, const char *), i++)
+		;
 
 	SCHISM_VLA_ALLOC(size_t, lens, i);
 

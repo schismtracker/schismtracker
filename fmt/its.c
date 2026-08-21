@@ -26,8 +26,8 @@
 #include "fmt.h"
 #include "mem.h"
 
-#include "player/sndfile.h"
 #include "song.h"
+#include "player/sndfile.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -73,7 +73,12 @@ static int it_read_sample_hdr(slurp_t *fp, struct it_sample *its)
 		return 0;
 #else
 	/* read it all in manually */
-# define READ_VALUE(name) do { if (slurp_read(fp, &its->name, sizeof(its->name)) != sizeof(its->name)) { return 0; } } while (0)
+# define READ_VALUE(name) \
+	 do { \
+		 if (slurp_read(fp, &its->name, sizeof(its->name)) != sizeof(its->name)) { \
+			 return 0; \
+		 } \
+	 } while (0)
 	READ_VALUE(id);
 	READ_VALUE(filename);
 	READ_VALUE(zero);
@@ -138,8 +143,10 @@ int fmt_its_read_info(dmoz_file_t *file, slurp_t *fp)
 			file->smp_flags |= CHN_PINGPONGSUSTAIN;
 	}
 
-	if (its.dfp & 128) file->smp_flags |= CHN_PANNING;
-	if (its.flags & 4) file->smp_flags |= CHN_STEREO;
+	if (its.dfp & 128)
+		file->smp_flags |= CHN_PANNING;
+	if (its.flags & 4)
+		file->smp_flags |= CHN_STEREO;
 
 	file->smp_defvol = its.vol;
 	file->smp_gblvol = its.gvl;
@@ -306,17 +313,28 @@ void save_its_header(disko_t *fp, song_sample_t *smp)
 	its.vir = smp->vib_rate;
 	its.vid = smp->vib_depth;
 	switch (smp->vib_type) {
-		case VIB_RANDOM:    its.vit = 3; break;
-		case VIB_SQUARE:    its.vit = 2; break;
-		case VIB_RAMP_DOWN: its.vit = 1; break;
-		default:
-		case VIB_SINE:      its.vit = 0; break;
+	case VIB_RANDOM:
+		its.vit = 3;
+		break;
+	case VIB_SQUARE:
+		its.vit = 2;
+		break;
+	case VIB_RAMP_DOWN:
+		its.vit = 1;
+		break;
+	default:
+	case VIB_SINE:
+		its.vit = 0;
+		break;
 	}
 
 #ifdef SCHISM_PRAGMA_PACK
 	disko_write(fp, &its, sizeof(its));
 #else
-# define WRITE_VALUE(name) do { disko_write(fp, &its.name, sizeof(its.name)); } while (0)
+# define WRITE_VALUE(name) \
+	 do { \
+		 disko_write(fp, &its.name, sizeof(its.name)); \
+	 } while (0)
 	WRITE_VALUE(id);
 	WRITE_VALUE(filename);
 	WRITE_VALUE(zero);
@@ -347,10 +365,10 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 		return SAVE_UNSUPPORTED;
 
 	save_its_header(fp, smp);
-	csf_write_sample(fp, smp, SF_LE | SF_PCMS
-			| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+	csf_write_sample(fp, smp,
+		SF_LE | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
 			| ((smp->flags & CHN_STEREO) ? SF_SS : SF_M),
-			UINT32_MAX);
+		UINT32_MAX);
 
 	/* Write the sample pointer. In an ITS file, the sample data is right after the header,
 	 * so its position in the file will be the same as the size of the header. */
@@ -360,4 +378,3 @@ int fmt_its_save_sample(disko_t *fp, song_sample_t *smp)
 
 	return SAVE_SUCCESS;
 }
-

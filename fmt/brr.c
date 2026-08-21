@@ -22,21 +22,20 @@
  */
 
 #include "headers.h"
-#include "fmt.h"
 #include "bits.h"
+#include "fmt.h"
 #include "mem.h"
 
 /* macros for extracting stuff from the header byte */
-#define BRR_HDR_SHIFT(x) ((x) >> 4)
+#define BRR_HDR_SHIFT(x)  ((x) >> 4)
 #define BRR_HDR_FILTER(x) (((x) >> 2) & 0x3)
-#define BRR_HDR_LOOP(x) (((x) >> 1) & 0x1)
-#define BRR_HDR_END(x) ((x) & 1)
+#define BRR_HDR_LOOP(x)   (((x) >> 1) & 0x1)
+#define BRR_HDR_END(x)    ((x) & 1)
 
 /* I'm a *bit* paranoid :) */
 #define BRR_TEST_BLOCKS (64)
 
-static inline SCHISM_ALWAYS_INLINE
-uint32_t brr_ratio(uint32_t x)
+static inline SCHISM_ALWAYS_INLINE uint32_t brr_ratio(uint32_t x)
 {
 	return (((uint64_t)x * 16) / 9);
 }
@@ -141,8 +140,7 @@ int fmt_brr_read_info(dmoz_file_t *file, slurp_t *fp)
 	return 1;
 }
 
-static int16_t brr_decode_sample(int32_t nibble, int16_t *psn1, int16_t *psn2,
-	uint8_t shift, uint8_t filter)
+static int16_t brr_decode_sample(int32_t nibble, int16_t *psn1, int16_t *psn2, uint8_t shift, uint8_t filter)
 {
 	/* poopy sign extension */
 	if (nibble >= 8)
@@ -226,7 +224,7 @@ int fmt_brr_load_sample(slurp_t *fp, song_sample_t *smp)
 		for (j = 0; j < 8; j++) {
 			uint8_t smpblk = block[1 + j];
 
-			data[2 * j + 0] = brr_decode_sample(smpblk >> 4,  &sn1, &sn2, shift, BRR_HDR_FILTER(block[0]));
+			data[2 * j + 0] = brr_decode_sample(smpblk >> 4, &sn1, &sn2, shift, BRR_HDR_FILTER(block[0]));
 			data[2 * j + 1] = brr_decode_sample(smpblk & 0xF, &sn1, &sn2, shift, BRR_HDR_FILTER(block[0]));
 		}
 	}

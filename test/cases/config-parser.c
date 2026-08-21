@@ -21,26 +21,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
-#include "test-tempfile.h"
 #include "test-assertions.h"
+#include "test-tempfile.h"
+#include "test.h"
 
 #include "charset.h"
 
 #include "config-parser.h"
 
-static const char test_config_file_content[] =
-	"[ducks]\n"
-	"colour = brown\n"
-	"count = 7\n"
-	"weight = 64 lb.\n";
+static const char test_config_file_content[] = "[ducks]\n"
+					       "colour = brown\n"
+					       "count = 7\n"
+					       "weight = 64 lb.\n";
 
 #define ARRANGE_TEST_CONFIG_FILE(CFG) \
-	do \
-	{ \
+	do { \
 		char test_config_file[TEST_TEMP_FILE_NAME_LENGTH]; \
 \
-		REQUIRE(test_temp_file(test_config_file, test_config_file_content, ARRAY_SIZE(test_config_file_content) - 1)); \
+		REQUIRE(test_temp_file( \
+			test_config_file, test_config_file_content, ARRAY_SIZE(test_config_file_content) - 1)); \
 \
 		int init_result = cfg_init(&cfg, test_config_file); \
 \
@@ -266,7 +265,8 @@ testresult_t test_config_file_string_boundary_zero(void)
 
 /* --------------------------------------------------------------------- */
 
-static int grep_config_impl(const cfg_file_t *cfg, const char *section_expr, const char *key_expr, const char *value_expr, struct cfg_section **section, struct cfg_key **key)
+static int grep_config_impl(const cfg_file_t *cfg, const char *section_expr, const char *key_expr,
+	const char *value_expr, struct cfg_section **section, struct cfg_key **key)
 {
 	int matches = 0;
 
@@ -280,7 +280,9 @@ static int grep_config_impl(const cfg_file_t *cfg, const char *section_expr, con
 		struct cfg_section *trace_section = cfg->sections;
 
 		while (trace_section != NULL) {
-			if (charset_fnmatch(section_expr, CHARSET_UTF8, trace_section->name, CHARSET_UTF8, CHARSET_FNM_CASEFOLD) == 0) {
+			if (charset_fnmatch(
+				    section_expr, CHARSET_UTF8, trace_section->name, CHARSET_UTF8, CHARSET_FNM_CASEFOLD)
+				== 0) {
 				*section = trace_section;
 				matches++;
 			}
@@ -296,7 +298,9 @@ static int grep_config_impl(const cfg_file_t *cfg, const char *section_expr, con
 			struct cfg_key *trace_key = trace_section->keys;
 
 			while (trace_key != NULL) {
-				if (charset_fnmatch(key_expr, CHARSET_UTF8, trace_key->name, CHARSET_UTF8, CHARSET_FNM_CASEFOLD) == 0) {
+				if (charset_fnmatch(
+					    key_expr, CHARSET_UTF8, trace_key->name, CHARSET_UTF8, CHARSET_FNM_CASEFOLD)
+					== 0) {
 					*key = trace_key;
 					matches++;
 				}
@@ -304,7 +308,8 @@ static int grep_config_impl(const cfg_file_t *cfg, const char *section_expr, con
 				trace_key = trace_key->next;
 			}
 
-			if (*section) break;
+			if (*section)
+				break;
 
 			trace_section = trace_section->next;
 		}
@@ -317,7 +322,9 @@ static int grep_config_impl(const cfg_file_t *cfg, const char *section_expr, con
 			struct cfg_key *trace_key = *key ? *key : trace_section->keys;
 
 			while (trace_key != NULL) {
-				if (charset_fnmatch(value_expr, CHARSET_UTF8, trace_key->value, CHARSET_UTF8, CHARSET_FNM_CASEFOLD) == 0)
+				if (charset_fnmatch(value_expr, CHARSET_UTF8, trace_key->value, CHARSET_UTF8,
+					    CHARSET_FNM_CASEFOLD)
+					== 0)
 					matches++;
 
 				if (*key)
@@ -326,7 +333,8 @@ static int grep_config_impl(const cfg_file_t *cfg, const char *section_expr, con
 				trace_key = trace_key->next;
 			}
 
-			if (*section || *key) break;
+			if (*section || *key)
+				break;
 
 			trace_section = trace_section->next;
 		}
@@ -385,12 +393,14 @@ static int grep_config(const cfg_file_t *cfg, const char *section_expr, const ch
 // Takes two additional output parameters:
 // - out_section: Receives a pointer to the last matching section.
 // - out_key: Receiver a pointer to the last matching key.
-static int grep_config_ex(const cfg_file_t *cfg, const char *section_expr, const char *key_expr, struct cfg_section **out_section, struct cfg_key **out_key)
+static int grep_config_ex(const cfg_file_t *cfg, const char *section_expr, const char *key_expr,
+	struct cfg_section **out_section, struct cfg_key **out_key)
 {
 	struct cfg_section *section;
 	struct cfg_key *key;
 
-	return grep_config_impl(cfg, section_expr, key_expr, NULL, out_section ? out_section : &section, out_key ? out_key : &key);
+	return grep_config_impl(
+		cfg, section_expr, key_expr, NULL, out_section ? out_section : &section, out_key ? out_key : &key);
 }
 
 testresult_t test_config_file_set_string_in_new_section(void)

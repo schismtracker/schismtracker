@@ -26,8 +26,8 @@
 
 #include "headers.h"
 
-#include "fmt.h"
 #include "bits.h"
+#include "fmt.h"
 
 /* --------------------------------------------------------------------------------------------------------- */
 /* chunk helpers */
@@ -72,7 +72,8 @@ static int w64_chunk_empty(struct w64_chunk *chunk)
 	return !memcmp(&empty_chunk, chunk, sizeof(struct w64_chunk));
 }
 
-static int w64_chunk_receive(struct w64_chunk *chunk, slurp_t *fp, int (*callback)(const void *, size_t, void *), void *userdata)
+static int w64_chunk_receive(
+	struct w64_chunk *chunk, slurp_t *fp, int (*callback)(const void *, size_t, void *), void *userdata)
 {
 	int64_t pos = slurp_tell(fp);
 	if (pos < 0)
@@ -116,38 +117,92 @@ static int w64_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 
 	{
 		static const unsigned char w64_guid_RIFF[16] = {
-			0x72, 0x69, 0x66, 0x66, 0x2E, 0x91, 0xCF, 0x11,
-			0xA5, 0xD6, 0x28, 0xDB, 0x04, 0xC1, 0x00, 0x00,
+			0x72,
+			0x69,
+			0x66,
+			0x66,
+			0x2E,
+			0x91,
+			0xCF,
+			0x11,
+			0xA5,
+			0xD6,
+			0x28,
+			0xDB,
+			0x04,
+			0xC1,
+			0x00,
+			0x00,
 		};
 
 		static const unsigned char w64_guid_WAVE[16] = {
-			0x77, 0x61, 0x76, 0x65, 0xF3, 0xAC, 0xD3, 0x11,
-			0x8C, 0xD1, 0x00, 0xC0, 0x4F, 0x8E, 0xDB, 0x8A,
+			0x77,
+			0x61,
+			0x76,
+			0x65,
+			0xF3,
+			0xAC,
+			0xD3,
+			0x11,
+			0x8C,
+			0xD1,
+			0x00,
+			0xC0,
+			0x4F,
+			0x8E,
+			0xDB,
+			0x8A,
 		};
 
 		unsigned char guid[16];
 
-		if (slurp_read(fp, guid, sizeof(guid)) != sizeof(guid)
-			|| memcmp(guid, w64_guid_RIFF, 16))
+		if (slurp_read(fp, guid, sizeof(guid)) != sizeof(guid) || memcmp(guid, w64_guid_RIFF, 16))
 			return 0;
 
 		/* skip filesize. */
 		slurp_seek(fp, 8, SEEK_CUR);
 
-		if (slurp_read(fp, guid, sizeof(guid)) != sizeof(guid)
-			|| memcmp(guid, w64_guid_WAVE, 16))
+		if (slurp_read(fp, guid, sizeof(guid)) != sizeof(guid) || memcmp(guid, w64_guid_WAVE, 16))
 			return 0;
 	}
 
 	{
 		static const unsigned char w64_guid_FMT_[16] = {
-			0x66, 0x6D, 0x74, 0x20, 0xF3, 0xAC, 0xD3, 0x11,
-			0x8C, 0xD1, 0x00, 0xC0, 0x4F, 0x8E, 0xDB, 0x8A,
+			0x66,
+			0x6D,
+			0x74,
+			0x20,
+			0xF3,
+			0xAC,
+			0xD3,
+			0x11,
+			0x8C,
+			0xD1,
+			0x00,
+			0xC0,
+			0x4F,
+			0x8E,
+			0xDB,
+			0x8A,
 		};
 
 		static const unsigned char w64_guid_DATA[16] = {
-			0x64, 0x61, 0x74, 0x61, 0xF3, 0xAC, 0xD3, 0x11,
-			0x8C, 0xD1, 0x00, 0xC0, 0x4F, 0x8E, 0xDB, 0x8A,
+			0x64,
+			0x61,
+			0x74,
+			0x61,
+			0xF3,
+			0xAC,
+			0xD3,
+			0x11,
+			0x8C,
+			0xD1,
+			0x00,
+			0xC0,
+			0x4F,
+			0x8E,
+			0xDB,
+			0x8A,
 		};
 
 		struct w64_chunk c;
@@ -184,11 +239,20 @@ static int w64_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 
 	// bit width
 	switch (fmt.bitspersample) {
-	case 8:  flags |= SF_8;  break;
-	case 16: flags |= SF_16; break;
-	case 24: flags |= SF_24; break;
-	case 32: flags |= SF_32; break;
-	default: return 0; // unsupported
+	case 8:
+		flags |= SF_8;
+		break;
+	case 16:
+		flags |= SF_16;
+		break;
+	case 24:
+		flags |= SF_24;
+		break;
+	case 32:
+		flags |= SF_32;
+		break;
+	default:
+		return 0; // unsupported
 	}
 
 	// encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
@@ -199,12 +263,13 @@ static int w64_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	case WAVE_FORMAT_IEEE_FLOAT:
 		flags |= SF_IEEE;
 		break;
-	default: return 0; // unsupported
+	default:
+		return 0; // unsupported
 	}
 
-	smp->flags         = 0; // flags are set by csf_read_sample
-	smp->c5speed       = fmt.freqHz;
-	smp->length        = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
+	smp->flags = 0; // flags are set by csf_read_sample
+	smp->c5speed = fmt.freqHz;
+	smp->length = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
 
 	if (load_sample) {
 		return w64_read_sample(&data_chunk, fp, smp, flags);
@@ -238,8 +303,8 @@ int fmt_w64_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	//fmt_fill_file_from_sample(file, &smp);
 
-	file->description  = "Sony Wave64";
-	file->type         = TYPE_SAMPLE_PLAIN;
+	file->description = "Sony Wave64";
+	file->type = TYPE_SAMPLE_PLAIN;
 	file->smp_filename = file->base;
 
 	return 1;

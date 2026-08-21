@@ -24,9 +24,9 @@
 #include "headers.h"
 #include "bits.h"
 #include "fmt.h"
-#include "util.h"
-#include "mem.h"
 #include "log.h"
+#include "mem.h"
+#include "util.h"
 
 /*
 #define D00_ENABLE_BROKEN_LEVELPULS
@@ -54,7 +54,11 @@ struct d00_header {
 };
 
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 static int d00_header_read_v1(struct d00_header *hdr, slurp_t *fp)
 {
@@ -87,8 +91,7 @@ static int d00_header_read_new(struct d00_header *hdr, slurp_t *fp)
 	if (!slurp_could_seek(fp, 119, SEEK_CUR) || slurp_could_seek(fp, UINT16_MAX, SEEK_SET))
 		return 0;
 
-	if ((slurp_read(fp, magic, 6) != 6)
-			|| memcmp(magic, "JCH\x26\x02\x66", 6))
+	if ((slurp_read(fp, magic, 6) != 6) || memcmp(magic, "JCH\x26\x02\x66", 6))
 		return 0;
 
 	READ_VALUE(type);
@@ -129,12 +132,8 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 	 * but v0-v1 d00 files have virtually no identifying information
 	 * if they haven't been reheadered. */
 	int64_t fppos;
-	static int (*const hdr_style[])(struct d00_header *hdr, slurp_t *fp) = {
-		/* in order of preference */
-		d00_header_read_new,
-		d00_header_read_v1,
-		NULL
-	};
+	static int (*const hdr_style[])(struct d00_header *hdr, slurp_t *fp) = {  /* in order of preference */
+		d00_header_read_new, d00_header_read_v1, NULL};
 	size_t i;
 
 	for (i = 0; /* nothing */; i++) {
@@ -173,14 +172,11 @@ static int d00_header_read(struct d00_header *hdr, slurp_t *fp)
 		return 0; /* wut */
 
 	/* verify that parapointers are within range for the file */
-#define PARAPTR_VALID(ptr) \
-	(fppos <= ptr || !slurp_could_seek(fp, ptr, SEEK_SET))
+#define PARAPTR_VALID(ptr) (fppos <= ptr || !slurp_could_seek(fp, ptr, SEEK_SET))
 
 	/* these can never be invalid */
-	if (!PARAPTR_VALID(hdr->tpoin)
-		    || !PARAPTR_VALID(hdr->info_paraptr)
-		    || !PARAPTR_VALID(hdr->instrument_paraptr)
-		    || !PARAPTR_VALID(hdr->sequence_paraptr))
+	if (!PARAPTR_VALID(hdr->tpoin) || !PARAPTR_VALID(hdr->info_paraptr) || !PARAPTR_VALID(hdr->instrument_paraptr)
+		|| !PARAPTR_VALID(hdr->sequence_paraptr))
 		return 0;
 
 	/* this pointer is used differently depending on the version.
@@ -298,14 +294,12 @@ static int uint16_compare(const void *a, const void *b)
 
 #define D00_PATTERN_ROWS 64
 
-static song_note_t *d00_get_note(song_t *song, uint32_t pattern, uint32_t row,
-	uint32_t chn)
+static song_note_t *d00_get_note(song_t *song, uint32_t pattern, uint32_t row, uint32_t chn)
 {
 	if (!song->patterns[pattern]) {
 		/* allocate the pattern data, if it's not there already */
 		song->patterns[pattern] = csf_allocate_pattern(D00_PATTERN_ROWS);
-		song->pattern_size[pattern] = song->pattern_alloc_size[pattern]
-			= D00_PATTERN_ROWS;
+		song->pattern_size[pattern] = song->pattern_alloc_size[pattern] = D00_PATTERN_ROWS;
 	}
 
 	return song->patterns[pattern] + (row * MAX_CHANNELS) + chn;
@@ -342,13 +336,11 @@ const char *d00_warn_names[D00_WARN_MAX_] = {
 	[D00_WARN_ORDERSPEED] = "Order speed ignored",
 };
 
-#define EDLIBVOLTOITVOL(x) \
-	((63 - ((x) & 63)) * 64 / 63)
+#define EDLIBVOLTOITVOL(x) ((63 - ((x) & 63)) * 64 / 63)
 
 #ifdef D00_ENABLE_BROKEN_LEVELPULS
 /* return of 0 means catastrophic failure */
-static int d00_load_levelpuls(uint16_t paraptr, int tunelev,
-	song_instrument_t *ins, song_sample_t *smp, slurp_t *fp)
+static int d00_load_levelpuls(uint16_t paraptr, int tunelev, song_instrument_t *ins, song_sample_t *smp, slurp_t *fp)
 {
 	/* FIXME: The first iteration of the tunelev takes in a "timer",
 	 * which is weird-speak for sustain for given amount of ticks. */
@@ -410,8 +402,7 @@ static int d00_load_levelpuls(uint16_t paraptr, int tunelev,
 }
 #endif
 
-int fmt_d00_load_song(song_t *song, slurp_t *fp,
-	SCHISM_UNUSED uint32_t lflags)
+int fmt_d00_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 {
 	int c;
 	int ninst = 0;
@@ -435,7 +426,7 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 	 * this is USUALLY simply "\xFF\xFF" (end marking) but in some
 	 * old songs (e.g. "the alibi.d00") it contains real data */
 	slurp_seek(fp, hdr.info_paraptr, SEEK_SET);
-	for (msgp = 0; msgp < MAX_MESSAGE; ) {
+	for (msgp = 0; msgp < MAX_MESSAGE;) {
 		int ch;
 
 		ch = slurp_getc(fp);
@@ -455,7 +446,8 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 				break; /* message end */
 			} else {
 				song->message[msgp++] = ch;
-				if (msgp >= MAX_MESSAGE) break;
+				if (msgp >= MAX_MESSAGE)
+					break;
 				song->message[msgp++] = ch2;
 			}
 		} else {
@@ -569,7 +561,7 @@ int fmt_d00_load_song(song_t *song, slurp_t *fp,
 					song_note_t *sn;
 					uint16_t count = 0;
 
-D00_readnote: /* this goto is kind of ugly... */
+				D00_readnote: /* this goto is kind of ugly... */
 					if (slurp_read(fp, &event, 2) != 2)
 						break;
 
@@ -598,7 +590,8 @@ D00_readnote: /* this goto is kind of ugly... */
 							break;
 						case 0x7E: /* "HOLD" */
 							/* copy the last effect... */
-							for (r = 0; pattern < MAX_PATTERNS && r <= count; r++, row++, d00_fix_row(&pattern, &row)) {
+							for (r = 0; pattern < MAX_PATTERNS && r <= count;
+								r++, row++, d00_fix_row(&pattern, &row)) {
 								sn = d00_get_note(song, pattern, row, c);
 
 								sn->effect = mem_effect;
@@ -682,11 +675,11 @@ D00_readnote: /* this goto is kind of ugly... */
 							if (hdr.version == 4) {
 								/* SPFX is a linked list.
 								 *
-								 * Yep; there's a `ptr` value within the structure, which
-								 * points to the next spfx structure to process. This is
-								 * terrible for us, but we can at least haphazardly
-								 * grab the instrument number from the first one, and
-								 * hope it fits... */
+								 * Yep; there's a `ptr` value within the structure,
+								 * which points to the next spfx structure to process.
+								 * This is terrible for us, but we can at least
+								 * haphazardly grab the instrument number from the first
+								 * one, and hope it fits... */
 								int64_t oldpos = slurp_tell(fp);
 
 								slurp_seek(fp, hdr.spfx_paraptr + fxop, SEEK_SET);
@@ -701,7 +694,8 @@ D00_readnote: /* this goto is kind of ugly... */
 								 *  - int8_t modlevadd;
 								 *  - uint8_t duration;
 								 *  - uint16_t ptr; (seriously?)
-								 * it's likely that we can transform these into an instrument. */
+								 * it's likely that we can transform these into an
+								 * instrument. */
 
 								slurp_seek(fp, oldpos, SEEK_SET);
 							}
@@ -806,16 +800,13 @@ D00_readnote: /* this goto is kind of ugly... */
 		qsort(speeds, 10, sizeof(uint16_t), uint16_compare);
 
 		for (c = 1; c < 10; c++) {
-			count = (speeds[c] == speeds[c - 1])
-				? (count + 1)
-				: 1;
+			count = (speeds[c] == speeds[c - 1]) ? (count + 1) : 1;
 
 			if (count > max_count) {
 				max_count = count;
 				mode = speeds[c];
 			}
 		}
-
 
 #if 0
 		log_appendf(1, "mode: %u", mode);
@@ -902,7 +893,6 @@ D00_readnote: /* this goto is kind of ugly... */
 			break;
 		}
 
-
 		smp->volume = 64 * 4; //mphack
 
 		/* It's probably safe to ignore these (?)
@@ -928,7 +918,8 @@ D00_readnote: /* this goto is kind of ugly... */
 	if (hdr.version == 4)
 		strncpy(song->tracker_id, "EdLib Tracker", sizeof(song->tracker_id) - 1);
 	else
-		snprintf(song->tracker_id, sizeof(song->tracker_id), "Unknown AdLib Tracker, file version %d", (int)hdr.version);
+		snprintf(song->tracker_id, sizeof(song->tracker_id), "Unknown AdLib Tracker, file version %d",
+			(int)hdr.version);
 	/* otherwise... it's probably some random tracker */
 
 	for (c = 0; c < D00_WARN_MAX_; c++)

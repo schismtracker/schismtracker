@@ -22,17 +22,18 @@
  */
 
 #include "headers.h"
-#include "charset.h"
 #include "osdefs.h"
+#include "charset.h"
 #include "log.h"
 
-#include <windows.h>
-#include <hal/video.h>
 #include <hal/debug.h>
+#include <hal/video.h>
 #include <nxdk/mount.h>
+#include <windows.h>
 
 /* converts FILETIME to unix time_t */
-static inline int64_t xbox_filetime_to_unix_time(FILETIME *ft) {
+static inline int64_t xbox_filetime_to_unix_time(FILETIME *ft)
+{
 	uint64_t ul = ((uint64_t)ft->dwHighDateTime << 32) | ft->dwLowDateTime;
 	return ((int64_t)(ul - 116444736000000000ULL) / 10000000);
 }
@@ -43,12 +44,12 @@ void xbox_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 
 	XVideoSetMode(640, 480, 32, REFRESH_DEFAULT);
 
-	log_appendf(1, "[XBOX] This is kernel version %u.%u.%u",
-		XboxKrnlVersion.Major, XboxKrnlVersion.Minor, XboxKrnlVersion.Build);
+	log_appendf(1, "[XBOX] This is kernel version %u.%u.%u", XboxKrnlVersion.Major, XboxKrnlVersion.Minor,
+		XboxKrnlVersion.Build);
 	/* There is also a Qfe member of the kernel version, which I'm guessing
 	 * is for quick security fixes? */
-	log_appendf(1, "[XBOX] GPU revision is %u, MCP revision is %u",
-		XboxHardwareInfo.GpuRevision, XboxHardwareInfo.McpRevision);
+	log_appendf(1, "[XBOX] GPU revision is %u, MCP revision is %u", XboxHardwareInfo.GpuRevision,
+		XboxHardwareInfo.McpRevision);
 
 	log_nl();
 

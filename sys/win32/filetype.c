@@ -21,28 +21,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "headers.h"
-#include "osdefs.h"
 #include "charset.h"
+#include "osdefs.h"
 
 #include <shlobj.h>
-#include <windows.h>
 #include <string.h>
+#include <windows.h>
 
 void win32_filecreated_callback(const char *filename)
 {
 	/* let explorer know when we create a file. */
 	charset_t explorer_charset;
 
-	SCHISM_ANSI_UNICODE({
-		explorer_charset = CHARSET_ANSI;
-	}, {
-		explorer_charset = CHARSET_WCHAR_T;
-	})
+	SCHISM_ANSI_UNICODE({ explorer_charset = CHARSET_ANSI; }, { explorer_charset = CHARSET_WCHAR_T; })
 
 	void *wc = charset_iconv_easy(filename, CHARSET_UTF8, explorer_charset);
 	if (wc) {
-		SHChangeNotify(SHCNE_CREATE, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
-		SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH|SHCNF_FLUSHNOWAIT, wc, NULL);
+		SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSHNOWAIT, wc, NULL);
+		SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATH | SHCNF_FLUSHNOWAIT, wc, NULL);
 		free(wc);
 	}
 }

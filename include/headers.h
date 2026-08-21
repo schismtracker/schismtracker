@@ -60,11 +60,11 @@
 /* ------------------------------------------------------------------------ */
 /* Actual standard C stuff */
 
+#include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stddef.h>
 #include <string.h>
-#include <ctype.h>
 #include <wchar.h>
 
 #include <errno.h>
@@ -72,7 +72,7 @@
 #include <time.h>
 
 #ifdef HAVE_LIMITS_H
-#include <limits.h>
+# include <limits.h>
 #endif
 
 /* TODO we should handle this stuff ourselves, rather than giving it off
@@ -115,7 +115,7 @@
 /* This defines MAXPATHLEN (used later in this file for the definition of
  * SCHISM_PATH_MAX) */
 #ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
+# include <sys/param.h>
 #endif
 
 /* These files provide struct stat, which we currently require to be
@@ -150,15 +150,15 @@ struct stat {
 	/* blkcnt_t st_blocks; */
 };
 
-# define S_IFREG (0x01)
-# define S_IFBLK (0x02)
-# define S_IFCHR (0x04)
-# define S_IFIFO (0x08)
-# define S_IFDIR (0x10)
-# define S_IFLNK (0x20)
+# define S_IFREG  (0x01)
+# define S_IFBLK  (0x02)
+# define S_IFCHR  (0x04)
+# define S_IFIFO  (0x08)
+# define S_IFDIR  (0x10)
+# define S_IFLNK  (0x20)
 # define S_IFSOCK (0x40)
 
-# define S_IFMT (0x7F) /* format mask */
+# define S_IFMT  (0x7F) /* format mask */
 
 /* If we aren't on a POSIX system, these probably can't be filled;
  * generally these should be ignored anyhow.  :) */
@@ -174,9 +174,9 @@ struct stat {
 # define S_ISUID (0x10000)
 # define S_ISGID (0x20000)
 
-# define S_IRWXU (S_IRUSR | S_IWUSR | S_IXUSR)
-# define S_IRWXG (S_IRGRP | S_IWGRP | S_IXGRP)
-# define S_IRWXO (S_IROTH | S_IWOTH | S_IXOTH)
+# define S_IRWXU     (S_IRUSR | S_IWUSR | S_IXUSR)
+# define S_IRWXG     (S_IRGRP | S_IWGRP | S_IXGRP)
+# define S_IRWXO     (S_IROTH | S_IWOTH | S_IXOTH)
 
 /* Convenience macros as defined by POSIX */
 # define S_ISREG(x)  (!!((x) & S_IFREG))
@@ -203,22 +203,20 @@ struct stat {
  *   SCHISM_SEMVER_ATLEAST(1, 2, 3, 2, 0, 0) -> TRUE
  *   SCHISM_SEMVER_ATLEAST(1, 2, 1, 1, 1, 0) -> FALSE */
 #define SCHISM_SEMVER_ATLEAST(mmajor, mminor, mpatch, major, minor, patch) \
-	(((major) >= (mmajor)) \
-	 && ((major) > (mmajor) || (minor) >= (mminor)) \
-	 && ((major) > (mmajor) || (minor) > (mminor) || (patch) >= (mpatch)))
+	(((major) >= (mmajor)) && ((major) > (mmajor) || (minor) >= (mminor)) \
+		&& ((major) > (mmajor) || (minor) > (mminor) || (patch) >= (mpatch)))
 
 /* A bunch of compiler detection stuff... don't mind this... */
 
 // GNU C (not necessarily GCC!)
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
 # define SCHISM_GNUC_ATLEAST(major, minor, patch) \
-	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+	 SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__)
 # define SCHISM_GNUC_ATLEAST(major, minor, patch) \
-	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, 0)
+	 SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, __GNUC_MINOR__, 0)
 #elif defined(__GNUC__)
-# define SCHISM_GNUC_ATLEAST(major, minor, patch) \
-	SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, 0, 0)
+# define SCHISM_GNUC_ATLEAST(major, minor, patch) SCHISM_SEMVER_ATLEAST(major, minor, patch, __GNUC__, 0, 0)
 #else
 # define SCHISM_GNUC_ATLEAST(major, minor, patch) (0)
 #endif
@@ -226,44 +224,39 @@ struct stat {
 // MSVC (untested)
 #if defined(_MSC_FULL_VER) && (_MSC_FULL_VER >= 140000000)
 # define SCHISM_MSVC_ATLEAST(major, minor, patch) \
-	SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_FULL_VER / 10000000, (_MSC_FULL_VER % 10000000 / 100000), (_MSC_FULL_VER % 100000) / 100)
+	 SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_FULL_VER / 10000000, (_MSC_FULL_VER % 10000000 / 100000), \
+		 (_MSC_FULL_VER % 100000) / 100)
 #elif defined(_MSC_FULL_VER)
 # define SCHISM_MSVC_ATLEAST(major, minor, patch) \
-	SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_FULL_VER / 1000000, (_MSC_FULL_VER % 1000000) / 10000, (_MSC_FULL_VER % 10000) / 10)
+	 SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_FULL_VER / 1000000, (_MSC_FULL_VER % 1000000) / 10000, \
+		 (_MSC_FULL_VER % 10000) / 10)
 #elif defined(_MSC_VER)
 # define SCHISM_MSVC_ATLEAST(major, minor, patch) \
-	SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_VER / 100, _MSC_VER % 100, 0)
+	 SCHISM_SEMVER_ATLEAST(major, minor, patch, _MSC_VER / 100, _MSC_VER % 100, 0)
 #else
 # define SCHISM_MSVC_ATLEAST(major, minor, patch) (0)
 #endif
 
 #ifdef __has_attribute
-# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
-	__has_attribute(x)
-# define SCHISM_HAS_ATTRIBUTE(x) __has_attribute(x)
+# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) __has_attribute(x)
+# define SCHISM_HAS_ATTRIBUTE(x)                           __has_attribute(x)
 #else
-# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) \
-	SCHISM_GNUC_ATLEAST(major, minor, patch)
-# define SCHISM_HAS_ATTRIBUTE(x) (0)
+# define SCHISM_GNUC_HAS_ATTRIBUTE(x, major, minor, patch) SCHISM_GNUC_ATLEAST(major, minor, patch)
+# define SCHISM_HAS_ATTRIBUTE(x)                           (0)
 #endif
 
 #ifdef __has_builtin
-# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) \
-	__has_builtin(x)
+# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) __has_builtin(x)
 #else
-# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) \
-	SCHISM_GNUC_ATLEAST(major, minor, patch)
+# define SCHISM_GNUC_HAS_BUILTIN(x, major, minor, patch) SCHISM_GNUC_ATLEAST(major, minor, patch)
 #endif
 
 #ifdef __has_extension
-# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
-	__has_extension(x)
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) __has_extension(x)
 #elif defined(__has_feature)
-# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
-	__has_feature(x)
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) __has_feature(x)
 #else
-# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) \
-	SCHISM_GNUC_ATLEAST(major, minor, patch)
+# define SCHISM_GNUC_HAS_EXTENSION(x, major, minor, patch) SCHISM_GNUC_ATLEAST(major, minor, patch)
 #endif
 
 /* C23 requires that this exists. maybe compiler versions
@@ -283,30 +276,29 @@ struct stat {
  * simply does nothing, and the result is a compile-time add of
  * zero, which gets optimized to nothing. :) */
 # define ARRAY_SIZE(a) \
-	(sizeof(a) / sizeof(*(a)) \
-    	+ sizeof(__typeof__(int[1 - 2 * \
-			!!__builtin_types_compatible_p(__typeof__(a), \
-				__typeof__(&(*(a))))])) * 0)
+	 (sizeof(a) / sizeof(*(a)) \
+		 + sizeof(__typeof__(int[1 - 2 * !!__builtin_types_compatible_p(__typeof__(a), __typeof__(&(*(a))))])) \
+			   * 0)
 #else
-# define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
+# define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
 #endif
 
 /* macros stolen from glib */
 #ifndef MAX
-# define MAX(X,Y) (((X)>(Y))?(X):(Y))
+# define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #endif
 #ifndef MIN
-# define MIN(X,Y) (((X)<(Y))?(X):(Y))
+# define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #endif
 #ifndef CLAMP
-# define CLAMP(N,L,H) (((N)>(H))?(H):(((N)<(L))?(L):(N)))
+# define CLAMP(N, L, H) (((N) > (H)) ? (H) : (((N) < (L)) ? (L) : (N)))
 #endif
 #ifndef ABS
 # define ABS(x) ((x) < 0 ? -(x) : x)
 #endif
 
-#define INT_SHAPED_PTR(v) ((intptr_t)(void*)(v))
-#define PTR_SHAPED_INT(i) ((void*)(intptr_t)(i))
+#define INT_SHAPED_PTR(v) ((intptr_t)(void *)(v))
+#define PTR_SHAPED_INT(i) ((void *)(intptr_t)(i))
 
 /* ------------------------------------------------------------------------ */
 
@@ -400,8 +392,7 @@ struct stat {
  * gets specified in the last parameter of this macro, else
  * it should be 0. */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__format__, 2, 3, 0)
-# define SCHISM_FORMAT_PRINTF(format_index, first_index) \
-	__attribute__((__format__(printf, format_index, first_index)))
+# define SCHISM_FORMAT_PRINTF(format_index, first_index) __attribute__((__format__(printf, format_index, first_index)))
 #else
 # define SCHISM_FORMAT_PRINTF(format_index, first_index)
 #endif
@@ -410,7 +401,7 @@ struct stat {
  * allocation size in bytes (malloc), or in the case of
  * _EX, an allocation size in objects (calloc). */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__alloc_size__, 9, 1, 0)
-# define SCHISM_ALLOC_SIZE(x) __attribute__((__alloc_size__(x)))
+# define SCHISM_ALLOC_SIZE(x)       __attribute__((__alloc_size__(x)))
 # define SCHISM_ALLOC_SIZE_EX(x, y) __attribute__((__alloc_size__(x, y)))
 #else
 # define SCHISM_ALLOC_SIZE(x)
@@ -535,8 +526,7 @@ struct stat {
 
 /* Win32, used for threads */
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__force_align_arg_pointer__, 4, 2, 0)
-# define SCHISM_FORCE_ALIGN_ARG_POINTER \
-	__attribute__((__force_align_arg_pointer__))
+# define SCHISM_FORCE_ALIGN_ARG_POINTER __attribute__((__force_align_arg_pointer__))
 #else
 # define SCHISM_FORCE_ALIGN_ARG_POINTER
 #endif
@@ -563,12 +553,16 @@ struct stat {
 /* alignof */
 
 #if 0// (__STDC_VERSION__ >= 201112L)
-#define SCHISM_ALIGNOF(type) \
-	_Alignof(type)
+# define SCHISM_ALIGNOF(type) _Alignof(type)
 #else
 /* clever use of offsetof() */
-#define SCHISM_ALIGNOF(type) \
-	offsetof(struct { char a; type b; }, b)
+# define SCHISM_ALIGNOF(type) \
+	 offsetof( \
+		 struct { \
+		  char a; \
+		  type b; \
+		 }, \
+		 b)
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -591,25 +585,28 @@ struct stat {
 SCHISM_NORETURN void schism_assert_fail(const char *msg, const char *exp, const char *file, int line);
 
 # define SCHISM_RUNTIME_ASSERT(x, msg) \
-	do { \
-		/* Make sure the message is actually a string.. */ \
-		SCHISM_STATIC_ASSERT(sizeof((msg)[0]) == 1u, "Assertion message must be a string"); \
-		if (!SCHISM_UNLIKELY(x)) schism_assert_fail((msg), #x, __FILE__, __LINE__); \
-	} while (0)
+	 do { \
+                /* Make sure the message is actually a string.. */ \
+		 SCHISM_STATIC_ASSERT(sizeof((msg)[0]) == 1u, "Assertion message must be a string"); \
+		 if (!SCHISM_UNLIKELY(x)) \
+			 schism_assert_fail((msg), #x, __FILE__, __LINE__); \
+	 } while (0)
 #else
-# define SCHISM_RUNTIME_ASSERT(x, msg) do { (x); } while (0)
+# define SCHISM_RUNTIME_ASSERT(x, msg) \
+	 do { \
+		 (x); \
+	 } while (0)
 #endif
 
 /* Static assertion. DO NOT use this within structure definitions! */
-#if (__STDC_VERSION__ >= 201112L) \
-	|| (SCHISM_GNUC_HAS_EXTENSION(c11_static_assert, 4, 6, 0))
+#if (__STDC_VERSION__ >= 201112L) || (SCHISM_GNUC_HAS_EXTENSION(c11_static_assert, 4, 6, 0))
 # define SCHISM_STATIC_ASSERT(x, msg) _Static_assert(x, msg)
 #else
 /* should work anywhere and shouldn't dump random stack allocations
  * BUT it fails to provide any sort of useful message to the user */
 # define SCHISM_STATIC_ASSERT(x, msg) \
-	extern int (*schism_static_assert_function_no_touchy_touchy_plz(void)) \
-		[!!sizeof (struct { int __error_if_negative: (x) ? 2 : -1; })]
+	 extern int (*schism_static_assert_function_no_touchy_touchy_plz( \
+		 void))[!!sizeof(struct { int __error_if_negative : (x) ? 2 : -1; })]
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -621,12 +618,13 @@ int asprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHIS
 int vasprintf(char **strp, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT_PRINTF(2, 0);
 #endif
 #ifndef HAVE_SNPRINTF
-#undef snprintf // stupid windows
+# undef snprintf // stupid windows
 int snprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, ...) SCHISM_FORMAT_PRINTF(3, 4);
 #endif
 #ifndef HAVE_VSNPRINTF
-#undef vsnprintf // stupid windows
-int vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap) SCHISM_FORMAT_PRINTF(2, 0);
+# undef vsnprintf // stupid windows
+int vsnprintf(char *buffer, size_t count, SCHISM_PRINTF_FORMAT_PARAM const char *fmt, va_list ap)
+	SCHISM_FORMAT_PRINTF(2, 0);
 #endif
 #ifndef HAVE_STRPTIME
 char *strptime(const char *buf, const char *fmt, struct tm *tm);
@@ -659,9 +657,9 @@ int unsetenv(const char *name);
 /* getopt replacement defines; these intentionally do not use the names
  * getopt() and such because a system could have getopt() but not
  * getopt_long(), and doing this avoids name collisions */
-# define ya_no_argument        0
-# define ya_required_argument  1
-# define ya_optional_argument  2
+# define ya_no_argument       0
+# define ya_required_argument 1
+# define ya_optional_argument 2
 
 struct option {
 	const char *name;
@@ -670,24 +668,25 @@ struct option {
 	int val;
 };
 
-int ya_getopt(int argc, char * const argv[], const char *optstring);
-int ya_getopt_long(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex);
-int ya_getopt_long_only(int argc, char * const argv[], const char *optstring, const struct option *longopts, int *longindex);
+int ya_getopt(int argc, char *const argv[], const char *optstring);
+int ya_getopt_long(int argc, char *const argv[], const char *optstring, const struct option *longopts, int *longindex);
+int ya_getopt_long_only(
+	int argc, char *const argv[], const char *optstring, const struct option *longopts, int *longindex);
 
 extern char *ya_optarg;
 extern int ya_optind, ya_opterr, ya_optopt;
 
 // yargh
-# define getopt ya_getopt
-# define getopt_long ya_getopt_long
-# define getopt_long_only ya_getopt_long_only
-# define optarg ya_optarg
-# define optind ya_optind
-# define opterr ya_opterr
-# define optopt ya_optopt
-# define no_argument ya_no_argument
-# define required_argument ya_required_argument
-# define optional_argument ya_optional_argument
+# define getopt               ya_getopt
+# define getopt_long          ya_getopt_long
+# define getopt_long_only     ya_getopt_long_only
+# define optarg               ya_optarg
+# define optind               ya_optind
+# define opterr               ya_opterr
+# define optopt               ya_optopt
+# define no_argument          ya_no_argument
+# define required_argument    ya_required_argument
+# define optional_argument    ya_optional_argument
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -816,20 +815,20 @@ void *alloca(size_t size);
 #ifdef HAVE_C99_VLAS
 # define SCHISM_VLA_ALLOC(type, name, size) type name[size]
 # define SCHISM_VLA_FREE(name) // no-op
-# define SCHISM_VLA_SIZEOF(name) sizeof(name)
+# define SCHISM_VLA_SIZEOF(name)            sizeof(name)
 #elif defined(SCHISM_USE_ALLOCA)
 # define SCHISM_VLA_ALLOC(type, name, size) \
-	const size_t _##name##_vla_size = ((size) * sizeof(type)); \
-	type *name = alloca(_##name##_vla_size)
+	 const size_t _##name##_vla_size = ((size) * sizeof(type)); \
+	 type *name = alloca(_##name##_vla_size)
 # define SCHISM_VLA_FREE(name) // no-op
 # define SCHISM_VLA_SIZEOF(name) (_##name##_vla_size)
 #else
 // fallback to the heap
 # include "mem.h"
 # define SCHISM_VLA_ALLOC(type, name, size) \
-	const size_t _##name##_vla_size = ((size) * sizeof(type)); \
-	type *name = mem_alloc(_##name##_vla_size)
-# define SCHISM_VLA_FREE(name) free(name)
+	 const size_t _##name##_vla_size = ((size) * sizeof(type)); \
+	 type *name = mem_alloc(_##name##_vla_size)
+# define SCHISM_VLA_FREE(name)   free(name)
 # define SCHISM_VLA_SIZEOF(name) (_##name##_vla_size)
 #endif
 
@@ -884,7 +883,7 @@ struct tm *xbox_localtime(const time_t *t);
 /* sys/win32/osdefs.c */
 struct tm *win32_localtime(const time_t *t);
 
-#define localtime win32_localtime
+# define localtime win32_localtime
 
 #endif
 

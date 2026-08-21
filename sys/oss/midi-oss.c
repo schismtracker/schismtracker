@@ -23,14 +23,14 @@
 
 #include "headers.h"
 
+#include "mem.h"
 #include "midi.h"
 #include "util.h"
-#include "mem.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #ifdef HAVE_POLL_H
 # include <poll.h>
@@ -41,9 +41,9 @@
 #include <fcntl.h>
 
 /* this is stupid; oss doesn't have a concept of ports... */
-#define MAX_OSS_MIDI    64
+#define MAX_OSS_MIDI 64
 
-#define MAX_MIDI_PORTS  (MAX_OSS_MIDI + 2)
+#define MAX_MIDI_PORTS (MAX_OSS_MIDI + 2)
 
 #define MIDIBUF_SIZE (65536)
 
@@ -53,8 +53,7 @@ struct oss_midi_provider {
 	unsigned char midi_buf[MIDIBUF_SIZE];
 };
 
-static void _oss_send(struct midi_port *p, const unsigned char *data, uint32_t len,
-	SCHISM_UNUSED uint32_t delay)
+static void _oss_send(struct midi_port *p, const unsigned char *data, uint32_t len, SCHISM_UNUSED uint32_t delay)
 {
 	int fd, n;
 	ssize_t r;
@@ -87,7 +86,10 @@ static void _oss_send(struct midi_port *p, const unsigned char *data, uint32_t l
 	}
 }
 
-static int _oss_start_stop(SCHISM_UNUSED struct midi_port *p) { return 1; /* do nothing */ }
+static int _oss_start_stop(SCHISM_UNUSED struct midi_port *p)
+{
+	return 1; /* do nothing */
+}
 
 static int _oss_work(struct midi_provider *p)
 {
@@ -152,11 +154,11 @@ static int _tryopen(int n, const char *name, struct midi_provider *_oss_provider
 	if (omp->opened[n] != -1)
 		return 1;
 
-	if ((omp->opened[n] = open(name, O_RDWR|O_NOCTTY|O_NONBLOCK)) != -1) {
+	if ((omp->opened[n] = open(name, O_RDWR | O_NOCTTY | O_NONBLOCK)) != -1) {
 		io = MIDI_INPUT | MIDI_OUTPUT;
-	} else if ((omp->opened[n] = open(name, O_RDONLY|O_NOCTTY|O_NONBLOCK)) != -1) {
+	} else if ((omp->opened[n] = open(name, O_RDONLY | O_NOCTTY | O_NONBLOCK)) != -1) {
 		io = MIDI_INPUT;
-	} else if ((omp->opened[n] = open(name, O_WRONLY|O_NOCTTY|O_NONBLOCK)) != -1) {
+	} else if ((omp->opened[n] = open(name, O_WRONLY | O_NOCTTY | O_NONBLOCK)) != -1) {
 		io = MIDI_OUTPUT;
 	} else {
 		return 2;

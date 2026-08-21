@@ -25,6 +25,10 @@
 
 #include "player/tables.h"
 
+/* disabling clang-format here until I can figure out how to get it to not
+ * look absolutely horrible */
+/* clang-format off */
+
 const uint8_t vc_portamento_table[16] = {
 	0x00, 0x01, 0x04, 0x08, 0x10, 0x20, 0x40, 0x60,
 	0x80, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF

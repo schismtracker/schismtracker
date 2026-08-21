@@ -24,17 +24,15 @@
 #include "headers.h"
 
 #include "bits.h"
-#include "bits.h"
-#include "player/sndfile.h"
-#include "player/snd_fm.h"
-#include "player/snd_gm.h"
-#include "log.h"
-#include "util.h"
-#include "ieee-float.h"
 #include "fmt.h" // for it_decompress8 / it_decompress16
+#include "ieee-float.h"
+#include "log.h"
 #include "mem.h"
 #include "player/cmixer.h"
-
+#include "player/snd_fm.h"
+#include "player/snd_gm.h"
+#include "player/sndfile.h"
+#include "util.h"
 
 static void _csf_reset(song_t *csf)
 {
@@ -136,7 +134,6 @@ void csf_free(song_t *csf)
 	}
 }
 
-
 static void _init_envelope(song_envelope_t *env, int n)
 {
 	env->nodes = 2;
@@ -177,7 +174,6 @@ void csf_free_instrument(song_instrument_t *i)
 	free(i);
 }
 
-
 void csf_destroy(song_t *csf)
 {
 	int i;
@@ -216,17 +212,17 @@ void csf_free_pattern(void *pat)
 }
 
 #define CSF_ALLOCATE_PREPEND ((MAX_SAMPLING_POINT_SIZE) * (MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE))
-#define CSF_ALLOCATE_APPEND ((1 + 4 + 4) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE * 4)
+#define CSF_ALLOCATE_APPEND  ((1 + 4 + 4) * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE * 4)
 
 signed char *csf_allocate_sample(uint32_t nbytes)
 {
-	return (signed char*)mem_calloc(1, nbytes + CSF_ALLOCATE_PREPEND + CSF_ALLOCATE_APPEND) + CSF_ALLOCATE_PREPEND;
+	return (signed char *)mem_calloc(1, nbytes + CSF_ALLOCATE_PREPEND + CSF_ALLOCATE_APPEND) + CSF_ALLOCATE_PREPEND;
 }
 
 void csf_free_sample(void *p)
 {
 	if (p)
-		free((signed char*)p - CSF_ALLOCATE_PREPEND);
+		free((signed char *)p - CSF_ALLOCATE_PREPEND);
 }
 
 #undef CSF_ALLOCATE_PREPEND
@@ -246,7 +242,7 @@ void csf_forget_history(song_t *csf)
 // Initializes MIDI callback function...
 void csf_init_midi(song_t *csf, song_midi_out_raw_spec_t midi_out_raw)
 {
-	csf->midi_out_raw  = midi_out_raw;
+	csf->midi_out_raw = midi_out_raw;
 }
 
 /* --------------------------------------------------------------------------------------------------------- */
@@ -281,38 +277,19 @@ int csf_pattern_is_empty(song_t *csf, int n)
 
 int csf_sample_is_empty(song_sample_t *smp)
 {
-	return (smp->data == NULL
-		&& name_is_blank(smp->name)
-		&& smp->filename[0] == '\0'
-		&& smp->c5speed == 8363
-		&& smp->volume == 64*4 //mphack
-		&& smp->global_volume == 64
-		&& smp->panning == 0
-		&& !(smp->flags & (CHN_LOOP | CHN_SUSTAINLOOP | CHN_PANNING))
-		&& smp->length == 0
-		&& smp->loop_start == 0
-		&& smp->loop_end == 0
-		&& smp->sustain_start == 0
-		&& smp->sustain_end == 0
-		&& smp->vib_type == VIB_SINE
-		&& smp->vib_rate == 0
-		&& smp->vib_depth == 0
-		&& smp->vib_speed == 0
-	);
+	return (smp->data == NULL && name_is_blank(smp->name) && smp->filename[0] == '\0' && smp->c5speed == 8363
+		&& smp->volume == 64 * 4 //mphack
+		&& smp->global_volume == 64 && smp->panning == 0
+		&& !(smp->flags & (CHN_LOOP | CHN_SUSTAINLOOP | CHN_PANNING)) && smp->length == 0
+		&& smp->loop_start == 0 && smp->loop_end == 0 && smp->sustain_start == 0 && smp->sustain_end == 0
+		&& smp->vib_type == VIB_SINE && smp->vib_rate == 0 && smp->vib_depth == 0 && smp->vib_speed == 0);
 }
 
 static int env_is_blank(song_envelope_t *env, int value)
 {
-	return (env->nodes == 2
-		&& env->loop_start == 0
-		&& env->loop_end == 0
-		&& env->sustain_start == 0
-		&& env->sustain_end == 0
-		&& env->ticks[0] == 0
-		&& env->ticks[1] == 100
-		&& env->values[0] == value
-		&& env->values[1] == value
-	);
+	return (env->nodes == 2 && env->loop_start == 0 && env->loop_end == 0 && env->sustain_start == 0
+		&& env->sustain_end == 0 && env->ticks[0] == 0 && env->ticks[1] == 100 && env->values[0] == value
+		&& env->values[1] == value);
 }
 
 int csf_instrument_is_empty(song_instrument_t *ins)
@@ -325,28 +302,15 @@ int csf_instrument_is_empty(song_instrument_t *ins)
 		if (ins->sample_map[n] != 0 || ins->note_map[n] != (n + NOTE_FIRST))
 			return 0;
 	}
-	return (name_is_blank(ins->name)
-		&& ins->filename[0] == '\0'
+	return (name_is_blank(ins->name) && ins->filename[0] == '\0'
 		&& ins->flags == 0 /* No envelopes, loop points, panning, or carry flags set */
-		&& ins->nna == NNA_NOTECUT
-		&& ins->dct == DCT_NONE
-		&& ins->dca == DCA_NOTECUT
-		&& env_is_blank(&ins->vol_env, 64)
-		&& ins->global_volume == 128
-		&& ins->fadeout == 0
-		&& ins->vol_swing == 0
-		&& env_is_blank(&ins->pan_env, 32)
-		&& ins->panning == 32*4 //mphack
+		&& ins->nna == NNA_NOTECUT && ins->dct == DCT_NONE && ins->dca == DCA_NOTECUT
+		&& env_is_blank(&ins->vol_env, 64) && ins->global_volume == 128 && ins->fadeout == 0
+		&& ins->vol_swing == 0 && env_is_blank(&ins->pan_env, 32) && ins->panning == 32 * 4 //mphack
 		&& ins->pitch_pan_center == 60 // C-5 (blah)
-		&& ins->pitch_pan_separation == 0
-		&& ins->pan_swing == 0
-		&& env_is_blank(&ins->pitch_env, 32)
-		&& ins->ifc == 0
-		&& ins->ifr == 0
-		&& ins->midi_channel_mask == 0
-		&& ins->midi_program == -1
-		&& ins->midi_bank == -1
-	);
+		&& ins->pitch_pan_separation == 0 && ins->pan_swing == 0 && env_is_blank(&ins->pitch_env, 32)
+		&& ins->ifc == 0 && ins->ifr == 0 && ins->midi_channel_mask == 0 && ins->midi_program == -1
+		&& ins->midi_bank == -1);
 }
 
 // IT-compatible: last order of "main song", or 0
@@ -362,8 +326,7 @@ int csf_last_order(song_t *csf)
 int csf_get_num_orders(song_t *csf)
 {
 	int n = MAX_ORDERS;
-	while (n >= 0 && csf->orderlist[--n] == ORDER_LAST) {
-	}
+	while (n >= 0 && csf->orderlist[--n] == ORDER_LAST) {}
 	return n + 1;
 }
 
@@ -373,7 +336,7 @@ int csf_get_num_patterns(song_t *csf)
 	int n = MAX_PATTERNS - 1;
 	while (n && csf_pattern_is_empty(csf, n))
 		n--;
-	return n+ 1;
+	return n + 1;
 }
 
 int csf_get_num_samples(song_t *csf)
@@ -391,7 +354,6 @@ int csf_get_num_instruments(song_t *csf)
 		n--;
 	return n;
 }
-
 
 int csf_first_blank_sample(song_t *csf, int start)
 {
@@ -412,7 +374,6 @@ int csf_first_blank_instrument(song_t *csf, int start)
 	}
 	return -1;
 }
-
 
 // FIXME this function sucks
 int csf_get_highest_used_channel(song_t *csf)
@@ -451,11 +412,9 @@ void csf_copy_midi_cfg(song_t *dest, song_t *src)
 	memcpy(&dest->midi_config, &src->midi_config, sizeof(midi_config_t));
 }
 
-
-int csf_set_wave_config(song_t *csf, uint32_t rate,uint32_t bits,uint32_t channels)
+int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t channels)
 {
-	int reset = ((csf->mix_frequency != rate)
-		     || (csf->mix_bits_per_sample != bits)
+	int reset = ((csf->mix_frequency != rate) || (csf->mix_bits_per_sample != bits)
 		     || (csf->mix_channels != channels));
 	csf->mix_channels = channels;
 	csf->mix_frequency = rate;
@@ -463,7 +422,6 @@ int csf_set_wave_config(song_t *csf, uint32_t rate,uint32_t bits,uint32_t channe
 	csf_init_player(csf, reset);
 	return 1;
 }
-
 
 int csf_set_resampling_mode(song_t *csf, uint32_t mode)
 {
@@ -473,7 +431,6 @@ int csf_set_resampling_mode(song_t *csf, uint32_t mode)
 
 	return 1;
 }
-
 
 // This used to use some stupid positioning based on the total number of rows elapsed, which is useless.
 // However, the only code calling this function is in this file, to set it to the start, so I'm optimizing
@@ -499,7 +456,6 @@ static void set_current_pos_0(song_t *csf)
 	csf->current_speed = csf->initial_speed;
 	csf->current_tempo = csf->initial_tempo;
 }
-
 
 void csf_set_current_order(song_t *csf, uint32_t position)
 {
@@ -532,7 +488,7 @@ void csf_set_current_order(song_t *csf, uint32_t position)
 	csf->buffer_count = 0;
 	csf->last_moved_channel = MAX_VOICES;
 
-	csf->flags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
+	csf->flags &= ~(SONG_PATTERNLOOP | SONG_ENDREACHED);
 }
 
 void csf_reset_playmarks(song_t *csf)
@@ -547,7 +503,6 @@ void csf_reset_playmarks(song_t *csf)
 			csf->instruments[n]->played = 0;
 	}
 }
-
 
 void csf_loop_pattern(song_t *csf, int pat, int row)
 {
@@ -571,12 +526,15 @@ void csf_loop_pattern(song_t *csf, int pat, int row)
 /* --------------------------------------------------------------------------------------------------------- */
 
 #define SF_FAIL(name, n) \
-	do { log_appendf(4, "%s: internal error: unsupported %s %d", __func__, name, n); return 0; } while (0);
+	do { \
+		log_appendf(4, "%s: internal error: unsupported %s %d", __func__, name, n); \
+		return 0; \
+	} while (0);
 
 uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, uint32_t maxlengthmask)
 {
 	uint32_t pos, len = sample->length;
-	if(maxlengthmask != UINT32_MAX)
+	if (maxlengthmask != UINT32_MAX)
 		len = len > maxlengthmask ? maxlengthmask : (len & maxlengthmask);
 
 	// validate the write flags, and set up the save params
@@ -601,8 +559,10 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	switch (flags & SF_ENC_MASK) {
 	case SF_PCMU:
 	case SF_PCMS:
-	case SF_PCMD: break;
-	default: SF_FAIL("encoding", flags & SF_ENC_MASK);
+	case SF_PCMD:
+		break;
+	default:
+		SF_FAIL("encoding", flags & SF_ENC_MASK);
 	}
 
 	if ((flags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK)) != 0) {
@@ -622,17 +582,17 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	do { \
 		const uint##BITS##_t *data; \
 		VARS \
-	\
-		PRE \
-	\
-		data = (const uint##BITS##_t *)sample->data; \
+\
+			PRE \
+\
+				data = (const uint##BITS##_t *)sample->data; \
 		for (pos = 0; pos < len; pos++) { \
 			uint##BITS##_t x = data[pos]; \
-	\
+\
 			LOOPPRE \
-	\
+\
 			disko_write(fp, &x, sizeof(x)); \
-	\
+\
 			LOOPPOST \
 		} \
 	} while (0)
@@ -641,19 +601,19 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	do { \
 		int i; \
 		VARS \
-	\
-		len *= CHANNELS; \
-	\
+\
+			len *= CHANNELS; \
+\
 		for (i = 0; i < CHANNELS; i++) { \
 			const uint##BITS##_t *data = (const uint##BITS##_t *)sample->data + i; \
-	\
+\
 			for (pos = 0; pos < len; pos += CHANNELS) { \
 				uint##BITS##_t x = data[pos]; \
-	\
+\
 				LOOPPRE \
-	\
+\
 				disko_write(fp, &x, sizeof(x)); \
-	\
+\
 				LOOPPOST \
 			} \
 		} \
@@ -664,11 +624,9 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 
 /* ------------------------------------------------------------------------ */
 
-#define WRITE_MONO_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) \
-	WRITE_FULL_SAMPLE(BITS, VARS, /* none */, LOOPPRE, LOOPPOST)
+#define WRITE_MONO_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) WRITE_FULL_SAMPLE(BITS, VARS, /* none */, LOOPPRE, LOOPPOST)
 
-#define WRITE_STEREO_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) \
-	WRITE_SPLIT_SAMPLE(BITS, VARS, LOOPPRE, LOOPPOST, 2)
+#define WRITE_STEREO_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) WRITE_SPLIT_SAMPLE(BITS, VARS, LOOPPRE, LOOPPOST, 2)
 
 #define WRITE_STEREO_INTERLEAVED_SAMPLE_EX(BITS, VARS, LOOPPRE, LOOPPOST) \
 	WRITE_INTERLEAVED_SAMPLE(BITS, VARS, LOOPPRE, LOOPPOST, 2)
@@ -676,30 +634,30 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 /* ------------------------------------------------------------------------ */
 
 #define WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, CHNS, NAME, NCHNS) \
-	case SF(BITS,CHNS,ENDIAN,PCMS): \
+	case SF(BITS, CHNS, ENDIAN, PCMS): \
 		WRITE_##NAME##_SAMPLE_EX(BITS, /* none */, LOOPPRE, /* none */); \
 		len *= (BITS / 8); \
 		break; \
-	case SF(BITS,CHNS,ENDIAN,PCMU): \
-		WRITE_##NAME##_SAMPLE_EX(BITS, \
-			/* none */ \
-		, { \
-			x ^= (UINT##BITS##_C(1) << (BITS - 1)); \
-			LOOPPRE \
-		}, /* none */); \
+	case SF(BITS, CHNS, ENDIAN, PCMU): \
+		WRITE_##NAME##_SAMPLE_EX( \
+			BITS,   /* none */ \
+			, \
+			{ \
+				x ^= (UINT##BITS##_C(1) << (BITS - 1)); \
+				LOOPPRE \
+			}, \
+			/* none */); \
 		len *= (BITS / 8); \
 		break; \
-	case SF(BITS,CHNS,ENDIAN,PCMD): \
-		WRITE_##NAME##_SAMPLE_EX(BITS, \
-			uint##BITS##_t delta[NCHNS] = {0};\
-			uint32_t deltapos; \
-		, { \
-			deltapos = (pos % NCHNS); \
-			x -= delta[deltapos]; \
-			LOOPPRE \
-		}, { \
-			delta[deltapos] = data[pos]; \
-		}); \
+	case SF(BITS, CHNS, ENDIAN, PCMD): \
+		WRITE_##NAME##_SAMPLE_EX( \
+			BITS, uint##BITS##_t delta[NCHNS] = {0}; uint32_t deltapos;, \
+			{ \
+				deltapos = (pos % NCHNS); \
+				x -= delta[deltapos]; \
+				LOOPPRE \
+			}, \
+			{ delta[deltapos] = data[pos]; }); \
 		len *= (BITS / 8); \
 		break;
 
@@ -708,14 +666,14 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, SS, STEREO, 2) \
 	WRITE_SAMPLE_EX(BITS, ENDIAN, LOOPPRE, SI, STEREO_INTERLEAVED, 2)
 
-	/* TODO: for signed PCM stereo interleaved and mono, we can
-	 * simply write the entire buffer to disk, which will definitely
-	 * be faster than what we're doing right now :) */
-	WRITE_SAMPLE(8, LE, /* none */)
-	WRITE_SAMPLE(8, BE, /* none */)
+        /* TODO: for signed PCM stereo interleaved and mono, we can
+		 * simply write the entire buffer to disk, which will definitely
+		 * be faster than what we're doing right now :) */
+		WRITE_SAMPLE(8, LE, /* none */)
+		WRITE_SAMPLE(8, BE, /* none */)
 
-	WRITE_SAMPLE(16, LE, { x = bswapLE16(x); })
-	WRITE_SAMPLE(16, BE, { x = bswapBE16(x); })
+		WRITE_SAMPLE(16, LE, { x = bswapLE16(x); })
+		WRITE_SAMPLE(16, BE, { x = bswapBE16(x); })
 
 #undef WRITE_FULL_SAMPLE
 #undef WRITE_INTERLEAVED_SAMPLE
@@ -738,7 +696,7 @@ uint32_t csf_write_sample(disko_t *fp, song_sample_t *sample, uint32_t flags, ui
 	{ \
 		uint##BITS##_t iadd[CHANNELS] = {0}; \
 		uint32_t i, c; \
-	\
+\
 		for (i = 0; i < samples; i++) { \
 			for (c = 0; c < (CHANNELS); c++) { \
 				buf[i * (CHANNELS) + c] += iadd[c]; \
@@ -756,29 +714,54 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 {
 	uint32_t len = 0, mem;
 
-	if (sample->flags & CHN_ADLIB) return 0; // no sample data
+	if (sample->flags & CHN_ADLIB)
+		return 0; // no sample data
 
-	if (!sample || sample->length < 1 || !fp) return 0;
+	if (!sample || sample->length < 1 || !fp)
+		return 0;
 
 	// validate the read flags before anything else
 	switch (flags & SF_BIT_MASK) {
-		case SF_7: case SF_8: case SF_16: case SF_24: case SF_32: case SF_64: break;
-		default: SF_FAIL("bit width", flags & SF_BIT_MASK);
+	case SF_7:
+	case SF_8:
+	case SF_16:
+	case SF_24:
+	case SF_32:
+	case SF_64:
+		break;
+	default:
+		SF_FAIL("bit width", flags & SF_BIT_MASK);
 	}
 	switch (flags & SF_CHN_MASK) {
-		case SF_M: case SF_SI: case SF_SS: break;
-		default: SF_FAIL("channel mask", flags & SF_CHN_MASK);
+	case SF_M:
+	case SF_SI:
+	case SF_SS:
+		break;
+	default:
+		SF_FAIL("channel mask", flags & SF_CHN_MASK);
 	}
 	switch (flags & SF_END_MASK) {
-		case SF_LE: case SF_BE: break;
-		default: SF_FAIL("endianness", flags & SF_END_MASK);
+	case SF_LE:
+	case SF_BE:
+		break;
+	default:
+		SF_FAIL("endianness", flags & SF_END_MASK);
 	}
 	switch (flags & SF_ENC_MASK) {
-		case SF_PCMS: case SF_PCMU: case SF_PCMD: case SF_IT214: case SF_IT215:
-		case SF_AMS: case SF_DMF: case SF_MDL: case SF_PTM: case SF_PCMD16:
-		case SF_IEEE:
-			break;
-		default: SF_FAIL("encoding", flags & SF_ENC_MASK);
+	case SF_PCMS:
+	case SF_PCMU:
+	case SF_PCMD:
+	case SF_IT214:
+	case SF_IT215:
+	case SF_AMS:
+	case SF_DMF:
+	case SF_MDL:
+	case SF_PTM:
+	case SF_PCMD16:
+	case SF_IEEE:
+		break;
+	default:
+		SF_FAIL("encoding", flags & SF_ENC_MASK);
 	}
 	if ((flags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK)) != 0) {
 		SF_FAIL("extra flag", flags & ~(SF_BIT_MASK | SF_CHN_MASK | SF_END_MASK | SF_ENC_MASK));
@@ -791,9 +774,12 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	mem = sample->length;
 
 	// fix the sample flags
-	sample->flags &= ~(CHN_16BIT|CHN_STEREO);
+	sample->flags &= ~(CHN_16BIT | CHN_STEREO);
 	switch (flags & SF_BIT_MASK) {
-	case SF_16: case SF_24: case SF_32: case SF_64:
+	case SF_16:
+	case SF_24:
+	case SF_32:
+	case SF_64:
 		// these are all stuffed into 16 bits.
 		mem *= 2;
 		sample->flags |= CHN_16BIT;
@@ -801,7 +787,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 	}
 	switch (flags & SF_CHN_MASK) {
-	case SF_SI: case SF_SS:
+	case SF_SI:
+	case SF_SS:
 		mem *= 2;
 		sample->flags |= CHN_STEREO;
 	default:
@@ -815,10 +802,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		return 0;
 	}
 
-	switch(flags) {
+	switch (flags) {
 	// 7-bit (data shifted one bit left)
-	case SF(7,M,BE,PCMS):
-	case SF(7,M,LE,PCMS):
+	case SF(7, M, BE, PCMS):
+	case SF(7, M, LE, PCMS):
 		len = sample->length;
 
 		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
@@ -835,14 +822,14 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	// 8-bit mono PCM
 	default:
 		printf("DEFAULT: %d\n", flags);
-		flags = SF(8,M,LE,PCMS);
+		flags = SF(8, M, LE, PCMS);
 		SCHISM_FALLTHROUGH;
-	case SF(8,M,LE,PCMS):
-	case SF(8,M,LE,PCMU):
-	case SF(8,M,LE,PCMD): 
-	case SF(8,M,BE,PCMS):
-	case SF(8,M,BE,PCMU):
-	case SF(8,M,BE,PCMD): {
+	case SF(8, M, LE, PCMS):
+	case SF(8, M, LE, PCMU):
+	case SF(8, M, LE, PCMD):
+	case SF(8, M, BE, PCMS):
+	case SF(8, M, BE, PCMU):
+	case SF(8, M, BE, PCMD): {
 		len = sample->length;
 
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
@@ -868,12 +855,12 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// 8-bit stereo samples
-	case SF(8,SS,LE,PCMS):
-	case SF(8,SS,LE,PCMU):
-	case SF(8,SS,LE,PCMD): 
-	case SF(8,SS,BE,PCMS):
-	case SF(8,SS,BE,PCMU):
-	case SF(8,SS,BE,PCMD): {
+	case SF(8, SS, LE, PCMS):
+	case SF(8, SS, LE, PCMU):
+	case SF(8, SS, LE, PCMD):
+	case SF(8, SS, BE, PCMS):
+	case SF(8, SS, BE, PCMU):
+	case SF(8, SS, BE, PCMD): {
 		int c;
 		uint32_t j;
 
@@ -905,12 +892,12 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// 8-bit interleaved stereo samples
-	case SF(8,SI,LE,PCMS):
-	case SF(8,SI,LE,PCMU):
-	case SF(8,SI,LE,PCMD):
-	case SF(8,SI,BE,PCMS):
-	case SF(8,SI,BE,PCMU):
-	case SF(8,SI,BE,PCMD): {
+	case SF(8, SI, LE, PCMS):
+	case SF(8, SI, LE, PCMU):
+	case SF(8, SI, LE, PCMD):
+	case SF(8, SI, BE, PCMS):
+	case SF(8, SI, BE, PCMU):
+	case SF(8, SI, BE, PCMD): {
 		len = sample->length * 2;
 
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
@@ -936,12 +923,12 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// 16-bit mono PCM samples
-	case SF(16,M,LE,PCMD):
-	case SF(16,M,LE,PCMS):
-	case SF(16,M,LE,PCMU):
-	case SF(16,M,BE,PCMD):
-	case SF(16,M,BE,PCMS):
-	case SF(16,M,BE,PCMU): {
+	case SF(16, M, LE, PCMD):
+	case SF(16, M, LE, PCMS):
+	case SF(16, M, LE, PCMU):
+	case SF(16, M, BE, PCMD):
+	case SF(16, M, BE, PCMS):
+	case SF(16, M, BE, PCMU): {
 		uint16_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? 0x8000 : 0;
 
 		len = sample->length;
@@ -966,12 +953,12 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// 16-bit stereo PCM samples
-	case SF(16,SS,LE,PCMD):
-	case SF(16,SS,LE,PCMS):
-	case SF(16,SS,LE,PCMU):
-	case SF(16,SS,BE,PCMD):
-	case SF(16,SS,BE,PCMS):
-	case SF(16,SS,BE,PCMU): {
+	case SF(16, SS, LE, PCMD):
+	case SF(16, SS, LE, PCMS):
+	case SF(16, SS, LE, PCMU):
+	case SF(16, SS, BE, PCMD):
+	case SF(16, SS, BE, PCMS):
+	case SF(16, SS, BE, PCMU): {
 		len = sample->length * 2;
 
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
@@ -983,7 +970,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			uint16_t *data = (uint16_t *)sample->data + c;
 			for (uint32_t j = 0; j < len; j += 2) {
 				slurp_read(fp, &data[j], 2);
-				data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+				data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j]))
+					  + iadd;
 				if ((flags & SF_ENC_MASK) == SF_PCMD)
 					iadd = data[j];
 			}
@@ -995,12 +983,12 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// 16-bit interleaved stereo samples
-	case SF(16,SI,LE,PCMS):
-	case SF(16,SI,LE,PCMU):
-	case SF(16,SI,LE,PCMD):
-	case SF(16,SI,BE,PCMS):
-	case SF(16,SI,BE,PCMU):
-	case SF(16,SI,BE,PCMD): {
+	case SF(16, SI, LE, PCMS):
+	case SF(16, SI, LE, PCMU):
+	case SF(16, SI, LE, PCMD):
+	case SF(16, SI, BE, PCMS):
+	case SF(16, SI, BE, PCMU):
+	case SF(16, SI, BE, PCMD): {
 		len = sample->length * 2;
 
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
@@ -1013,7 +1001,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 			uint16_t *data = (uint16_t *)sample->data + c;
 			for (uint32_t j = 0; j < len; j += 2) {
-				data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j])) + iadd;
+				data[j] = (((flags & SF_END_MASK) == SF_BE) ? bswapBE16(data[j]) : bswapLE16(data[j]))
+					  + iadd;
 				if ((flags & SF_ENC_MASK) == SF_PCMD)
 					iadd = data[j];
 			}
@@ -1025,14 +1014,14 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// PCM 24-bit -> load sample, and normalize it to 16-bit
-	case SF(24,M,LE,PCMS):
-	case SF(24,M,LE,PCMU):
-	case SF(24,M,BE,PCMS):
-	case SF(24,M,BE,PCMU):
-	case SF(24,SI,LE,PCMS):
-	case SF(24,SI,LE,PCMU):
-	case SF(24,SI,BE,PCMS):
-	case SF(24,SI,BE,PCMU):
+	case SF(24, M, LE, PCMS):
+	case SF(24, M, LE, PCMU):
+	case SF(24, M, BE, PCMS):
+	case SF(24, M, BE, PCMU):
+	case SF(24, SI, LE, PCMS):
+	case SF(24, SI, LE, PCMU):
+	case SF(24, SI, BE, PCMS):
+	case SF(24, SI, BE, PCMU):
 		len = sample->length * 3;
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
@@ -1040,7 +1029,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
-		if (len > 3*8*(((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
+		if (len > 3 * 8 * (((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
 			int32_t max = 0xFF;
 			int32_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT32_MIN : 0;
 			const int64_t start = slurp_tell(fp);
@@ -1050,14 +1039,16 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				slurp_read(fp, src, sizeof(src));
 
 				int32_t l = ((flags & SF_END_MASK) == SF_BE)
-					? ((((src[0] << 8) | src[1]) << 8) | src[2]) << 8
-					: ((((src[2] << 8) | src[1]) << 8) | src[0]) << 8;
+						    ? ((((src[0] << 8) | src[1]) << 8) | src[2]) << 8
+						    : ((((src[2] << 8) | src[1]) << 8) | src[0]) << 8;
 				l += iadd;
 
 				l = rshift_signed(l, 8);
 
-				if (l > max) max = l;
-				if (-l > max) max = -l;
+				if (l > max)
+					max = l;
+				if (-l > max)
+					max = -l;
 			}
 
 			slurp_seek(fp, start, SEEK_SET);
@@ -1070,8 +1061,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				slurp_read(fp, src, sizeof(src));
 
 				int32_t l = ((flags & SF_END_MASK) == SF_BE)
-					? ((((src[0] << 8) | src[1]) << 8) | src[2]) << 8
-					: ((((src[2] << 8) | src[1]) << 8) | src[0]) << 8;
+						    ? ((((src[0] << 8) | src[1]) << 8) | src[2]) << 8
+						    : ((((src[2] << 8) | src[1]) << 8) | src[0]) << 8;
 				l += iadd;
 
 				*dest++ = (int16_t)(l / max);
@@ -1080,14 +1071,14 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 
 	// PCM 32-bit -> load sample, and normalize it to 16-bit
-	case SF(32,M,LE,PCMS):
-	case SF(32,M,LE,PCMU):
-	case SF(32,M,BE,PCMS):
-	case SF(32,M,BE,PCMU):
-	case SF(32,SI,LE,PCMS):
-	case SF(32,SI,LE,PCMU):
-	case SF(32,SI,BE,PCMS):
-	case SF(32,SI,BE,PCMU):
+	case SF(32, M, LE, PCMS):
+	case SF(32, M, LE, PCMU):
+	case SF(32, M, BE, PCMS):
+	case SF(32, M, BE, PCMU):
+	case SF(32, SI, LE, PCMS):
+	case SF(32, SI, LE, PCMU):
+	case SF(32, SI, BE, PCMS):
+	case SF(32, SI, BE, PCMU):
 		len = sample->length * 4;
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
@@ -1095,7 +1086,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
-		if (len > 4*8*(((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
+		if (len > 4 * 8 * (((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
 			int32_t max = 0xFFFF;
 			int32_t iadd = ((flags & SF_ENC_MASK) == SF_PCMU) ? INT32_MIN : 0;
 			const int64_t start = slurp_tell(fp);
@@ -1107,8 +1098,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 				l = ((flags & SF_END_MASK) == SF_BE) ? (int32_t)bswapBE32(l) : bswapLE32(l);
 				l += iadd;
 
-				if (l > max) max = l;
-				if (-l > max) max = -l;
+				if (l > max)
+					max = l;
+				if (-l > max)
+					max = -l;
 			}
 
 			slurp_seek(fp, start, SEEK_SET);
@@ -1130,10 +1123,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 
 	// 32-bit IEEE floating point
-	case SF(32,M,LE,IEEE):
-	case SF(32,M,BE,IEEE):
-	case SF(32,SI,BE,IEEE):
-	case SF(32,SI,LE,IEEE): {
+	case SF(32, M, LE, IEEE):
+	case SF(32, M, BE, IEEE):
+	case SF(32, SI, BE, IEEE):
+	case SF(32, SI, LE, IEEE): {
 		len = sample->length;
 
 		int16_t *data = (int16_t *)sample->data;
@@ -1159,8 +1152,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 	}
 
-	case SF(32,SS,BE,IEEE):
-	case SF(32,SS,LE,IEEE): {
+	case SF(32, SS, BE, IEEE):
+	case SF(32, SS, LE, IEEE): {
 		int i;
 
 		len = sample->length * 2;
@@ -1188,10 +1181,10 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// 64-bit IEEE floating point
-	case SF(64,M,LE,IEEE):
-	case SF(64,M,BE,IEEE):
-	case SF(64,SI,BE,IEEE):
-	case SF(64,SI,LE,IEEE): {
+	case SF(64, M, LE, IEEE):
+	case SF(64, M, BE, IEEE):
+	case SF(64, SI, BE, IEEE):
+	case SF(64, SI, LE, IEEE): {
 		len = sample->length;
 
 		int16_t *data = (int16_t *)sample->data;
@@ -1217,8 +1210,8 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 	}
 
-	case SF(64,SS,BE,IEEE):
-	case SF(64,SS,LE,IEEE): {
+	case SF(64, SS, BE, IEEE):
+	case SF(64, SS, LE, IEEE): {
 		int i;
 
 		len = sample->length * 2;
@@ -1246,61 +1239,54 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	}
 
 	// IT 2.14 compressed samples
-	case SF(8,M,LE,IT214):
-	case SF(16,M,LE,IT214):
-	case SF(8,M,LE,IT215):
-	case SF(16,M,LE,IT215): {
+	case SF(8, M, LE, IT214):
+	case SF(16, M, LE, IT214):
+	case SF(8, M, LE, IT215):
+	case SF(16, M, LE, IT215): {
 		int64_t start = slurp_tell(fp);
 		if ((flags & SF_BIT_MASK) == SF_8) {
-			it_decompress8(sample->data, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
+			it_decompress8(sample->data, sample->length, fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
 		} else {
-			it_decompress16(sample->data, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
+			it_decompress16(sample->data, sample->length, fp, (flags & SF_ENC_MASK) == SF_IT215, 1);
 		}
 		len = slurp_tell(fp) - start;
 		break;
 	}
-	case SF(8,SS,LE,IT214):
-	case SF(16,SS,LE,IT214):
-	case SF(8,SS,LE,IT215):
-	case SF(16,SS,LE,IT215): {
+	case SF(8, SS, LE, IT214):
+	case SF(16, SS, LE, IT214):
+	case SF(8, SS, LE, IT215):
+	case SF(16, SS, LE, IT215): {
 		int64_t start = slurp_tell(fp);
 		if ((flags & SF_BIT_MASK) == SF_8) {
-			it_decompress8(sample->data, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
-			it_decompress8(sample->data + 1, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
+			it_decompress8(sample->data, sample->length, fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
+			it_decompress8(sample->data + 1, sample->length, fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
 		} else {
-			it_decompress16(sample->data, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
-			it_decompress16(sample->data + 2, sample->length,
-					fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
+			it_decompress16(sample->data, sample->length, fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
+			it_decompress16(sample->data + 2, sample->length, fp, (flags & SF_ENC_MASK) == SF_IT215, 2);
 		}
 		len = slurp_tell(fp) - start;
 		break;
 	}
 
 	// PTM 8bit delta to 16-bit sample
-	case SF(16,M,LE,PTM): {
+	case SF(16, M, LE, PTM): {
 		len = sample->length * 2;
 		signed char *data = (signed char *)sample->data;
 		signed char delta8 = 0;
-		for (uint32_t j=0; j<len; j++) {
+		for (uint32_t j = 0; j < len; j++) {
 			delta8 += slurp_getc(fp);
 			*data++ = delta8;
 		}
 		uint16_t *data16 = (uint16_t *)sample->data;
-		for (uint32_t j=0; j<len; j+=2) {
+		for (uint32_t j = 0; j < len; j += 2) {
 			*data16 = bswapLE16(*data16);
 			data16++;
 		}
-	}
-	break;
+	} break;
 
 	// Huffman MDL compressed samples
-	case SF(8,M,LE,MDL):
-	case SF(16,M,LE,MDL):
+	case SF(8, M, LE, MDL):
+	case SF(16, M, LE, MDL):
 		if ((flags & SF_BIT_MASK) == SF_8) {
 			len = mdl_decompress8(sample->data, sample->length, fp);
 		} else {
@@ -1309,7 +1295,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		break;
 
 	// 8-bit ADPCM data w/ 16-byte table (MOD ADPCM)
-	case SF(PCMD16,8,M,LE): {
+	case SF(PCMD16, 8, M, LE): {
 		len = (sample->length + 1) / 2 + 16;
 
 		if (!slurp_could_seek(fp, len, SEEK_CUR))
@@ -1319,7 +1305,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		slurp_read(fp, table, sizeof(table));
 
 		signed char *data = sample->data, smpval = 0;
-		for (uint32_t j=16; j<len; j++) {
+		for (uint32_t j = 16; j < len; j++) {
 			int c = slurp_getc(fp);
 
 			smpval += table[c & 0xF];
@@ -1338,24 +1324,26 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 /* --------------------------------------------------------------------------------------------------------- */
 
 #define PRECOMPUTE_LOOPS_IMPL(bits) \
-	static void csf_precompute_loop_copy_loop_impl_##bits##_(int##bits##_t *target, const int##bits##_t *data, uint32_t loop_end, int channels, int bidi, int direction) \
+	static void csf_precompute_loop_copy_loop_impl_##bits##_(int##bits##_t *target, const int##bits##_t *data, \
+		uint32_t loop_end, int channels, int bidi, int direction) \
 	{ \
 		int samples = 2 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE + (direction ? 1 : 0); \
 		int##bits##_t *dest = target + channels * (2 * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE - 1); \
 		uint32_t position = loop_end - 1; \
 		const int write_increment = direction ? 1 : -1; \
 		int read_increment = write_increment; \
-		\
+\
 		for (int i = 0; i < samples; i++) { \
 			for (int c = 0; c < channels; c++) \
 				dest[c] = data[position * channels + c]; \
-		\
+\
 			dest += write_increment * channels; \
-		\
+\
 			if (position == loop_end - 1 && read_increment > 0) { \
 				if (bidi) { \
 					read_increment = -1; \
-					if (position > 0) position--; \
+					if (position > 0) \
+						position--; \
 				} else { \
 					position = 0; \
 				} \
@@ -1370,50 +1358,47 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 			} \
 		} \
 	} \
-	\
-	static void csf_precompute_loop_impl_##bits##_(int##bits##_t *target, const int##bits##_t *data, uint32_t loop_end, int channels, int bidi) \
+\
+	static void csf_precompute_loop_impl_##bits##_( \
+		int##bits##_t *target, const int##bits##_t *data, uint32_t loop_end, int channels, int bidi) \
 	{ \
 		if (loop_end <= 0) \
 			return; \
-	\
+\
 		csf_precompute_loop_copy_loop_impl_##bits##_(target, data, loop_end, channels, bidi, 1); \
 		csf_precompute_loop_copy_loop_impl_##bits##_(target, data, loop_end, channels, bidi, 0); \
 	} \
-	\
+\
 	static void csf_precompute_loops_impl_##bits##_(song_sample_t *smp) \
 	{ \
 		const int channels = (smp->flags & CHN_STEREO) ? 2 : 1; \
 		const int copy_samples = channels * MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE; \
-		\
+\
 		int##bits##_t *smp_data = (int##bits##_t *)smp->data; \
 		int##bits##_t *after_smp_start = smp_data + smp->length * channels; \
 		int##bits##_t *loop_lookahead_start = after_smp_start + copy_samples; \
 		int##bits##_t *sustain_lookahead_start = loop_lookahead_start + 4 * copy_samples; \
 		int i; \
 		int c; \
-		\
-		/* Hold sample on the same level as the last sampling point at the end to prevent extra pops with interpolation.
-		 * Do the same at the sample start, too. */ \
+\
+		/* Hold sample on the same level as the last sampling point at the end to prevent extra pops with \
+		 * interpolation. Do the same at the sample start, too. */ \
 		for (i = 0; i < MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE; i++) { \
 			for (c = 0; c < channels; c++) { \
 				after_smp_start[i * channels + c] = after_smp_start[-channels + c]; \
 				smp_data[-(i + 1) * channels + c] = smp_data[c]; \
 			} \
 		} \
-	\
-		if(smp->flags & CHN_LOOP) { \
+\
+		if (smp->flags & CHN_LOOP) { \
 			csf_precompute_loop_impl_##bits##_(loop_lookahead_start, \
-				smp_data + smp->loop_start * channels, \
-				smp->loop_end - smp->loop_start, \
-				channels, \
+				smp_data + smp->loop_start * channels, smp->loop_end - smp->loop_start, channels, \
 				smp->flags & CHN_PINGPONGLOOP); \
 		} \
-		if(smp->flags & CHN_SUSTAINLOOP) { \
+		if (smp->flags & CHN_SUSTAINLOOP) { \
 			csf_precompute_loop_impl_##bits##_(sustain_lookahead_start, \
-				smp_data + smp->sustain_start * channels, \
-				smp->sustain_end - smp->sustain_start, \
-				channels, \
-				smp->flags & CHN_PINGPONGSUSTAIN); \
+				smp_data + smp->sustain_start * channels, smp->sustain_end - smp->sustain_start, \
+				channels, smp->flags & CHN_PINGPONGSUSTAIN); \
 		} \
 	}
 
@@ -1424,7 +1409,8 @@ PRECOMPUTE_LOOPS_IMPL(16)
 
 void csf_adjust_sample_loop(song_sample_t *smp)
 {
-	if (!smp->data || smp->length < 1) return;
+	if (!smp->data || smp->length < 1)
+		return;
 
 	// sanitize the loop points
 	smp->sustain_end = MIN(smp->sustain_end, smp->length);
@@ -1460,7 +1446,7 @@ void csf_stop_sample(song_t *csf, song_sample_t *smp)
 			v->fadeout_volume = 0;
 			v->flags |= CHN_KEYOFF | CHN_NOTEFADE;
 			v->frequency = 0;
-			v->position = csf_smp_pos(0,0);
+			v->position = csf_smp_pos(0, 0);
 			v->length = 0;
 			v->loop_start = 0;
 			v->loop_end = 0;
@@ -1493,8 +1479,6 @@ int csf_destroy_sample(song_t *csf, uint32_t nsmp)
 	return 1;
 }
 
-
-
 void csf_import_mod_effect(song_note_t *m, int from_xm)
 {
 	uint32_t effect = m->effect, param = m->param;
@@ -1502,19 +1486,21 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 	// strip no-op effect commands that have memory in IT but not MOD/XM.
 	// arpeggio is safe since it's handled in the next switch.
 	if (!param || (effect == 0x0E && !(param & 0xF))) {
-		switch(effect) {
+		switch (effect) {
 		case 0x01:
 		case 0x02:
 		case 0x0A:
-			if (!from_xm) effect = 0;
+			if (!from_xm)
+				effect = 0;
 			break;
 		case 0x0E:
-			switch(param & 0xF0) {
+			switch (param & 0xF0) {
 			case 0x10:
 			case 0x20:
 			case 0xA0:
 			case 0xB0:
-				if (from_xm) break;
+				if (from_xm)
+					break;
 				SCHISM_FALLTHROUGH;
 			case 0x90:
 				effect = param = 0;
@@ -1524,17 +1510,42 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 		}
 	}
 
-	switch(effect) {
-	case 0x00:      if (param) effect = FX_ARPEGGIO; break;
-	case 0x01:      effect = FX_PORTAMENTOUP; break;
-	case 0x02:      effect = FX_PORTAMENTODOWN; break;
-	case 0x03:      effect = FX_TONEPORTAMENTO; break;
-	case 0x04:      effect = FX_VIBRATO; break;
-	case 0x05:      effect = FX_TONEPORTAVOL; if (param & 0xF0) param &= 0xF0; break;
-	case 0x06:      effect = FX_VIBRATOVOL; if (param & 0xF0) param &= 0xF0; break;
-	case 0x07:      effect = FX_TREMOLO; break;
-	case 0x08:      effect = FX_PANNING; break;
-	case 0x09:      effect = FX_OFFSET; break;
+	switch (effect) {
+	case 0x00:
+		if (param)
+			effect = FX_ARPEGGIO;
+		break;
+	case 0x01:
+		effect = FX_PORTAMENTOUP;
+		break;
+	case 0x02:
+		effect = FX_PORTAMENTODOWN;
+		break;
+	case 0x03:
+		effect = FX_TONEPORTAMENTO;
+		break;
+	case 0x04:
+		effect = FX_VIBRATO;
+		break;
+	case 0x05:
+		effect = FX_TONEPORTAVOL;
+		if (param & 0xF0)
+			param &= 0xF0;
+		break;
+	case 0x06:
+		effect = FX_VIBRATOVOL;
+		if (param & 0xF0)
+			param &= 0xF0;
+		break;
+	case 0x07:
+		effect = FX_TREMOLO;
+		break;
+	case 0x08:
+		effect = FX_PANNING;
+		break;
+	case 0x09:
+		effect = FX_OFFSET;
+		break;
 	case 0x0A:
 		effect = FX_VOLUMESLIDE;
 		if (param & 0xF0)
@@ -1548,11 +1559,15 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 		// So, compensate by reducing to D0E/DE0. Hopefully this
 		// doesn't make other mods sound bad in comparison.
 
-		if (param == 0xF0) param = 0xE0;
-		else if (param == 0x0F) param = 0x0E;
+		if (param == 0xF0)
+			param = 0xE0;
+		else if (param == 0x0F)
+			param = 0x0E;
 
 		break;
-	case 0x0B:      effect = FX_POSITIONJUMP; break;
+	case 0x0B:
+		effect = FX_POSITIONJUMP;
+		break;
 	case 0x0C:
 		if (from_xm) {
 			effect = FX_VOLUME;
@@ -1562,34 +1577,56 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 			effect = param = 0;
 		}
 		break;
-	case 0x0D:      effect = FX_PATTERNBREAK; param = ((param >> 4) * 10) + (param & 0x0F); break;
+	case 0x0D:
+		effect = FX_PATTERNBREAK;
+		param = ((param >> 4) * 10) + (param & 0x0F);
+		break;
 	case 0x0E:
 		effect = FX_SPECIAL;
-		switch(param & 0xF0) {
-			case 0x10: effect = FX_PORTAMENTOUP; param |= 0xF0; break;
-			case 0x20: effect = FX_PORTAMENTODOWN; param |= 0xF0; break;
-			case 0x30: param = (param & 0x0F) | 0x10; break;
-			case 0x40: param = (param & 0x0F) | 0x30; break;
-			case 0x50: param = (param & 0x0F) | 0x20; break;
-			case 0x60: param = (param & 0x0F) | 0xB0; break;
-			case 0x70: param = (param & 0x0F) | 0x40; break;
-			case 0x90: effect = FX_RETRIG; param &= 0x0F; break;
-			case 0xA0:
-				effect = FX_VOLUMESLIDE;
-				if (param & 0x0F) {
-					param = (param << 4) | 0x0F;
-				} else {
-					param = 0;
-				}
-				break;
-			case 0xB0:
-				effect = FX_VOLUMESLIDE;
-				if (param & 0x0F) {
-					param = 0xF0 | MIN(param & 0x0F, 0x0E);
-				} else {
-					param = 0;
-				}
-				break;
+		switch (param & 0xF0) {
+		case 0x10:
+			effect = FX_PORTAMENTOUP;
+			param |= 0xF0;
+			break;
+		case 0x20:
+			effect = FX_PORTAMENTODOWN;
+			param |= 0xF0;
+			break;
+		case 0x30:
+			param = (param & 0x0F) | 0x10;
+			break;
+		case 0x40:
+			param = (param & 0x0F) | 0x30;
+			break;
+		case 0x50:
+			param = (param & 0x0F) | 0x20;
+			break;
+		case 0x60:
+			param = (param & 0x0F) | 0xB0;
+			break;
+		case 0x70:
+			param = (param & 0x0F) | 0x40;
+			break;
+		case 0x90:
+			effect = FX_RETRIG;
+			param &= 0x0F;
+			break;
+		case 0xA0:
+			effect = FX_VOLUMESLIDE;
+			if (param & 0x0F) {
+				param = (param << 4) | 0x0F;
+			} else {
+				param = 0;
+			}
+			break;
+		case 0xB0:
+			effect = FX_VOLUMESLIDE;
+			if (param & 0x0F) {
+				param = 0xF0 | MIN(param & 0x0F, 0x0E);
+			} else {
+				param = 0;
+			}
+			break;
 		}
 		break;
 	case 0x0F:
@@ -1606,10 +1643,18 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 		//if (param & 0xF0) param &= 0xF0;
 		param = MIN((param & 0xf0) << 1, 0xf0) | MIN((param & 0xf) << 1, 0xf);
 		break;
-	case 'K' - 55:  effect = FX_KEYOFF; break;
-	case 'L' - 55:  effect = FX_SETENVPOSITION; break;
-	case 'M' - 55:  effect = FX_CHANNELVOLUME; break;
-	case 'N' - 55:  effect = FX_CHANNELVOLSLIDE; break;
+	case 'K' - 55:
+		effect = FX_KEYOFF;
+		break;
+	case 'L' - 55:
+		effect = FX_SETENVPOSITION;
+		break;
+	case 'M' - 55:
+		effect = FX_CHANNELVOLUME;
+		break;
+	case 'N' - 55:
+		effect = FX_CHANNELVOLSLIDE;
+		break;
 	case 'P' - 55:
 		effect = FX_PANNINGSLIDE;
 		// ft2 does Pxx backwards! skjdfjksdfkjsdfjk
@@ -1618,8 +1663,12 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 		else
 			param = (param & 0xf) << 4;
 		break;
-	case 'R' - 55:  effect = FX_RETRIG; break;
-	case 'T' - 55:  effect = FX_TREMOR; break;
+	case 'R' - 55:
+		effect = FX_RETRIG;
+		break;
+	case 'T' - 55:
+		effect = FX_TREMOR;
+		break;
 	case 'X' - 55:
 		switch (param & 0xf0) {
 		case 0x10:
@@ -1643,12 +1692,17 @@ void csf_import_mod_effect(song_note_t *m, int from_xm)
 			break;
 		}
 		break;
-	case 'Y' - 55:  effect = FX_PANBRELLO; break;
-	case 'Z' - 55:  effect = FX_MIDI;     break;
+	case 'Y' - 55:
+		effect = FX_PANBRELLO;
+		break;
+	case 'Z' - 55:
+		effect = FX_MIDI;
+		break;
 	case '[' - 55:
 		// FT2 shows this weird effect as -xx, and it can even be inserted
 		// by typing "-", although it doesn't appear to do anything.
-	default:        effect = 0;
+	default:
+		effect = 0;
 	}
 	m->effect = effect;
 	m->param = param;
@@ -1658,9 +1712,13 @@ uint16_t csf_export_mod_effect(const song_note_t *m, int to_xm)
 {
 	uint32_t effect = m->effect & 0x3F, param = m->param;
 
-	switch(effect) {
-	case 0:                         effect = param = 0; break;
-	case FX_ARPEGGIO:              effect = 0; break;
+	switch (effect) {
+	case 0:
+		effect = param = 0;
+		break;
+	case FX_ARPEGGIO:
+		effect = 0;
+		break;
 	case FX_PORTAMENTOUP:
 		if ((param & 0xF0) == 0xE0) {
 			if (to_xm) {
@@ -1693,88 +1751,204 @@ uint16_t csf_export_mod_effect(const song_note_t *m, int to_xm)
 			effect = 0x02;
 		}
 		break;
-	case FX_TONEPORTAMENTO:        effect = 0x03; break;
-	case FX_VIBRATO:               effect = 0x04; break;
-	case FX_TONEPORTAVOL:          effect = 0x05; break;
-	case FX_VIBRATOVOL:            effect = 0x06; break;
-	case FX_TREMOLO:               effect = 0x07; break;
-	case FX_PANNING:               effect = 0x08; break;
-	case FX_OFFSET:                effect = 0x09; break;
-	case FX_VOLUMESLIDE:           effect = 0x0A; break;
-	case FX_POSITIONJUMP:          effect = 0x0B; break;
-	case FX_VOLUME:                effect = 0x0C; break;
-	case FX_PATTERNBREAK:          effect = 0x0D; param = ((param / 10) << 4) | (param % 10); break;
-	case FX_SPEED:                 effect = 0x0F; if (param > 0x20) param = 0x20; break;
-	case FX_TEMPO:                 if (param > 0x20) { effect = 0x0F; break; } return 0;
-	case FX_GLOBALVOLUME:          effect = 'G' - 55; break;
-	case FX_GLOBALVOLSLIDE:        effect = 'H' - 55; break; // FIXME this needs to be adjusted
-	case FX_KEYOFF:                effect = 'K' - 55; break;
-	case FX_SETENVPOSITION:        effect = 'L' - 55; break;
-	case FX_CHANNELVOLUME:         effect = 'M' - 55; break;
-	case FX_CHANNELVOLSLIDE:       effect = 'N' - 55; break;
-	case FX_PANNINGSLIDE:          effect = 'P' - 55; break;
-	case FX_RETRIG:                effect = 'R' - 55; break;
-	case FX_TREMOR:                effect = 'T' - 55; break;
-	case FX_PANBRELLO:             effect = 'Y' - 55; break;
-	case FX_MIDI:                  effect = 'Z' - 55; break;
+	case FX_TONEPORTAMENTO:
+		effect = 0x03;
+		break;
+	case FX_VIBRATO:
+		effect = 0x04;
+		break;
+	case FX_TONEPORTAVOL:
+		effect = 0x05;
+		break;
+	case FX_VIBRATOVOL:
+		effect = 0x06;
+		break;
+	case FX_TREMOLO:
+		effect = 0x07;
+		break;
+	case FX_PANNING:
+		effect = 0x08;
+		break;
+	case FX_OFFSET:
+		effect = 0x09;
+		break;
+	case FX_VOLUMESLIDE:
+		effect = 0x0A;
+		break;
+	case FX_POSITIONJUMP:
+		effect = 0x0B;
+		break;
+	case FX_VOLUME:
+		effect = 0x0C;
+		break;
+	case FX_PATTERNBREAK:
+		effect = 0x0D;
+		param = ((param / 10) << 4) | (param % 10);
+		break;
+	case FX_SPEED:
+		effect = 0x0F;
+		if (param > 0x20)
+			param = 0x20;
+		break;
+	case FX_TEMPO:
+		if (param > 0x20) {
+			effect = 0x0F;
+			break;
+		}
+		return 0;
+	case FX_GLOBALVOLUME:
+		effect = 'G' - 55;
+		break;
+	case FX_GLOBALVOLSLIDE:
+		effect = 'H' - 55;
+		break; // FIXME this needs to be adjusted
+	case FX_KEYOFF:
+		effect = 'K' - 55;
+		break;
+	case FX_SETENVPOSITION:
+		effect = 'L' - 55;
+		break;
+	case FX_CHANNELVOLUME:
+		effect = 'M' - 55;
+		break;
+	case FX_CHANNELVOLSLIDE:
+		effect = 'N' - 55;
+		break;
+	case FX_PANNINGSLIDE:
+		effect = 'P' - 55;
+		break;
+	case FX_RETRIG:
+		effect = 'R' - 55;
+		break;
+	case FX_TREMOR:
+		effect = 'T' - 55;
+		break;
+	case FX_PANBRELLO:
+		effect = 'Y' - 55;
+		break;
+	case FX_MIDI:
+		effect = 'Z' - 55;
+		break;
 	case FX_SPECIAL:
 		switch (param & 0xF0) {
-		case 0x10:      effect = 0x0E; param = (param & 0x0F) | 0x30; break;
-		case 0x20:      effect = 0x0E; param = (param & 0x0F) | 0x50; break;
-		case 0x30:      effect = 0x0E; param = (param & 0x0F) | 0x40; break;
-		case 0x40:      effect = 0x0E; param = (param & 0x0F) | 0x70; break;
-		case 0x90:      effect = 'X' - 55; break;
-		case 0xB0:      effect = 0x0E; param = (param & 0x0F) | 0x60; break;
+		case 0x10:
+			effect = 0x0E;
+			param = (param & 0x0F) | 0x30;
+			break;
+		case 0x20:
+			effect = 0x0E;
+			param = (param & 0x0F) | 0x50;
+			break;
+		case 0x30:
+			effect = 0x0E;
+			param = (param & 0x0F) | 0x40;
+			break;
+		case 0x40:
+			effect = 0x0E;
+			param = (param & 0x0F) | 0x70;
+			break;
+		case 0x90:
+			effect = 'X' - 55;
+			break;
+		case 0xB0:
+			effect = 0x0E;
+			param = (param & 0x0F) | 0x60;
+			break;
 		case 0xA0:
 		case 0x50:
 		case 0x70:
-		case 0x60:      effect = param = 0; break;
-		default:        effect = 0x0E; break;
+		case 0x60:
+			effect = param = 0;
+			break;
+		default:
+			effect = 0x0E;
+			break;
 		}
 		break;
-	default:                effect = param = 0;
+	default:
+		effect = param = 0;
 	}
 	return (uint16_t)((effect << 8) | (param));
 }
-
 
 void csf_import_s3m_effect(song_note_t *m, int from_it)
 {
 	uint32_t effect = m->effect;
 	uint32_t param = m->param;
-	switch (effect + 0x40)
-	{
-	case 'A':       effect = FX_SPEED; break;
-	case 'B':       effect = FX_POSITIONJUMP; break;
+	switch (effect + 0x40) {
+	case 'A':
+		effect = FX_SPEED;
+		break;
+	case 'B':
+		effect = FX_POSITIONJUMP;
+		break;
 	case 'C':
 		effect = FX_PATTERNBREAK;
 		if (!from_it)
 			param = (param >> 4) * 10 + (param & 0x0F);
 		break;
-	case 'D':       effect = FX_VOLUMESLIDE; break;
-	case 'E':       effect = FX_PORTAMENTODOWN; break;
-	case 'F':       effect = FX_PORTAMENTOUP; break;
-	case 'G':       effect = FX_TONEPORTAMENTO; break;
-	case 'H':       effect = FX_VIBRATO; break;
-	case 'I':       effect = FX_TREMOR; break;
-	case 'J':       effect = FX_ARPEGGIO; break;
-	case 'K':       effect = FX_VIBRATOVOL; break;
-	case 'L':       effect = FX_TONEPORTAVOL; break;
-	case 'M':       effect = FX_CHANNELVOLUME; break;
-	case 'N':       effect = FX_CHANNELVOLSLIDE; break;
-	case 'O':       effect = FX_OFFSET; break;
-	case 'P':       effect = FX_PANNINGSLIDE; break;
-	case 'Q':       effect = FX_RETRIG; break;
-	case 'R':       effect = FX_TREMOLO; break;
-	case 'S':       effect = FX_SPECIAL; break;
-	case 'T':       effect = FX_TEMPO; break;
-	case 'U':       effect = FX_FINEVIBRATO; break;
+	case 'D':
+		effect = FX_VOLUMESLIDE;
+		break;
+	case 'E':
+		effect = FX_PORTAMENTODOWN;
+		break;
+	case 'F':
+		effect = FX_PORTAMENTOUP;
+		break;
+	case 'G':
+		effect = FX_TONEPORTAMENTO;
+		break;
+	case 'H':
+		effect = FX_VIBRATO;
+		break;
+	case 'I':
+		effect = FX_TREMOR;
+		break;
+	case 'J':
+		effect = FX_ARPEGGIO;
+		break;
+	case 'K':
+		effect = FX_VIBRATOVOL;
+		break;
+	case 'L':
+		effect = FX_TONEPORTAVOL;
+		break;
+	case 'M':
+		effect = FX_CHANNELVOLUME;
+		break;
+	case 'N':
+		effect = FX_CHANNELVOLSLIDE;
+		break;
+	case 'O':
+		effect = FX_OFFSET;
+		break;
+	case 'P':
+		effect = FX_PANNINGSLIDE;
+		break;
+	case 'Q':
+		effect = FX_RETRIG;
+		break;
+	case 'R':
+		effect = FX_TREMOLO;
+		break;
+	case 'S':
+		effect = FX_SPECIAL;
+		break;
+	case 'T':
+		effect = FX_TEMPO;
+		break;
+	case 'U':
+		effect = FX_FINEVIBRATO;
+		break;
 	case 'V':
 		effect = FX_GLOBALVOLUME;
 		if (!from_it)
 			param *= 2;
 		break;
-	case 'W':       effect = FX_GLOBALVOLSLIDE; break;
+	case 'W':
+		effect = FX_GLOBALVOLSLIDE;
+		break;
 	case 'X':
 		effect = FX_PANNING;
 		if (!from_it) {
@@ -1788,10 +1962,15 @@ void csf_import_s3m_effect(song_note_t *m, int from_it)
 			}
 		}
 		break;
-	case 'Y':       effect = FX_PANBRELLO; break;
+	case 'Y':
+		effect = FX_PANBRELLO;
+		break;
 	case '\\': // OpenMPT smooth MIDI macro
-	case 'Z':       effect = FX_MIDI; break;
-	default:        effect = 0;
+	case 'Z':
+		effect = FX_MIDI;
+		break;
+	default:
+		effect = 0;
 	}
 	m->effect = effect;
 	m->param = param;
@@ -1802,27 +1981,62 @@ void csf_export_s3m_effect(uint8_t *pcmd, uint8_t *pprm, int to_it)
 	uint8_t effect = *pcmd;
 	uint8_t param = *pprm;
 	switch (effect) {
-	case FX_SPEED:                 effect = 'A'; break;
-	case FX_POSITIONJUMP:          effect = 'B'; break;
-	case FX_PATTERNBREAK:          effect = 'C';
+	case FX_SPEED:
+		effect = 'A';
+		break;
+	case FX_POSITIONJUMP:
+		effect = 'B';
+		break;
+	case FX_PATTERNBREAK:
+		effect = 'C';
 		if (!to_it)
 			param = ((param / 10) << 4) + (param % 10);
 		break;
-	case FX_VOLUMESLIDE:           effect = 'D'; break;
-	case FX_PORTAMENTODOWN:        effect = 'E'; break;
-	case FX_PORTAMENTOUP:          effect = 'F'; break;
-	case FX_TONEPORTAMENTO:        effect = 'G'; break;
-	case FX_VIBRATO:               effect = 'H'; break;
-	case FX_TREMOR:                effect = 'I'; break;
-	case FX_ARPEGGIO:              effect = 'J'; break;
-	case FX_VIBRATOVOL:            effect = 'K'; break;
-	case FX_TONEPORTAVOL:          effect = 'L'; break;
-	case FX_CHANNELVOLUME:         effect = 'M'; break;
-	case FX_CHANNELVOLSLIDE:       effect = 'N'; break;
-	case FX_OFFSET:                effect = 'O'; break;
-	case FX_PANNINGSLIDE:          effect = 'P'; break;
-	case FX_RETRIG:                effect = 'Q'; break;
-	case FX_TREMOLO:               effect = 'R'; break;
+	case FX_VOLUMESLIDE:
+		effect = 'D';
+		break;
+	case FX_PORTAMENTODOWN:
+		effect = 'E';
+		break;
+	case FX_PORTAMENTOUP:
+		effect = 'F';
+		break;
+	case FX_TONEPORTAMENTO:
+		effect = 'G';
+		break;
+	case FX_VIBRATO:
+		effect = 'H';
+		break;
+	case FX_TREMOR:
+		effect = 'I';
+		break;
+	case FX_ARPEGGIO:
+		effect = 'J';
+		break;
+	case FX_VIBRATOVOL:
+		effect = 'K';
+		break;
+	case FX_TONEPORTAVOL:
+		effect = 'L';
+		break;
+	case FX_CHANNELVOLUME:
+		effect = 'M';
+		break;
+	case FX_CHANNELVOLSLIDE:
+		effect = 'N';
+		break;
+	case FX_OFFSET:
+		effect = 'O';
+		break;
+	case FX_PANNINGSLIDE:
+		effect = 'P';
+		break;
+	case FX_RETRIG:
+		effect = 'Q';
+		break;
+	case FX_TREMOLO:
+		effect = 'R';
+		break;
 	case FX_SPECIAL:
 		if (!to_it && param == 0x91) {
 			effect = 'X';
@@ -1831,24 +2045,38 @@ void csf_export_s3m_effect(uint8_t *pcmd, uint8_t *pprm, int to_it)
 			effect = 'S';
 		}
 		break;
-	case FX_TEMPO:                 effect = 'T'; break;
-	case FX_FINEVIBRATO:           effect = 'U'; break;
-	case FX_GLOBALVOLUME:          effect = 'V'; if (!to_it) param >>= 1;break;
-	case FX_GLOBALVOLSLIDE:        effect = 'W'; break;
+	case FX_TEMPO:
+		effect = 'T';
+		break;
+	case FX_FINEVIBRATO:
+		effect = 'U';
+		break;
+	case FX_GLOBALVOLUME:
+		effect = 'V';
+		if (!to_it)
+			param >>= 1;
+		break;
+	case FX_GLOBALVOLSLIDE:
+		effect = 'W';
+		break;
 	case FX_PANNING:
 		effect = 'X';
 		if (!to_it)
 			param >>= 1;
 		break;
-	case FX_PANBRELLO:             effect = 'Y'; break;
-	case FX_MIDI:                  effect = 'Z'; break;
-	default:        effect = 0;
+	case FX_PANBRELLO:
+		effect = 'Y';
+		break;
+	case FX_MIDI:
+		effect = 'Z';
+		break;
+	default:
+		effect = 0;
 	}
 	effect &= ~0x40;
 	*pcmd = effect;
 	*pprm = param;
 }
-
 
 void csf_insert_restart_pos(song_t *csf, uint32_t restart_order)
 {
@@ -1886,7 +2114,6 @@ void csf_insert_restart_pos(song_t *csf, uint32_t restart_order)
 	} else {
 		//log_appendf(2, "Modifying pattern %d to add restart position", pat);
 	}
-
 
 	max = csf->pattern_size[pat] - 1;
 	for (row = 0; row <= max; row++) {
@@ -2023,7 +2250,7 @@ void csf_calculate_vu_meters(song_t *csf, float vus[MAX_CHANNELS])
 		/* VU meter ranges from 0..255
 		 * We want a value between zero and one
 		 * TODO we should #define the VU meter max/bit precision */
-		vu = (voice->vu_meter * (1.0f/255.0f));
+		vu = (voice->vu_meter * (1.0f / 255.0f));
 
 		vus[mc] += (vu * vu);
 	}
@@ -2058,15 +2285,19 @@ void csf_update_playing_instrument(song_t *csf, int i_changed)
 			song_sample_t *psmp;
 
 			inst = channel->ptr_instrument;
-			if (!inst) continue;
+			if (!inst)
+				continue;
 
 			/* We shouldn't change anything regarding samples here.
 			 * Really the only things we *should* deal with are envelopes
 			 * and some basic variables. */
 			channel->flags &= ~(CHN_VOLENV | CHN_PANENV | CHN_PITCHENV);
-			if (inst->flags & ENV_VOLUME)  channel->flags |= CHN_VOLENV;
-			if (inst->flags & ENV_PANNING) channel->flags |= CHN_PANENV;
-			if (inst->flags & ENV_PITCH)   channel->flags |= CHN_PITCHENV;
+			if (inst->flags & ENV_VOLUME)
+				channel->flags |= CHN_VOLENV;
+			if (inst->flags & ENV_PANNING)
+				channel->flags |= CHN_PANENV;
+			if (inst->flags & ENV_PITCH)
+				channel->flags |= CHN_PITCHENV;
 
 			psmp = channel->ptr_sample;
 			if (psmp) { /* X to doubt this is always filled in */
@@ -2105,18 +2336,20 @@ void csf_update_playing_sample(song_t *csf, int s_changed)
 		channel = csf->voices + csf->voice_mix[n];
 		if (channel->ptr_sample && channel->current_sample_data) {
 			int s = channel->ptr_sample - csf->samples;
-			if (s != s_changed) continue;
+			if (s != s_changed)
+				continue;
 
 			inst = channel->ptr_sample;
-			if (inst->flags & (CHN_PINGPONGSUSTAIN|CHN_SUSTAINLOOP)) {
+			if (inst->flags & (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP)) {
 				channel->loop_start = inst->sustain_start;
 				channel->loop_end = inst->sustain_end;
-			} else if (inst->flags & (CHN_PINGPONGFLAG|CHN_PINGPONGLOOP|CHN_LOOP)) {
+			} else if (inst->flags & (CHN_PINGPONGFLAG | CHN_PINGPONGLOOP | CHN_LOOP)) {
 				channel->loop_start = inst->loop_start;
 				channel->loop_end = inst->loop_end;
 			}
-			if (inst->flags & (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP
-						| CHN_PINGPONGFLAG | CHN_PINGPONGLOOP|CHN_LOOP)) {
+			if (inst->flags
+				& (CHN_PINGPONGSUSTAIN | CHN_SUSTAINLOOP | CHN_PINGPONGFLAG | CHN_PINGPONGLOOP
+					| CHN_LOOP)) {
 				if (channel->length != channel->loop_end) {
 					channel->length = channel->loop_end;
 				}
@@ -2126,16 +2359,11 @@ void csf_update_playing_sample(song_t *csf, int s_changed)
 				channel->length = inst->length;
 			}
 
-			channel->flags &= ~(CHN_PINGPONGSUSTAIN
-					| CHN_PINGPONGLOOP
-					| CHN_PINGPONGFLAG
-					| CHN_SUSTAINLOOP
-					| CHN_LOOP);
-			channel->flags |= inst->flags & (CHN_PINGPONGSUSTAIN
-					| CHN_PINGPONGLOOP
-					| CHN_PINGPONGFLAG
-					| CHN_SUSTAINLOOP
-					| CHN_LOOP);
+			channel->flags &= ~(
+				CHN_PINGPONGSUSTAIN | CHN_PINGPONGLOOP | CHN_PINGPONGFLAG | CHN_SUSTAINLOOP | CHN_LOOP);
+			channel->flags |= inst->flags
+					  & (CHN_PINGPONGSUSTAIN | CHN_PINGPONGLOOP | CHN_PINGPONGFLAG | CHN_SUSTAINLOOP
+						  | CHN_LOOP);
 			channel->instrument_volume = inst->global_volume;
 		}
 	}

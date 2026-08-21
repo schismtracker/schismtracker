@@ -23,10 +23,10 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
-#include "str.h"
 #include "mem.h"
+#include "slurp.h"
+#include "str.h"
 
 #include "player/sndfile.h"
 
@@ -46,7 +46,8 @@ struct header_669 {
 static int read_header_669(struct header_669 *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) \
+	return 0
 
 	READ_VALUE(sig);
 	READ_VALUE(songmessage);
@@ -80,15 +81,13 @@ int fmt_669_read_info(dmoz_file_t *file, slurp_t *fp)
 	else
 		return 0;
 
-	if (hdr.samples == 0 || hdr.patterns == 0
-	    || hdr.samples > 64 || hdr.patterns > 128
-	    || hdr.restartpos > 127)
+	if (hdr.samples == 0 || hdr.patterns == 0 || hdr.samples > 64 || hdr.patterns > 128 || hdr.restartpos > 127)
 		return 0;
 	for (i = 0; i < 128; i++)
 		if (hdr.breaks[i] > 0x3f)
 			return 0;
 
-	file->title = strn_dup((const char*)hdr.songmessage, sizeof(hdr.songmessage));
+	file->title = strn_dup((const char *)hdr.songmessage, sizeof(hdr.songmessage));
 	file->description = desc;
 	/*file->extension = str_dup("669");*/
 	file->type = TYPE_MODULE_S3M;
@@ -156,9 +155,9 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	for (smp = 1; smp <= nsmp; smp++) {
 		slurp_read(fp, b, 13);
 		b[13] = 0; /* the spec says it's supposed to be ASCIIZ, but some 669's use all 13 chars */
-		strcpy(song->samples[smp].name, (char *) b);
+		strcpy(song->samples[smp].name, (char *)b);
 		b[12] = 0; /* ... filename field only has room for 12 chars though */
-		strcpy(song->samples[smp].filename, (char *) b);
+		strcpy(song->samples[smp].filename, (char *)b);
 
 		slurp_read(fp, &tmplong, 4);
 		song->samples[smp].length = bswapLE32(tmplong);
@@ -256,7 +255,8 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 					note->param |= 0xf0;
 					effect[chan] = 0xff;
 					break;
-				case 4: /* E - frequency vibrato - almost like an arpeggio, but does not arpeggiate by a given note but by a frequency amount. */
+				case 4: /* E - frequency vibrato - almost like an arpeggio, but does not arpeggiate by a
+					   given note but by a frequency amount. */
 					note->effect = FX_ARPEGGIO;
 					note->param |= (note->param << 4);
 					break;
@@ -266,8 +266,7 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 					break;
 				case 6:
 					// G - subcommands (extended)
-					switch(note->param)
-					{
+					switch (note->param) {
 					case 0:
 						// balance fine slide left
 						note->param = 0x4F;
@@ -335,11 +334,10 @@ int fmt_669_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	for (n = 8; n < 64; n++)
 		song->channels[n].flags = CHN_MUTE;
 
-//      if (ferror(fp)) {
-//              return LOAD_FILE_ERROR;
-//      }
+	//      if (ferror(fp)) {
+	//              return LOAD_FILE_ERROR;
+	//      }
 
 	/* done! */
 	return LOAD_SUCCESS;
 }
-

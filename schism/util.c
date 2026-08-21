@@ -26,10 +26,10 @@ extraneous libraries (i.e. GLib). */
 
 #include "headers.h"
 #include "util.h"
-#include "osdefs.h"
-#include "mem.h"
 #include "cpu.h"
+#include "mem.h"
 #include "mt.h"
+#include "osdefs.h"
 
 #if defined(HAVE_MKSTEMP) && defined(HAVE_FDOPEN) && !defined(SCHISM_WIN32)
 # define MKFSTEMP_USE_MKSTEMP 1
@@ -215,20 +215,20 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 	attributes static void mem_xor_##name(void *vbuf, size_t len, unsigned char c) \
 	{ \
 		unsigned char *buf = vbuf; \
-	\
+\
 		if (len >= 4) { \
 			size_t len8; \
 			uint32_t cccc; \
-	\
+\
 			/* expand to all bytes */ \
 			cccc = c; \
 			cccc |= (cccc << 8); \
 			cccc |= (cccc << 16); \
-	\
+\
 			/* align the pointer */ \
 			for (; (uintptr_t)buf % sizeof(uint32_t); len--) \
 				*(buf++) ^= c; \
-	\
+\
 			/* process in chunks of 8 32-bit integers */ \
 			for (len8 = (len / (sizeof(uint32_t) * 8)); len8 > 0; len8--) { \
 				((uint32_t *)buf)[0] ^= cccc; \
@@ -242,7 +242,7 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 				buf += (8 * sizeof(uint32_t)); \
 			} \
 			len %= (sizeof(uint32_t) * 8); \
-	\
+\
 			/* process in chunks of 32-bit integers */ \
 			for (len8 = len / sizeof(uint32_t); len8 > 0; len8--) { \
 				((uint32_t *)buf)[0] ^= cccc; \
@@ -250,7 +250,7 @@ int msgbox(int style, const char *title, const char *fmt, ...)
 			} \
 			len %= sizeof(uint32_t); \
 		} \
-	\
+\
 		/* process any that remain */ \
 		for (; len > 0; len--) \
 			*(buf++) ^= c; \
@@ -311,14 +311,16 @@ void mem_xor(void *vbuf, size_t len, unsigned char c)
  * AVX2 is about twice as fast as SSE2. */
 
 #define MINMAX_C(BITS) \
-	void minmax_##BITS##_c(const int##BITS##_t *data, size_t len, \
-		int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
+	void minmax_##BITS##_c( \
+		const int##BITS##_t *data, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
 	{ \
 		size_t i; \
-	\
+\
 		for (i = 0; i < len; i += stride) { \
-			if (data[i] < *min) *min = data[i]; \
-			if (data[i] > *max) *max = data[i]; \
+			if (data[i] < *min) \
+				*min = data[i]; \
+			if (data[i] > *max) \
+				*max = data[i]; \
 		} \
 	}
 
@@ -339,31 +341,36 @@ MINMAX_C(32)
 /* circa 2000 (pentium 4) */
 
 /* 8-bit SSE2 */
-MINMAX_INTRINSICS(sse2, sse2, __m128i, 8, 16,
+MINMAX_INTRINSICS(
+	sse2, sse2, __m128i, 8, 16,
 	/* vars */
-	__m128i msb;,
-{
-	/* prefix */
-	msb = _mm_set1_epi8(0x80);
+	__m128i msb;
+	,
+	{
+        /* prefix */
+		msb = _mm_set1_epi8(0x80);
 
-	*min ^= 0x80;
-	*max ^= 0x80;
-}, {
-	/* suffix */
-	vmin = _mm_xor_si128(vmin, msb);
-	vmax = _mm_xor_si128(vmax, msb);
+		*min ^= 0x80;
+		*max ^= 0x80;
+	},
+	{
+        /* suffix */
+		vmin = _mm_xor_si128(vmin, msb);
+		vmax = _mm_xor_si128(vmax, msb);
 
-	*min ^= 0x80;
-	*max ^= 0x80;
-}, {
-	/* process */
-	x = _mm_xor_si128(x, msb);
-}, _mm_set1_epi8, _mm_loadu_si128, _mm_min_epu8, _mm_max_epu8, _mm_store_si128)
+		*min ^= 0x80;
+		*max ^= 0x80;
+	},
+	{
+        /* process */
+		x = _mm_xor_si128(x, msb);
+	},
+	_mm_set1_epi8, _mm_loadu_si128, _mm_min_epu8, _mm_max_epu8, _mm_store_si128)
 
 /* 16-bit SSE2 */
 MINMAX_INTRINSICS(sse2, sse2, __m128i, 16, 8,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	_mm_set1_epi16, _mm_loadu_si128, _mm_min_epi16, _mm_max_epi16, _mm_store_si128)
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */, _mm_set1_epi16, _mm_loadu_si128, _mm_min_epi16,
+	_mm_max_epi16, _mm_store_si128)
 
 #   define MINMAX_SSE2
 #  endif
@@ -372,8 +379,8 @@ MINMAX_INTRINSICS(sse2, sse2, __m128i, 16, 8,
 
 /* 8-bit SSE 4.1 */
 MINMAX_INTRINSICS(sse4.1, sse41, __m128i, 8, 16,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	_mm_set1_epi8, _mm_loadu_si128, _mm_min_epi8, _mm_max_epi8, _mm_store_si128)
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */, _mm_set1_epi8, _mm_loadu_si128, _mm_min_epi8,
+	_mm_max_epi8, _mm_store_si128)
 #   define MINMAX_SSE41
 #  endif
 #  ifdef SCHISM_AVX2
@@ -381,13 +388,13 @@ MINMAX_INTRINSICS(sse4.1, sse41, __m128i, 8, 16,
 
 /* 8-bit AVX2 */
 MINMAX_INTRINSICS(avx2, avx2, __m256i, 8, 32,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	_mm256_set1_epi8, _mm256_loadu_si256, _mm256_min_epi8, _mm256_max_epi8, _mm256_store_si256)
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */, _mm256_set1_epi8, _mm256_loadu_si256,
+	_mm256_min_epi8, _mm256_max_epi8, _mm256_store_si256)
 
 /* 16-bit AVX2 */
 MINMAX_INTRINSICS(avx2, avx2, __m256i, 16, 16,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	_mm256_set1_epi16, _mm256_loadu_si256, _mm256_min_epi16, _mm256_max_epi16, _mm256_store_si256)
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */, _mm256_set1_epi16, _mm256_loadu_si256,
+	_mm256_min_epi16, _mm256_max_epi16, _mm256_store_si256)
 
 #   define MINMAX_AVX2
 #  endif
@@ -395,23 +402,22 @@ MINMAX_INTRINSICS(avx2, avx2, __m256i, 16, 16,
 /* circa 2016, super fast */
 
 MINMAX_INTRINSICS(avx512bw, avx512bw, __m512i, 8, 64,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	_mm512_set1_epi8, _mm512_loadu_si512, _mm512_min_epi8, _mm512_max_epi8, _mm512_store_si512)
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */, _mm512_set1_epi8, _mm512_loadu_si512,
+	_mm512_min_epi8, _mm512_max_epi8, _mm512_store_si512)
 
 MINMAX_INTRINSICS(avx512bw, avx512bw, __m512i, 16, 32,
-	/* nothing */, /* nothing */, /* nothing */, /* nothing */,
-	_mm512_set1_epi16, _mm512_loadu_si512, _mm512_min_epi16, _mm512_max_epi16, _mm512_store_si512)
+	/* nothing */, /* nothing */, /* nothing */, /* nothing */, _mm512_set1_epi16, _mm512_loadu_si512,
+	_mm512_min_epi16, _mm512_max_epi16, _mm512_store_si512)
 
 #   define MINMAX_AVX512BW
 #  endif
 # elif (defined(__powerpc__) || defined(__ppc__) || defined(__ppc64__)) && defined(SCHISM_ALTIVEC)
 /* defined in util-altivec.c */
-#   define MINMAX_ALTIVEC
+#  define MINMAX_ALTIVEC
 # endif
 #endif
 
-void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
-	size_t stride)
+void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max, size_t stride)
 {
 	/* NOTE: for stride > 2, plain C code is faster than avx2 or sse2. */
 #ifdef MINMAX_AVX512BW
@@ -448,8 +454,7 @@ void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
 	minmax_8_c(buf, len, min, max, stride);
 }
 
-void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
-	size_t stride)
+void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max, size_t stride)
 {
 	/* NOTE: for stride > 2, plain C code is faster than avx2 or sse2. */
 #ifdef MINMAX_AVX512BW
@@ -480,8 +485,7 @@ void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
 	minmax_16_c(buf, len, min, max, stride);
 }
 
-void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
-	size_t stride)
+void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max, size_t stride)
 {
 	/* TODO: vectorized versions. */
 	minmax_32_c(buf, len, min, max, stride);
