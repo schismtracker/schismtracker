@@ -24,13 +24,13 @@
 #define _WIN32_WINNT 0x0600 // Windows Vista
 
 #include "headers.h"
-#include "mem.h"
-#include "log.h"
-#include "loadso.h"
 #include "backend/mt.h"
+#include "loadso.h"
+#include "log.h"
+#include "mem.h"
 
-#include <windows.h>
 #include <process.h>
+#include <windows.h>
 
 #define MSVC_EXCEPTION_NAME_CODE UINT32_C(0x406D1388)
 
@@ -56,12 +56,12 @@
 typedef void *PVECTORED_EXCEPTION_HANDLER;
 #endif
 
-static PVOID (WINAPI *KERNEL32_AddVectoredExceptionHandler)(ULONG, PVECTORED_EXCEPTION_HANDLER);
-static ULONG (WINAPI *KERNEL32_RemoveVectoredExceptionHandler)(PVOID);
-static BOOL (WINAPI *KERNEL32_IsDebuggerPresent)(void); // NT 4+
+static PVOID(WINAPI *KERNEL32_AddVectoredExceptionHandler)(ULONG, PVECTORED_EXCEPTION_HANDLER);
+static ULONG(WINAPI *KERNEL32_RemoveVectoredExceptionHandler)(PVOID);
+static BOOL(WINAPI *KERNEL32_IsDebuggerPresent)(void); // NT 4+
 
 // not necessarily kernel32, but most likely. sometimes it can be kernelbase!
-static HRESULT (WINAPI *KERNEL32_SetThreadDescription)(HANDLE, PCWSTR); // win10+
+static HRESULT(WINAPI *KERNEL32_SetThreadDescription)(HANDLE, PCWSTR); // win10+
 
 struct mt_thread {
 	HANDLE thread;
@@ -77,8 +77,8 @@ struct mt_thread {
 static LONG __stdcall win32_exception_handler_noop(EXCEPTION_POINTERS *info)
 {
 	return (info && info->ExceptionRecord && info->ExceptionRecord->ExceptionCode == MSVC_EXCEPTION_NAME_CODE)
-		? EXCEPTION_CONTINUE_EXECUTION
-		: EXCEPTION_CONTINUE_SEARCH;
+		       ? EXCEPTION_CONTINUE_EXECUTION
+		       : EXCEPTION_CONTINUE_SEARCH;
 }
 
 // This raises an exception that notifies the current debugger
@@ -91,15 +91,17 @@ static inline void win32_raise_name_exception(const char *name)
 		// Based on other code that uses ugly non-standard packing; this is only
 		// tested for x86 and x86_64, no idea about arm.
 
-		SCHISM_STATIC_ASSERT(sizeof(ULONG_PTR) >= sizeof(DWORD), "This code assumes ULONG_PTR is at least the size of a DWORD");
-		SCHISM_STATIC_ASSERT(sizeof(ULONG_PTR) % sizeof(DWORD) == 0, "This code assumes the size of ULONG_PTR is a multiple of the size of a DWORD");
+		SCHISM_STATIC_ASSERT(sizeof(ULONG_PTR) >= sizeof(DWORD),
+			"This code assumes ULONG_PTR is at least the size of a DWORD");
+		SCHISM_STATIC_ASSERT(sizeof(ULONG_PTR) % sizeof(DWORD) == 0,
+			"This code assumes the size of ULONG_PTR is a multiple of the size of a DWORD");
 
-#define DIVIDE_ROUNDING_UP(x, y) (((x) + (y) - 1) / (y))
+# define DIVIDE_ROUNDING_UP(x, y) (((x) + (y) - 1) / (y))
 		union {
 			DWORD dw;
 			ULONG_PTR ulp;
 		} info[2 + DIVIDE_ROUNDING_UP(sizeof(DWORD) * 2, sizeof(ULONG_PTR))] = {0};
-#undef DIVIDE_ROUNDING_UP
+# undef DIVIDE_ROUNDING_UP
 
 		info[0].dw = 0x1000; // Magic number
 		info[1].ulp = (ULONG_PTR)name_a; // ANSI string w/ the name of the thread
@@ -108,7 +110,7 @@ static inline void win32_raise_name_exception(const char *name)
 			// on whether it's 32 or 64-bit; either way, they're just right beside each
 			// other in memory, so we can just do this.
 
-			static const DWORD dw[2] = { -1 /* Thread ID (-1 for current thread) */, 0 /* Reserved */};
+			static const DWORD dw[2] = {-1 /* Thread ID (-1 for current thread) */, 0 /* Reserved */};
 			memcpy(info + 2, dw, sizeof(dw));
 		}
 
@@ -173,14 +175,16 @@ mt_thread_t *win32_thread_create(schism_thread_function_t func, const char *name
 
 void win32_thread_wait(mt_thread_t *thread, int *status)
 {
-	if (!thread) return;
+	if (!thread)
+		return;
 
 	WaitForSingleObject(thread->thread, INFINITE);
 	CloseHandle(thread->thread);
 
 	free(thread->name);
 
-	if (status) *status = thread->status;
+	if (status)
+		*status = thread->status;
 
 	free(thread);
 }
@@ -191,12 +195,16 @@ void win32_thread_set_priority(int priority)
 	int npri;
 
 	switch (priority) {
-#define PRIORITY(x, y) case MT_THREAD_PRIORITY_##x: npri = THREAD_PRIORITY_##y; break 
-	PRIORITY(LOW, LOWEST);
-	PRIORITY(NORMAL, NORMAL);
-	PRIORITY(HIGH, HIGHEST);
-	PRIORITY(TIME_CRITICAL, TIME_CRITICAL);
-	default: return;
+#define PRIORITY(x, y) \
+	case MT_THREAD_PRIORITY_##x: \
+		npri = THREAD_PRIORITY_##y; \
+		break
+		PRIORITY(LOW, LOWEST);
+		PRIORITY(NORMAL, NORMAL);
+		PRIORITY(HIGH, HIGHEST);
+		PRIORITY(TIME_CRITICAL, TIME_CRITICAL);
+	default:
+		return;
 #undef PRIORITY
 	}
 
@@ -213,15 +221,15 @@ static mt_thread_id_t win32_thread_id(void)
 /* mutexes */
 
 // Critical section pointers
-static void (WINAPI *KERNEL32_InitializeCriticalSection)(LPCRITICAL_SECTION);
-static DWORD (WINAPI *KERNEL32_SetCriticalSectionSpinCount)(LPCRITICAL_SECTION, DWORD);
-static void (WINAPI *KERNEL32_DeleteCriticalSection)(LPCRITICAL_SECTION);
-static void (WINAPI *KERNEL32_EnterCriticalSection)(LPCRITICAL_SECTION);
-static void (WINAPI *KERNEL32_LeaveCriticalSection)(LPCRITICAL_SECTION);
+static void(WINAPI *KERNEL32_InitializeCriticalSection)(LPCRITICAL_SECTION);
+static DWORD(WINAPI *KERNEL32_SetCriticalSectionSpinCount)(LPCRITICAL_SECTION, DWORD);
+static void(WINAPI *KERNEL32_DeleteCriticalSection)(LPCRITICAL_SECTION);
+static void(WINAPI *KERNEL32_EnterCriticalSection)(LPCRITICAL_SECTION);
+static void(WINAPI *KERNEL32_LeaveCriticalSection)(LPCRITICAL_SECTION);
 
-static void (WINAPI *KERNEL32_InitializeSRWLock)(PSRWLOCK);
-static void (WINAPI *KERNEL32_AcquireSRWLockExclusive)(PSRWLOCK);
-static void (WINAPI *KERNEL32_ReleaseSRWLockExclusive)(PSRWLOCK);
+static void(WINAPI *KERNEL32_InitializeSRWLock)(PSRWLOCK);
+static void(WINAPI *KERNEL32_AcquireSRWLockExclusive)(PSRWLOCK);
+static void(WINAPI *KERNEL32_ReleaseSRWLockExclusive)(PSRWLOCK);
 
 // Should be set on init and never touched again until quit.
 static enum {
@@ -276,13 +284,13 @@ mt_mutex_t *win32_mutex_create(void)
 		break;
 	}
 
-
 	return mutex;
 }
 
 void win32_mutex_delete(mt_mutex_t *mutex)
 {
-	if (!mutex) return;
+	if (!mutex)
+		return;
 
 	switch (win32_mutex_impl) {
 	case WIN32_MUTEX_IMPL_MUTEX:
@@ -300,11 +308,13 @@ void win32_mutex_delete(mt_mutex_t *mutex)
 
 void win32_mutex_lock(mt_mutex_t *mutex)
 {
-	if (!mutex) return;
+	if (!mutex)
+		return;
 
 	switch (win32_mutex_impl) {
 	case WIN32_MUTEX_IMPL_MUTEX:
-		SCHISM_RUNTIME_ASSERT(WaitForSingleObject(mutex->impl.mutex, INFINITE) == WAIT_OBJECT_0, "Mutex locks should never fail");
+		SCHISM_RUNTIME_ASSERT(WaitForSingleObject(mutex->impl.mutex, INFINITE) == WAIT_OBJECT_0,
+			"Mutex locks should never fail");
 		break;
 	case WIN32_MUTEX_IMPL_CRITICALSECTION:
 		KERNEL32_EnterCriticalSection(&mutex->impl.critsec);
@@ -315,7 +325,8 @@ void win32_mutex_lock(mt_mutex_t *mutex)
 			++mutex->impl.srwlock.count;
 		} else {
 			KERNEL32_AcquireSRWLockExclusive(&mutex->impl.srwlock.srw);
-			SCHISM_RUNTIME_ASSERT(!mutex->impl.srwlock.count && !mutex->impl.srwlock.owner, "Mutex is not empty? Schism bug!");
+			SCHISM_RUNTIME_ASSERT(!mutex->impl.srwlock.count && !mutex->impl.srwlock.owner,
+				"Mutex is not empty? Schism bug!");
 			mutex->impl.srwlock.count = 1;
 			mutex->impl.srwlock.owner = id;
 		}
@@ -326,7 +337,8 @@ void win32_mutex_lock(mt_mutex_t *mutex)
 
 void win32_mutex_unlock(mt_mutex_t *mutex)
 {
-	if (!mutex) return;
+	if (!mutex)
+		return;
 
 	switch (win32_mutex_impl) {
 	case WIN32_MUTEX_IMPL_MUTEX:
@@ -355,10 +367,10 @@ void win32_mutex_unlock(mt_mutex_t *mutex)
 // the BeOS condition variable emulation, by Christopher Tate and
 // Owen Smith, including most comments.
 
-static void (WINAPI *KERNEL32_InitializeConditionVariable)(PCONDITION_VARIABLE);
-static BOOL (WINAPI *KERNEL32_SleepConditionVariableCS)(PCONDITION_VARIABLE, PCRITICAL_SECTION, DWORD);
-static BOOL (WINAPI *KERNEL32_SleepConditionVariableSRW)(PCONDITION_VARIABLE, PSRWLOCK, DWORD, ULONG);
-static void (WINAPI *KERNEL32_WakeConditionVariable)(PCONDITION_VARIABLE);
+static void(WINAPI *KERNEL32_InitializeConditionVariable)(PCONDITION_VARIABLE);
+static BOOL(WINAPI *KERNEL32_SleepConditionVariableCS)(PCONDITION_VARIABLE, PCRITICAL_SECTION, DWORD);
+static BOOL(WINAPI *KERNEL32_SleepConditionVariableSRW)(PCONDITION_VARIABLE, PSRWLOCK, DWORD, ULONG);
+static void(WINAPI *KERNEL32_WakeConditionVariable)(PCONDITION_VARIABLE);
 
 static enum {
 	WIN32_COND_IMPL_FAKE = 0,
@@ -408,13 +420,17 @@ mt_cond_t *win32_cond_create(void)
 
 void win32_cond_delete(mt_cond_t *cond)
 {
-	if (!cond) return;
+	if (!cond)
+		return;
 
 	switch (win32_cond_impl) {
 	case WIN32_COND_IMPL_FAKE:
-		if (cond->impl.fake.sem) CloseHandle(cond->impl.fake.sem);
-		if (cond->impl.fake.handshake_sem) CloseHandle(cond->impl.fake.handshake_sem);
-		if (cond->impl.fake.signal_sem) CloseHandle(cond->impl.fake.signal_sem);
+		if (cond->impl.fake.sem)
+			CloseHandle(cond->impl.fake.sem);
+		if (cond->impl.fake.handshake_sem)
+			CloseHandle(cond->impl.fake.handshake_sem);
+		if (cond->impl.fake.signal_sem)
+			CloseHandle(cond->impl.fake.signal_sem);
 		break;
 	case WIN32_COND_IMPL_VISTA:
 		// LET'S SEE WHAT'S IN THE BOX!
@@ -426,7 +442,8 @@ void win32_cond_delete(mt_cond_t *cond)
 
 void win32_cond_signal(mt_cond_t *cond)
 {
-	if (!cond) return;
+	if (!cond)
+		return;
 
 	switch (win32_cond_impl) {
 	case WIN32_COND_IMPL_FAKE:
@@ -460,7 +477,8 @@ static inline SCHISM_ALWAYS_INLINE int win32_cond_wait_fake_impl_(mt_cond_t *con
 	int result = 0;
 
 	// validate the arguments
-	if (!cond || !mutex) return 0;
+	if (!cond || !mutex)
+		return 0;
 
 	// record the fact that we're waiting on the semaphore.  This action is
 	// protected by a mutex because exclusive access to the waiter count is
@@ -500,7 +518,8 @@ static inline SCHISM_ALWAYS_INLINE int win32_cond_wait_fake_impl_(mt_cond_t *con
 	return result;
 }
 
-static inline SCHISM_ALWAYS_INLINE int win32_cond_wait_vista_impl_(mt_cond_t *cond, mt_mutex_t *mutex, uint32_t *timeout)
+static inline SCHISM_ALWAYS_INLINE int win32_cond_wait_vista_impl_(
+	mt_cond_t *cond, mt_mutex_t *mutex, uint32_t *timeout)
 {
 	switch (win32_mutex_impl) {
 	case WIN32_MUTEX_IMPL_SRWLOCK: {
@@ -512,17 +531,20 @@ static inline SCHISM_ALWAYS_INLINE int win32_cond_wait_vista_impl_(mt_cond_t *co
 		mutex->impl.srwlock.count = 0;
 		mutex->impl.srwlock.owner = 0;
 
-		int result = KERNEL32_SleepConditionVariableSRW(&cond->impl.vista, &mutex->impl.srwlock.srw, timeout ? *timeout : INFINITE, 0);
+		int result = KERNEL32_SleepConditionVariableSRW(
+			&cond->impl.vista, &mutex->impl.srwlock.srw, timeout ? *timeout : INFINITE, 0);
 
 		// Mutex is always owned by us now
-		SCHISM_RUNTIME_ASSERT(!mutex->impl.srwlock.count && !mutex->impl.srwlock.owner, "SRWlock should not have an internal owner after a condition variable wait");
+		SCHISM_RUNTIME_ASSERT(!mutex->impl.srwlock.count && !mutex->impl.srwlock.owner,
+			"SRWlock should not have an internal owner after a condition variable wait");
 		mutex->impl.srwlock.count = 1;
 		mutex->impl.srwlock.owner = id;
 
 		return result;
 	}
 	case WIN32_MUTEX_IMPL_CRITICALSECTION:
-		return KERNEL32_SleepConditionVariableCS(&cond->impl.vista, &mutex->impl.critsec, timeout ? *timeout : INFINITE);
+		return KERNEL32_SleepConditionVariableCS(
+			&cond->impl.vista, &mutex->impl.critsec, timeout ? *timeout : INFINITE);
 	default:
 		// Should never happen
 		return 0;
@@ -573,7 +595,8 @@ static mt_sem_t *win32_sem_create(void)
 
 static void win32_sem_delete(mt_sem_t *sem)
 {
-	if (!sem || !sem->sem) return;
+	if (!sem || !sem->sem)
+		return;
 
 	CloseHandle(sem->sem);
 }
@@ -608,10 +631,10 @@ static int win32_threads_init(void)
 #endif
 
 #ifdef SCHISM_XBOX
-# define KERNEL32_FUNC_XBOX(x) KERNEL32_##x = x
+# define KERNEL32_FUNC_XBOX(x)  KERNEL32_##x = x
 # define KERNEL32_FUNC_WIN32(x) KERNEL32_##x = NULL
 #else
-# define KERNEL32_FUNC_XBOX(x) KERNEL32_##x = loadso_function_load(lib_kernel32, #x)
+# define KERNEL32_FUNC_XBOX(x)  KERNEL32_##x = loadso_function_load(lib_kernel32, #x)
 # define KERNEL32_FUNC_WIN32(x) KERNEL32_FUNC_XBOX(x)
 #endif
 
@@ -641,8 +664,10 @@ static int win32_threads_init(void)
 	}
 #endif
 
-	const int critsec_ok = KERNEL32_InitializeCriticalSection && KERNEL32_DeleteCriticalSection && KERNEL32_EnterCriticalSection && KERNEL32_LeaveCriticalSection;
-	const int srwlock_ok = KERNEL32_InitializeSRWLock && KERNEL32_AcquireSRWLockExclusive && KERNEL32_ReleaseSRWLockExclusive;
+	const int critsec_ok = KERNEL32_InitializeCriticalSection && KERNEL32_DeleteCriticalSection
+			       && KERNEL32_EnterCriticalSection && KERNEL32_LeaveCriticalSection;
+	const int srwlock_ok
+		= KERNEL32_InitializeSRWLock && KERNEL32_AcquireSRWLockExclusive && KERNEL32_ReleaseSRWLockExclusive;
 
 	if (srwlock_ok) {
 		win32_mutex_impl = WIN32_MUTEX_IMPL_SRWLOCK;

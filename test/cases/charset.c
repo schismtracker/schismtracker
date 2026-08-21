@@ -21,8 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
 #include "test-assertions.h"
+#include "test.h"
 
 #include "charset.h"
 
@@ -37,21 +37,21 @@
 		char outbuf[sizeof(expectoutput)]; \
 		char *outbufptr = outbuf; \
 		size_t outbufsz = sizeof(outbuf); \
-	\
+\
 		x = charset_iconv_v2_open(inset, outset, 0); \
 		REQUIRE(x);
 
 #define TEST_CHARSET_ICONV_V2_END \
-		ASSERT(inbufptr == (inbuf + sizeof(inbuf))); \
-		ASSERT(inbufsz == 0); \
-		ASSERT(outbufptr == (outbuf + sizeof(outbuf))); \
-		ASSERT(outbufsz == 0); \
-	\
-		ASSERT(memcmp(expect, outbuf, sizeof(outbuf)) == 0); \
-	\
-		charset_iconv_v2_close(x); \
-	\
-		RETURN_PASS; \
+	ASSERT(inbufptr == (inbuf + sizeof(inbuf))); \
+	ASSERT(inbufsz == 0); \
+	ASSERT(outbufptr == (outbuf + sizeof(outbuf))); \
+	ASSERT(outbufsz == 0); \
+\
+	ASSERT(memcmp(expect, outbuf, sizeof(outbuf)) == 0); \
+\
+	charset_iconv_v2_close(x); \
+\
+	RETURN_PASS; \
 	}
 
 #define TEST_STRING \
@@ -123,7 +123,8 @@ TEST_CHARSET_ICONV_V2_BEGIN(_ansi, CHARSET_ANSI, CHARSET_UTF8, "himynameiscarmen
 }
 TEST_CHARSET_ICONV_V2_END
 
-TEST_CHARSET_ICONV_V2_BEGIN(_ansiout, CHARSET_UTF8, CHARSET_ANSI, "himynameiscarmenwinstead", "himynameiscarmenwinstead")
+TEST_CHARSET_ICONV_V2_BEGIN(
+	_ansiout, CHARSET_UTF8, CHARSET_ANSI, "himynameiscarmenwinstead", "himynameiscarmenwinstead")
 {
 	charset_error_t r;
 

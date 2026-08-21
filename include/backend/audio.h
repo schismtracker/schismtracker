@@ -24,9 +24,9 @@
 #ifndef SCHISM_BACKEND_AUDIO_H_
 #define SCHISM_BACKEND_AUDIO_H_
 
-#include "../song.h"
-#include "../mt.h"
 #include "../atomic.h"
+#include "../mt.h"
+#include "../song.h"
 
 /* constants */
 
@@ -61,7 +61,8 @@ typedef struct {
 	int (*init_driver)(const char *driver);
 	void (*quit_driver)(void);
 
-	schism_audio_device_t *(*open_device)(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained);
+	schism_audio_device_t *(*open_device)(
+		uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained);
 	void (*close_device)(schism_audio_device_t *device);
 	void (*lock_device)(schism_audio_device_t *device);
 	void (*unlock_device)(schism_audio_device_t *device);
@@ -149,10 +150,8 @@ struct schism_audio_device_simple {
 	void (*callback)(uint8_t *stream, uint32_t len);
 };
 
-int audio_simple_init(schism_audio_device_t *dev_,
-	const struct schism_audio_device_simple_vtable *vtbl,
-	void (*callback)(uint8_t *stream, uint32_t len),
-	uint8_t silence);
+int audio_simple_init(schism_audio_device_t *dev_, const struct schism_audio_device_simple_vtable *vtbl,
+	void (*callback)(uint8_t *stream, uint32_t len), uint8_t silence);
 void audio_simple_close(struct schism_audio_device_simple *dev);
 int audio_simple_worker(struct schism_audio_device_simple *dev);
 

@@ -23,17 +23,17 @@
 
 #include "headers.h"
 
-#include "slurp.h"
 #include "fmt.h"
-#include "util.h"
-#include "osdefs.h"
 #include "mem.h"
+#include "osdefs.h"
+#include "slurp.h"
+#include "util.h"
 
 /* --------------------------------------------------------------------- */
 
 static int slurp_stdio_open_(slurp_t *t, const char *filename, uint64_t size);
 
-int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
+int slurp(slurp_t *t, const char *filename, struct stat *buf, uint64_t size)
 {
 	static int (*const init_funcs[])(slurp_t *t, const char *filename, uint64_t size) = {
 #ifdef SCHISM_WIN32
@@ -84,7 +84,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 		return -1;
 	}
 
-finished: ; /* this semicolon is important because C */
+finished:; /* this semicolon is important because C */
 #ifdef USE_ZLIB
 	/* do this before mmcmp handling, so gzip'd mmcmp'd modules
 	 * will load correctly
@@ -131,7 +131,7 @@ finished: ; /* this semicolon is important because C */
 	return 0;
 }
 
-void unslurp(slurp_t * t)
+void unslurp(slurp_t *t)
 {
 	if (!t)
 		return;
@@ -232,7 +232,7 @@ int slurp_stdio(slurp_t *t, FILE *fp)
 		/* A BARBERSHOP HAIRCUT THAT COSTS A QUARTER */
 		t->seek = slurp_stdio_seek_;
 		t->tell = slurp_stdio_tell_;
-		t->eof  = slurp_stdio_eof_;
+		t->eof = slurp_stdio_eof_;
 		t->read = slurp_stdio_read_;
 		t->length = slurp_stdio_length_;
 	}
@@ -309,7 +309,8 @@ static size_t slurp_memory_peek_(slurp_t *t, void *ptr, size_t count)
 	return count;
 }
 
-static int slurp_memory_receive_(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
+static int slurp_memory_receive_(
+	slurp_t *t, int (*callback)(const void *, size_t, void *), size_t count, void *userdata)
 {
 	/* xd */
 	ptrdiff_t bytesleft = (ptrdiff_t)t->internal.memory.length - t->internal.memory.pos;
@@ -518,7 +519,7 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
 
 	for (;;) {
-		size_t l = sf2_slurp_cap(s, count);		
+		size_t l = sf2_slurp_cap(s, count);
 		if (!l)
 			break;
 
@@ -586,8 +587,7 @@ int slurp_sf2v2(slurp_t *s, slurp_t *in, size_t num, int64_t off1, int64_t len1,
 	return 0;
 }
 
-void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
-	int64_t off2, size_t len2)
+void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1, int64_t off2, size_t len2)
 {
 	slurp_sf2v2(s, in, 2, off1, len1, off2, len2);
 }
@@ -621,9 +621,13 @@ static int slurp_nonseek_available(slurp_t *fp, size_t x, int whence)
 	int64_t pos = x;
 
 	switch (whence) {
-	case SEEK_SET: break;
-	case SEEK_CUR: pos += fp->internal.memory.pos; break;
-	case SEEK_END: return !x;
+	case SEEK_SET:
+		break;
+	case SEEK_CUR:
+		pos += fp->internal.memory.pos;
+		break;
+	case SEEK_END:
+		return !x;
 	}
 
 	while (pos > (int64_t)ns->ds.length) {
@@ -665,10 +669,8 @@ static uint64_t slurp_nonseek_length(slurp_t *fp)
 	return fp->internal.memory.length;
 }
 
-int slurp_init_nonseek(slurp_t *fp,
-	size_t (*read_func)(void *opaque, disko_t *ds, size_t count),
-	void (*closure)(void *opaque),
-	void *opaque)
+int slurp_init_nonseek(slurp_t *fp, size_t (*read_func)(void *opaque, disko_t *ds, size_t count),
+	void (*closure)(void *opaque), void *opaque)
 {
 	struct slurp_nonseek *ns = mem_calloc(1, sizeof(*ns));
 
@@ -701,7 +703,8 @@ int slurp_seek(slurp_t *t, int64_t offset, int whence)
 	int64_t offcheck = offset;
 
 	switch (whence) {
-	case SEEK_SET: break;
+	case SEEK_SET:
+		break;
 	case SEEK_CUR: {
 		int64_t pos = slurp_tell(t);
 
@@ -731,8 +734,7 @@ int64_t slurp_tell(slurp_t *t)
 	return t->tell(t);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-void slurp_fill_remaining(slurp_t *t, void *ptr, size_t read, size_t count)
+static inline SCHISM_ALWAYS_INLINE void slurp_fill_remaining(slurp_t *t, void *ptr, size_t read, size_t count)
 {
 	if (count > read) {
 		/* short read -- fill in any extra bytes with zeroes */
@@ -741,8 +743,7 @@ void slurp_fill_remaining(slurp_t *t, void *ptr, size_t read, size_t count)
 	}
 }
 
-static inline SCHISM_ALWAYS_INLINE
-size_t slurp_limit_count(slurp_t *t, size_t count)
+static inline SCHISM_ALWAYS_INLINE size_t slurp_limit_count(slurp_t *t, size_t count)
 {
 	int64_t pos;
 
@@ -857,9 +858,13 @@ int slurp_could_seek(slurp_t *fp, int64_t x, int whence)
 		int64_t pos = 0;
 
 		switch (whence) {
-		case SEEK_SET: break;
-		case SEEK_CUR: pos += slurp_tell(fp); break;
-		case SEEK_END: return (x <= 0); /* file pointers past the end are not valid */
+		case SEEK_SET:
+			break;
+		case SEEK_CUR:
+			pos += slurp_tell(fp);
+			break;
+		case SEEK_END:
+			return (x <= 0); /* file pointers past the end are not valid */
 		}
 
 		if (pos < 0)

@@ -45,12 +45,12 @@ int sdl12_putenv(const char *penv);
 int sdl12_load_sym(const char *fn, void *addr);
 
 # define SCHISM_SDL12_SYM(x) \
-	if (!sdl12_load_sym("SDL_" #x, &sdl12_##x)) return -1
+	 if (!sdl12_load_sym("SDL_" #x, &sdl12_##x)) \
+	 return -1
 
 #else
 
-# define SCHISM_SDL12_SYM(x) \
-	sdl12_##x = SDL_##x
+# define SCHISM_SDL12_SYM(x) sdl12_##x = SDL_##x
 
 #endif
 

@@ -22,8 +22,8 @@
  */
 
 #include "headers.h"
-#include "fmt.h"
 #include "bits.h"
+#include "fmt.h"
 
 // ------------------------------------------------------------------------------------------------------------
 // IT decompression code from itsex.c (Cubic Player) and load_it.cpp (Modplug)
@@ -49,7 +49,6 @@ static uint32_t it_readbits(int8_t n, uint32_t *bitbuf, uint32_t *bitnum, slurp_
 	return value >> (32 - n);
 }
 
-
 uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int channels)
 {
 	int8_t *destpos;                // position in destination buffer which will be returned
@@ -58,14 +57,14 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 	uint8_t width;                  // actual "bit width"
 	uint16_t value;                 // value read from file to be processed
 	int8_t d1, d2;                  // integrator buffers (d2 for it2.15)
-	int8_t v;                       // sample value
+	int8_t v;         // sample value
 	uint32_t bitbuf, bitnum;        // state for it_readbits
 
 	const int64_t startpos = slurp_tell(fp);
 	if (startpos < 0)
 		return 0; // wat
 
-	destpos = (int8_t *) dest;
+	destpos = (int8_t *)dest;
 
 	// now unpack data till the dest buffer is full
 	while (len) {
@@ -79,8 +78,7 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 			if (pos < 0)
 				return 0;
 
-			if (c1 == EOF || c2 == EOF
-				|| !slurp_could_seek(fp, c1 | (c2 << 8), SEEK_CUR))
+			if (c1 == EOF || c2 == EOF || !slurp_could_seek(fp, c1 | (c2 << 8), SEEK_CUR))
 				return pos - startpos;
 		}
 		bitbuf = bitnum = 0;
@@ -132,7 +130,7 @@ uint32_t it_decompress8(void *dest, uint32_t len, slurp_t *fp, int it215, int ch
 				v = (value << shift);
 				v >>= shift;
 			} else {
-				v = (int8_t) value;
+				v = (int8_t)value;
 			}
 
 			// integrate upon the sample values
@@ -160,14 +158,14 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 	uint8_t width;                  // actual "bit width"
 	uint32_t value;                 // value read from file to be processed
 	int16_t d1, d2;                 // integrator buffers (d2 for it2.15)
-	int16_t v;                      // sample value
+	int16_t v;        // sample value
 	uint32_t bitbuf, bitnum;        // state for it_readbits
 
 	const int64_t startpos = slurp_tell(fp);
 	if (startpos < 0)
 		return 0; // wat
 
-	destpos = (int16_t *) dest;
+	destpos = (int16_t *)dest;
 
 	// now unpack data till the dest buffer is full
 	while (len) {
@@ -181,8 +179,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 			if (pos < 0)
 				return 0;
 
-			if (c1 == EOF || c2 == EOF
-				|| !slurp_could_seek(fp, c1 | (c2 << 8), SEEK_CUR))
+			if (c1 == EOF || c2 == EOF || !slurp_could_seek(fp, c1 | (c2 << 8), SEEK_CUR))
 				return pos - startpos;
 		}
 
@@ -206,7 +203,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 			if (width < 7) {
 				// method 1 (1-6 bits)
 				// check for "100..."
-				if (value == (uint32_t) 1 << (width - 1)) {
+				if (value == (uint32_t)1 << (width - 1)) {
 					// yes!
 					value = it_readbits(4, &bitbuf, &bitnum, fp) + 1; // read new width
 					width = (value < width) ? value : value + 1; // and expand it
@@ -215,7 +212,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 			} else if (width < 17) {
 				// method 2 (7-16 bits)
 				uint16_t border = (0xFFFF >> (17 - width)) - 8; // lower border for width chg
-				if (value > border && value <= (uint32_t) (border + 16)) {
+				if (value > border && value <= (uint32_t)(border + 16)) {
 					value -= border; // convert width to 1-8
 					width = (value < width) ? value : value + 1; // and expand it
 					continue; // ... next value
@@ -235,7 +232,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 				v = (value << shift);
 				v >>= shift;
 			} else {
-				v = (int16_t) value;
+				v = (int16_t)value;
 			}
 
 			// integrate upon the sample values
@@ -259,7 +256,7 @@ uint32_t it_decompress16(void *dest, uint32_t len, slurp_t *fp, int it215, int c
 
 static uint16_t mdl_read_bits(uint32_t *bitbuf, uint32_t *bitnum, slurp_t *fp, int8_t n)
 {
-	uint16_t v = (uint16_t)((*bitbuf) & ((1 << n) - 1) );
+	uint16_t v = (uint16_t)((*bitbuf) & ((1 << n) - 1));
 	(*bitbuf) >>= n;
 	(*bitnum) -= n;
 	if ((*bitnum) <= 24) {
@@ -291,7 +288,7 @@ uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
 
 	uint8_t *data = dest;
 
-	for (uint32_t j=0; j<len; j++) {
+	for (uint32_t j = 0; j < len; j++) {
 		uint8_t sign = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 1);
 
 		uint8_t hibyte;
@@ -299,7 +296,8 @@ uint32_t mdl_decompress8(void *dest, uint32_t len, slurp_t *fp)
 			hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 3);
 		} else {
 			hibyte = 8;
-			while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1)) hibyte += 0x10;
+			while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1))
+				hibyte += 0x10;
 			hibyte += mdl_read_bits(&bitbuf, &bitnum, fp, 4);
 		}
 
@@ -336,7 +334,7 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
 
 	uint16_t *data = dest;
 
-	for (uint32_t j=0; j<len; j++) {
+	for (uint32_t j = 0; j < len; j++) {
 		uint8_t hibyte;
 		uint8_t sign;
 
@@ -347,10 +345,12 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
 			hibyte = (uint8_t)mdl_read_bits(&bitbuf, &bitnum, fp, 3);
 		} else {
 			hibyte = 8;
-			while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1)) hibyte += 0x10;
+			while (!mdl_read_bits(&bitbuf, &bitnum, fp, 1))
+				hibyte += 0x10;
 			hibyte += mdl_read_bits(&bitbuf, &bitnum, fp, 4);
 		}
-		if (sign) hibyte = ~hibyte;
+		if (sign)
+			hibyte = ~hibyte;
 		dlt += hibyte;
 
 		data[j] = ((uint16_t)dlt << 8) | lowbyte;
@@ -397,11 +397,11 @@ uint32_t mdl_decompress16(void *dest, uint32_t len, slurp_t *fp)
  *                      - Enable the provision of initial input to blast()
  */
 
-#include <stddef.h>             /* for NULL */
 #include <setjmp.h>             /* for setjmp(), longjmp(), and jmp_buf */
+#include <stddef.h>             /* for NULL */
 
-#define MAXBITS 13               /* maximum code length */
-#define MAXWIN 4096              /* maximum output window size */
+#define MAXBITS            13               /* maximum code length */
+#define MAXWIN             4096              /* maximum output window size */
 #define HUFFMAN_CHUNK_SIZE 65536 /* chunk size for input */
 
 /* input and output state */
@@ -445,7 +445,8 @@ static int32_t huffman_bits(struct state *s, int32_t need)
 		if (s->left == 0) {
 			s->left = slurp_read(s->slurp, s->inbuf, sizeof(s->inbuf));
 			s->in = s->inbuf;
-			if (s->left == 0) longjmp(s->env, 1);       /* out of input */
+			if (s->left == 0)
+				longjmp(s->env, 1);       /* out of input */
 		}
 		val |= (int32_t)(*(s->in)++) << s->bitcnt;          /* load eight bits */
 		s->left--;
@@ -525,18 +526,21 @@ static int32_t huffman_decode(struct state *s, struct huffman *h)
 			code <<= 1;
 			len++;
 		}
-		left = (MAXBITS+1) - len;
-		if (left == 0) break;
+		left = (MAXBITS + 1) - len;
+		if (left == 0)
+			break;
 		if (s->left == 0) {
 			s->left = slurp_read(s->slurp, s->inbuf, sizeof(s->inbuf));
 			s->in = s->inbuf;
-			if (s->left == 0) longjmp(s->env, 1);       /* out of input */
+			if (s->left == 0)
+				longjmp(s->env, 1);       /* out of input */
 		}
 		bitbuf = *(s->in)++;
 		s->left--;
-		if (left > 8) left = 8;
+		if (left > 8)
+			left = 8;
 	}
-	return -9;                          /* ran out of codes */
+	return -9;     /* ran out of codes */
 }
 
 /*
@@ -561,7 +565,7 @@ static int32_t huffman_construct(struct huffman *h, const unsigned char *rep, in
 	int32_t symbol;         /* current symbol when stepping through length[] */
 	int32_t len;            /* current length when stepping through h->count[] */
 	int32_t left;           /* number of possible codes left of current length */
-	int16_t offs[MAXBITS+1];      /* offsets in symbol table for each length */
+	int16_t offs[MAXBITS + 1];      /* offsets in symbol table for each length */
 	int16_t length[256];  /* code lengths */
 
 	/* convert compact repeat counts into symbol bit length list */
@@ -585,12 +589,13 @@ static int32_t huffman_construct(struct huffman *h, const unsigned char *rep, in
 		return 0;                       /* complete, but decode() will fail */
 
 	/* check for an over-subscribed or incomplete set of lengths */
-	left = 1;                           /* one possible code of zero length */
+	left = 1;      /* one possible code of zero length */
 	for (len = 1; len <= MAXBITS; len++) {
 		left <<= 1;                     /* one more bit, double codes left */
 		left -= h->count[len];          /* deduct count from possible codes */
-		if (left < 0) return left;      /* over-subscribed--return negative */
-	}                                   /* left > 0 means incomplete */
+		if (left < 0)
+			return left;      /* over-subscribed--return negative */
+	}       /* left > 0 means incomplete */
 
 	/* generate offsets into symbol table for each length for sorting */
 	offs[1] = 0;
@@ -657,20 +662,17 @@ static int32_t huffman_decomp(struct state *s)
 	int32_t copy;           /* copy counter */
 	unsigned char *from, *to;   /* copy pointers */
 	static int virgin = 1;                              /* build tables once */
-	static short litcnt[MAXBITS+1], litsym[256];        /* litcode memory */
-	static short lencnt[MAXBITS+1], lensym[16];         /* lencode memory */
-	static short distcnt[MAXBITS+1], distsym[64];       /* distcode memory */
+	static short litcnt[MAXBITS + 1], litsym[256];        /* litcode memory */
+	static short lencnt[MAXBITS + 1], lensym[16];         /* lencode memory */
+	static short distcnt[MAXBITS + 1], distsym[64];       /* distcode memory */
 	static struct huffman litcode = {litcnt, litsym};   /* length code */
 	static struct huffman lencode = {lencnt, lensym};   /* length code */
 	static struct huffman distcode = {distcnt, distsym};/* distance code */
 		/* bit lengths of literal codes */
-	static const unsigned char litlen[] = {
-		11, 124, 8, 7, 28, 7, 188, 13, 76, 4, 10, 8, 12, 10, 12, 10, 8, 23, 8,
-		9, 7, 6, 7, 8, 7, 6, 55, 8, 23, 24, 12, 11, 7, 9, 11, 12, 6, 7, 22, 5,
-		7, 24, 6, 11, 9, 6, 7, 22, 7, 11, 38, 7, 9, 8, 25, 11, 8, 11, 9, 12,
-		8, 12, 5, 38, 5, 38, 5, 11, 7, 5, 6, 21, 6, 10, 53, 8, 7, 24, 10, 27,
-		44, 253, 253, 253, 252, 252, 252, 13, 12, 45, 12, 45, 12, 61, 12, 45,
-		44, 173};
+	static const unsigned char litlen[] = {11, 124, 8, 7, 28, 7, 188, 13, 76, 4, 10, 8, 12, 10, 12, 10, 8, 23, 8, 9,
+		7, 6, 7, 8, 7, 6, 55, 8, 23, 24, 12, 11, 7, 9, 11, 12, 6, 7, 22, 5, 7, 24, 6, 11, 9, 6, 7, 22, 7, 11,
+		38, 7, 9, 8, 25, 11, 8, 11, 9, 12, 8, 12, 5, 38, 5, 38, 5, 11, 7, 5, 6, 21, 6, 10, 53, 8, 7, 24, 10, 27,
+		44, 253, 253, 253, 252, 252, 252, 13, 12, 45, 12, 45, 12, 61, 12, 45, 44, 173};
 		/* bit lengths of length codes 0..15 */
 	static const unsigned char lenlen[] = {2, 35, 36, 53, 38, 23};
 		/* bit lengths of distance codes 0..63 */
@@ -690,9 +692,11 @@ static int32_t huffman_decomp(struct state *s)
 
 	/* read header */
 	lit = huffman_bits(s, 8);
-	if (lit > 1) return -1;
+	if (lit > 1)
+		return -1;
 	dict = huffman_bits(s, 8);
-	if (dict < 4 || dict > 6) return -2;
+	if (dict < 4 || dict > 6)
+		return -2;
 
 	/* decode literals and length/distance pairs */
 	do {
@@ -700,7 +704,8 @@ static int32_t huffman_decomp(struct state *s)
 			/* get length */
 			symbol = huffman_decode(s, &lencode);
 			len = base[symbol] + huffman_bits(s, extra[symbol]);
-			if (len == 519) break;              /* end code */
+			if (len == 519)
+				break;              /* end code */
 
 			/* get distance */
 			symbol = len == 2 ? 2 : dict;
@@ -720,7 +725,8 @@ static int32_t huffman_decomp(struct state *s)
 					copy = dist;
 				}
 				copy -= s->next;
-				if (copy > len) copy = len;
+				if (copy > len)
+					copy = len;
 				len -= copy;
 				s->next += copy;
 				do {

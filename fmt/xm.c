@@ -23,9 +23,9 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "it.h" // needed for get_effect_char (purely informational)
 #include "log.h"
@@ -56,7 +56,8 @@ struct xm_file_header {
 static int read_header_xm(struct xm_file_header *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) \
+	return 0
 
 	READ_VALUE(id);
 	READ_VALUE(name);
@@ -75,8 +76,7 @@ static int read_header_xm(struct xm_file_header *hdr, slurp_t *fp)
 
 #undef READ_VALUE
 
-	if (memcmp(hdr->id, "Extended Module: ", sizeof(hdr->id))
-		|| hdr->doseof != 0x1a)
+	if (memcmp(hdr->id, "Extended Module: ", sizeof(hdr->id)) || hdr->doseof != 0x1a)
 		return 0;
 
 	/* now byteswap */
@@ -116,11 +116,15 @@ int fmt_xm_read_info(dmoz_file_t *file, slurp_t *fp)
 /* --------------------------------------------------------------------------------------------------------- */
 
 static uint8_t autovib_import[8] = {
-	VIB_SINE, VIB_SQUARE,
+	VIB_SINE,
+	VIB_SQUARE,
 	VIB_RAMP_DOWN, // actually ramp up
-	VIB_RAMP_DOWN, VIB_RANDOM,
+	VIB_RAMP_DOWN,
+	VIB_RANDOM,
 	// default to sine
-	VIB_SINE, VIB_SINE, VIB_SINE,
+	VIB_SINE,
+	VIB_SINE,
+	VIB_SINE,
 };
 
 static inline unsigned char xm_getc(slurp_t *fp, unsigned char def)
@@ -133,7 +137,6 @@ static inline unsigned char xm_getc(slurp_t *fp, unsigned char def)
 
 	return x;
 }
-
 
 static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *fp)
 {
@@ -185,11 +188,16 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 			for (chan = 0; !slurp_eof(fp) && chan < hdr->channels; chan++, note++) {
 				b = slurp_getc(fp);
 				if (b & 128) {
-					if (b & 1) note->note = slurp_getc(fp);
-					if (b & 2) note->instrument = slurp_getc(fp);
-					if (b & 4) note->volparam = slurp_getc(fp);
-					if (b & 8) note->effect = slurp_getc(fp);
-					if (b & 16) note->param = slurp_getc(fp);
+					if (b & 1)
+						note->note = slurp_getc(fp);
+					if (b & 2)
+						note->instrument = slurp_getc(fp);
+					if (b & 4)
+						note->volparam = slurp_getc(fp);
+					if (b & 8)
+						note->effect = slurp_getc(fp);
+					if (b & 16)
+						note->param = slurp_getc(fp);
 				} else {
 					note->note = b;
 					note->instrument = slurp_getc(fp);
@@ -235,8 +243,10 @@ static void load_xm_patterns(song_t *song, struct xm_file_header *hdr, slurp_t *
 				switch (note->volparam >> 4) {
 				case 5: // 0x50 = volume 64, 51-5F = nothing
 					if (note->volparam == 0x50) {
-				case 1: case 2:
-				case 3: case 4: // Set volume Value-$10
+					case 1:
+					case 2:
+					case 3:
+					case 4: // Set volume Value-$10
 						note->voleffect = FX_VOLUME;
 						note->volparam -= 0x10;
 						break;
@@ -435,7 +445,10 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 			smp->loop_end >>= 1;
 		}
 		if (smp->adlib_bytes[0] != 0xAD) {
-			csf_read_sample(smp, SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
+			csf_read_sample(smp,
+				SF_LE | ((smp->flags & CHN_STEREO) ? SF_SS : SF_M) | SF_PCMD
+					| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8),
+				fp);
 		} else {
 			smp->adlib_bytes[0] = 0;
 			csf_read_sample(smp, SF_8 | SF_M | SF_LE | SF_PCMD16, fp);
@@ -446,7 +459,7 @@ static void load_xm_samples(song_sample_t *first, int total, slurp_t *fp)
 // Volume/panning envelope loop fix
 // FT2 leaves out the final tick of the envelope loop causing a slight discrepancy when loading XI instruments directly
 // from an XM file into Schism
-// Works by adding a new end node one tick behind the previous loop end by linearly interpolating (or selecting 
+// Works by adding a new end node one tick behind the previous loop end by linearly interpolating (or selecting
 // an existing node there).
 // Runs generally the same for either type of envelope (vol/pan), pointed to by s_env.
 static void fix_xm_envelope_loop(song_envelope_t *s_env, int sustain_flag)
@@ -639,10 +652,10 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 				slurp_read(fp, &w, 2); // tick
 				w = bswapLE16(w);
 				if (n > 0 && w < prevtick && !(w & 0xFF00)) {
-					// libmikmod code says: "Some broken XM editing program will only save the low byte of the position
-					// value. Try to compensate by adding the missing high byte."
-					// Note: MPT 1.07's XI instrument saver omitted the high byte of envelope nodes.
-					// This might be the source for some broken envelopes in IT and XM files.
+					// libmikmod code says: "Some broken XM editing program will only save the low
+					// byte of the position value. Try to compensate by adding the missing high
+					// byte." Note: MPT 1.07's XI instrument saver omitted the high byte of envelope
+					// nodes. This might be the source for some broken envelopes in IT and XM files.
 					w |= (prevtick & 0xFF00U);
 					if (w < prevtick)
 						w += 0x100;
@@ -655,7 +668,8 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		}
 		for (i = 0; i < ARRAY_SIZE(envs); i++) {
 			b = slurp_getc(fp);
-			if (b != EOF) envs[i].env->nodes = CLAMP(b, 0, 12);
+			if (b != EOF)
+				envs[i].env->nodes = CLAMP(b, 0, 12);
 		}
 		for (i = 0; i < ARRAY_SIZE(envs); i++) {
 			b = slurp_getc(fp);
@@ -668,9 +682,12 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 		for (i = 0; i < ARRAY_SIZE(envs); i++) {
 			b = slurp_getc(fp);
 			if (b != EOF) {
-				if ((b & 1) && envs[i].env->nodes > 0) ins->flags |= envs[i].envflag;
-				if (b & 2) ins->flags |= envs[i].envsusloopflag;
-				if (b & 4) ins->flags |= envs[i].envloopflag;
+				if ((b & 1) && envs[i].env->nodes > 0)
+					ins->flags |= envs[i].envflag;
+				if (b & 2)
+					ins->flags |= envs[i].envsusloopflag;
+				if (b & 4)
+					ins->flags |= envs[i].envloopflag;
 			}
 		}
 
@@ -735,7 +752,6 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			}
 		}
 
-
 		// some other things...
 		ins->panning = 128;
 		ins->global_volume = 128;
@@ -787,14 +803,19 @@ static int load_xm_instruments(song_t *song, struct xm_file_header *hdr, slurp_t
 			if (smp->loop_start >= smp->loop_end)
 				b &= ~3; // that loop sucks, turn it off
 			switch (b & 3) {
-				/* NOTE: all cases fall through here.
-				In FT2, type 3 is played as pingpong, but the GUI doesn't show any selected
-				loop type. Apparently old MPT versions wrote 3 for pingpong loops, but that
-				doesn't seem to be reliable enough to declare "THIS WAS MPT" because it seems
-				FT2 would also SAVE that broken data after loading an instrument with loop
-				type 3 was set. I have no idea. */
-				case 3: case 2: smp->flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
-				case 1: smp->flags |= CHN_LOOP; break;
+			/* NOTE: all cases fall through here.
+			In FT2, type 3 is played as pingpong, but the GUI doesn't show any selected
+			loop type. Apparently old MPT versions wrote 3 for pingpong loops, but that
+			doesn't seem to be reliable enough to declare "THIS WAS MPT" because it seems
+			FT2 would also SAVE that broken data after loading an instrument with loop
+			type 3 was set. I have no idea. */
+			case 3:
+			case 2:
+				smp->flags |= CHN_PINGPONGLOOP;
+				SCHISM_FALLTHROUGH;
+			case 1:
+				smp->flags |= CHN_LOOP;
+				break;
 			}
 			if (b & 0x10) {
 				smp->flags |= CHN_16BIT;
@@ -934,7 +955,8 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 					break;
 				}
 
-				if (xtpm) break;
+				if (xtpm)
+					break;
 			}
 		}
 
@@ -956,4 +978,3 @@ int fmt_xm_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 
 	return LOAD_SUCCESS;
 }
-

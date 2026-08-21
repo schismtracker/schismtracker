@@ -20,16 +20,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#define NATIVE_SCREEN_WIDTH             640
-#define NATIVE_SCREEN_HEIGHT            400
+#define NATIVE_SCREEN_WIDTH  640
+#define NATIVE_SCREEN_HEIGHT 400
 
 #include "headers.h"
-#include "osdefs.h"
+#include "it.h"
+#include "video.h"
 #include "config.h"
 #include "events.h"
 #include "mem.h"
-#include "video.h"
-#include "it.h"
+#include "osdefs.h"
 
 #include "backend/video.h"
 
@@ -50,13 +50,13 @@
 # include <fcntl.h>
 # include <linux/fb.h>
 #endif
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #if HAVE_SYS_IOCTL_H
 # include <sys/ioctl.h>
 #endif
 #if HAVE_SIGNAL_H
-#include <signal.h>
+# include <signal.h>
 #endif
 
 #include <SDL.h>
@@ -71,11 +71,11 @@
 #include "video.h"
 
 #ifndef SCHISM_MACOSX
-#ifdef SCHISM_WIN32
-#include "auto/schismico.h"
-#else
-#include "auto/schismico_hires.h"
-#endif
+# ifdef SCHISM_WIN32
+#  include "auto/schismico.h"
+# else
+#  include "auto/schismico_hires.h"
+# endif
 #endif
 
 #include "charset.h"
@@ -132,40 +132,41 @@ static struct video_cf {
 	uint32_t pal[256];
 } video;
 
-static int (SDLCALL *sdl12_InitSubSystem)(Uint32 flags);
-static void (SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
+static int(SDLCALL *sdl12_InitSubSystem)(Uint32 flags);
+static void(SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
 
 static char *(SDLCALL *sdl12_VideoDriverName)(char *namebuf, int maxlen);
 static const SDL_VideoInfo *(SDLCALL *sdl12_GetVideoInfo)(void);
-static void (SDLCALL *sdl12_WM_SetCaption)(const char *title, const char *icon);
+static void(SDLCALL *sdl12_WM_SetCaption)(const char *title, const char *icon);
 static SDL_Surface *(SDLCALL *sdl12_SetVideoMode)(int width, int height, int bpp, Uint32 flags);
 static SDL_Rect **(SDLCALL *sdl12_ListModes)(SDL_PixelFormat *format, Uint32 flags);
-static int (SDLCALL *sdl12_ShowCursor)(int toggle);
-static Uint32 (SDLCALL *sdl12_MapRGB)(const SDL_PixelFormat *fmt, Uint8 r, Uint8 g, Uint8 b);
-static int (SDLCALL *sdl12_SetColors)(SDL_Surface *surface, SDL_Color *colors, int firstcolor, int ncolors);
-static int (SDLCALL *sdl12_LockSurface)(SDL_Surface *surface);
-static void (SDLCALL *sdl12_Delay)(Uint32 ms);
-static void (SDLCALL *sdl12_UnlockSurface)(SDL_Surface *surface);
-static int (SDLCALL *sdl12_Flip)(SDL_Surface *screen);
-static SDL_GrabMode (SDLCALL *sdl12_WM_GrabInput)(SDL_GrabMode mode);
-static Uint8 (SDLCALL *sdl12_GetAppState)(void);
-static void (SDLCALL *sdl12_WarpMouse)(Uint16 x, Uint16 y);
-static Uint8 (SDLCALL *sdl12_EventState)(Uint8 type, int state);
-static void (SDLCALL *sdl12_FreeSurface)(SDL_Surface *surface);
-static void (SDLCALL *sdl12_WM_SetIcon)(SDL_Surface *icon, Uint8 *mask);
-static SDL_Surface *(SDLCALL *sdl12_CreateRGBSurfaceFrom)(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
-static int (SDLCALL *sdl12_EnableUNICODE)(int enable);
-static int (SDLCALL *sdl12_GetWMInfo)(SDL_SysWMinfo *);
+static int(SDLCALL *sdl12_ShowCursor)(int toggle);
+static Uint32(SDLCALL *sdl12_MapRGB)(const SDL_PixelFormat *fmt, Uint8 r, Uint8 g, Uint8 b);
+static int(SDLCALL *sdl12_SetColors)(SDL_Surface *surface, SDL_Color *colors, int firstcolor, int ncolors);
+static int(SDLCALL *sdl12_LockSurface)(SDL_Surface *surface);
+static void(SDLCALL *sdl12_Delay)(Uint32 ms);
+static void(SDLCALL *sdl12_UnlockSurface)(SDL_Surface *surface);
+static int(SDLCALL *sdl12_Flip)(SDL_Surface *screen);
+static SDL_GrabMode(SDLCALL *sdl12_WM_GrabInput)(SDL_GrabMode mode);
+static Uint8(SDLCALL *sdl12_GetAppState)(void);
+static void(SDLCALL *sdl12_WarpMouse)(Uint16 x, Uint16 y);
+static Uint8(SDLCALL *sdl12_EventState)(Uint8 type, int state);
+static void(SDLCALL *sdl12_FreeSurface)(SDL_Surface *surface);
+static void(SDLCALL *sdl12_WM_SetIcon)(SDL_Surface *icon, Uint8 *mask);
+static SDL_Surface *(SDLCALL *sdl12_CreateRGBSurfaceFrom)(void *pixels, int width, int height, int depth, int pitch,
+	Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
+static int(SDLCALL *sdl12_EnableUNICODE)(int enable);
+static int(SDLCALL *sdl12_GetWMInfo)(SDL_SysWMinfo *);
 #ifdef SCHISM_MACOS
-static void (SDLCALL *sdl12_InitQuickDraw)(struct QDGlobals *the_qd);
+static void(SDLCALL *sdl12_InitQuickDraw)(struct QDGlobals *the_qd);
 #endif
-static int (SDLCALL *sdl12_VideoModeOK)(int width, int height, int bpp, Uint32 flags);
+static int(SDLCALL *sdl12_VideoModeOK)(int width, int height, int bpp, Uint32 flags);
 
-static void (SDLCALL *sdl12_FreeYUVOverlay)(SDL_Overlay *overlay);
-static int (SDLCALL *sdl12_DisplayYUVOverlay)(SDL_Overlay *overlay, SDL_Rect *dstrect);
+static void(SDLCALL *sdl12_FreeYUVOverlay)(SDL_Overlay *overlay);
+static int(SDLCALL *sdl12_DisplayYUVOverlay)(SDL_Overlay *overlay, SDL_Rect *dstrect);
 static SDL_Overlay *(SDLCALL *sdl12_CreateYUVOverlay)(int width, int height, Uint32 format, SDL_Surface *display);
-static int (SDLCALL *sdl12_LockYUVOverlay)(SDL_Overlay *overlay);
-static void (SDLCALL *sdl12_UnlockYUVOverlay)(SDL_Overlay *overlay);
+static int(SDLCALL *sdl12_LockYUVOverlay)(SDL_Overlay *overlay);
+static void(SDLCALL *sdl12_UnlockYUVOverlay)(SDL_Overlay *overlay);
 
 static const char *sdl12_video_driver_name(void)
 {
@@ -186,13 +187,11 @@ static void sdl12_video_report(void)
 		log_appendf(5, " Display format: %d bits/pixel", (int)video.surface->format->BitsPerPixel);
 		break;
 	case VIDEO_YUV:
-		log_appendf(5, " %s-accelerated video overlay",
-			video.overlay->hw_overlay ? "Hardware" : "Non");
+		log_appendf(5, " %s-accelerated video overlay", video.overlay->hw_overlay ? "Hardware" : "Non");
 		video_yuv_report();
 		break;
 	case VIDEO_SURFACE:
-		log_appendf(5, " %s%s video surface",
-			(video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
+		log_appendf(5, " %s%s video surface", (video.surface->flags & SDL_HWSURFACE) ? "Hardware" : "Software",
 			(video.surface->flags & SDL_HWACCEL) ? " accelerated" : "");
 		if (SDL_MUSTLOCK(video.surface))
 			log_append(4, 0, " Must lock surface");
@@ -212,9 +211,8 @@ static void sdl12_video_report(void)
 // check if w and h are multiples of native res (and by the same multiplier)
 static inline SCHISM_ALWAYS_INLINE int best_resolution(int w, int h)
 {
-	return (w % NATIVE_SCREEN_WIDTH == 0)
-		&& (h % NATIVE_SCREEN_HEIGHT == 0)
-		&& ((w / NATIVE_SCREEN_WIDTH) == (h / NATIVE_SCREEN_HEIGHT));
+	return (w % NATIVE_SCREEN_WIDTH == 0) && (h % NATIVE_SCREEN_HEIGHT == 0)
+	       && ((w / NATIVE_SCREEN_WIDTH) == (h / NATIVE_SCREEN_HEIGHT));
 }
 
 static int sdl12_video_is_fullscreen(void)
@@ -236,7 +234,7 @@ static void sdl12_video_shutdown(void)
 {
 	if (video.desktop.fullscreen) {
 		video.desktop.fullscreen = 0;
-		video_resize(0,0);
+		video_resize(0, 0);
 	}
 }
 
@@ -289,7 +287,7 @@ static int sdl12_video_startup(void)
 {
 	SDL_Rect **modes;
 	int32_t i, x = -1, y = -1;
-	const SDL_VideoInfo* info;
+	const SDL_VideoInfo *info;
 	int center_enabled;
 
 	sdl12_WM_SetCaption("Schism Tracker", "Schism Tracker");
@@ -297,15 +295,16 @@ static int sdl12_video_startup(void)
 /* apple/macs use a bundle; this overrides their nice pretty icon */
 	{
 		const char **xpm;
-#ifdef SCHISM_WIN32
+# ifdef SCHISM_WIN32
 		xpm = _schism_icon_xpm;
-#else
+# else
 		xpm = _schism_icon_xpm_hires;
-#endif
+# endif
 		uint32_t *pixels;
 		int width, height;
 		if (!xpmdata(xpm, &pixels, &width, &height)) {
-			SDL_Surface *icon = sdl12_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+			SDL_Surface *icon = sdl12_CreateRGBSurfaceFrom(pixels, width, height, 32,
+				width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 			if (icon) {
 				sdl12_WM_SetIcon(icon, NULL);
 				sdl12_FreeSurface(icon);
@@ -330,7 +329,7 @@ static int sdl12_video_startup(void)
 			int xr, yr;
 
 			/* Calculate position within the screen */
-			xr = round(x + ((w - cfg_video_width)  / 2));
+			xr = round(x + ((w - cfg_video_width) / 2));
 			yr = round(y + ((h - cfg_video_height) / 2));
 
 			snprintf(windowpos, 1024, "SDL_VIDEO_WINDOW_POS=%d,%d", xr, yr);
@@ -409,19 +408,20 @@ static int sdl12_video_startup(void)
 	 * if SDL_GetVideoInfo fails. */
 	if (x < 0 || y < 0) {
 		modes = sdl12_ListModes(NULL, SDL_FULLSCREEN | SDL_HWSURFACE);
-		if (modes != (SDL_Rect**)0 && modes != (SDL_Rect**)-1) {
+		if (modes != (SDL_Rect **)0 && modes != (SDL_Rect **)-1) {
 			for (i = 0; modes[i]; i++) {
-				if (modes[i]->w < NATIVE_SCREEN_WIDTH) continue;
-				if (modes[i]->h < NATIVE_SCREEN_HEIGHT)continue;
+				if (modes[i]->w < NATIVE_SCREEN_WIDTH)
+					continue;
+				if (modes[i]->h < NATIVE_SCREEN_HEIGHT)
+					continue;
 				if (x == -1 || y == -1 || modes[i]->w < x || modes[i]->h < y) {
-					if (modes[i]->w != NATIVE_SCREEN_WIDTH
-					||  modes[i]->h != NATIVE_SCREEN_HEIGHT) {
+					if (modes[i]->w != NATIVE_SCREEN_WIDTH || modes[i]->h != NATIVE_SCREEN_HEIGHT) {
 						if (x == NATIVE_SCREEN_WIDTH || y == NATIVE_SCREEN_HEIGHT)
 							continue;
 					}
 					x = modes[i]->w;
 					y = modes[i]->h;
-					if (best_resolution(x,y))
+					if (best_resolution(x, y))
 						break;
 				}
 			}
@@ -436,9 +436,8 @@ static int sdl12_video_startup(void)
 	video.desktop.width = x;
 	video.desktop.height = y;
 
-	video_opengl_init(sdl12_opengl_object_load,
-		sdl12_opengl_function_load, NULL, NULL,
-		sdl12_opengl_set_attribute, sdl12_opengl_swap_buffers);
+	video_opengl_init(sdl12_opengl_object_load, sdl12_opengl_function_load, NULL, NULL, sdl12_opengl_set_attribute,
+		sdl12_opengl_swap_buffers);
 
 	/* no scaling when using the SDL surfaces directly */
 	video.desktop.swsurface = !cfg_video_hardware;
@@ -471,11 +470,8 @@ static int sdl12_video_startup(void)
 				video.desktop.doublebuf = 1;
 				video.desktop.fullscreen = 0;
 				video.desktop.swsurface = 0;
-				video.surface = sdl12_SetVideoMode(x,y,
-						video.desktop.bpp,
-						SDL_HWSURFACE
-						| SDL_DOUBLEBUF
-						| SDL_ASYNCBLIT);
+				video.surface = sdl12_SetVideoMode(
+					x, y, video.desktop.bpp, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_ASYNCBLIT);
 			}
 			close(fb);
 		}
@@ -528,7 +524,7 @@ static int sdl12_video_startup(void)
 static SDL_Surface *setup_surface_(uint32_t w, uint32_t h, uint32_t sdlflags)
 {
 	if (video.desktop.doublebuf)
-		sdlflags |= (SDL_DOUBLEBUF|SDL_ASYNCBLIT);
+		sdlflags |= (SDL_DOUBLEBUF | SDL_ASYNCBLIT);
 
 	if (video.desktop.fullscreen) {
 		w = video.desktop.width;
@@ -551,9 +547,7 @@ static SDL_Surface *setup_surface_(uint32_t w, uint32_t h, uint32_t sdlflags)
 			sdlflags |= (SDL_RESIZABLE);
 		}
 
-		sdlflags |= (video.desktop.swsurface
-				? SDL_SWSURFACE
-				: SDL_HWSURFACE);
+		sdlflags |= (video.desktop.swsurface ? SDL_SWSURFACE : SDL_HWSURFACE);
 
 		video.surface = sdl12_SetVideoMode(w, h, video.desktop.bpp, sdlflags);
 	}
@@ -567,14 +561,13 @@ static SDL_Surface *setup_surface_(uint32_t w, uint32_t h, uint32_t sdlflags)
 	/* use the actual w/h of the surface.
 	 * this fixes weird hi-dpi issues under SDL2 and SDL3,
 	 * I suppose it won't hurt here. */
-	video_calculate_clip(video.surface->w, video.surface->h,
-		&video.clip.x, &video.clip.y, &video.clip.w, &video.clip.h);
+	video_calculate_clip(
+		video.surface->w, video.surface->h, &video.clip.x, &video.clip.y, &video.clip.w, &video.clip.h);
 
 	return video.surface;
 }
 
-static int sdl12_video_opengl_setup_callback(uint32_t *x, uint32_t *y,
-	uint32_t *w, uint32_t *h)
+static int sdl12_video_opengl_setup_callback(uint32_t *x, uint32_t *y, uint32_t *w, uint32_t *h)
 {
 	int r;
 
@@ -596,8 +589,10 @@ static void sdl12_video_resize(uint32_t width, uint32_t height)
 	double x, y;
 	int x_y_valid = 0;
 #endif
-	if (!width) width = cfg_video_width;
-	if (!height) height = cfg_video_height;
+	if (!width)
+		width = cfg_video_width;
+	if (!height)
+		height = cfg_video_height;
 	video.draw.width = width;
 	video.draw.height = height;
 
@@ -610,68 +605,53 @@ static void sdl12_video_resize(uint32_t width, uint32_t height)
 	}
 #endif
 
-	if (cfg_video_hardware
-		&& video_opengl_setup(width, height, sdl12_video_opengl_setup_callback)) {
+	if (cfg_video_hardware && video_opengl_setup(width, height, sdl12_video_opengl_setup_callback)) {
 		video.type = VIDEO_OPENGL;
 		return;
 		/* We get a nasty little black flicker here, ugh */
-	} else if ((cfg_video_hardware && (cfg_video_interpolation == VIDEO_INTERPOLATION_NEAREST)) || video.desktop.yuvformat != VIDEO_YUV_NONE) {
+	} else if ((cfg_video_hardware && (cfg_video_interpolation == VIDEO_INTERPOLATION_NEAREST))
+		   || video.desktop.yuvformat != VIDEO_YUV_NONE) {
 		if (video.overlay) {
 			sdl12_FreeYUVOverlay(video.overlay);
 			video.overlay = NULL;
 		}
 		if (setup_surface_(width, height, 0)) {
-			uint32_t yuvfmt = (video.desktop.yuvformat != VIDEO_YUV_NONE) 
-				? video.desktop.yuvformat
-				: VIDEO_YUV_IYUV;
+			uint32_t yuvfmt = (video.desktop.yuvformat != VIDEO_YUV_NONE) ? video.desktop.yuvformat
+										      : VIDEO_YUV_IYUV;
 
 			switch (yuvfmt) {
 			case VIDEO_YUV_YV12:
-				video.overlay = sdl12_CreateYUVOverlay
-					(2 * NATIVE_SCREEN_WIDTH,
-					 2 * NATIVE_SCREEN_HEIGHT,
-					 SDL_YV12_OVERLAY, video.surface);
+				video.overlay = sdl12_CreateYUVOverlay(2 * NATIVE_SCREEN_WIDTH,
+					2 * NATIVE_SCREEN_HEIGHT, SDL_YV12_OVERLAY, video.surface);
 				break;
 			case VIDEO_YUV_IYUV:
-				video.overlay = sdl12_CreateYUVOverlay
-					(2 * NATIVE_SCREEN_WIDTH,
-					 2 * NATIVE_SCREEN_HEIGHT,
-					 SDL_IYUV_OVERLAY, video.surface);
+				video.overlay = sdl12_CreateYUVOverlay(2 * NATIVE_SCREEN_WIDTH,
+					2 * NATIVE_SCREEN_HEIGHT, SDL_IYUV_OVERLAY, video.surface);
 				break;
 			case VIDEO_YUV_YV12_TV:
-				video.overlay = sdl12_CreateYUVOverlay
-					(NATIVE_SCREEN_WIDTH,
-					 NATIVE_SCREEN_HEIGHT,
-					 SDL_YV12_OVERLAY, video.surface);
+				video.overlay = sdl12_CreateYUVOverlay(
+					NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT, SDL_YV12_OVERLAY, video.surface);
 				break;
 			case VIDEO_YUV_IYUV_TV:
-				video.overlay = sdl12_CreateYUVOverlay
-					(NATIVE_SCREEN_WIDTH,
-					 NATIVE_SCREEN_HEIGHT,
-					 SDL_IYUV_OVERLAY, video.surface);
+				video.overlay = sdl12_CreateYUVOverlay(
+					NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT, SDL_IYUV_OVERLAY, video.surface);
 				break;
 			case VIDEO_YUV_UYVY:
-				video.overlay = sdl12_CreateYUVOverlay
-					(2 * NATIVE_SCREEN_WIDTH,
-					 NATIVE_SCREEN_HEIGHT,
-					 SDL_UYVY_OVERLAY, video.surface);
+				video.overlay = sdl12_CreateYUVOverlay(
+					2 * NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT, SDL_UYVY_OVERLAY, video.surface);
 				break;
 			case VIDEO_YUV_YVYU:
-				video.overlay = sdl12_CreateYUVOverlay
-					(2 * NATIVE_SCREEN_WIDTH,
-					 NATIVE_SCREEN_HEIGHT,
-					 SDL_YVYU_OVERLAY, video.surface);
+				video.overlay = sdl12_CreateYUVOverlay(
+					2 * NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT, SDL_YVYU_OVERLAY, video.surface);
 				break;
 			case VIDEO_YUV_YUY2:
-				video.overlay = sdl12_CreateYUVOverlay
-					(2 * NATIVE_SCREEN_WIDTH,
-					 NATIVE_SCREEN_HEIGHT,
-					 SDL_YUY2_OVERLAY, video.surface);
+				video.overlay = sdl12_CreateYUVOverlay(
+					2 * NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT, SDL_YUY2_OVERLAY, video.surface);
 				break;
 			}
 
-			if (video.overlay && (video.overlay->planes == 3 || video.overlay->planes == 1) &&
-				 ((video.desktop.yuvformat != VIDEO_YUV_NONE) || video.overlay->hw_overlay)) {
+			if (video.overlay && (video.overlay->planes == 3 || video.overlay->planes == 1)
+				&& ((video.desktop.yuvformat != VIDEO_YUV_NONE) || video.overlay->hw_overlay)) {
 				video.type = VIDEO_YUV;
 				video_yuv_setformat(yuvfmt);
 				return;
@@ -702,8 +682,7 @@ static void sdl8bit_pal_(unsigned int i, unsigned char rgb[3])
 
 static void sdl_pal_(unsigned int i, unsigned char rgb[3])
 {
-	video.pal[i] = sdl12_MapRGB(video.surface->format,
-			rgb[0], rgb[1], rgb[2]);
+	video.pal[i] = sdl12_MapRGB(video.surface->format, rgb[0], rgb[1], rgb[2]);
 }
 
 static void sdl12_video_colors(unsigned char palette[16][3])
@@ -738,15 +717,10 @@ static uint32_t sdl12_map_rgb_callback(void *data, uint8_t r, uint8_t g, uint8_t
 			break;
 		} else if (format->Gloss == 2) {
 			/* RGB565 */
-			return (((uint32_t)r << 8) & 0xF800) |
-				(((uint32_t)g << 3) & 0x07E0) |
-				((uint32_t)b >> 3);
+			return (((uint32_t)r << 8) & 0xF800) | (((uint32_t)g << 3) & 0x07E0) | ((uint32_t)b >> 3);
 		} else {
 			/* RGB555 */
-			return 0x8000 |
-				((r << 7) & 0x7C00) |
-				((g << 2) & 0x03E0) |
-				(b >> 3);
+			return 0x8000 | ((r << 7) & 0x7C00) | ((g << 2) & 0x03E0) | (b >> 3);
 		}
 	}
 
@@ -786,23 +760,14 @@ SCHISM_HOT static void sdl12_video_blit(void)
 
 #if defined(HAVE_LINUX_FB_H)
 		if (video.desktop.fb_hacks) {
-			video_blit11(video.surface->format->BytesPerPixel,
-				video.surface->pixels,
-				video.surface->pitch,
+			video_blit11(video.surface->format->BytesPerPixel, video.surface->pixels, video.surface->pitch,
 				video.pal);
 		} else
 #endif
 		{
-			video_blitSC(video.surface->format->BytesPerPixel,
-				video.surface->pixels,
-				video.surface->pitch,
-				video.pal,
-				sdl12_map_rgb_callback,
-				video.surface->format,
-				video.clip.x,
-				video.clip.y,
-				video.clip.w,
-				video.clip.h);
+			video_blitSC(video.surface->format->BytesPerPixel, video.surface->pixels, video.surface->pitch,
+				video.pal, sdl12_map_rgb_callback, video.surface->format, video.clip.x, video.clip.y,
+				video.clip.w, video.clip.h);
 		}
 
 		if (SDL_MUSTLOCK(video.surface))
@@ -829,7 +794,7 @@ static int sdl12_video_is_hardware(void)
 	if (video.type == VIDEO_YUV && video.overlay)
 		return video.overlay->hw_overlay;
 
-	return !!(video.surface->flags & (SDL_HWSURFACE|SDL_OPENGL));
+	return !!(video.surface->flags & (SDL_HWSURFACE | SDL_OPENGL));
 }
 
 static int sdl12_video_is_input_grabbed(void)
@@ -927,9 +892,7 @@ static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 	 * using OpenGL. Tested this with messing around
 	 * a lot between fullscreen and menu bar and
 	 * it seems to work right */
-	if ((video.type == VIDEO_OPENGL)
-			&& !(video.surface->flags & SDL_FULLSCREEN)
-			&& !cache_size) {
+	if ((video.type == VIDEO_OPENGL) && !(video.surface->flags & SDL_FULLSCREEN) && !cache_size) {
 		int h;
 		RECT w, c;
 
@@ -940,7 +903,8 @@ static void sdl12_video_toggle_menu(SCHISM_UNUSED int on)
 		if (!cfg_video_want_menu_bar)
 			h = -h;
 
-		SetWindowPos(wm_info.window, NULL, 0, 0, w.right - w.left, (w.bottom - w.top) + h, SWP_NOMOVE | SWP_NOZORDER);
+		SetWindowPos(wm_info.window, NULL, 0, 0, w.right - w.left, (w.bottom - w.top) + h,
+			SWP_NOMOVE | SWP_NOZORDER);
 	}
 #endif
 
@@ -969,10 +933,10 @@ static void sdl12_video_mousecursor_changed(void)
 
 /* ------------------------------------------------------------------------ */
 
-static int (SDLCALL *sdl12_GL_LoadLibrary)(const char *path) = NULL;
-static int (SDLCALL *sdl12_GL_SetAttribute)(SDL_GLattr attr, int value) = NULL;
-static void *(SDLCALL *sdl12_GL_GetProcAddress)(const char* proc) = NULL;
-static void (SDLCALL *sdl12_GL_SwapBuffers)(void) = NULL;
+static int(SDLCALL *sdl12_GL_LoadLibrary)(const char *path) = NULL;
+static int(SDLCALL *sdl12_GL_SetAttribute)(SDL_GLattr attr, int value) = NULL;
+static void *(SDLCALL *sdl12_GL_GetProcAddress)(const char *proc) = NULL;
+static void(SDLCALL *sdl12_GL_SwapBuffers)(void) = NULL;
 
 static int sdl12_opengl_object_load(const char *path)
 {
@@ -996,17 +960,34 @@ static int sdl12_opengl_set_attribute(int attr, int value)
 	case VIDEO_GL_ALPHA_SIZE: sdlattr = SDL_GL_ALPHA_SIZE; break;
 	case VIDEO_GL_BUFFER_SIZE: sdlattr = SDL_GL_BUFFER_SIZE; break;
 	*/
-	case VIDEO_GL_DOUBLEBUFFER: sdlattr = SDL_GL_DOUBLEBUFFER; break;
-	case VIDEO_GL_DEPTH_SIZE: sdlattr = SDL_GL_DEPTH_SIZE; break;
-	case VIDEO_GL_STENCIL_SIZE: sdlattr = SDL_GL_STENCIL_SIZE; break;
-	case VIDEO_GL_ACCUM_RED_SIZE: sdlattr = SDL_GL_ACCUM_RED_SIZE; break;
-	case VIDEO_GL_ACCUM_GREEN_SIZE: sdlattr = SDL_GL_ACCUM_GREEN_SIZE; break;
-	case VIDEO_GL_ACCUM_BLUE_SIZE: sdlattr = SDL_GL_ACCUM_BLUE_SIZE; break;
-	case VIDEO_GL_ACCUM_ALPHA_SIZE: sdlattr = SDL_GL_ACCUM_ALPHA_SIZE; break;
+	case VIDEO_GL_DOUBLEBUFFER:
+		sdlattr = SDL_GL_DOUBLEBUFFER;
+		break;
+	case VIDEO_GL_DEPTH_SIZE:
+		sdlattr = SDL_GL_DEPTH_SIZE;
+		break;
+	case VIDEO_GL_STENCIL_SIZE:
+		sdlattr = SDL_GL_STENCIL_SIZE;
+		break;
+	case VIDEO_GL_ACCUM_RED_SIZE:
+		sdlattr = SDL_GL_ACCUM_RED_SIZE;
+		break;
+	case VIDEO_GL_ACCUM_GREEN_SIZE:
+		sdlattr = SDL_GL_ACCUM_GREEN_SIZE;
+		break;
+	case VIDEO_GL_ACCUM_BLUE_SIZE:
+		sdlattr = SDL_GL_ACCUM_BLUE_SIZE;
+		break;
+	case VIDEO_GL_ACCUM_ALPHA_SIZE:
+		sdlattr = SDL_GL_ACCUM_ALPHA_SIZE;
+		break;
 #if SDL_VERSION_ATLEAST(1, 2, 11)
-	case VIDEO_GL_SWAP_CONTROL: sdlattr = SDL_GL_SWAP_CONTROL; break;
+	case VIDEO_GL_SWAP_CONTROL:
+		sdlattr = SDL_GL_SWAP_CONTROL;
+		break;
 #endif
-	default: return -1;
+	default:
+		return -1;
 	}
 
 	return sdl12_GL_SetAttribute(sdlattr, value);

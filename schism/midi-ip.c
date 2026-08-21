@@ -24,9 +24,9 @@
 #include "midi.h"
 
 #include "it.h"
-#include "util.h"
 #include "events.h"
 #include "mem.h"
+#include "util.h"
 
 #include "mt.h" // mutexes
 
@@ -40,36 +40,35 @@
 
 #ifdef USE_NETWORK
 
-#ifdef SCHISM_WIN32
-# include <ws2tcpip.h>
-# include <windows.h>
+# ifdef SCHISM_WIN32
+#  include <windows.h>
+#  include <ws2tcpip.h>
 
 typedef UINT_PTR sock_t;
 
-# define SOCKET_INVALID INVALID_SOCKET
-#else
-# include <sys/select.h>
-# include <sys/socket.h>
-# include <sys/types.h>
-# include <arpa/inet.h>
-# include <fcntl.h>
-# include <netinet/in.h>
+#  define SOCKET_INVALID INVALID_SOCKET
+# else
+#  include <arpa/inet.h>
+#  include <fcntl.h>
+#  include <netinet/in.h>
+#  include <sys/select.h>
+#  include <sys/socket.h>
+#  include <sys/types.h>
 
-# define SOCKET_INVALID (-1)
-# define SOCKET_ERROR (-1)
-# define closesocket close
+#  define SOCKET_INVALID (-1)
+#  define SOCKET_ERROR   (-1)
+#  define closesocket    close
 
 typedef int sock_t;
-#endif
+# endif
 
-#define DEFAULT_IP_PORT_COUNT   (5)
-#define MIDI_IP_BASE    (21928)
-#define MAX_DGRAM_SIZE  (1280)
+# define DEFAULT_IP_PORT_COUNT (5)
+# define MIDI_IP_BASE          (21928)
+# define MAX_DGRAM_SIZE        (1280)
 
 static const unsigned char midi_ip_multicast_addr[4] = {
 	/* network byte order (big endian) */
-	225, 0, 0, 37
-};
+	225, 0, 0, 37};
 
 struct midi_ip {
 	sock_t fd;
@@ -83,7 +82,7 @@ struct midi_ip_provider {
 	volatile int num_ports;
 	/* socket used for output */
 	sock_t out_fd;
-#define MIDIBUF_SIZE (65536)
+# define MIDIBUF_SIZE (65536)
 	/* midi buffer */
 	unsigned char midibuf[MIDIBUF_SIZE];
 };
@@ -105,26 +104,26 @@ static sock_t _get_fd(int pb, int isout)
 	sock_t fd;
 	int opt;
 
-#if !defined(PF_INET) && defined(AF_INET)
-#define PF_INET AF_INET
-#endif
+# if !defined(PF_INET) && defined(AF_INET)
+#  define PF_INET AF_INET
+# endif
 	fd = socket(PF_INET, SOCK_DGRAM, 0);
 	if (fd == SOCKET_INVALID)
 		return SOCKET_INVALID;
 
 	/* XXX why are we setting this? where are we reusing ports? */
 	opt = 1;
-	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(int));
+	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *)&opt, sizeof(int));
 
 	/* don't loop back what we generate */
 	opt = !isout;
-#ifdef SCHISM_WIN32
+# ifdef SCHISM_WIN32
 	/* apparently this is reversed on windows?
 	 * drumstick sources link to msdn:
 	 * https://learn.microsoft.com/en-us/windows/win32/winsock/ip-multicast-2 */
 	opt = !opt;
-#endif
-	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void*)&opt, sizeof(opt)) == SOCKET_ERROR) {
+# endif
+	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void *)&opt, sizeof(opt)) == SOCKET_ERROR) {
 		closesocket(fd);
 		return SOCKET_INVALID;
 	}
@@ -134,19 +133,19 @@ static sock_t _get_fd(int pb, int isout)
 	 * set this to 1. Linux manpages even say that it's important that this be
 	 * set to the smallest TTL possible, so I'm changing it :) */
 	opt = 1;
-	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void*)&opt, sizeof(opt)) == SOCKET_ERROR) {
+	if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&opt, sizeof(opt)) == SOCKET_ERROR) {
 		closesocket(fd);
 		return SOCKET_INVALID;
 	}
 
 	memcpy(&mreq.imr_multiaddr, midi_ip_multicast_addr, sizeof(midi_ip_multicast_addr));
-	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void*)&mreq, sizeof(mreq)) == SOCKET_ERROR) {
+	if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void *)&mreq, sizeof(mreq)) == SOCKET_ERROR) {
 		closesocket(fd);
 		return SOCKET_INVALID;
 	}
 
 	opt = 1;
-	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void*)&opt, sizeof(opt)) == SOCKET_ERROR) {
+	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void *)&opt, sizeof(opt)) == SOCKET_ERROR) {
 		closesocket(fd);
 		return SOCKET_INVALID;
 	}
@@ -154,40 +153,60 @@ static sock_t _get_fd(int pb, int isout)
 	asin.sin_family = AF_INET;
 	if (!isout) {
 		/* all 0s is inaddr_any; but this is for listening */
-#if 1
+# if 1
 		//JosepMa:On my machine, using the 225.0.0.37 address caused bind to fail.
 		//Didn't look too much to find why.
 		memset(&asin.sin_addr, 0, 4);
-#else
+# else
 		memcpy(&asin.sin_addr, midi_ip_multicast_addr, sizeof(midi_ip_multicast_addr));
-#endif
-		asin.sin_port = htons(MIDI_IP_BASE+pb);
+# endif
+		asin.sin_port = htons(MIDI_IP_BASE + pb);
 	}
 	if (bind(fd, (struct sockaddr *)&asin, sizeof(asin)) == SOCKET_ERROR) {
-#ifdef SCHISM_WIN32
+# ifdef SCHISM_WIN32
 		int asdf = WSAGetLastError();
 		perror("binderror");
-		switch(asdf) {
-			case WSANOTINITIALISED: perror("WSANOTINITIALISED");break;
-			case WSAENETDOWN: perror("WSAENETDOWN");break;
-			case WSAEFAULT: perror("WSAEFAULT");break;
-			case WSAEINVAL: perror("WSAEINVAL");break;
-			case WSAEINPROGRESS: perror("WSAEINPROGRESS");break;
-			case WSAENOTSOCK: perror("WSAENOTSOCK");break;
-			case WSAEACCES: perror("WSAEACCES");break;
-			case WSAEADDRINUSE: perror("WSAEADDRINUSE");break;
-			case WSAEADDRNOTAVAIL: perror("WSAEADDRNOTAVAIL");break;
-			case WSAENOBUFS: perror("WSAENOBUFS");break;
-			default: perror("default");break;
+		switch (asdf) {
+		case WSANOTINITIALISED:
+			perror("WSANOTINITIALISED");
+			break;
+		case WSAENETDOWN:
+			perror("WSAENETDOWN");
+			break;
+		case WSAEFAULT:
+			perror("WSAEFAULT");
+			break;
+		case WSAEINVAL:
+			perror("WSAEINVAL");
+			break;
+		case WSAEINPROGRESS:
+			perror("WSAEINPROGRESS");
+			break;
+		case WSAENOTSOCK:
+			perror("WSAENOTSOCK");
+			break;
+		case WSAEACCES:
+			perror("WSAEACCES");
+			break;
+		case WSAEADDRINUSE:
+			perror("WSAEADDRINUSE");
+			break;
+		case WSAEADDRNOTAVAIL:
+			perror("WSAEADDRNOTAVAIL");
+			break;
+		case WSAENOBUFS:
+			perror("WSAENOBUFS");
+			break;
+		default:
+			perror("default");
+			break;
 		}
-#else
+# else
 		perror("bind");
-#endif
+# endif
 		closesocket(fd);
 		return SOCKET_INVALID;
 	}
-
-
 
 	return fd;
 }
@@ -227,7 +246,8 @@ static int _ip_work(struct midi_provider *p)
 		data = q->userdata;
 
 		FD_SET(data->fd, &rfds);
-		if (data->fd > m) m = data->fd;
+		if (data->fd > m)
+			m = data->fd;
 	}
 
 	/* no waiting, just poll */
@@ -262,8 +282,7 @@ static int _ip_stop(SCHISM_UNUSED struct midi_port *p)
 	return 1;
 }
 
-static void _ip_send(struct midi_port *p, const unsigned char *data, uint32_t len,
-	SCHISM_UNUSED uint32_t delay)
+static void _ip_send(struct midi_port *p, const unsigned char *data, uint32_t len, SCHISM_UNUSED uint32_t delay)
 {
 	struct sockaddr_in asin = {0};
 	struct midi_ip *userdata;
@@ -272,7 +291,8 @@ static void _ip_send(struct midi_port *p, const unsigned char *data, uint32_t le
 	mip = p->provider->userdata;
 	userdata = p->userdata;
 
-	if (len == 0) return;
+	if (len == 0)
+		return;
 
 	asin.sin_family = AF_INET;
 	/* 255.0.0.37 -- UDP multicast MIDI IP */
@@ -282,9 +302,8 @@ static void _ip_send(struct midi_port *p, const unsigned char *data, uint32_t le
 	while (len) {
 		int ss;
 
-		ss = (len > MAX_DGRAM_SIZE) ?  MAX_DGRAM_SIZE : len;
-		if (sendto(mip->out_fd, (const char*)data, ss, 0,
-				(struct sockaddr *)&asin,sizeof(asin)) < 0) {
+		ss = (len > MAX_DGRAM_SIZE) ? MAX_DGRAM_SIZE : len;
+		if (sendto(mip->out_fd, (const char *)data, ss, 0, (struct sockaddr *)&asin, sizeof(asin)) < 0) {
 			/* nah */
 			p->io &= ~(MIDI_OUTPUT);
 			break;
@@ -332,13 +351,12 @@ static void _ip_poll(struct midi_provider *p)
 		}
 		data->pb = i;
 
-		if (snprintf(buf, sizeof(buf), " Multicast/IP MIDI %ld", i+1) == -1) {
+		if (snprintf(buf, sizeof(buf), " Multicast/IP MIDI %ld", i + 1) == -1) {
 			perror("snprintf");
 			exit(255);
 		}
 
-		midi_port_register(p, MIDI_INPUT|MIDI_OUTPUT, buf,
-			data, _ip_userdata_destroy);
+		midi_port_register(p, MIDI_INPUT | MIDI_OUTPUT, buf, data, _ip_userdata_destroy);
 	}
 }
 
@@ -360,7 +378,8 @@ int ip_midi_setup(void)
 	static struct midi_driver driver;
 	struct midi_ip_provider *mip;
 
-	if (status.flags & NO_NETWORK) return 0;
+	if (status.flags & NO_NETWORK)
+		return 0;
 
 	mip = mem_calloc(1, sizeof(*mip));
 
@@ -394,14 +413,18 @@ int ip_midi_getports(void)
 	struct midi_port *q;
 	int i;
 
-	if (!midi_ip_prov) return 0;
+	if (!midi_ip_prov)
+		return 0;
 
 	mip = midi_ip_prov->userdata;
 
-	if (mip->out_fd == SOCKET_INVALID) return 0;
-	if (status.flags & NO_NETWORK) return 0;
+	if (mip->out_fd == SOCKET_INVALID)
+		return 0;
+	if (status.flags & NO_NETWORK)
+		return 0;
 
-	for (i = 0, q = NULL; midi_port_foreach(midi_ip_prov, &q); i++);
+	for (i = 0, q = NULL; midi_port_foreach(midi_ip_prov, &q); i++)
+		;
 
 	return i;
 }
@@ -410,12 +433,15 @@ void ip_midi_setports(int n)
 {
 	struct midi_ip_provider *mip;
 
-	if (!midi_ip_prov) return;
+	if (!midi_ip_prov)
+		return;
 
 	mip = midi_ip_prov->userdata;
 
-	if (mip->out_fd == SOCKET_INVALID) return;
-	if (status.flags & NO_NETWORK) return;
+	if (mip->out_fd == SOCKET_INVALID)
+		return;
+	if (status.flags & NO_NETWORK)
+		return;
 
 	mip->num_ports = n;
 
@@ -435,4 +461,3 @@ void ip_midi_setports(SCHISM_UNUSED int n)
 }
 
 #endif
-

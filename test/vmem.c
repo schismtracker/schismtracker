@@ -70,7 +70,7 @@ static struct vmem_table_entry *vmem_get_entry(void *x)
 static void vmem_kill_entry(struct vmem_table_entry *x)
 {
 	x->ptr = NULL;
-	x->sz  = 0; /* Eh */
+	x->sz = 0; /* Eh */
 }
 
 static int vmem_add_entry(void *x, size_t sz)
@@ -82,7 +82,7 @@ static int vmem_add_entry(void *x, size_t sz)
 		return -1;
 
 	r->ptr = x;
-	r->sz  = sz;
+	r->sz = sz;
 
 	return 0;
 }
@@ -102,15 +102,16 @@ static int vmem_convflags(uint32_t flags)
 int vmem_protect(void *chunk, uint32_t flags)
 {
 	struct vmem_table_entry *r;
-    int x;
+	int x;
 
 	r = vmem_get_entry(chunk);
 
-	while ((x = mprotect(chunk, r->sz, vmem_convflags(flags))) != 0 && errno == EINTR);
-    if (x != 0) {
-    	perror("mprotect");
-        return -1;
-    }
+	while ((x = mprotect(chunk, r->sz, vmem_convflags(flags))) != 0 && errno == EINTR)
+		;
+	if (x != 0) {
+		perror("mprotect");
+		return -1;
+	}
 
 	return 0;
 }
@@ -120,14 +121,16 @@ void *vmem_alloc(size_t sz, uint32_t flags)
 	struct vmem_table_entry *r;
 
     /* handle signals properly */
-	while (!(r = mmap(NULL, sz, vmem_convflags(flags), MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) && errno == EINTR);
-    if (!r)
-        return NULL;
+	while (!(r = mmap(NULL, sz, vmem_convflags(flags), MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) && errno == EINTR)
+		;
+	if (!r)
+		return NULL;
 
-    if (vmem_add_entry(r, sz) < 0) {
-    	while (munmap(r, sz) != 0 && errno == EINTR);
-    	return NULL;
-    }
+	if (vmem_add_entry(r, sz) < 0) {
+		while (munmap(r, sz) != 0 && errno == EINTR)
+			;
+		return NULL;
+	}
 
 	return r;
 }
@@ -136,21 +139,22 @@ void vmem_free(void *chunk)
 {
 	struct vmem_table_entry *r;
 
-	if (!chunk) return;
+	if (!chunk)
+		return;
 
 	r = vmem_get_entry(chunk);
-	if (!r) return; /* ? */
+	if (!r)
+		return; /* ? */
 
-	while (munmap(chunk, r->sz) != 0 && errno == EINTR);
+	while (munmap(chunk, r->sz) != 0 && errno == EINTR)
+		;
 
 	vmem_kill_entry(r);
 }
 #elif defined(VMEM_WIN32)
 static DWORD vmem_convflags(uint32_t flags)
 {
-	return (flags & VMEM_WRITE) ? PAGE_READWRITE
-		: (flags & VMEM_READ) ? PAGE_READONLY
-		: PAGE_NOACCESS;
+	return (flags & VMEM_WRITE) ? PAGE_READWRITE : (flags & VMEM_READ) ? PAGE_READONLY : PAGE_NOACCESS;
 }
 
 int vmem_protect(void *chunk, uint32_t flags)
@@ -158,10 +162,12 @@ int vmem_protect(void *chunk, uint32_t flags)
 	struct vmem_table_entry *r;
 	DWORD xyzzy;
 
-	if (!chunk) return -1; /* ok */
+	if (!chunk)
+		return -1; /* ok */
 
 	r = vmem_get_entry(chunk);
-	if (!r) return -1;
+	if (!r)
+		return -1;
 
 	if (!VirtualProtect(chunk, r->sz, vmem_convflags(flags), &xyzzy))
 		return -1;
@@ -191,7 +197,8 @@ void vmem_free(void *chunk)
 	struct vmem_table_entry *r;
 
 	r = vmem_get_entry(chunk);
-	if (!r) return;
+	if (!r)
+		return;
 
 	VirtualFree(chunk, 0, MEM_RELEASE);
 

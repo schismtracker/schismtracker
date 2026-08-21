@@ -25,9 +25,9 @@
 
 #include "headers.h"
 #include "bits.h"
+#include "fmt.h"
 #include "ieee-float.h"
 #include "log.h"
-#include "fmt.h"
 #include "mem.h"
 
 /* --------------------------------------------------------------------- */
@@ -57,7 +57,12 @@ static int aiff_chunk_vhdr_read(const void *data, size_t size, void *void_vhdr)
 	slurp_memstream(&fp, (uint8_t *)data, size);
 
 #define READ_VALUE(name) \
-	do { if (slurp_read(&fp, &vhdr->name, sizeof(vhdr->name)) != sizeof(vhdr->name)) { unslurp(&fp); return 0; } } while (0)
+	do { \
+		if (slurp_read(&fp, &vhdr->name, sizeof(vhdr->name)) != sizeof(vhdr->name)) { \
+			unslurp(&fp); \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(smp_highoct_1shot);
 	READ_VALUE(smp_highoct_repeat);
@@ -82,7 +87,12 @@ static int aiff_chunk_comm_read(const void *data, size_t size, void *void_comm)
 	slurp_memstream(&fp, (uint8_t *)data, size);
 
 #define READ_VALUE(name) \
-	do { if (slurp_read(&fp, &comm->name, sizeof(comm->name)) != sizeof(comm->name)) { unslurp(&fp); return 0; } } while (0)
+	do { \
+		if (slurp_read(&fp, &comm->name, sizeof(comm->name)) != sizeof(comm->name)) { \
+			unslurp(&fp); \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(num_channels);
 	READ_VALUE(num_frames);
@@ -128,8 +138,8 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 {
 	uint32_t filetype = 0;
 	iff_chunk_t chunk = {0};
-	iff_chunk_t vhdr = {0}, body = {0}, name = {0}, auth = {0}, anno = {0},
-	            ssnd = {0}, comm = {0}, mark = {0}, inst = {0}, applschm = {0};
+	iff_chunk_t vhdr = {0}, body = {0}, name = {0}, auth = {0}, anno = {0}, ssnd = {0}, comm = {0}, mark = {0},
+		    inst = {0}, applschm = {0};
 
 	if (!iff_chunk_peek(&chunk, fp))
 		return 0;
@@ -152,12 +162,23 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 
 		while (iff_chunk_peek(&chunk, fp)) {
 			switch (chunk.id) {
-				case ID_VHDR: vhdr = chunk; break;
-				case ID_BODY: body = chunk; break;
-				case ID_NAME: name = chunk; break;
-				case ID_AUTH: auth = chunk; break;
-				case ID_ANNO: anno = chunk; break;
-				default: break;
+			case ID_VHDR:
+				vhdr = chunk;
+				break;
+			case ID_BODY:
+				body = chunk;
+				break;
+			case ID_NAME:
+				name = chunk;
+				break;
+			case ID_AUTH:
+				auth = chunk;
+				break;
+			case ID_ANNO:
+				anno = chunk;
+				break;
+			default:
+				break;
 			}
 		}
 		if (!(vhdr.id && body.id))
@@ -171,21 +192,20 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			return 0;
 		}
 		if (chunk_vhdr.num_octaves != 1) {
-			log_appendf(4, "warning: IFF file contains %d octaves",
-				chunk_vhdr.num_octaves);
+			log_appendf(4, "warning: IFF file contains %d octaves", chunk_vhdr.num_octaves);
 		}
 
 		if (file) {
 			file->smp_speed = bswapBE16(chunk_vhdr.smp_per_sec);
 			file->smp_length = body.size;
 
-			file->description = (filetype == ID_16SV)
-				? "16SV sample"
-				: "8SVX sample";
+			file->description = (filetype == ID_16SV) ? "16SV sample" : "8SVX sample";
 			file->type = TYPE_SAMPLE_PLAIN;
 		}
-		if (!name.id) name = auth;
-		if (!name.id) name = anno;
+		if (!name.id)
+			name = auth;
+		if (!name.id)
+			name = anno;
 		if (name.id) {
 			if (file) {
 				file->title = mem_alloc(name.size + 1);
@@ -248,37 +268,48 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 
 		while (iff_chunk_peek(&chunk, fp)) {
 			switch (chunk.id) {
-				case ID_COMM: comm = chunk; break;
-				case ID_SSND: ssnd = chunk; break;
-				case ID_NAME: name = chunk; break;
-				case ID_MARK: mark = chunk; break;
-				case ID_INST: inst = chunk; break;
-				case ID_APPL: {
-					int64_t pos = slurp_tell(fp);
-					uint32_t id;
+			case ID_COMM:
+				comm = chunk;
+				break;
+			case ID_SSND:
+				ssnd = chunk;
+				break;
+			case ID_NAME:
+				name = chunk;
+				break;
+			case ID_MARK:
+				mark = chunk;
+				break;
+			case ID_INST:
+				inst = chunk;
+				break;
+			case ID_APPL: {
+				int64_t pos = slurp_tell(fp);
+				uint32_t id;
 
-					/* figure out which type it is.
-					 * if it's from us, we want to read it in */
-					slurp_seek(fp, chunk.offset, SEEK_SET);
+				/* figure out which type it is.
+				 * if it's from us, we want to read it in */
+				slurp_seek(fp, chunk.offset, SEEK_SET);
 
-					chunk.offset += 4;
-					chunk.size -= 4;
+				chunk.offset += 4;
+				chunk.size -= 4;
 
-					slurp_read(fp, &id, sizeof(id));
-					id = bswapBE32(id);
+				slurp_read(fp, &id, sizeof(id));
+				id = bswapBE32(id);
 
-					switch (id) {
-					case ID_Schm:
-						applschm = chunk;
-						break;
-					}
-
-					/* return back to the original pos */
-					slurp_seek(fp, pos, SEEK_SET);
-
+				switch (id) {
+				case ID_Schm:
+					applschm = chunk;
 					break;
 				}
-				default: break;
+
+				/* return back to the original pos */
+				slurp_seek(fp, pos, SEEK_SET);
+
+				break;
+			}
+			default:
+				break;
 			}
 		}
 		if (!(comm.id && ssnd.id))
@@ -364,13 +395,19 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 
 			/* okay, now we have everything; now find the markers */
 			switch (loop_type) {
-			case 2: psmp->flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
-			case 1: psmp->flags |= CHN_LOOP;
+			case 2:
+				psmp->flags |= CHN_PINGPONGLOOP;
+				SCHISM_FALLTHROUGH;
+			case 1:
+				psmp->flags |= CHN_LOOP;
 			}
 
 			switch (sustain_type) {
-			case 2: psmp->flags |= CHN_PINGPONGSUSTAIN; SCHISM_FALLTHROUGH;
-			case 1: psmp->flags |= CHN_SUSTAINLOOP;
+			case 2:
+				psmp->flags |= CHN_PINGPONGSUSTAIN;
+				SCHISM_FALLTHROUGH;
+			case 1:
+				psmp->flags |= CHN_SUSTAINLOOP;
 			}
 		}
 
@@ -404,7 +441,9 @@ static int read_iff_(dmoz_file_t *file, song_sample_t *smp, slurp_t *fp)
 			file->type = TYPE_SAMPLE_PLAIN;
 
 			switch ((bswapBE32(chunk_comm.sample_size) + 7) & ~7) {
-			case 16: case 24: case 32:
+			case 16:
+			case 24:
+			case 32:
 				file->smp_flags |= CHN_16BIT;
 			}
 		}
@@ -481,8 +520,8 @@ struct aiff_writedata {
 	int bpf; // bytes per frame
 };
 
-static int aiff_header(disko_t *fp, int bits, int channels, uint32_t rate,
-	const char *name, size_t length, song_sample_t *smp, struct aiff_writedata *awd /* out */)
+static int aiff_header(disko_t *fp, int bits, int channels, uint32_t rate, const char *name, size_t length,
+	song_sample_t *smp, struct aiff_writedata *awd /* out */)
 {
 	int16_t s;
 	uint32_t ul;
@@ -546,21 +585,21 @@ static int aiff_header(disko_t *fp, int bits, int channels, uint32_t rate,
 
 		/* now start writing the markers. */
 #define WRITE_MARKER(id, x) \
-do { \
-	w = bswapBE16(id); \
-	disko_write(fp, &w, 2); \
+	do { \
+		w = bswapBE16(id); \
+		disko_write(fp, &w, 2); \
 \
-	dw = bswapBE32(x); \
-	disko_write(fp, &dw, 4); \
+		dw = bswapBE32(x); \
+		disko_write(fp, &dw, 4); \
 \
-	/* no name... */ \
-	disko_write(fp, "\0", 1); \
-} while (0)
+        /* no name... */ \
+		disko_write(fp, "\0", 1); \
+	} while (0)
 
-		WRITE_MARKER(MID_LOOP_START,    smp->loop_start);
-		WRITE_MARKER(MID_LOOP_END,      smp->loop_end);
+		WRITE_MARKER(MID_LOOP_START, smp->loop_start);
+		WRITE_MARKER(MID_LOOP_END, smp->loop_end);
 		WRITE_MARKER(MID_SUSTAIN_START, smp->sustain_start);
-		WRITE_MARKER(MID_SUSTAIN_END,   smp->sustain_end);
+		WRITE_MARKER(MID_SUSTAIN_END, smp->sustain_end);
 
 #undef WRITE_MARKER
 
@@ -614,16 +653,16 @@ do { \
 		/* finally, to the loops */
 
 #define WRITE_LOOP(LOOPFLAG, PINGPONGFLAG, MIDSTART, MIDEND) \
-do { \
-	w = bswapBE16(!!(smp->flags & (LOOPFLAG)) + !!(smp->flags & (PINGPONGFLAG))); \
-	disko_write(fp, &w, 2); \
+	do { \
+		w = bswapBE16(!!(smp->flags & (LOOPFLAG)) + !!(smp->flags & (PINGPONGFLAG))); \
+		disko_write(fp, &w, 2); \
 \
-	w = bswapBE16(MIDSTART); \
-	disko_write(fp, &w, 2); \
+		w = bswapBE16(MIDSTART); \
+		disko_write(fp, &w, 2); \
 \
-	w = bswapBE16(MIDEND); \
-	disko_write(fp, &w, 2); \
-} while (0)
+		w = bswapBE16(MIDEND); \
+		disko_write(fp, &w, 2); \
+	} while (0)
 
 		WRITE_LOOP(CHN_SUSTAINLOOP, CHN_PINGPONGSUSTAIN, MID_SUSTAIN_START, MID_SUSTAIN_END);
 		WRITE_LOOP(CHN_LOOP, CHN_PINGPONGLOOP, MID_LOOP_START, MID_LOOP_END);
@@ -732,8 +771,8 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 	flags |= (smp->flags & CHN_16BIT) ? SF_16 : SF_8;
 	flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
-	bpf = aiff_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
-		smp->c5speed, smp->name, smp->length, smp, NULL);
+	bpf = aiff_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed,
+		smp->name, smp->length, smp, NULL);
 
 	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bpf) {
 		log_appendf(4, "AIFF: unexpected data size written");
@@ -748,7 +787,6 @@ int fmt_aiff_save_sample(disko_t *fp, song_sample_t *smp)
 
 	return SAVE_SUCCESS;
 }
-
 
 int fmt_aiff_export_head(disko_t *fp, int bits, int channels, uint32_t rate, const char *title)
 {
@@ -771,8 +809,7 @@ int fmt_aiff_export_body(disko_t *fp, const uint8_t *data, size_t length)
 {
 	struct aiff_writedata *awd = fp->userdata;
 
-	if (fmt_write_pcm(fp, data, length, awd->bpf, awd->bps,
-			awd->swap, "AIFF") < 0)
+	if (fmt_write_pcm(fp, data, length, awd->bpf, awd->bps, awd->swap, "AIFF") < 0)
 		return DW_ERROR;
 
 	awd->numbytes += length;

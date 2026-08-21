@@ -27,15 +27,15 @@
 # error You are not on Windows. What are you doing?
 #endif
 
-#include <windows.h>
 #include <sys/stat.h>
+#include <windows.h>
 
-#include "util.h"
-#include "log.h"
-#include "slurp.h"
 #include "charset.h"
 #include "loadso.h"
+#include "log.h"
 #include "osdefs.h"
+#include "slurp.h"
+#include "util.h"
 
 static void win32_unmap_(slurp_t *slurp)
 {
@@ -58,26 +58,29 @@ static void win32_unmap_(slurp_t *slurp)
 	}
 }
 
-static inline HANDLE CreateFileUTF8(const char *filename, DWORD a, DWORD b, LPSECURITY_ATTRIBUTES c, DWORD d, DWORD e, HANDLE f)
+static inline HANDLE CreateFileUTF8(
+	const char *filename, DWORD a, DWORD b, LPSECURITY_ATTRIBUTES c, DWORD d, DWORD e, HANDLE f)
 {
 	HANDLE h;
 
-	SCHISM_ANSI_UNICODE({
-		// Windows 9x
-		char *filename_a;
-		if (charset_iconv(filename, &filename_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
-			return INVALID_HANDLE_VALUE;
+	SCHISM_ANSI_UNICODE(
+		{
+                // Windows 9x
+			char *filename_a;
+			if (charset_iconv(filename, &filename_a, CHARSET_UTF8, CHARSET_ANSI, SIZE_MAX))
+				return INVALID_HANDLE_VALUE;
 
-		h = CreateFileA(filename_a, a, b, c, d, e, f);
-		free(filename_a);
-	}, {
-		wchar_t *filename_w;
-		if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
-			return INVALID_HANDLE_VALUE;
+			h = CreateFileA(filename_a, a, b, c, d, e, f);
+			free(filename_a);
+		},
+		{
+			wchar_t *filename_w;
+			if (charset_iconv(filename, &filename_w, CHARSET_UTF8, CHARSET_WCHAR_T, SIZE_MAX))
+				return INVALID_HANDLE_VALUE;
 
-		h = CreateFileW(filename_w, a, b, c, d, e, f);
-		free(filename_w);
-	})
+			h = CreateFileW(filename_w, a, b, c, d, e, f);
+			free(filename_w);
+		})
 
 	return h;
 }
@@ -89,19 +92,23 @@ static int win32_error_unmap_(slurp_t *slurp, const char *filename, const char *
 	DWORD err = GetLastError();
 	char *ptr = NULL;
 
-	SCHISM_ANSI_UNICODE({
-		LPSTR errmsg = NULL;
-		FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-				err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&errmsg, 0, NULL);
-		charset_iconv(errmsg, &ptr, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX);
-		LocalFree(errmsg);
-	}, {
-		LPWSTR errmsg = NULL;
-		FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-				err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&errmsg, 0, NULL);
-		charset_iconv(errmsg, &ptr, CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX);
-		LocalFree(errmsg);
-	})
+	SCHISM_ANSI_UNICODE(
+		{
+			LPSTR errmsg = NULL;
+			FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
+					       | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&errmsg, 0, NULL);
+			charset_iconv(errmsg, &ptr, CHARSET_ANSI, CHARSET_UTF8, SIZE_MAX);
+			LocalFree(errmsg);
+		},
+		{
+			LPWSTR errmsg = NULL;
+			FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
+					       | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&errmsg, 0, NULL);
+			charset_iconv(errmsg, &ptr, CHARSET_WCHAR_T, CHARSET_UTF8, SIZE_MAX);
+			LocalFree(errmsg);
+		})
 
 	// I don't particularly want to split this stuff onto two lines, but
 	// it's the only way to make the error message readable in some cases
@@ -131,7 +138,8 @@ int slurp_win32_mmap(slurp_t *slurp, const char *filename, uint64_t st)
 	if (st > (uint64_t)SIZE_MAX)
 		return SLURP_OPEN_IGNORE;
 
-	file = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	file = CreateFileUTF8(
+		filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE)
 		return win32_error_unmap_(slurp, filename, "CreateFile", SLURP_OPEN_FAIL);
 
@@ -173,10 +181,17 @@ static int slurp_win32_seek_(slurp_t *t, int64_t offset, int whence)
 	r.QuadPart = offset;
 
 	switch (whence) {
-	case SEEK_SET: move = FILE_BEGIN; break;
-	case SEEK_CUR: move = FILE_CURRENT; break;
-	case SEEK_END: move = FILE_END; break;
-	default: return -1;
+	case SEEK_SET:
+		move = FILE_BEGIN;
+		break;
+	case SEEK_CUR:
+		move = FILE_CURRENT;
+		break;
+	case SEEK_END:
+		move = FILE_END;
+		break;
+	default:
+		return -1;
 	}
 
 	r.u.LowPart = SetFilePointer(t->internal.win32.handle, r.u.LowPart, &r.u.HighPart, move);
@@ -231,7 +246,8 @@ int slurp_win32(slurp_t *t, const char *filename, SCHISM_UNUSED uint64_t size)
 {
 	memset(t, 0, sizeof(*t));
 
-	t->internal.win32.handle = CreateFileUTF8(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	t->internal.win32.handle = CreateFileUTF8(
+		filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (t->internal.win32.handle == INVALID_HANDLE_VALUE)
 		return SLURP_OPEN_FAIL;
 

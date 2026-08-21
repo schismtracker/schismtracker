@@ -22,15 +22,15 @@
  */
 
 #include "headers.h"
-#include "mt.h"
 #include "loadso.h"
-#include "osdefs.h"
 #include "mem.h"
+#include "mt.h"
+#include "osdefs.h"
 
 #include "backend/timer.h"
 
-#include <windows.h>
 #include <mmsystem.h>
+#include <windows.h>
 
 // Old toolchains don't have these:
 #ifndef CREATE_WAITABLE_TIMER_MANUAL_RESET
@@ -116,8 +116,8 @@ static timer_ticks_t win32_timer_ticks_us(void)
 // These are in much, much older versions of Windows.
 // Really, Windows 95 is the only version that doesn't have these symbols.
 // FIXME is this actually true? Win95 at least has WaitForSingleObject.
-static HANDLE (WINAPI *WIN32_CreateWaitableTimer)(LPSECURITY_ATTRIBUTES, BOOL, LPCSTR) = NULL;
-static BOOL (WINAPI *WIN32_SetWaitableTimer)(HANDLE, const LARGE_INTEGER *, LONG, PTIMERAPCROUTINE, LPVOID, BOOL) = NULL;
+static HANDLE(WINAPI *WIN32_CreateWaitableTimer)(LPSECURITY_ATTRIBUTES, BOOL, LPCSTR) = NULL;
+static BOOL(WINAPI *WIN32_SetWaitableTimer)(HANDLE, const LARGE_INTEGER *, LONG, PTIMERAPCROUTINE, LPVOID, BOOL) = NULL;
 
 // internal NTDLL functions; this is what SleepEx actually calls under the hood
 // on NT 4 and newer.
@@ -125,7 +125,8 @@ static BOOL (WINAPI *WIN32_SetWaitableTimer)(HANDLE, const LARGE_INTEGER *, LONG
 // XXX For architectures that never had 9x (namely, amd64, arm, arm64, ppc, alpha)
 // should we only compile NtDelayExecution and simply not bother with the timer
 // crap?
-static LONG /*NTSTATUS*/ (__stdcall /*NTAPI*/ *NTDLL_NtDelayExecution)(BOOLEAN Alertable, PLARGE_INTEGER Interval) = NULL;
+static LONG /*NTSTATUS*/ (__stdcall /*NTAPI*/ *NTDLL_NtDelayExecution)(BOOLEAN Alertable, PLARGE_INTEGER Interval)
+	= NULL;
 
 // FIXME: we're leaking timers here on thread exit
 static DWORD dw_timer_tls_index = TLS_OUT_OF_INDEXES;
@@ -206,8 +207,7 @@ static int win32_timer_init(void)
 
 #ifdef WIN32_TIMER_COMPILE_WINMM
 	if (win32_ntver_atleast(5, 1, 0) // This is buggy and broken on Win2k
-		&& QueryPerformanceFrequency(&win32_timer_resolution)
-		&& win32_timer_resolution.QuadPart
+		&& QueryPerformanceFrequency(&win32_timer_resolution) && win32_timer_resolution.QuadPart
 		&& QueryPerformanceCounter(&win32_timer_start)) {
 		win32_timer_impl = WIN32_TIMER_IMPL_QPC;
 	} else {

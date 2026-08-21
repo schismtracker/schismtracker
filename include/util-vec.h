@@ -24,17 +24,18 @@
 #ifndef UTIL_VEC_H_
 #define UTIL_VEC_H_
 
-#define MINMAX_INTRINSICS_EX(EXTERN, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
-	__attribute__((__target__(#TARGET))) \
-	EXTERN void minmax_##BITS##_##NAME(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
+#define MINMAX_INTRINSICS_EX( \
+	EXTERN, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
+	__attribute__((__target__(#TARGET))) EXTERN void minmax_##BITS##_##NAME( \
+		const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
 	{ \
 		size_t i; \
-	\
-		if (!len) return; /* wat */ \
-	\
-		if (len >= SIZE \
-				&& stride < SIZE /* stride cannot be over SIZE */ \
-				&& !(stride & (stride - 1))) /* stride must be a power of 2 */ \
+\
+		if (!len) \
+			return; /* wat */ \
+\
+		if (len >= SIZE && stride < SIZE /* stride cannot be over SIZE */ \
+			&& !(stride & (stride - 1))) /* stride must be a power of 2 */ \
 		{ \
 			size_t xlen; \
 			TYPE vmin; \
@@ -43,10 +44,10 @@
 			__attribute__((__aligned__(SIZE * (BITS / 8)))) int##BITS##_t amax[SIZE]; \
 			VARS \
 \
-			PREFIX \
+				PREFIX \
 \
-			/* load the min and unsign it */ \
-			vmin = SET1(*min); \
+                        /* load the min and unsign it */ \
+					vmin = SET1(*min); \
 			vmax = SET1(*max); \
 \
 			/* kludge it in */ \
@@ -72,8 +73,10 @@
 			STORE((TYPE *)amax, vmax); \
 \
 			for (i = 0; i < SIZE; i += stride) { \
-				if (amin[i] < *min) *min = amin[i]; \
-				if (amax[i] > *max) *max = amax[i]; \
+				if (amin[i] < *min) \
+					*min = amin[i]; \
+				if (amax[i] > *max) \
+					*max = amax[i]; \
 			} \
 		} \
 \
@@ -81,8 +84,10 @@
 		minmax_##BITS##_c(buf, len, min, max, stride); \
 	}
 
-#define MINMAX_INTRINSICS(TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
-	MINMAX_INTRINSICS_EX(static, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE)
+#define MINMAX_INTRINSICS( \
+	TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
+	MINMAX_INTRINSICS_EX(static, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, \
+		MIN, MAX, STORE)
 
 void minmax_8_c(const int8_t *buf, size_t len, int8_t *min, int8_t *max, size_t stride);
 void minmax_16_c(const int16_t *buf, size_t len, int16_t *min, int16_t *max, size_t stride);
@@ -91,4 +96,3 @@ void minmax_8_altivec(const int8_t *buf, size_t len, int8_t *min, int8_t *max, s
 void minmax_16_altivec(const int16_t *buf, size_t len, int16_t *min, int16_t *max, size_t stride);
 
 #endif
-

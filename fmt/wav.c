@@ -22,14 +22,14 @@
  */
 
 #include "headers.h"
-#include "bits.h"
-#include "fmt.h"
 #include "it.h"
+#include "bits.h"
 #include "disko.h"
-#include "player/sndfile.h"
+#include "fmt.h"
 #include "log.h"
-#include "str.h"
 #include "mem.h"
+#include "player/sndfile.h"
+#include "str.h"
 
 // Standard IFF chunks IDs
 #define IFFID_FORM UINT32_C(0x464f524d)
@@ -58,7 +58,12 @@ int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 	slurp_memstream(&fp, (uint8_t *)data, size);
 
 #define READ_VALUE(name) \
-	do { if (slurp_read(&fp, &name, sizeof(name)) != sizeof(name)) { unslurp(&fp); return 0; } } while (0)
+	do { \
+		if (slurp_read(&fp, &name, sizeof(name)) != sizeof(name)) { \
+			unslurp(&fp); \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(fmt->format);
 	READ_VALUE(fmt->channels);
@@ -67,19 +72,28 @@ int wav_chunk_fmt_read(const void *data, size_t size, void *void_fmt)
 	READ_VALUE(fmt->samplesize);
 	READ_VALUE(fmt->bitspersample);
 
-	fmt->format        = bswapLE16(fmt->format);
-	fmt->channels      = bswapLE16(fmt->channels);
-	fmt->freqHz        = bswapLE32(fmt->freqHz);
-	fmt->bytessec      = bswapLE32(fmt->bytessec);
-	fmt->samplesize    = bswapLE16(fmt->samplesize);
+	fmt->format = bswapLE16(fmt->format);
+	fmt->channels = bswapLE16(fmt->channels);
+	fmt->freqHz = bswapLE32(fmt->freqHz);
+	fmt->bytessec = bswapLE32(fmt->bytessec);
+	fmt->samplesize = bswapLE16(fmt->samplesize);
 	fmt->bitspersample = bswapLE16(fmt->bitspersample);
 
 	/* BUT I'M NOT DONE YET */
 	if (fmt->format == WAVE_FORMAT_EXTENSIBLE) {
 		static const unsigned char subformat_base_check[12] = {
-			0x00, 0x00, 0x10, 0x00,
-			0x80, 0x00, 0x00, 0xAA,
-			0x00, 0x38, 0x9B, 0x71,
+			0x00,
+			0x00,
+			0x10,
+			0x00,
+			0x80,
+			0x00,
+			0x00,
+			0xAA,
+			0x00,
+			0x38,
+			0x9B,
+			0x71,
 		};
 
 		uint32_t subformat;
@@ -128,8 +142,7 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 		if (slurp_read(fp, &id_WAVE, sizeof(id_WAVE)) != sizeof(id_WAVE))
 			return 0;
 
-		if (bswapBE32(id_RIFF) != IFFID_RIFF ||
-			bswapBE32(id_WAVE) != IFFID_WAVE)
+		if (bswapBE32(id_RIFF) != IFFID_RIFF || bswapBE32(id_WAVE) != IFFID_WAVE)
 			return 0;
 	}
 
@@ -204,11 +217,20 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 
 	// bit width
 	switch (fmt.bitspersample) {
-	case 8:  flags |= SF_8;  break;
-	case 16: flags |= SF_16; break;
-	case 24: flags |= SF_24; break;
-	case 32: flags |= SF_32; break;
-	default: return 0; // unsupported
+	case 8:
+		flags |= SF_8;
+		break;
+	case 16:
+		flags |= SF_16;
+		break;
+	case 24:
+		flags |= SF_24;
+		break;
+	case 32:
+		flags |= SF_32;
+		break;
+	default:
+		return 0; // unsupported
 	}
 
 	// encoding (8-bit wav is unsigned, everything else is signed -- yeah, it's stupid)
@@ -219,12 +241,13 @@ static int wav_load(song_sample_t *smp, slurp_t *fp, int load_sample)
 	case WAVE_FORMAT_IEEE_FLOAT:
 		flags |= SF_IEEE;
 		break;
-	default: return 0; // unsupported
+	default:
+		return 0; // unsupported
 	}
 
-	smp->flags         = 0; // flags are set by csf_read_sample
-	smp->c5speed       = fmt.freqHz;
-	smp->length        = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
+	smp->flags = 0; // flags are set by csf_read_sample
+	smp->c5speed = fmt.freqHz;
+	smp->length = data_chunk.size / ((fmt.bitspersample / 8) * fmt.channels);
 
 	/* if we have XTRA or SMPL chunks, fill them in as well. */
 	if (xtra_chunk.id) {
@@ -300,8 +323,8 @@ int fmt_wav_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	fmt_fill_file_from_sample(file, &smp);
 
-	file->description  = "IBM/Microsoft RIFF Audio";
-	file->type         = TYPE_SAMPLE_PLAIN;
+	file->description = "IBM/Microsoft RIFF Audio";
+	file->type = TYPE_SAMPLE_PLAIN;
 	file->smp_filename = file->base;
 
 	return 1;
@@ -321,8 +344,8 @@ struct wav_writedata {
 };
 
 /* returns bytes per frame */
-static int wav_header(disko_t *fp, int bits, int channels, uint32_t rate, size_t length,
-	struct wav_writedata *wwd /* out */)
+static int wav_header(
+	disko_t *fp, int bits, int channels, uint32_t rate, size_t length, struct wav_writedata *wwd /* out */)
 {
 	int16_t s;
 	uint32_t ul;
@@ -377,7 +400,8 @@ static inline void fmt_wav_write_INFO_chunk(disko_t *fp, const char chunk[4], co
 
 	/* word align; I'm not sure if this is the "correct" way
 	 * to do this, but eh */
-	if (len & 1) disko_putc(fp, ' ');
+	if (len & 1)
+		disko_putc(fp, ' ');
 }
 
 static void fmt_wav_write_LIST(disko_t *fp, const char *title)
@@ -429,8 +453,8 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 	flags |= (smp->flags & CHN_16BIT) ? (SF_16 | SF_PCMS) : (SF_8 | SF_PCMU);
 	flags |= (smp->flags & CHN_STEREO) ? SF_SI : SF_M;
 
-	bps = wav_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1,
-		smp->c5speed, smp->length, NULL);
+	bps = wav_header(fp, (smp->flags & CHN_16BIT) ? 16 : 8, (smp->flags & CHN_STEREO) ? 2 : 1, smp->c5speed,
+		smp->length, NULL);
 
 	if (csf_write_sample(fp, smp, flags, UINT32_MAX) != smp->length * bps) {
 		log_appendf(4, "WAV: unexpected data size written");
@@ -459,7 +483,6 @@ int fmt_wav_save_sample(disko_t *fp, song_sample_t *smp)
 	return SAVE_SUCCESS;
 }
 
-
 int fmt_wav_export_head(disko_t *fp, int bits, int channels, uint32_t rate, const char *title)
 {
 	struct wav_writedata *wwd = malloc(sizeof(struct wav_writedata));
@@ -483,8 +506,7 @@ int fmt_wav_export_body(disko_t *fp, const uint8_t *data, size_t length)
 {
 	struct wav_writedata *wwd = fp->userdata;
 
-	if (fmt_write_pcm(fp, data, length, wwd->bpf, wwd->bps,
-			wwd->swap, "WAV") < 0)
+	if (fmt_write_pcm(fp, data, length, wwd->bpf, wwd->bps, wwd->swap, "WAV") < 0)
 		return DW_ERROR;
 
 	wwd->numbytes += length;

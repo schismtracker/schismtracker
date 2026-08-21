@@ -22,15 +22,15 @@
  */
 
 #include "headers.h"
-#include "vgamem.h"
+#include "dialog.h"
 #include "it.h"
 #include "page.h"
-#include "video.h"
 #include "song.h"
-#include "version.h"
-#include "dialog.h"
 #include "widget.h"
 #include "keyboard.h"
+#include "version.h"
+#include "vgamem.h"
+#include "video.h"
 
 /* Eventual TODO: draw the pattern data in the Schism logo in a different color than the words */
 #include "auto/logoit.h"
@@ -46,15 +46,20 @@ static struct logo_data {
 static struct widget widgets_about[1];
 
 static struct vgamem_overlay logo_image = {
-	23, 17,
-	58, 24,
-	NULL, 0, 0, 0,
+	23,
+	17,
+	58,
+	24,
+	NULL,
+	0,
+	0,
+	0,
 };
-
 
 static int _fixup_ignore_globals(struct key_event *k)
 {
-	if (k->mouse && k->y > 20) return 0;
+	if (k->mouse && k->y > 20)
+		return 0;
 	switch (k->sym) {
 	case SCHISM_KEYSYM_LEFT:
 	case SCHISM_KEYSYM_RIGHT:
@@ -65,13 +70,19 @@ static int _fixup_ignore_globals(struct key_event *k)
 	case SCHISM_KEYSYM_ESCAPE:
 		/* use default handler */
 		return 0;
-	case SCHISM_KEYSYM_F2: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F9: case SCHISM_KEYSYM_F10:
+	case SCHISM_KEYSYM_F2:
+	case SCHISM_KEYSYM_F5:
+	case SCHISM_KEYSYM_F9:
+	case SCHISM_KEYSYM_F10:
 		// Ctrl + these keys does not lead to a new screen
 		if (k->mod & SCHISM_KEYMOD_CTRL)
 			break;
 		// Fall through.
-	case SCHISM_KEYSYM_F1: case SCHISM_KEYSYM_F3: case SCHISM_KEYSYM_F4:
-	case SCHISM_KEYSYM_F11: case SCHISM_KEYSYM_F12:
+	case SCHISM_KEYSYM_F1:
+	case SCHISM_KEYSYM_F3:
+	case SCHISM_KEYSYM_F4:
+	case SCHISM_KEYSYM_F11:
+	case SCHISM_KEYSYM_F12:
 		// Ignore Alt and so on.
 		if (k->mod & (SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_SHIFT))
 			break;
@@ -86,7 +97,7 @@ static int _fixup_ignore_globals(struct key_event *k)
 
 static void _draw_full(void)
 {
-	draw_fill_chars(0,0,79,49,DEFAULT_FG,0);
+	draw_fill_chars(0, 0, 79, 49, DEFAULT_FG, 0);
 }
 
 void about_load_page(struct page *page)
@@ -102,7 +113,8 @@ void about_load_page(struct page *page)
 
 static void about_close(SCHISM_UNUSED void *data)
 {
-	if (status.current_page == PAGE_ABOUT) set_page(PAGE_LOAD_MODULE);
+	if (status.current_page == PAGE_ABOUT)
+		set_page(PAGE_LOAD_MODULE);
 	status.flags |= NEED_UPDATE;
 }
 
@@ -112,11 +124,11 @@ static void about_draw_const(void)
 
 	if (status.current_page == PAGE_ABOUT) {
 		/* redraw outer part */
-		draw_box(11,16, 68, 34, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
+		draw_box(11, 16, 68, 34, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
 	}
 
 	if (status.flags & CLASSIC_MODE) {
-		draw_box(25,25, 56, 30, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
+		draw_box(25, 25, 56, 30, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
 
 		draw_text("Sound Card Setup", 32, 26, 0, 2);
 
@@ -167,7 +179,7 @@ void show_about(void)
 		vgamem_ovl_alloc(&logo_image);
 		xpmdata(_logo_it_xpm, &it_logo.pixels, &it_logo.width, &it_logo.height);
 		xpmdata(_logo_schism_xpm, &schism_logo.pixels, &schism_logo.width, &schism_logo.height);
-		didit=1;
+		didit = 1;
 	}
 
 	logo = (status.flags & CLASSIC_MODE) ? it_logo : schism_logo;
@@ -179,24 +191,17 @@ void show_about(void)
 		for (y = 0; y < logo.height; y++) {
 			for (x = 0; x < logo.width; x++) {
 				if (logo.pixels[x]) {
-					vgamem_ovl_drawpixel(&logo_image, x+2, y+6, c);
+					vgamem_ovl_drawpixel(&logo_image, x + 2, y + 6, c);
 				}
 			}
-			vgamem_ovl_drawpixel(&logo_image, x, y+6, 2);
-			vgamem_ovl_drawpixel(&logo_image, x+1, y+6, 2);
+			vgamem_ovl_drawpixel(&logo_image, x, y + 6, 2);
+			vgamem_ovl_drawpixel(&logo_image, x + 1, y + 6, 2);
 			logo.pixels += logo.width;
 		}
 	}
 
-	widget_create_button(widgets_about + 0,
-			33,32,
-			12,
-			0,0,0,0,0,
-			dialog_yes_NULL, "Continue", 3);
-	d = dialog_create_custom(11,16,
-			58, 19,
-			widgets_about, 1, 0,
-			about_draw_const, NULL);
+	widget_create_button(widgets_about + 0, 33, 32, 12, 0, 0, 0, 0, 0, dialog_yes_NULL, "Continue", 3);
+	d = dialog_create_custom(11, 16, 58, 19, widgets_about, 1, 0, about_draw_const, NULL);
 	d->action_yes = about_close;
 	d->action_no = about_close;
 	d->action_cancel = about_close;
@@ -209,4 +214,3 @@ void show_about(void)
 	status.flags |= DIR_MODULES_CHANGED;
 	pages[PAGE_LOAD_MODULE].set_page();
 }
-

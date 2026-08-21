@@ -24,12 +24,12 @@
 #include "headers.h"
 
 #include "backend/dmoz.h"
-#include "loadso.h"
 #include "charset.h"
 #include "dmoz.h"
-#include "util.h"
+#include "loadso.h"
 #include "mem.h"
 #include "osdefs.h"
+#include "util.h"
 
 #include <windows.h>
 
@@ -37,39 +37,41 @@ static char *win32_dmoz_get_exe_path(void)
 {
 	char *utf8 = NULL;
 
-	SCHISM_ANSI_UNICODE({
-		// Windows 9x
-		char path[MAX_PATH];
+	SCHISM_ANSI_UNICODE(
+		{
+                // Windows 9x
+			char path[MAX_PATH];
 
-		if (GetModuleFileNameA(NULL, path, ARRAY_SIZE(path)))
-			charset_iconv(path, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(path));
-	}, {
-		// Windows NT. This uses dynamic allocation to account for e.g. UNC paths.
-		DWORD pathsize = MAX_PATH;
-		WCHAR *path = NULL;
+			if (GetModuleFileNameA(NULL, path, ARRAY_SIZE(path)))
+				charset_iconv(path, &utf8, CHARSET_ANSI, CHARSET_UTF8, sizeof(path));
+		},
+		{
+                // Windows NT. This uses dynamic allocation to account for e.g. UNC paths.
+			DWORD pathsize = MAX_PATH;
+			WCHAR *path = NULL;
 
-		for (;;) {
-			{
-				void *new = mem_realloc(path, pathsize * sizeof(*path));
-				if (!new) {
-					free(path);
-					return NULL;
+			for (;;) {
+				{
+					void *new = mem_realloc(path, pathsize * sizeof(*path));
+					if (!new) {
+						free(path);
+						return NULL;
+					}
+
+					path = new;
 				}
 
-				path = new;
+				DWORD len = GetModuleFileNameW(NULL, path, pathsize);
+				if (len < pathsize - 1)
+					break;
+
+				pathsize *= 2;
 			}
 
-			DWORD len = GetModuleFileNameW(NULL, path, pathsize);
-			if (len < pathsize - 1)
-				break;
+			charset_iconv(path, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, pathsize * sizeof(*path));
 
-			pathsize *= 2;
-		}
-
-		charset_iconv(path, &utf8, CHARSET_WCHAR_T, CHARSET_UTF8, pathsize * sizeof(*path));
-
-		free(path);
-	})
+			free(path);
+		})
 
 	if (utf8) {
 		char *parent = dmoz_path_get_parent_directory(utf8);

@@ -23,8 +23,8 @@
 
 #include "headers.h"
 #include "osdefs.h"
-#include "mem.h"
 #include "log.h"
+#include "mem.h"
 
 #define INCL_DOS
 #define INCL_PM
@@ -63,7 +63,7 @@ FILE *os2_fopen(const char *path, const char *rw)
 	return fp;
 }
 
-int os2_stat(const char* path, struct stat* st)
+int os2_stat(const char *path, struct stat *st)
 {
 	int rc;
 	char *sys;
@@ -199,9 +199,15 @@ void os2_show_message_box(const char *title, const char *text, int style)
 	}
 
 	switch (style) {
-	case OS_MESSAGE_BOX_INFO: os2style |= MB_ICONASTERISK; break;
-	case OS_MESSAGE_BOX_ERROR: os2style |= MB_ICONHAND; break;
-	case OS_MESSAGE_BOX_WARNING: os2style |= MB_ICONEXCLAMATION; break;
+	case OS_MESSAGE_BOX_INFO:
+		os2style |= MB_ICONASTERISK;
+		break;
+	case OS_MESSAGE_BOX_ERROR:
+		os2style |= MB_ICONHAND;
+		break;
+	case OS_MESSAGE_BOX_WARNING:
+		os2style |= MB_ICONEXCLAMATION;
+		break;
 	}
 
 	// untested:

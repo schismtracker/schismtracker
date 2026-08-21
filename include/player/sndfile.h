@@ -3,7 +3,7 @@
  *
  * Authors: Olivier Lapicque <olivierl@jps.net>,
  *          Adam Goode       <adam@evdebs.org> (endian and char fixes for PPC)
-*/
+ */
 #ifndef SCHISM_PLAYER_SNDFILE_H_
 #define SCHISM_PLAYER_SNDFILE_H_
 
@@ -15,143 +15,143 @@
 
 #include "tables.h"
 
-#include "timer.h" // timer_ticks_t
 #include "fmopl.h" // OPL_CHANNELS
+#include "timer.h" // timer_ticks_t
 
-#define MOD_AMIGAC2             0x1AB
-#define MAX_SAMPLE_LENGTH       0x10000000 /* borrowed from OpenMPT; originally 16000000 */
-#define MAX_SAMPLE_RATE         192000
-#define MAX_ORDERS              256
-#define MAX_PATTERNS            240
-#define MAX_SAMPLES             236
-#define MAX_INSTRUMENTS         MAX_SAMPLES
-#define MAX_CHANNELS            64
-#define MAX_ENVPOINTS           32
-#define MAX_INFONAME            80
-#define MAX_EQ_BANDS            6
-#define MAX_MESSAGE             8000
-#define MAX_INTERPOLATION_LOOKAHEAD 4
+#define MOD_AMIGAC2                             0x1AB
+#define MAX_SAMPLE_LENGTH                       0x10000000 /* borrowed from OpenMPT; originally 16000000 */
+#define MAX_SAMPLE_RATE                         192000
+#define MAX_ORDERS                              256
+#define MAX_PATTERNS                            240
+#define MAX_SAMPLES                             236
+#define MAX_INSTRUMENTS                         MAX_SAMPLES
+#define MAX_CHANNELS                            64
+#define MAX_ENVPOINTS                           32
+#define MAX_INFONAME                            80
+#define MAX_EQ_BANDS                            6
+#define MAX_MESSAGE                             8000
+#define MAX_INTERPOLATION_LOOKAHEAD             4
 #define MAX_INTERPOLATION_LOOKAHEAD_BUFFER_SIZE 16 /* Borrowed from OpenMPT */
-#define MAX_SAMPLING_POINT_SIZE 4
+#define MAX_SAMPLING_POINT_SIZE                 4
 
-#define MAX_MIDI_CHANNELS       16
-#define MAX_MIDI_MACRO          32
+#define MAX_MIDI_CHANNELS 16
+#define MAX_MIDI_MACRO    32
 
-#define MAX_VOICES              256
+#define MAX_VOICES 256
 
-#define MIX_MAX_CHANNELS		2 /* used for filters and stuff */
-#define MIXBUFFERSIZE           512
+#define MIX_MAX_CHANNELS 2 /* used for filters and stuff */
+#define MIXBUFFERSIZE    512
 
-
-#define CHN_16BIT               0x01 // 16-bit sample
-#define CHN_LOOP                0x02 // looped sample
-#define CHN_PINGPONGLOOP        0x04 // bi-directional (useless unless CHN_LOOP is also set)
-#define CHN_SUSTAINLOOP         0x08 // sample with sustain loop
-#define CHN_PINGPONGSUSTAIN     0x10 // bi-directional (useless unless CHN_SUSTAINLOOP is also set)
-#define CHN_PANNING             0x20 // sample with default panning set
-#define CHN_STEREO              0x40 // stereo sample
-#define CHN_PINGPONGFLAG        0x80 // when flag is on, sample is processed backwards
-#define CHN_MUTE                0x100 // muted channel
-#define CHN_KEYOFF              0x200 // exit sustain (note-off encountered)
-#define CHN_NOTEFADE            0x400 // fade note (~~~ or end of instrument envelope)
-#define CHN_SURROUND            0x800 // use surround channel (S91)
-#define CHN_NOIDO               0x1000 // near enough to an exact multiple of c5speed that interpolation
-                                       // won't be noticeable (or interpolation is disabled completely)
-#define CHN_HQSRC               0x2000 // ???
-#define CHN_FILTER              0x4000 // filtered output (i.e., Zxx)
-#define CHN_VOLUMERAMP          0x8000 // ramp volume
-#define CHN_VIBRATO             0x10000 // apply vibrato
-#define CHN_TREMOLO             0x20000 // apply tremolo
+#define CHN_16BIT           0x01 // 16-bit sample
+#define CHN_LOOP            0x02 // looped sample
+#define CHN_PINGPONGLOOP    0x04 // bi-directional (useless unless CHN_LOOP is also set)
+#define CHN_SUSTAINLOOP     0x08 // sample with sustain loop
+#define CHN_PINGPONGSUSTAIN 0x10 // bi-directional (useless unless CHN_SUSTAINLOOP is also set)
+#define CHN_PANNING         0x20 // sample with default panning set
+#define CHN_STEREO          0x40 // stereo sample
+#define CHN_PINGPONGFLAG    0x80 // when flag is on, sample is processed backwards
+#define CHN_MUTE            0x100 // muted channel
+#define CHN_KEYOFF          0x200 // exit sustain (note-off encountered)
+#define CHN_NOTEFADE        0x400 // fade note (~~~ or end of instrument envelope)
+#define CHN_SURROUND        0x800 // use surround channel (S91)
+#define CHN_NOIDO \
+	0x1000 // near enough to an exact multiple of c5speed that interpolation
+				       // won't be noticeable (or interpolation is disabled completely)
+#define CHN_HQSRC      0x2000 // ???
+#define CHN_FILTER     0x4000 // filtered output (i.e., Zxx)
+#define CHN_VOLUMERAMP 0x8000 // ramp volume
+#define CHN_VIBRATO    0x10000 // apply vibrato
+#define CHN_TREMOLO    0x20000 // apply tremolo
 //#define CHN_PANBRELLO         0x40000 // apply panbrello (handled elsewhere now)
-#define CHN_PORTAMENTO          0x80000 // apply portamento
-#define CHN_GLISSANDO           0x100000 // glissando mode ("stepped" pitch slides)
-#define CHN_VOLENV              0x200000 // volume envelope is active
-#define CHN_PANENV              0x400000 // pan envelope is active
-#define CHN_PITCHENV            0x800000 // pitch/filter envelope is active
-#define CHN_FASTVOLRAMP         0x1000000 // ramp volume very fast (XXX this is a dumb flag)
-#define CHN_NEWNOTE             0x2000000 // note was triggered, reset filter
+#define CHN_PORTAMENTO  0x80000 // apply portamento
+#define CHN_GLISSANDO   0x100000 // glissando mode ("stepped" pitch slides)
+#define CHN_VOLENV      0x200000 // volume envelope is active
+#define CHN_PANENV      0x400000 // pan envelope is active
+#define CHN_PITCHENV    0x800000 // pitch/filter envelope is active
+#define CHN_FASTVOLRAMP 0x1000000 // ramp volume very fast (XXX this is a dumb flag)
+#define CHN_NEWNOTE     0x2000000 // note was triggered, reset filter
 //#define CHN_REVERB            0x4000000
 //#define CHN_NOREVERB          0x8000000
-#define CHN_NNAMUTE             0x10000000 // turn off mute, but have it reset later
-#define CHN_ADLIB               0x20000000 // OPL mode
-#define CHN_LOOP_WRAPPED        0x40000000 // loop has just wrapped to the beginning
+#define CHN_NNAMUTE      0x10000000 // turn off mute, but have it reset later
+#define CHN_ADLIB        0x20000000 // OPL mode
+#define CHN_LOOP_WRAPPED 0x40000000 // loop has just wrapped to the beginning
 
-#define CHN_SAMPLE_FLAGS (CHN_16BIT | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP \
-	| CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO | CHN_PINGPONGFLAG | CHN_ADLIB)
+#define CHN_SAMPLE_FLAGS \
+	(CHN_16BIT | CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN | CHN_PANNING | CHN_STEREO \
+		| CHN_PINGPONGFLAG | CHN_ADLIB)
 
+#define ENV_VOLUME       0x0001
+#define ENV_VOLSUSTAIN   0x0002
+#define ENV_VOLLOOP      0x0004
+#define ENV_PANNING      0x0008
+#define ENV_PANSUSTAIN   0x0010
+#define ENV_PANLOOP      0x0020
+#define ENV_PITCH        0x0040
+#define ENV_PITCHSUSTAIN 0x0080
+#define ENV_PITCHLOOP    0x0100
+#define ENV_SETPANNING   0x0200
+#define ENV_FILTER       0x0400
+#define ENV_VOLCARRY     0x0800
+#define ENV_PANCARRY     0x1000
+#define ENV_PITCHCARRY   0x2000
+#define ENV_MUTE         0x4000
 
-#define ENV_VOLUME              0x0001
-#define ENV_VOLSUSTAIN          0x0002
-#define ENV_VOLLOOP             0x0004
-#define ENV_PANNING             0x0008
-#define ENV_PANSUSTAIN          0x0010
-#define ENV_PANLOOP             0x0020
-#define ENV_PITCH               0x0040
-#define ENV_PITCHSUSTAIN        0x0080
-#define ENV_PITCHLOOP           0x0100
-#define ENV_SETPANNING          0x0200
-#define ENV_FILTER              0x0400
-#define ENV_VOLCARRY            0x0800
-#define ENV_PANCARRY            0x1000
-#define ENV_PITCHCARRY          0x2000
-#define ENV_MUTE                0x4000
-
-#define FX_NONE                0 // .
-#define FX_ARPEGGIO            1 // J
-#define FX_PORTAMENTOUP        2 // F
-#define FX_PORTAMENTODOWN      3 // E
-#define FX_TONEPORTAMENTO      4 // G
-#define FX_VIBRATO             5 // H
-#define FX_TONEPORTAVOL        6 // L
-#define FX_VIBRATOVOL          7 // K
-#define FX_TREMOLO             8 // R
-#define FX_PANNING             9 // X
-#define FX_OFFSET              10 // O
-#define FX_VOLUMESLIDE         11 // D
-#define FX_POSITIONJUMP        12 // B
-#define FX_VOLUME              13 // ! (FT2/IMF Cxx)
-#define FX_PATTERNBREAK        14 // C
-#define FX_RETRIG              15 // Q
-#define FX_SPEED               16 // A
-#define FX_TEMPO               17 // T
-#define FX_TREMOR              18 // I
-#define FX_SPECIAL             20 // S
-#define FX_CHANNELVOLUME       21 // M
-#define FX_CHANNELVOLSLIDE     22 // N
-#define FX_GLOBALVOLUME        23 // V
-#define FX_GLOBALVOLSLIDE      24 // W
-#define FX_KEYOFF              25 // $ (FT2 Kxx)
-#define FX_FINEVIBRATO         26 // U
-#define FX_PANBRELLO           27 // Y
-#define FX_PANNINGSLIDE        29 // P
-#define FX_SETENVPOSITION      30 // & (FT2 Lxx)
-#define FX_MIDI                31 // Z
-#define FX_NOTESLIDEUP         32 // ( (IMF Gxy)
-#define FX_NOTESLIDEDOWN       33 // ) (IMF Hxy)
-#define FX_MAX                 34
-#define FX_UNIMPLEMENTED       FX_MAX // no-op, displayed as "?"
+#define FX_NONE            0 // .
+#define FX_ARPEGGIO        1 // J
+#define FX_PORTAMENTOUP    2 // F
+#define FX_PORTAMENTODOWN  3 // E
+#define FX_TONEPORTAMENTO  4 // G
+#define FX_VIBRATO         5 // H
+#define FX_TONEPORTAVOL    6 // L
+#define FX_VIBRATOVOL      7 // K
+#define FX_TREMOLO         8 // R
+#define FX_PANNING         9 // X
+#define FX_OFFSET          10 // O
+#define FX_VOLUMESLIDE     11 // D
+#define FX_POSITIONJUMP    12 // B
+#define FX_VOLUME          13 // ! (FT2/IMF Cxx)
+#define FX_PATTERNBREAK    14 // C
+#define FX_RETRIG          15 // Q
+#define FX_SPEED           16 // A
+#define FX_TEMPO           17 // T
+#define FX_TREMOR          18 // I
+#define FX_SPECIAL         20 // S
+#define FX_CHANNELVOLUME   21 // M
+#define FX_CHANNELVOLSLIDE 22 // N
+#define FX_GLOBALVOLUME    23 // V
+#define FX_GLOBALVOLSLIDE  24 // W
+#define FX_KEYOFF          25 // $ (FT2 Kxx)
+#define FX_FINEVIBRATO     26 // U
+#define FX_PANBRELLO       27 // Y
+#define FX_PANNINGSLIDE    29 // P
+#define FX_SETENVPOSITION  30 // & (FT2 Lxx)
+#define FX_MIDI            31 // Z
+#define FX_NOTESLIDEUP     32 // ( (IMF Gxy)
+#define FX_NOTESLIDEDOWN   33 // ) (IMF Hxy)
+#define FX_MAX             34
+#define FX_UNIMPLEMENTED   FX_MAX // no-op, displayed as "?"
 
 #define FX_IS_EFFECT(v) ((v) > 0 && (v) < FX_MAX)
 
 // Volume Column commands
-#define VOLFX_NONE             0
-#define VOLFX_VOLUME           1
-#define VOLFX_PANNING          2
-#define VOLFX_VOLSLIDEUP       3 // C
-#define VOLFX_VOLSLIDEDOWN     4 // D
-#define VOLFX_FINEVOLUP        5 // A
-#define VOLFX_FINEVOLDOWN      6 // B
-#define VOLFX_VIBRATOSPEED     7 // $ (FT2 Ax)
-#define VOLFX_VIBRATODEPTH     8 // H
-#define VOLFX_PANSLIDELEFT     9 // < (FT2 Dx)
-#define VOLFX_PANSLIDERIGHT    10 // > (FT2 Ex)
-#define VOLFX_TONEPORTAMENTO   11 // G
-#define VOLFX_PORTAUP          12 // F
-#define VOLFX_PORTADOWN        13 // E
+#define VOLFX_NONE           0
+#define VOLFX_VOLUME         1
+#define VOLFX_PANNING        2
+#define VOLFX_VOLSLIDEUP     3 // C
+#define VOLFX_VOLSLIDEDOWN   4 // D
+#define VOLFX_FINEVOLUP      5 // A
+#define VOLFX_FINEVOLDOWN    6 // B
+#define VOLFX_VIBRATOSPEED   7 // $ (FT2 Ax)
+#define VOLFX_VIBRATODEPTH   8 // H
+#define VOLFX_PANSLIDELEFT   9 // < (FT2 Dx)
+#define VOLFX_PANSLIDERIGHT  10 // > (FT2 Ex)
+#define VOLFX_TONEPORTAMENTO 11 // G
+#define VOLFX_PORTAUP        12 // F
+#define VOLFX_PORTADOWN      13 // E
 
 // orderlist
-#define ORDER_SKIP              254 // +++
-#define ORDER_LAST              255 // ---
+#define ORDER_SKIP 254 // +++
+#define ORDER_LAST 255 // ---
 
 // 'Special' notes
 // Note fade IS actually supported in Impulse Tracker, but there's no way to handle it in the editor
@@ -160,70 +160,70 @@
 // update 20090805: ok just discovered that IT internally uses 253 for its "no note" value.
 // guess we'll use a different value for fade!
 // note: 246 is rather arbitrary, but IT conveniently displays this value as "F#D" ("FD" with 2-char notes)
-#define NOTE_NONE               0   // ...
-#define NOTE_FIRST              1   // C-0
-#define NOTE_MIDC               61  // C-5
-#define NOTE_LAST               120 // B-9
-#define NOTE_FADE               246 // ~~~
-#define NOTE_CUT                254 // ^^^
-#define NOTE_OFF                255 // ===
-#define NOTE_IS_NOTE(n)         ((n) > NOTE_NONE && (n) <= NOTE_LAST) // anything playable - C-0 to B-9
-#define NOTE_IS_CONTROL(n)      ((n) > NOTE_LAST)                     // not a note, but non-empty
-#define NOTE_IS_INVALID(n)      ((n) > NOTE_LAST && (n) < NOTE_CUT && (n) != NOTE_FADE) // ???
+#define NOTE_NONE          0   // ...
+#define NOTE_FIRST         1   // C-0
+#define NOTE_MIDC          61  // C-5
+#define NOTE_LAST          120 // B-9
+#define NOTE_FADE          246 // ~~~
+#define NOTE_CUT           254 // ^^^
+#define NOTE_OFF           255 // ===
+#define NOTE_IS_NOTE(n)    ((n) > NOTE_NONE && (n) <= NOTE_LAST) // anything playable - C-0 to B-9
+#define NOTE_IS_CONTROL(n) ((n) > NOTE_LAST)                     // not a note, but non-empty
+#define NOTE_IS_INVALID(n) ((n) > NOTE_LAST && (n) < NOTE_CUT && (n) != NOTE_FADE) // ???
 
 // Auto-vibrato types
-#define VIB_SINE                0
-#define VIB_RAMP_DOWN           1
-#define VIB_SQUARE              2
-#define VIB_RANDOM              3
+#define VIB_SINE      0
+#define VIB_RAMP_DOWN 1
+#define VIB_SQUARE    2
+#define VIB_RANDOM    3
 
 // NNA types
-#define NNA_NOTECUT             0
-#define NNA_CONTINUE            1
-#define NNA_NOTEOFF             2
-#define NNA_NOTEFADE            3
+#define NNA_NOTECUT  0
+#define NNA_CONTINUE 1
+#define NNA_NOTEOFF  2
+#define NNA_NOTEFADE 3
 
 // DCT types
-#define DCT_NONE                0
-#define DCT_NOTE                1
-#define DCT_SAMPLE              2
-#define DCT_INSTRUMENT          3
+#define DCT_NONE       0
+#define DCT_NOTE       1
+#define DCT_SAMPLE     2
+#define DCT_INSTRUMENT 3
 
 // DCA types
-#define DCA_NOTECUT             0
-#define DCA_NOTEOFF             1
-#define DCA_NOTEFADE            2
+#define DCA_NOTECUT  0
+#define DCA_NOTEOFF  1
+#define DCA_NOTEFADE 2
 
 // Nothing innately special about this -- just needs to be above the max pattern length.
 // process row is set to this in order to get the player to jump to the end of the pattern.
 // (See ITTECH.TXT)
-#define PROCESS_NEXT_ORDER      0xFFFE
+#define PROCESS_NEXT_ORDER 0xFFFE
 
 // Module flags
-#define SONG_EMBEDMIDICFG       0x0001 // Embed MIDI macros (Shift-F1) in file
+#define SONG_EMBEDMIDICFG 0x0001 // Embed MIDI macros (Shift-F1) in file
 //#define SONG_FASTVOLSLIDES    0x0002
-#define SONG_ITOLDEFFECTS       0x0004 // Old Impulse Tracker effect implementations
-#define SONG_COMPATGXX          0x0008 // "Compatible Gxx" (handle portamento more like other trackers)
-#define SONG_LINEARSLIDES       0x0010 // Linear slides vs. Amiga slides
-#define SONG_PATTERNPLAYBACK    0x0020 // Only playing current pattern
+#define SONG_ITOLDEFFECTS    0x0004 // Old Impulse Tracker effect implementations
+#define SONG_COMPATGXX       0x0008 // "Compatible Gxx" (handle portamento more like other trackers)
+#define SONG_LINEARSLIDES    0x0010 // Linear slides vs. Amiga slides
+#define SONG_PATTERNPLAYBACK 0x0020 // Only playing current pattern
 //#define SONG_STEP             0x0040
-#define SONG_PAUSED             0x0080 // Playback paused (Shift-F8)
+#define SONG_PAUSED 0x0080 // Playback paused (Shift-F8)
 //#define SONG_FADINGSONG       0x0100
-#define SONG_ENDREACHED         0x0200 // Song is finished (standalone keyjazz mode)
+#define SONG_ENDREACHED 0x0200 // Song is finished (standalone keyjazz mode)
 //#define SONG_GLOBALFADE       0x0400
 //#define SONG_CPUVERYHIGH      0x0800
-#define SONG_FIRSTTICK          0x1000 // Current tick is the first tick of the row (dopey flow-control flag)
+#define SONG_FIRSTTICK 0x1000 // Current tick is the first tick of the row (dopey flow-control flag)
 //#define SONG_MPTFILTERMODE    0x2000
 //#define SONG_SURROUNDPAN      0x4000
 //#define SONG_EXFILTERRANGE    0x8000
 //#define SONG_AMIGALIMITS      0x10000
-#define SONG_INSTRUMENTMODE     0x20000 // Process instruments
-#define SONG_ORDERLOCKED        0x40000 // Don't advance orderlist *(Alt-F11)
-#define SONG_NOSTEREO           0x80000 // secret code for "mono"
-#define SONG_PATTERNLOOP        (SONG_PATTERNPLAYBACK | SONG_ORDERLOCKED) // Loop current pattern (F6)
+#define SONG_INSTRUMENTMODE 0x20000 // Process instruments
+#define SONG_ORDERLOCKED    0x40000 // Don't advance orderlist *(Alt-F11)
+#define SONG_NOSTEREO       0x80000 // secret code for "mono"
+#define SONG_PATTERNLOOP    (SONG_PATTERNPLAYBACK | SONG_ORDERLOCKED) // Loop current pattern (F6)
 
 // Global Options (Renderer)
-#define SNDMIX_REVERSESTEREO    0x0001 // swap L/R audio channels
+#define SNDMIX_REVERSESTEREO 0x0001 // swap L/R audio channels
 //#define SNDMIX_NOISEREDUCTION 0x0002 // reduce hiss (do not use, it's just a simple low-pass filter)
 //#define SNDMIX_AGC            0x0004 // automatic gain control
 //#define SNDMIX_NORESAMPLING     0x0008 // force no resampling (uninterpolated)
@@ -235,14 +235,14 @@
 //#define SNDMIX_SOFTPANNING    0x0200
 //#define SNDMIX_ULTRAHQSRCMODE   0x0400 // polyphase resampling (or FIR? I don't know)
 // Misc Flags (can safely be turned on or off)
-#define SNDMIX_DIRECTTODISK     0x10000 // disk writer mode
-#define SNDMIX_NOBACKWARDJUMPS  0x40000 // disallow Bxx jumps from going backward in the orderlist
+#define SNDMIX_DIRECTTODISK    0x10000 // disk writer mode
+#define SNDMIX_NOBACKWARDJUMPS 0x40000 // disallow Bxx jumps from going backward in the orderlist
 //#define SNDMIX_MAXDEFAULTPAN  0x80000 // (no longer) Used by the MOD loader
-#define SNDMIX_MUTECHNMODE      0x100000 // Notes are not played on muted channels
-#define SNDMIX_NOSURROUND       0x200000 // ignore S91
+#define SNDMIX_MUTECHNMODE 0x100000 // Notes are not played on muted channels
+#define SNDMIX_NOSURROUND  0x200000 // ignore S91
 //#define SNDMIX_NOMIXING       0x400000
-#define SNDMIX_NORAMPING        0x800000 // don't apply ramping on volume change (causes clicks)
-#define SNDMIX_CALCLENGTH       0x1000000 // length calculation optimizations (i.e. no instrument/note change)
+#define SNDMIX_NORAMPING  0x800000 // don't apply ramping on volume change (causes clicks)
+#define SNDMIX_CALCLENGTH 0x1000000 // length calculation optimizations (i.e. no instrument/note change)
 
 enum {
 	SRCMODE_NEAREST,
@@ -262,45 +262,45 @@ enum {
 // - csf_read_sample DOES check the values for validity
 
 // Bit width (8 bits for simplicity)
-#define _SDV_BIT(n)            ((n) << 0)
-#define SF_BIT_MASK            0xff
-#define SF_7                   _SDV_BIT(7)  // 7-bit (weird!)
-#define SF_8                   _SDV_BIT(8)  // 8-bit
-#define SF_16                  _SDV_BIT(16) // 16-bit
-#define SF_24                  _SDV_BIT(24) // 24-bit
-#define SF_32                  _SDV_BIT(32) // 32-bit
-#define SF_64                  _SDV_BIT(64) // 64-bit (for IEEE floating point)
+#define _SDV_BIT(n) ((n) << 0)
+#define SF_BIT_MASK 0xff
+#define SF_7        _SDV_BIT(7)  // 7-bit (weird!)
+#define SF_8        _SDV_BIT(8)  // 8-bit
+#define SF_16       _SDV_BIT(16) // 16-bit
+#define SF_24       _SDV_BIT(24) // 24-bit
+#define SF_32       _SDV_BIT(32) // 32-bit
+#define SF_64       _SDV_BIT(64) // 64-bit (for IEEE floating point)
 
 // Channels (4 bits)
-#define _SDV_CHN(n)            ((n) << 8)
-#define SF_CHN_MASK            0xf00
-#define SF_M                   _SDV_CHN(1) // mono
-#define SF_SI                  _SDV_CHN(2) // stereo, interleaved
-#define SF_SS                  _SDV_CHN(3) // stereo, split
+#define _SDV_CHN(n) ((n) << 8)
+#define SF_CHN_MASK 0xf00
+#define SF_M        _SDV_CHN(1) // mono
+#define SF_SI       _SDV_CHN(2) // stereo, interleaved
+#define SF_SS       _SDV_CHN(3) // stereo, split
 
 // Endianness (4 bits)
-#define _SDV_END(n)            ((n) << 12)
-#define SF_END_MASK            0xf000
-#define SF_LE                  _SDV_END(1) // little-endian
-#define SF_BE                  _SDV_END(2) // big-endian
+#define _SDV_END(n) ((n) << 12)
+#define SF_END_MASK 0xf000
+#define SF_LE       _SDV_END(1) // little-endian
+#define SF_BE       _SDV_END(2) // big-endian
 
 // Encoding (8 bits)
-#define _SDV_ENC(n)            ((n) << 16)
-#define SF_ENC_MASK            0xff0000
-#define SF_PCMS                _SDV_ENC(1) // PCM, signed
-#define SF_PCMU                _SDV_ENC(2) // PCM, unsigned
-#define SF_PCMD                _SDV_ENC(3) // PCM, delta-encoded
-#define SF_IT214               _SDV_ENC(4) // Impulse Tracker 2.14 compressed
-#define SF_IT215               _SDV_ENC(5) // Impulse Tracker 2.15 compressed
-#define SF_AMS                 _SDV_ENC(6) // AMS / Velvet Studio packed
-#define SF_DMF                 _SDV_ENC(7) // DMF Huffman compression
-#define SF_MDL                 _SDV_ENC(8) // MDL Huffman compression
-#define SF_PTM                 _SDV_ENC(9) // PTM 8-bit delta value -> 16-bit sample
-#define SF_PCMD16              _SDV_ENC(10) // PCM, 16-byte table delta-encoded
-#define SF_IEEE                _SDV_ENC(11) // IEEE floating point
+#define _SDV_ENC(n) ((n) << 16)
+#define SF_ENC_MASK 0xff0000
+#define SF_PCMS     _SDV_ENC(1) // PCM, signed
+#define SF_PCMU     _SDV_ENC(2) // PCM, unsigned
+#define SF_PCMD     _SDV_ENC(3) // PCM, delta-encoded
+#define SF_IT214    _SDV_ENC(4) // Impulse Tracker 2.14 compressed
+#define SF_IT215    _SDV_ENC(5) // Impulse Tracker 2.15 compressed
+#define SF_AMS      _SDV_ENC(6) // AMS / Velvet Studio packed
+#define SF_DMF      _SDV_ENC(7) // DMF Huffman compression
+#define SF_MDL      _SDV_ENC(8) // MDL Huffman compression
+#define SF_PTM      _SDV_ENC(9) // PTM 8-bit delta value -> 16-bit sample
+#define SF_PCMD16   _SDV_ENC(10) // PCM, 16-byte table delta-encoded
+#define SF_IEEE     _SDV_ENC(11) // IEEE floating point
 
 // Sample format shortcut
-#define SF(a,b,c,d) (SF_ ## a | SF_ ## b| SF_ ## c | SF_ ## d)
+#define SF(a, b, c, d) (SF_##a | SF_##b | SF_##c | SF_##d)
 
 // ------------------------------------------------------------------------------------------------------------
 /* this might seem totally insane, but it makes this shit easier to change when
@@ -311,145 +311,124 @@ struct song_smp_pos {
 };
 
 /* constructor */
-static inline SCHISM_ALWAYS_INLINE
-struct song_smp_pos csf_smp_pos(int32_t whole, uint32_t frac)
+static inline SCHISM_ALWAYS_INLINE struct song_smp_pos csf_smp_pos(int32_t whole, uint32_t frac)
 {
 	struct song_smp_pos pos;
 	pos.v = lshift_signed((int64_t)whole, 32) | frac;
 	return pos;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int64_t csf_smp_pos_get_full(struct song_smp_pos v)
+static inline SCHISM_ALWAYS_INLINE int64_t csf_smp_pos_get_full(struct song_smp_pos v)
 {
 	return v.v; /* breaking: hit new emoticon */
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int32_t csf_smp_pos_get_whole(struct song_smp_pos pos)
+static inline SCHISM_ALWAYS_INLINE int32_t csf_smp_pos_get_whole(struct song_smp_pos pos)
 {
 	return rshift_signed(pos.v, 32);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-uint32_t csf_smp_pos_get_frac(struct song_smp_pos pos)
+static inline SCHISM_ALWAYS_INLINE uint32_t csf_smp_pos_get_frac(struct song_smp_pos pos)
 {
 	return (pos.v & 0xFFFFFFFF);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_equals_one(struct song_smp_pos pos)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_equals_one(struct song_smp_pos pos)
 {
 	return (pos.v == INT64_C(0x100000000));
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_equals_zero(struct song_smp_pos pos)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_equals_zero(struct song_smp_pos pos)
 {
 	return !pos.v;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_is_positive(struct song_smp_pos pos)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_is_positive(struct song_smp_pos pos)
 {
 	/* what about zero? */
 	return pos.v > 0;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_is_negative(struct song_smp_pos pos)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_is_negative(struct song_smp_pos pos)
 {
 	return pos.v < 0;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-struct song_smp_pos csf_smp_pos_add(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE struct song_smp_pos csf_smp_pos_add(struct song_smp_pos a, struct song_smp_pos b)
 {
 	a.v += b.v;
 	return a;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-struct song_smp_pos csf_smp_pos_sub(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE struct song_smp_pos csf_smp_pos_sub(struct song_smp_pos a, struct song_smp_pos b)
 {
 	a.v -= b.v;
 	return a;
 }
 
 /* multiplication by scalar */
-static inline SCHISM_ALWAYS_INLINE
-struct song_smp_pos csf_smp_pos_mul_whole(struct song_smp_pos a, int64_t b)
+static inline SCHISM_ALWAYS_INLINE struct song_smp_pos csf_smp_pos_mul_whole(struct song_smp_pos a, int64_t b)
 {
 	a.v *= b;
 	return a;
 }
 
 /* division by another smp pos, returns scalar */
-static inline SCHISM_ALWAYS_INLINE
-int64_t csf_smp_pos_div(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE int64_t csf_smp_pos_div(struct song_smp_pos a, struct song_smp_pos b)
 {
 	return (a.v / b.v);
 }
 
 /* division by scalar, returns smp pos */
-static inline SCHISM_ALWAYS_INLINE
-struct song_smp_pos csf_smp_pos_div_whole(struct song_smp_pos a, int64_t b)
+static inline SCHISM_ALWAYS_INLINE struct song_smp_pos csf_smp_pos_div_whole(struct song_smp_pos a, int64_t b)
 {
 	a.v /= b;
 	return a;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_lt(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_lt(struct song_smp_pos a, struct song_smp_pos b)
 {
 	return (a.v < b.v);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_gt(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_gt(struct song_smp_pos a, struct song_smp_pos b)
 {
 	return (a.v > b.v);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_le(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_le(struct song_smp_pos a, struct song_smp_pos b)
 {
 	return (a.v <= b.v);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_ge(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_ge(struct song_smp_pos a, struct song_smp_pos b)
 {
 	return (a.v >= b.v);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_equ(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_equ(struct song_smp_pos a, struct song_smp_pos b)
 {
 	return (a.v == b.v);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-int csf_smp_pos_neq(struct song_smp_pos a, struct song_smp_pos b)
+static inline SCHISM_ALWAYS_INLINE int csf_smp_pos_neq(struct song_smp_pos a, struct song_smp_pos b)
 {
 	return (a.v != b.v);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-struct song_smp_pos csf_smp_pos_negate(struct song_smp_pos v)
+static inline SCHISM_ALWAYS_INLINE struct song_smp_pos csf_smp_pos_negate(struct song_smp_pos v)
 {
 	v.v = -v.v;
 	return v;
 }
 
-static inline SCHISM_ALWAYS_INLINE
-struct song_smp_pos csf_smp_pos_ratio(int32_t dividend, uint32_t divisor)
+static inline SCHISM_ALWAYS_INLINE struct song_smp_pos csf_smp_pos_ratio(int32_t dividend, uint32_t divisor)
 {
 	return csf_smp_pos_div_whole(csf_smp_pos(dividend, 0), divisor);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-struct song_smp_pos csf_smp_pos_muldiv(struct song_smp_pos v, uint32_t mul, uint32_t div)
+static inline SCHISM_ALWAYS_INLINE struct song_smp_pos csf_smp_pos_muldiv(
+	struct song_smp_pos v, uint32_t mul, uint32_t div)
 {
 	v.v = (v.v * mul) / div;
 	return v;
@@ -525,7 +504,7 @@ typedef struct song_instrument {
 // this struct should really only be holding the stuff actually needed for mixing)
 typedef struct song_voice {
 	// First 32-bytes: Most used mixing information: don't change it
-	signed char * current_sample_data;
+	signed char *current_sample_data;
 	struct song_smp_pos position;
 	struct song_smp_pos increment;
 	int32_t right_volume; // volume of the left channel
@@ -540,7 +519,8 @@ typedef struct song_voice {
 	uint32_t loop_end;
 	int32_t right_ramp_volume; // ?
 	int32_t left_ramp_volume; // ?
-	int32_t strike; // decremented to zero. this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)
+	int32_t strike; // decremented to zero. this affects how long the initial hit on the playback marks lasts
+			// (bigger dot in instrument and sample list windows)
 
 	//int32_t filter_y1, filter_y2, filter_y3, filter_y4;
 	//int32_t filter_a0, filter_b0, filter_b1;
@@ -569,7 +549,8 @@ typedef struct song_voice {
 	uint32_t master_channel; // nonzero = background/NNA voice, indicates what channel it "came from"
     // TODO: As noted elsewhere, this means current channel volume.
 	int32_t global_volume;
-    // FIXME: Here instrument_volume means the value calculated from sample global volume and instrument global volume.
+    // FIXME: Here instrument_volume means the value calculated from sample global volume and instrument global
+    // volume.
     //  And we miss a value for "running envelope volume" for the page_info
 	int32_t instrument_volume;
 	int32_t last_instrument_volume;
@@ -660,17 +641,18 @@ typedef struct song_s3m_channel_info {
 } song_s3m_channel_info_t;
 
 typedef struct song_midi_state {
-    unsigned char volume; // Which volume has been configured for this channel
-    unsigned char patch;  // What is the latest patch configured on this channel
-    unsigned char bank;   // What is the latest bank configured on this channel
-    int32_t bend;         // The latest pitchbend on this channel
-    signed char pan;      // Latest pan
+	unsigned char volume; // Which volume has been configured for this channel
+	unsigned char patch;  // What is the latest patch configured on this channel
+	unsigned char bank;   // What is the latest bank configured on this channel
+	int32_t bend;         // The latest pitchbend on this channel
+	signed char pan;      // Latest pan
 } song_midi_state_t;
 
 // forward declare `struct song` to bypass compiler warnings  -paper
 struct song;
 
-typedef void (*song_midi_out_raw_spec_t)(struct song *csf, const unsigned char *msg, uint32_t msg_len, uint32_t buf_size);
+typedef void (*song_midi_out_raw_spec_t)(
+	struct song *csf, const unsigned char *msg, uint32_t msg_len, uint32_t buf_size);
 
 ////////////////////////////////////////////////////////////////////
 
@@ -725,7 +707,6 @@ extern midi_config_t default_midi_config;
 extern const song_note_t blank_pattern[64 * MAX_CHANNELS];
 extern const song_note_t *blank_note;
 
-
 struct multi_write {
 	int used;
 	void *data;
@@ -742,8 +723,8 @@ typedef struct song {
 
 	song_voice_t voices[MAX_VOICES];                // Channels
 	uint32_t voice_mix[MAX_VOICES];                 // Channels to be mixed
-	song_sample_t samples[MAX_SAMPLES+1];           // Samples (1-based!)
-	song_instrument_t *instruments[MAX_INSTRUMENTS+1]; // Instruments (1-based!)
+	song_sample_t samples[MAX_SAMPLES + 1];           // Samples (1-based!)
+	song_instrument_t *instruments[MAX_INSTRUMENTS + 1]; // Instruments (1-based!)
 	song_channel_t channels[MAX_CHANNELS];          // Channel settings
 	song_note_t *patterns[MAX_PATTERNS];            // Patterns
 	uint16_t pattern_size[MAX_PATTERNS];            // Pattern Lengths
@@ -753,7 +734,7 @@ typedef struct song {
 	uint32_t initial_speed;
 	uint32_t initial_tempo;
 	uint32_t initial_global_volume;
-	uint32_t flags;                                 // Song flags SONG_XXXX
+	uint32_t flags;				 // Song flags SONG_XXXX
 	uint32_t pan_separation;
 	uint32_t num_voices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
 	uint32_t mix_stat; // number of channels being mixed (not really used)
@@ -883,7 +864,6 @@ uint16_t csf_export_mod_effect(const song_note_t *m, int xm);
 void csf_import_s3m_effect(song_note_t *m, int it);
 void csf_export_s3m_effect(uint8_t *pcmd, uint8_t *pprm, int it);
 
-
 // counting stuff
 
 int csf_note_is_empty(song_note_t *note);
@@ -902,8 +882,7 @@ int csf_first_blank_instrument(song_t *csf, int start);
 
 int csf_get_highest_used_channel(song_t *csf);
 
-void csf_set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrument_t *penv,
-	song_sample_t *pins);
+void csf_set_instrument_panning(song_t *csf, song_voice_t *chan, song_instrument_t *penv, song_sample_t *pins);
 
 int csf_set_wave_config(song_t *csf, uint32_t rate, uint32_t bits, uint32_t channels);
 
@@ -933,8 +912,8 @@ void fx_key_off(song_t *csf, uint32_t chan);
 void fx_midi_zxx(song_t *csf, song_voice_t *chan);
 void csf_midi_send(song_t *csf, const unsigned char *data, uint32_t len, uint32_t chan, int fake);
 void csf_midi_out_note(song_t *csf, int chan, const song_note_t *starting_note);
-void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, uint32_t param,
-			uint32_t note, uint32_t velocity, uint32_t use_instr);
+void csf_process_midi_macro(song_t *csf, uint32_t chan, const char *midi_macro, uint32_t param, uint32_t note,
+	uint32_t velocity, uint32_t use_instr);
 song_sample_t *csf_translate_keyboard(song_t *csf, song_instrument_t *ins, uint32_t note, song_sample_t *def);
 
 // various utility functions in snd_fx.c
@@ -976,25 +955,20 @@ void csf_update_playing_sample(song_t *csf, int s_changed);
 /* ------------------------------------------------------------------------ */
 
 // Return (a*b)/c - no divide error
-static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldiv(int32_t a,
-	int32_t b, int32_t c)
+static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldiv(int32_t a, int32_t b, int32_t c)
 {
-	return ((int64_t) a * (int64_t) b ) / c;
+	return ((int64_t)a * (int64_t)b) / c;
 }
-
 
 // Return (a*b+c/2)/c - no divide error
-static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldivr(int32_t a,
-	int32_t b, int32_t c)
+static inline SCHISM_CONST SCHISM_ALWAYS_INLINE int32_t _muldivr(int32_t a, int32_t b, int32_t c)
 {
-	return ((int64_t) a * (int64_t) b + rshift_signed(c, 1)) / c;
+	return ((int64_t)a * (int64_t)b + rshift_signed(c, 1)) / c;
 }
 
-SCHISM_CONST SCHISM_ALWAYS_INLINE static inline
-uint32_t csf_calculate_tick_length(song_t *csf)
+SCHISM_CONST SCHISM_ALWAYS_INLINE static inline uint32_t csf_calculate_tick_length(song_t *csf)
 {
-	return (csf->mix_frequency * 5 * csf->tempo_factor)
-		/ (csf->current_tempo << 8);
+	return (csf->mix_frequency * 5 * csf->tempo_factor) / (csf->current_tempo << 8);
 }
 
 /* converts ticks to samples */
@@ -1003,11 +977,9 @@ uint32_t csf_calculate_tick_length(song_t *csf)
 #define csf_ticks_to_samples(ticks, freq, tempo) (int32_t)((int32_t)(ticks) * csf_tick_length_in_samples(freq, tempo))
 
 /* starts at 0 */
-SCHISM_CONST SCHISM_ALWAYS_INLINE static inline
-int32_t csf_get_current_tick(song_t *csf)
+SCHISM_CONST SCHISM_ALWAYS_INLINE static inline int32_t csf_get_current_tick(song_t *csf)
 {
 	return csf->current_speed - csf->tick_count;
 }
 
 #endif /* SCHISM_PLAYER_SNDFILE_H_ */
-

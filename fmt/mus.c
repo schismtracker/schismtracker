@@ -23,10 +23,10 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -43,7 +43,11 @@ struct mus_header {
 static int read_mus_header(struct mus_header *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(id);
 	READ_VALUE(scorelen);
@@ -58,7 +62,7 @@ static int read_mus_header(struct mus_header *hdr, slurp_t *fp)
 	if (memcmp(hdr->id, "MUS\x1a", 4))
 		return 0;
 
-	hdr->scorelen   = bswapLE16(hdr->scorelen);
+	hdr->scorelen = bswapLE16(hdr->scorelen);
 	hdr->scorestart = bswapLE16(hdr->scorestart);
 
 	if (!slurp_could_seek(fp, hdr->scorestart + hdr->scorelen, SEEK_SET))
@@ -98,16 +102,14 @@ Some things yet to tackle:
 - awesomus/d_doom.mus has some very strange timing issues: I'm getting note events with thousands of ticks.
 - Probably ought to clean up the warnings so messages only show once... */
 
-
 #define MUS_ROWS_PER_PATTERN 200
-#define MUS_SPEED_CHANNEL 15 // where the speed adjustments go (counted from 0 -- 15 is the drum channel)
-#define MUS_BREAK_CHANNEL (MUS_SPEED_CHANNEL + 1)
-#define MUS_TICKADJ_CHANNEL (MUS_BREAK_CHANNEL + 1) // S6x tick adjustments go here *and subsequent channels!!*
+#define MUS_SPEED_CHANNEL    15 // where the speed adjustments go (counted from 0 -- 15 is the drum channel)
+#define MUS_BREAK_CHANNEL    (MUS_SPEED_CHANNEL + 1)
+#define MUS_TICKADJ_CHANNEL  (MUS_BREAK_CHANNEL + 1) // S6x tick adjustments go here *and subsequent channels!!*
 
 // Tick calculations are done in fixed point for better accuracy
 #define FRACBITS 12
 #define FRACMASK ((1 << FRACBITS) - 1)
-
 
 int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 {
@@ -177,8 +179,7 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 					if (nsmp < MAX_SAMPLES) {
 						// New sample!
 						patch_percussion[b1] = nsmp;
-						strncpy(song->samples[nsmp].name,
-							midi_percussion_names[b1 - 24], 25);
+						strncpy(song->samples[nsmp].name, midi_percussion_names[b1 - 24], 25);
 						song->samples[nsmp].name[25] = '\0';
 						nsmp++;
 					} else {
@@ -386,4 +387,3 @@ int fmt_mus_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 
 	return LOAD_SUCCESS;
 }
-

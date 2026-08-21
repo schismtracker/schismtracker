@@ -22,9 +22,9 @@
  */
 
 #include "headers.h"
+#include "song.h"
 #include "bits.h"
 #include "fmt.h"
-#include "song.h"
 #include "log.h"
 #include "mem.h"
 
@@ -38,8 +38,7 @@ int fmt_mtm_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char magic[3], title[20];
 
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "MTM", 3))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "MTM", 3))
 		return 0;
 
 	slurp_seek(fp, 1, SEEK_CUR);
@@ -109,8 +108,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	if (memcmp(b, "MTM", 3) != 0)
 		return LOAD_UNSUPPORTED;
 	n = slurp_getc(fp);
-	snprintf(song->tracker_id, sizeof(song->tracker_id),
-		"MultiTracker %d.%d", n >> 4, n & 0xf);
+	snprintf(song->tracker_id, sizeof(song->tracker_id), "MultiTracker %d.%d", n >> 4, n & 0xf);
 	slurp_read(fp, song->title, 20);
 	song->title[20] = 0;
 	slurp_read(fp, &ntrk, 2);
@@ -258,8 +256,7 @@ int fmt_mtm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 				continue;
 
 			csf_read_sample(song->samples + smp,
-				(SF_LE | SF_PCMU | SF_M
-				 | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)), fp);
+				(SF_LE | SF_PCMU | SF_M | ((song->samples[smp].flags & CHN_16BIT) ? SF_16 : SF_8)), fp);
 		}
 	}
 

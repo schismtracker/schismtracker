@@ -23,10 +23,10 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -39,8 +39,7 @@ int fmt_okt_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!slurp_could_seek(fp, 16, SEEK_CUR))
 		return 0;
 
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "OKTASONG", sizeof(magic)))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "OKTASONG", sizeof(magic)))
 		return 0;
 
 	file->description = "Amiga Oktalyzer";
@@ -52,15 +51,15 @@ int fmt_okt_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define OKT_BLOCK(a,b,c,d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
-#define OKT_BLK_CMOD    OKT_BLOCK('C','M','O','D')
-#define OKT_BLK_SAMP    OKT_BLOCK('S','A','M','P')
-#define OKT_BLK_SPEE    OKT_BLOCK('S','P','E','E')
-#define OKT_BLK_SLEN    OKT_BLOCK('S','L','E','N')
-#define OKT_BLK_PLEN    OKT_BLOCK('P','L','E','N')
-#define OKT_BLK_PATT    OKT_BLOCK('P','A','T','T')
-#define OKT_BLK_PBOD    OKT_BLOCK('P','B','O','D')
-#define OKT_BLK_SBOD    OKT_BLOCK('S','B','O','D')
+#define OKT_BLOCK(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
+#define OKT_BLK_CMOD          OKT_BLOCK('C', 'M', 'O', 'D')
+#define OKT_BLK_SAMP          OKT_BLOCK('S', 'A', 'M', 'P')
+#define OKT_BLK_SPEE          OKT_BLOCK('S', 'P', 'E', 'E')
+#define OKT_BLK_SLEN          OKT_BLOCK('S', 'L', 'E', 'N')
+#define OKT_BLK_PLEN          OKT_BLOCK('P', 'L', 'E', 'N')
+#define OKT_BLK_PATT          OKT_BLOCK('P', 'A', 'T', 'T')
+#define OKT_BLK_PBOD          OKT_BLOCK('P', 'B', 'O', 'D')
+#define OKT_BLK_SBOD          OKT_BLOCK('S', 'B', 'O', 'D')
 
 #ifdef HAVE_PRAGMA_PACK
 # pragma pack(push, 1)
@@ -86,7 +85,6 @@ enum {
 	OKT_HAS_PATT = 1 << 4,
 };
 
-
 /* return: number of channels */
 static int okt_read_cmod(song_t *song, slurp_t *fp)
 {
@@ -102,7 +100,6 @@ static int okt_read_cmod(song_t *song, slurp_t *fp)
 		cs[t].flags |= CHN_MUTE;
 	return cn;
 }
-
 
 static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpflag[])
 {
@@ -158,7 +155,6 @@ static void okt_read_samp(song_t *song, slurp_t *fp, uint32_t len, uint32_t smpf
 		ssmp->global_volume = 64;
 	}
 }
-
 
 /* Octalyzer effects list, straight from the internal help (acquired by running "strings octalyzer1.57") --
 	- Effects Help Page --------------------------
@@ -307,8 +303,10 @@ static uint32_t okt_read_pbod(song_t *song, slurp_t *fp, int nchn, int pat)
 					}
 					// 0x40 is set volume -- fall through
 					SCHISM_FALLTHROUGH;
-				case 0: case 1:
-				case 2: case 3:
+				case 0:
+				case 1:
+				case 2:
+				case 3:
 					note->voleffect = VOLFX_VOLUME;
 					note->volparam = note->param;
 					note->effect = FX_NONE;
@@ -482,7 +480,8 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 				continue;
 
 			if (ssmp->length != smpsize[sd]) {
-				log_appendf(4, " Warning: Sample %d: header/data size mismatch (%" PRIu32 "/%" PRIu32 ")", sh,
+				log_appendf(4,
+					" Warning: Sample %d: header/data size mismatch (%" PRIu32 "/%" PRIu32 ")", sh,
 					ssmp->length, smpsize[sd]);
 				ssmp->length = MIN(smpsize[sd], ssmp->length);
 			}
@@ -506,4 +505,3 @@ int fmt_okt_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 	return LOAD_SUCCESS;
 }
-

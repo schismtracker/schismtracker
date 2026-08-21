@@ -34,20 +34,20 @@
  * my keyboards. :') */
 
 #include "headers.h"
+#include "log.h"
 #include "mem.h"
 #include "str.h"
-#include "log.h"
 
 #include "midi.h" /* schism midi header */
 
 #include <MIDI.h>
 #include <Memory.h>
 
-#define SCHISM_MIDIMGR_CLIENT_ID (0x5363686D)      /* Schm */
-#define SCHISM_MIDIMGR_INPUT_PORT_ID (0x494E5055)  /* INPU */
-#define SCHISM_MIDIMGR_OUTPUT_PORT_ID (0x4F555450) /* OUTP */
-#define SCHISM_MIDIMGR_CLIENT_NAME "Schism Tracker"
-#define SCHISM_MIDIMGR_INPUT_PORT_NAME "MIDI In"
+#define SCHISM_MIDIMGR_CLIENT_ID        (0x5363686D)      /* Schm */
+#define SCHISM_MIDIMGR_INPUT_PORT_ID    (0x494E5055)  /* INPU */
+#define SCHISM_MIDIMGR_OUTPUT_PORT_ID   (0x4F555450) /* OUTP */
+#define SCHISM_MIDIMGR_CLIENT_NAME      "Schism Tracker"
+#define SCHISM_MIDIMGR_INPUT_PORT_NAME  "MIDI In"
 #define SCHISM_MIDIMGR_OUTPUT_PORT_NAME "MIDI Out"
 #define SCHISM_MIDIMGR_PORT_BUFFER_SIZE (1024)     /* ehhhh */
 
@@ -93,8 +93,7 @@ struct midimgr_midi {
 	uint32_t portID;
 };
 
-static void _midimgr_send(struct midi_port *p, const unsigned char *data,
-	uint32_t len, SCHISM_UNUSED uint32_t delay)
+static void _midimgr_send(struct midi_port *p, const unsigned char *data, uint32_t len, SCHISM_UNUSED uint32_t delay)
 {
 	/* FIXME: If we have multiple ports, this will send data to ALL
 	 * of them. That's really bad! :)
@@ -166,12 +165,12 @@ static int _midimgr_start(struct midi_port *p)
 
 	if (p->iocap == MIDI_INPUT) {
 		/* Connect their output to our input */
-		err = MIDIConnectData(mgr->clientID, mgr->portID,
-			SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_INPUT_PORT_ID);
+		err = MIDIConnectData(
+			mgr->clientID, mgr->portID, SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_INPUT_PORT_ID);
 	} else if (p->iocap == MIDI_OUTPUT) {
 		/* Connect our output to their input */
-		err = MIDIConnectData(SCHISM_MIDIMGR_CLIENT_ID,
-			SCHISM_MIDIMGR_OUTPUT_PORT_ID, mgr->clientID, mgr->portID);
+		err = MIDIConnectData(
+			SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_OUTPUT_PORT_ID, mgr->clientID, mgr->portID);
 	}
 
 	return (err == noErr);
@@ -185,12 +184,12 @@ static int _midimgr_stop(struct midi_port *p)
 
 	if (p->iocap == MIDI_INPUT) {
 		/* Disconnect their output from our input */
-		err = MIDIUnConnectData(mgr->clientID, mgr->portID,
-			SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_INPUT_PORT_ID);
+		err = MIDIUnConnectData(
+			mgr->clientID, mgr->portID, SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_INPUT_PORT_ID);
 	} else if (p->iocap == MIDI_OUTPUT) {
 		/* Disconnect our output from their input */
-		err = MIDIUnConnectData(SCHISM_MIDIMGR_CLIENT_ID,
-			SCHISM_MIDIMGR_OUTPUT_PORT_ID, mgr->clientID, mgr->portID);
+		err = MIDIUnConnectData(
+			SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_OUTPUT_PORT_ID, mgr->clientID, mgr->portID);
 	}
 
 	return (err == noErr);
@@ -203,8 +202,7 @@ static void _midimgr_destroy_port_userdata(void *userdata)
 }
 
 /* separated from _midimgr_poll */
-static void _midimgr_handle_port(struct midi_provider *q,
-	uint32_t clientID, uint32_t portID)
+static void _midimgr_handle_port(struct midi_provider *q, uint32_t clientID, uint32_t portID)
 {
 	struct midi_port *p;
 	uint8_t iocap;
@@ -270,10 +268,9 @@ static void _midimgr_handle_port(struct midi_provider *q,
 	mgr = mem_calloc(1, sizeof(struct midimgr_midi));
 
 	mgr->clientID = clientID;
-	mgr->portID   = portID;
+	mgr->portID = portID;
 
-	midi_port_register(q, iocap, name + 1, mgr,
-		_midimgr_destroy_port_userdata);
+	midi_port_register(q, iocap, name + 1, mgr, _midimgr_destroy_port_userdata);
 }
 
 static void _midimgr_poll(struct midi_provider *q)
@@ -412,8 +409,7 @@ int midimgr_midi_setup(void)
 	params.initClock.format = midiFormatMSec; /* Milliseconds */
 	str_to_pascal(SCHISM_MIDIMGR_INPUT_PORT_NAME, params.name, NULL);
 
-	err = MIDIAddPort(SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_PORT_BUFFER_SIZE,
-		&prov->refnum_in, &params);
+	err = MIDIAddPort(SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_PORT_BUFFER_SIZE, &prov->refnum_in, &params);
 	if (err != noErr) {
 #ifdef SCHISM_MIDIMGR_DEBUG
 		midimgr_logf("Failed to add input port with error %d", (int)err);
@@ -434,8 +430,7 @@ int midimgr_midi_setup(void)
 	params.initClock.format = midiFormatMSec; /* Milliseconds */
 	str_to_pascal(SCHISM_MIDIMGR_OUTPUT_PORT_NAME, params.name, NULL);
 
-	err = MIDIAddPort(SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_PORT_BUFFER_SIZE,
-		&prov->refnum_out, &params);
+	err = MIDIAddPort(SCHISM_MIDIMGR_CLIENT_ID, SCHISM_MIDIMGR_PORT_BUFFER_SIZE, &prov->refnum_out, &params);
 	if (err != noErr) {
 #ifdef SCHISM_MIDIMGR_DEBUG
 		midimgr_logf("Failed to add output port with error %d", (int)err);

@@ -44,9 +44,8 @@
 # include <sys/sysctl.h>
 #elif defined(SCHISM_MACOS)
 # include <Gestalt.h>
-#elif SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_init, 4, 8, 0) \
-		&& SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_supports, 4, 8, 0) \
-		&& !defined(SCHISM_XBOX) /* broken toolchain */
+#elif SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_init, 4, 8, 0) && SCHISM_GNUC_HAS_BUILTIN(__builtin_cpu_supports, 4, 8, 0) \
+	&& !defined(SCHISM_XBOX) /* broken toolchain */
 # define SCHISM_HAS_GNUC_CPU_BUILTINS
 #endif
 
@@ -62,7 +61,7 @@ int cpu_init(void)
 	/* Load kernel32 functions dynamically; this function
 	 * doesn't exist on Windows 95 */
 	HMODULE kernel32;
-	typedef BOOL (WINAPI *LPFN_K32_IsProcessorFeaturePresent)(DWORD);
+	typedef BOOL(WINAPI * LPFN_K32_IsProcessorFeaturePresent)(DWORD);
 	LPFN_K32_IsProcessorFeaturePresent K32_IsProcessorFeaturePresent;
 
 	kernel32 = LoadLibraryA("KERNEL32.DLL");
@@ -70,19 +69,18 @@ int cpu_init(void)
 		return -1;
 
 	/* sigh */
-	K32_IsProcessorFeaturePresent =
-		(LPFN_K32_IsProcessorFeaturePresent)GetProcAddress(kernel32,
-			"IsProcessorFeaturePresent");
+	K32_IsProcessorFeaturePresent
+		= (LPFN_K32_IsProcessorFeaturePresent)GetProcAddress(kernel32, "IsProcessorFeaturePresent");
 	if (!K32_IsProcessorFeaturePresent) {
 		FreeLibrary(kernel32);
 		return -1;
 	}
 
 # define CPU_FEATURE(WINBIT, BIT) \
-do { \
-	if (K32_IsProcessorFeaturePresent(WINBIT)) \
-		BITARRAY_SET(features, (BIT)); \
-} while (0)
+	 do { \
+		 if (K32_IsProcessorFeaturePresent(WINBIT)) \
+			 BITARRAY_SET(features, (BIT)); \
+	 } while (0)
 
 	CPU_FEATURE(PF_XMMI64_INSTRUCTIONS_AVAILABLE, CPU_FEATURE_SSE2);
 	CPU_FEATURE(PF_SSE4_1_INSTRUCTIONS_AVAILABLE, CPU_FEATURE_SSE41);
@@ -97,14 +95,13 @@ do { \
 #elif defined(SCHISM_MACOSX)
 
 # define CPU_FEATURE(NAME, BIT) \
-do { \
-	int enabled; \
-	size_t enabled_len = sizeof(enabled); \
-	if (!sysctlbyname("hw.optional." NAME, &enabled, &enabled_len, NULL, 0) \
-			&& enabled_len == sizeof(enabled) \
-			&& enabled) \
-		BITARRAY_SET(features, (BIT)); \
-} while (0)
+	 do { \
+		 int enabled; \
+		 size_t enabled_len = sizeof(enabled); \
+		 if (!sysctlbyname("hw.optional." NAME, &enabled, &enabled_len, NULL, 0) \
+			 && enabled_len == sizeof(enabled) && enabled) \
+			 BITARRAY_SET(features, (BIT)); \
+	 } while (0)
 
 	CPU_FEATURE("altivec", CPU_FEATURE_ALTIVEC);
 	CPU_FEATURE("sse2", CPU_FEATURE_SSE2);
@@ -123,11 +120,11 @@ do { \
 	if (err != noErr)
 		return -1;
 
-# define CPU_FEATURE(NAME,BIT) \
-do { \
-	if ((feat) & (1UL << (NAME))) \
-		BITARRAY_SET(features, (BIT)); \
-} while (0)
+# define CPU_FEATURE(NAME, BIT) \
+	 do { \
+		 if ((feat) & (1UL << (NAME))) \
+			 BITARRAY_SET(features, (BIT)); \
+	 } while (0)
 
 	CPU_FEATURE(gestaltPowerPCHasVectorInstructions, CPU_FEATURE_ALTIVEC);
 
@@ -136,10 +133,10 @@ do { \
 	__builtin_cpu_init();
 
 # define CPU_FEATURE(NAME, BIT) \
-do { \
-	if (__builtin_cpu_supports(NAME)) \
-		BITARRAY_SET(features, (BIT)); \
-} while (0)
+	 do { \
+		 if (__builtin_cpu_supports(NAME)) \
+			 BITARRAY_SET(features, (BIT)); \
+	 } while (0)
 
 # if defined(__x86_64__) || defined(__i386__)
 	CPU_FEATURE("sse2", CPU_FEATURE_SSE2);
@@ -152,7 +149,7 @@ do { \
 	/* arm? alpha? sparc? */
 # endif
 
-#undef CPU_FEATURE
+# undef CPU_FEATURE
 
 	return 0;
 #else

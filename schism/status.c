@@ -26,12 +26,12 @@
 #include <stdarg.h>
 
 #include "it.h"
-#include "song.h"
 #include "page.h"
-#include "vgamem.h"
-#include "timer.h"
+#include "song.h"
 #include "mem.h"
 #include "str.h"
+#include "timer.h"
+#include "vgamem.h"
 
 #include "player/sndfile.h"
 
@@ -52,7 +52,8 @@ static void status_text_flash_generic(const char *format, int bios, va_list ap)
 
 	status_bios = bios;
 
-	if (vasprintf(&status_text, format, ap) == -1) abort();
+	if (vasprintf(&status_text, format, ap) == -1)
+		abort();
 
 	status.flags |= NEED_UPDATE;
 }

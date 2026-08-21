@@ -24,27 +24,27 @@
 #include "init.h"
 
 #include "headers.h"
-#include "mt.h"
-#include "mem.h"
 #include "backend/timer.h"
+#include "mem.h"
+#include "mt.h"
 
-static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
-static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
+static int(SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
+static void(SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
 
-static void (SDLCALL *sdl2_Delay)(uint32_t ms) = NULL;
+static void(SDLCALL *sdl2_Delay)(uint32_t ms) = NULL;
 
-static uint64_t (SDLCALL *sdl2_GetPerformanceFrequency)(void) = NULL;
-static uint64_t (SDLCALL *sdl2_GetPerformanceCounter)(void) = NULL;
+static uint64_t(SDLCALL *sdl2_GetPerformanceFrequency)(void) = NULL;
+static uint64_t(SDLCALL *sdl2_GetPerformanceCounter)(void) = NULL;
 
 // Introduced in SDL 2.0.18
-static uint64_t (SDLCALL *sdl2_GetTicks64)(void) = NULL;
+static uint64_t(SDLCALL *sdl2_GetTicks64)(void) = NULL;
 
 static int sdl2_have_timer64 = 0;
 
 static uint64_t sdl2_performance_start = 0;
 static uint64_t sdl2_performance_frequency = 0;
 
-static SDL_TimerID (SDLCALL *sdl2_AddTimer)(uint32_t ms, SDL_TimerCallback callback, void *param);
+static SDL_TimerID(SDLCALL *sdl2_AddTimer)(uint32_t ms, SDL_TimerCallback callback, void *param);
 
 static timer_ticks_t sdl2_timer_ticks(void)
 {

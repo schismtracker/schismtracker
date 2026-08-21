@@ -23,9 +23,9 @@
 
 #include "headers.h"
 
-#include "video.h" /* for declaration of xpmdata */
-#include "util.h"
 #include "mem.h"
+#include "util.h"
+#include "video.h" /* for declaration of xpmdata */
 
 /*
 ** This came from SDL_image's IMG_xpm.c
@@ -51,23 +51,23 @@
     slouken@libsdl.org
 */
 
-#define SKIPSPACE(p)                            \
-do {                                            \
-	while(isspace((unsigned char)*(p)))     \
-	      ++(p);                            \
-} while(0)
+#define SKIPSPACE(p) \
+	do { \
+		while (isspace((unsigned char)*(p))) \
+			++(p); \
+	} while (0)
 
-#define SKIPNONSPACE(p)                                 \
-do {                                                    \
-	while(!isspace((unsigned char)*(p)) && *p)      \
-	      ++(p);                                    \
-} while(0)
+#define SKIPNONSPACE(p) \
+	do { \
+		while (!isspace((unsigned char)*(p)) && *p) \
+			++(p); \
+	} while (0)
 
 /* portable case-insensitive string comparison */
 static int string_equal(const char *a, const char *b, int n)
 {
-	while(*a && *b && n) {
-		if(toupper((unsigned char)*a) != toupper((unsigned char)*b))
+	while (*a && *b && n) {
+		if (toupper((unsigned char)*a) != toupper((unsigned char)*b))
 			return 0;
 		a++;
 		b++;
@@ -83,20 +83,23 @@ static int string_equal(const char *a, const char *b, int n)
 static int color_to_rgb(const char *spec, int speclen, uint32_t *rgb)
 {
 	/* poor man's rgb.txt */
-	static struct { const char *name; uint32_t rgb; } known[] = {
-		{"none",  0xffffffff},
-		{"black", 0x00000000},
-		{"white", 0x00ffffff},
-		{"red",   0x00ff0000},
-		{"green", 0x0000ff00},
-		{"blue",  0x000000ff},
-		{"gray27",0x00454545},
-		{"gray4", 0x000a0a0a},
+	static struct {
+		const char *name;
+		uint32_t rgb;
+	} known[] = {
+		{"none",   0xffffffff},
+		{"black",  0x00000000},
+		{"white",  0x00ffffff},
+		{"red",    0x00ff0000},
+		{"green",  0x0000ff00},
+		{"blue",   0x000000ff},
+		{"gray27", 0x00454545},
+		{"gray4",  0x000a0a0a},
 	};
 
-	if(spec[0] == '#') {
+	if (spec[0] == '#') {
 		char buf[7];
-		switch(speclen) {
+		switch (speclen) {
 		case 4:
 			buf[0] = buf[1] = spec[1];
 			buf[2] = buf[3] = spec[2];
@@ -119,8 +122,8 @@ static int color_to_rgb(const char *spec, int speclen, uint32_t *rgb)
 		return 1;
 	} else {
 		size_t i;
-		for(i = 0; i < ARRAY_SIZE(known); i++)
-			if(string_equal(known[i].name, spec, speclen)) {
+		for (i = 0; i < ARRAY_SIZE(known); i++)
+			if (string_equal(known[i].name, spec, speclen)) {
 				*rgb = known[i].rgb;
 				return 1;
 			}
@@ -148,7 +151,7 @@ static int hash_key(const char *key, int cpp, int size)
 	int hash;
 
 	hash = 0;
-	while ( cpp-- > 0 ) {
+	while (cpp-- > 0) {
 		hash = hash * 33 + *key++;
 	}
 	return hash & (size - 1);
@@ -164,7 +167,7 @@ static struct color_hash *create_colorhash(int maxnum)
 	hash = mem_alloc(sizeof *hash);
 
 	/* use power-of-2 sized hash table for decoding speed */
-	for(s = STARTING_HASH_SIZE; s < maxnum; s <<= 1)
+	for (s = STARTING_HASH_SIZE; s < maxnum; s <<= 1)
 		;
 	hash->size = s;
 	hash->maxnum = maxnum;
@@ -176,8 +179,7 @@ static struct color_hash *create_colorhash(int maxnum)
 	return hash;
 }
 
-static int add_colorhash(struct color_hash *hash,
-			 char *key, int cpp, uint32_t color)
+static int add_colorhash(struct color_hash *hash, char *key, int cpp, uint32_t color)
 {
 	int h = hash_key(key, cpp, hash->size);
 	struct hash_entry *e = hash->next_free++;
@@ -194,8 +196,8 @@ static int add_colorhash(struct color_hash *hash,
 static uint32_t get_colorhash(struct color_hash *hash, const char *key, int cpp)
 {
 	struct hash_entry *entry = hash->table[hash_key(key, cpp, hash->size)];
-	while(entry) {
-		if(memcmp(key, entry->key, cpp) == 0)
+	while (entry) {
+		if (memcmp(key, entry->key, cpp) == 0)
 			return entry->color;
 		entry = entry->next;
 	}
@@ -204,13 +206,12 @@ static uint32_t get_colorhash(struct color_hash *hash, const char *key, int cpp)
 
 static void free_colorhash(struct color_hash *hash)
 {
-	if(hash && hash->table) {
+	if (hash && hash->table) {
 		free(hash->table);
 		free(hash->entries);
 		free(hash);
 	}
 }
-
 
 int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 {
@@ -227,10 +228,11 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 
 	error = 0;
 
-	xpmlines = (const char ***) &data;
+	xpmlines = (const char ***)&data;
 
 	line = get_next_line(xpmlines);
-	if(!line) goto done;
+	if (!line)
+		goto done;
 
 	/*
 	 * The header string of an XPMv3 image has the format
@@ -241,8 +243,7 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 	 * Right now we don't use the hotspots but it should be handled
 	 * one day.
 	 */
-	if(sscanf(line, "%d %d %d %d", w, h, &ncolors, &cpp) != 4
-	   || *w <= 0 || *h <= 0 || ncolors <= 0 || cpp <= 0) {
+	if (sscanf(line, "%d %d %d %d", w, h, &ncolors, &cpp) != 4 || *w <= 0 || *h <= 0 || ncolors <= 0 || cpp <= 0) {
 		error = 1;
 		goto done;
 	}
@@ -255,22 +256,22 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 	/* Read the colors */
 	colors = create_colorhash(ncolors);
 
-	for(n = 0; n < ncolors; ++n) {
+	for (n = 0; n < ncolors; ++n) {
 		const char *p;
 		line = get_next_line(xpmlines);
-		if(!line)
+		if (!line)
 			goto done;
 
 		p = line + cpp + 1;
 
 		/* parse a colour definition */
-		for(;;) {
+		for (;;) {
 			char nametype;
 			const char *colname;
 			uint32_t rgb, pixel;
 
 			SKIPSPACE(p);
-			if(!*p) {
+			if (!*p) {
 				error = 3;
 				goto done;
 			}
@@ -279,10 +280,10 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 			SKIPSPACE(p);
 			colname = p;
 			SKIPNONSPACE(p);
-			if(nametype == 's')
+			if (nametype == 's')
 				continue;      /* skip symbolic colour names */
 
-			if(!color_to_rgb(colname, p - colname, &rgb))
+			if (!color_to_rgb(colname, p - colname, &rgb))
 				continue;
 
 			memcpy(nextkey, line, cpp);
@@ -299,7 +300,7 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h)
 
 	/* Read the pixels */
 	dst = *pixels;
-	for(y = 0; y < *h; y++) {
+	for (y = 0; y < *h; y++) {
 		line = get_next_line(xpmlines);
 		for (x = 0; x < *w; x++)
 			dst[x] = get_colorhash(colors, line + x * cpp, cpp);

@@ -23,10 +23,10 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -67,7 +67,11 @@ struct mtrk {
 static int read_mid_mthd(struct mthd *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(tag);
 
@@ -102,7 +106,11 @@ static int read_mid_mthd(struct mthd *hdr, slurp_t *fp)
 static int read_mid_mtrk(struct mtrk *mtrk, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &mtrk->name, sizeof(mtrk->name)) != sizeof(mtrk->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &mtrk->name, sizeof(mtrk->name)) != sizeof(mtrk->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(tag);
 	READ_VALUE(length);
@@ -190,7 +198,9 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		uint8_t fg_note;
 		uint8_t bg_note; // really just used as a boolean...
 		uint8_t instrument;
-	} midich[16] = {{NOTE_NONE, NOTE_NONE, 0}};
+	} midich[16] = {
+		{NOTE_NONE, NOTE_NONE, 0}
+        };
 	char *message_cur = song->message;
 	uint32_t message_left = MAX_MESSAGE;
 	uint32_t pulse = 0; // cumulative time from start of track
@@ -386,7 +396,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 						break;
 
 					case 0x20: // MIDI channel (FF 20 len* cc)
-						// specifies which midi-channel sysexes are assigned to
+						   // specifies which midi-channel sysexes are assigned to
 					case 0x21: // MIDI port (FF 21 len* pp)
 						// specifies which port/bus this track's events are routed to
 						break;
@@ -428,13 +438,21 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 				/* sysex */
 				case 0x0:
 				/* syscommon */
-				case 0x1: case 0x2: case 0x3:
-				case 0x4: case 0x5: case 0x6:
+				case 0x1:
+				case 0x2:
+				case 0x3:
+				case 0x4:
+				case 0x5:
+				case 0x6:
 				case 0x7:
 					rs = 0; // clear running status
 				/* sysrt */
-				case 0x8: case 0x9: case 0xa:
-				case 0xb: case 0xc: case 0xd:
+				case 0x8:
+				case 0x9:
+				case 0xa:
+				case 0xb:
+				case 0xc:
+				case 0xd:
 				case 0xe:
 					// 0xf0 - sysex
 					// 0xf1-0xf7 - common
@@ -456,8 +474,8 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			prev = prev->next;
 		}
 		if (slurp_tell(fp) != nextpos) {
-			log_appendf(2, " Track %d ended %" PRId64 " bytes from boundary",
-				trknum, slurp_tell(fp) - nextpos);
+			log_appendf(
+				2, " Track %d ended %" PRId64 " bytes from boundary", trknum, slurp_tell(fp) - nextpos);
 			slurp_seek(fp, nextpos, SEEK_SET);
 		}
 	}
@@ -505,7 +523,7 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 		while (row >= MID_ROWS_PER_PATTERN) {
 			// New pattern time!
-			if(pat >= MAX_PATTERNS) {
+			if (pat >= MAX_PATTERNS) {
 				log_appendf(4, " Warning: Too many patterns, song is truncated");
 				return LOAD_SUCCESS;
 			}
@@ -536,4 +554,3 @@ int fmt_mid_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 	return LOAD_SUCCESS;
 }
-

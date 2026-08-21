@@ -27,35 +27,35 @@
 #include "player/sndfile.h" /* for song_sample_t */
 
 enum {
-	TYPE_BROWSABLE_MASK   = 0x1, /* if (type & TYPE_BROWSABLE_MASK) it's readable as a library */
-	TYPE_FILE_MASK        = 0x2, /* if (type & TYPE_FILE_MASK) it's a regular file */
-	TYPE_DIRECTORY        = 0x4 | TYPE_BROWSABLE_MASK, /* if (type == TYPE_DIRECTORY) ... guess what! */
-	TYPE_NON_REGULAR      = 0x8, /* if (type == TYPE_NON_REGULAR) it's something weird, e.g. a socket */
+	TYPE_BROWSABLE_MASK = 0x1, /* if (type & TYPE_BROWSABLE_MASK) it's readable as a library */
+	TYPE_FILE_MASK = 0x2, /* if (type & TYPE_FILE_MASK) it's a regular file */
+	TYPE_DIRECTORY = 0x4 | TYPE_BROWSABLE_MASK, /* if (type == TYPE_DIRECTORY) ... guess what! */
+	TYPE_NON_REGULAR = 0x8, /* if (type == TYPE_NON_REGULAR) it's something weird, e.g. a socket */
 
 	/* (flags & 0xF0) are reserved for future use */
 
 	/* this has to match TYPE_BROWSABLE_MASK for directories */
-	TYPE_EXT_DATA_MASK    = 0xFFF01, /* if (type & TYPE_EXT_DATA_MASK) the extended data has been checked */
+	TYPE_EXT_DATA_MASK = 0xFFF01, /* if (type & TYPE_EXT_DATA_MASK) the extended data has been checked */
 
-	TYPE_MODULE_MASK      = 0xF00, /* if (type & TYPE_MODULE_MASK) it's loadable as a module */
-	TYPE_MODULE_MOD       = 0x100 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
-	TYPE_MODULE_S3M       = 0x200 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
-	TYPE_MODULE_XM        = 0x300 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
-	TYPE_MODULE_IT        = 0x400 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
+	TYPE_MODULE_MASK = 0xF00, /* if (type & TYPE_MODULE_MASK) it's loadable as a module */
+	TYPE_MODULE_MOD = 0x100 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
+	TYPE_MODULE_S3M = 0x200 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
+	TYPE_MODULE_XM = 0x300 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
+	TYPE_MODULE_IT = 0x400 | TYPE_BROWSABLE_MASK | TYPE_FILE_MASK,
 
-	TYPE_INST_MASK        = 0xF000, /* if (type & TYPE_INST_MASK) it's loadable as an instrument */
-	TYPE_INST_ITI         = 0x1000 | TYPE_FILE_MASK, /* .iti (native) instrument */
-	TYPE_INST_XI          = 0x2000 | TYPE_FILE_MASK, /* fast tracker .xi */
-	TYPE_INST_OTHER       = 0x3000 | TYPE_FILE_MASK, /* gus patch, soundfont, ...? */
+	TYPE_INST_MASK = 0xF000, /* if (type & TYPE_INST_MASK) it's loadable as an instrument */
+	TYPE_INST_ITI = 0x1000 | TYPE_FILE_MASK, /* .iti (native) instrument */
+	TYPE_INST_XI = 0x2000 | TYPE_FILE_MASK, /* fast tracker .xi */
+	TYPE_INST_OTHER = 0x3000 | TYPE_FILE_MASK, /* gus patch, soundfont, ...? */
 
-	TYPE_SAMPLE_MASK      = 0xF0000, /* if (type & TYPE_SAMPLE_MASK) it's loadable as a sample */
-	TYPE_UNKNOWN          = 0x10000 | TYPE_FILE_MASK, /* any unrecognized file, loaded as raw pcm data */
-	TYPE_SAMPLE_PLAIN     = 0x20000 | TYPE_FILE_MASK, /* au, aiff, wav (simple formats) */
-	TYPE_SAMPLE_EXTD      = 0x30000 | TYPE_FILE_MASK, /* its, s3i (tracker formats with extended stuff) */
-	TYPE_SAMPLE_COMPR     = 0x40000 | TYPE_FILE_MASK, /* ogg, mp3 (compressed audio) */
+	TYPE_SAMPLE_MASK = 0xF0000, /* if (type & TYPE_SAMPLE_MASK) it's loadable as a sample */
+	TYPE_UNKNOWN = 0x10000 | TYPE_FILE_MASK, /* any unrecognized file, loaded as raw pcm data */
+	TYPE_SAMPLE_PLAIN = 0x20000 | TYPE_FILE_MASK, /* au, aiff, wav (simple formats) */
+	TYPE_SAMPLE_EXTD = 0x30000 | TYPE_FILE_MASK, /* its, s3i (tracker formats with extended stuff) */
+	TYPE_SAMPLE_COMPR = 0x40000 | TYPE_FILE_MASK, /* ogg, mp3 (compressed audio) */
 
-	TYPE_INTERNAL_FLAGS   = 0xF00000,
-	TYPE_HIDDEN           = 0x100000,
+	TYPE_INTERNAL_FLAGS = 0xF00000,
+	TYPE_HIDDEN = 0x100000,
 };
 
 /* A brief description of the sort_order field:
@@ -138,7 +138,7 @@ typedef struct dmoz_dirlist {
 /* For any of these, pass NULL for dirs to handle directories and files in the same list.
 for load_library, provide one of the dmoz_read_whatever_library functions, or NULL. */
 int dmoz_read(const char *path, dmoz_filelist_t *files, dmoz_dirlist_t *dirs,
-	int (*load_library)(const char *,dmoz_filelist_t *,dmoz_dirlist_t *));
+	int (*load_library)(const char *, dmoz_filelist_t *, dmoz_dirlist_t *));
 void dmoz_free(dmoz_filelist_t *files, dmoz_dirlist_t *dirs);
 
 void dmoz_sort(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist);
@@ -159,19 +159,18 @@ void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), i
 /* butt */
 int song_preload_sample(dmoz_file_t *f);
 
-
 /* Path handling functions */
 #if defined(SCHISM_WIN32) || defined(SCHISM_OS2) || defined(SCHISM_XBOX)
-# define DIR_SEPARATOR '\\'
-# define DIR_SEPARATOR_STR "\\"
+# define DIR_SEPARATOR       '\\'
+# define DIR_SEPARATOR_STR   "\\"
 # define IS_DIR_SEPARATOR(c) ((c) == '/' || (c) == '\\')
 #elif defined(SCHISM_MACOS)
-# define DIR_SEPARATOR ':'
-# define DIR_SEPARATOR_STR ":"
+# define DIR_SEPARATOR       ':'
+# define DIR_SEPARATOR_STR   ":"
 # define IS_DIR_SEPARATOR(c) ((c) == ':')
 #else
-# define DIR_SEPARATOR '/'
-# define DIR_SEPARATOR_STR "/"
+# define DIR_SEPARATOR       '/'
+# define DIR_SEPARATOR_STR   "/"
 # define IS_DIR_SEPARATOR(c) ((c) == '/')
 #endif
 
@@ -221,11 +220,11 @@ dmoz_dir_t *dmoz_add_dir(dmoz_dirlist_t *dlist, char *path, char *base, int sort
 
 /* Add a directory to either the dir list (if dlist != NULL) or the file list otherwise. This is basically a
 convenient shortcut for adding a directory. */
-void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
-			  char *path, char *base, struct stat *st, int sort_order);
+void dmoz_add_file_or_dir(
+	dmoz_filelist_t *flist, dmoz_dirlist_t *dlist, char *path, char *base, struct stat *st, int sort_order);
 
 /* this is called by main to actually do some dmoz work. returns 0 if there is no dmoz work to do...
-*/
+ */
 int dmoz_worker(void);
 
 /* these update the file selection cache for the various pages */

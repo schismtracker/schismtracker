@@ -23,8 +23,8 @@
 
 #include "headers.h"
 #include "it.h"
-#include "mem.h"
 #include "version.h"
+#include "mem.h"
 
 #define TOP_BANNER_CLASSIC "Impulse Tracker v2.14 Copyright (C) 1995-1998 Jeffrey Lim"
 
@@ -34,11 +34,11 @@ Oct 31, 2009. Note that there have been a few bugs that crept in,
 for example:
 
 Mar 3, 2025  -- added commit 0026465 which had versions off by
-                roughly a month
+		roughly a month
 Mar 5, 2025  -- version 20250305 is released, this version saved
-                files as "20250205"
+		files as "20250205"
 Mar 7, 2025  -- add commit d0ffb96 which fixed the bug introduced
-                by the commit on Mar 3, 2025
+		by the commit on Mar 3, 2025
 Mar 13, 2025 -- version 20250313 is released
 
 So, any file with a version indicating a mythical "20250205" version
@@ -81,7 +81,7 @@ Information at our disposal:
 #else
 # define TOP_BANNER_NORMAL "Schism Tracker built " __DATE__ " " __TIME__
 #endif
-	;
+;
 
 /* -------------------------------------------------------- */
 /* These are intended to work entirely without time_t to avoid
@@ -92,21 +92,20 @@ Information at our disposal:
  * work fine from what I can tell. */
 
 /* macros ! */
-#define LEAP_YEAR(y) ((year) % 4 == 0 && (year) % 100 != 0)
-#define LEAP_YEARS_BEFORE(y) ((((y) - 1) / 4) - (((y) - 1) / 100) + (((y) - 1) / 400))
+#define LEAP_YEAR(y)                   ((year) % 4 == 0 && (year) % 100 != 0)
+#define LEAP_YEARS_BEFORE(y)           ((((y) - 1) / 4) - (((y) - 1) / 100) + (((y) - 1) / 400))
 #define LEAP_YEARS_BETWEEN(start, end) (LEAP_YEARS_BEFORE(end) - LEAP_YEARS_BEFORE(start + 1))
 
-#define EPOCH_YEAR 2009
+#define EPOCH_YEAR  2009
 #define EPOCH_MONTH 10
-#define EPOCH_DAY 31
+#define EPOCH_DAY   31
 
 /* -------------------------------------------------------------- */
 
 // only used by ver_mktime, do not use directly
 // see https://alcor.concordia.ca/~gpkatch/gdate-algorithm.html
 // for a description of the algorithm used here
-static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
-int64_t ver_date_encode(uint32_t y, uint32_t m, uint32_t d)
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST int64_t ver_date_encode(uint32_t y, uint32_t m, uint32_t d)
 {
 	int64_t mm, yy;
 
@@ -116,8 +115,7 @@ int64_t ver_date_encode(uint32_t y, uint32_t m, uint32_t d)
 	return (yy * 365LL) + (yy / 4LL) - (yy / 100LL) + (yy / 400LL) + ((mm * 306LL + 5LL) / 10LL) + (d - 1LL);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-void ver_date_decode(int64_t date, uint32_t *py, uint32_t *pm, uint32_t *pd)
+static inline SCHISM_ALWAYS_INLINE void ver_date_decode(int64_t date, uint32_t *py, uint32_t *pm, uint32_t *pd)
 {
 	int64_t y, ddd, mi;
 
@@ -177,24 +175,20 @@ chosen epoch, there can be plenty of room for the foreseeable future.
 	0x052 = (0x052 - 0x050) + 2009-10-31 = 2009-11-02
 	0x14f = (0x14f - 0x050) + 2009-10-31 = 2010-07-13
 	0xffe = (0xfff - 0x050) + 2009-10-31 = 2020-10-27
-  = 0xfff: a non-value indicating a date after 2020-10-27. in this case, the full version number is stored in a reserved header field.
-		   this field follows the same format, using the same epoch, but without adding 0x50. */
+  = 0xfff: a non-value indicating a date after 2020-10-27. in this case, the full version number is stored in a reserved
+header field. this field follows the same format, using the same epoch, but without adding 0x50. */
 uint16_t ver_cwtv;
 uint32_t ver_reserved;
 
 /* these should be 50 characters or shorter, as they are used in the startup dialog */
-const char *ver_short_copyright =
-	"Copyright (c) 2003-2026 Storlek, Mrs. Brisby et al.";
-const char *ver_short_based_on =
-	"Based on Impulse Tracker by Jeffrey Lim aka Pulse";
+const char *ver_short_copyright = "Copyright (c) 2003-2026 Storlek, Mrs. Brisby et al.";
+const char *ver_short_based_on = "Based on Impulse Tracker by Jeffrey Lim aka Pulse";
 
 /* SEE ALSO: helptext/copyright (contains full copyright information, credits, and GPL boilerplate) */
 
 const char *schism_banner(int classic)
 {
-	return (classic
-		? TOP_BANNER_CLASSIC
-		: TOP_BANNER_NORMAL);
+	return (classic ? TOP_BANNER_CLASSIC : TOP_BANNER_NORMAL);
 }
 
 void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
@@ -228,8 +222,7 @@ void ver_decode_cwtv(uint16_t cwtv, uint32_t reserved, char buf[11])
 /* ----------------------------------------------------------------- */
 /* parsers */
 
-static inline SCHISM_ALWAYS_INLINE
-int lookup_short_month(const char *name)
+static inline SCHISM_ALWAYS_INLINE int lookup_short_month(const char *name)
 {
 	static const char month_names[12][3] = {
 		"Jan",
@@ -260,8 +253,7 @@ int lookup_short_month(const char *name)
 /* The return value of this isn't really used anywhere,
  * it's just to make sure timestamps strings are of the
  * correct format. */
-static inline SCHISM_ALWAYS_INLINE
-int lookup_weekday(const char *name)
+static inline SCHISM_ALWAYS_INLINE int lookup_weekday(const char *name)
 {
 	static const char weekday_names[7][3] = {
 		"Sun",
@@ -329,10 +321,8 @@ int ver_parse_schism_version(const char *ver, uint32_t *pyear, uint32_t *pmonth,
 {
 	uint32_t year, month, day;
 
-	if (strlen(ver) != 8
-			|| ver_parse_num(ver, 4, &year) != 0
-			|| ver_parse_num(ver + 4, 2, &month) != 0
-			|| ver_parse_num(ver + 6, 2, &day) != 0)
+	if (strlen(ver) != 8 || ver_parse_num(ver, 4, &year) != 0 || ver_parse_num(ver + 4, 2, &month) != 0
+		|| ver_parse_num(ver + 6, 2, &day) != 0)
 		return -1;
 
 	*pyear = year;
@@ -350,10 +340,9 @@ int ver_parse_ctimestamp(const char *timestamp, uint32_t *pyear, uint32_t *pmont
 		return -1;
 
 	/* get these out of the way first */
-	if (!isdigit(timestamp[11]) || !isdigit(timestamp[12]) || timestamp[13] != ':'
-			|| !isdigit(timestamp[14]) || !isdigit(timestamp[15]) || timestamp[16] != ':'
-			|| !isdigit(timestamp[17]) || !isdigit(timestamp[18])
-			|| timestamp[3] != ' ' || timestamp[7] != ' ' || timestamp[19] != ' ')
+	if (!isdigit(timestamp[11]) || !isdigit(timestamp[12]) || timestamp[13] != ':' || !isdigit(timestamp[14])
+		|| !isdigit(timestamp[15]) || timestamp[16] != ':' || !isdigit(timestamp[17]) || !isdigit(timestamp[18])
+		|| timestamp[3] != ' ' || timestamp[7] != ' ' || timestamp[19] != ' ')
 		return -1;
 
 	if (lookup_weekday(timestamp) == -1)

@@ -26,16 +26,16 @@
 #include "headers.h"
 #include "osdefs.h" /* os_show_message_box */
 
-static int (SDLCALL *sdl2_Init)(Uint32 flags);
-static void (SDLCALL *sdl2_Quit)(void);
+static int(SDLCALL *sdl2_Init)(Uint32 flags);
+static void(SDLCALL *sdl2_Quit)(void);
 static const char *(SDLCALL *sdl2_GetError)(void);
-static void (SDLCALL *sdl2_GetVersion)(SDL_version * ver);
+static void(SDLCALL *sdl2_GetVersion)(SDL_version *ver);
 
 static int load_sdl2_syms(void);
 
 #ifdef SDL2_DYNAMIC_LOAD
 
-#include "loadso.h"
+# include "loadso.h"
 
 static void *sdl2_dltrick_handle_ = NULL;
 
@@ -67,7 +67,8 @@ static int sdl2_dlinit(void)
 	return retval;
 }
 
-SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+SCHISM_STATIC_ASSERT(sizeof(void(*)) == sizeof(void *),
+	"dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 int sdl2_load_sym(const char *fn, void *addr)
 {
@@ -88,7 +89,7 @@ static int sdl2_dlinit(void)
 	return 0;
 }
 
-#define sdl2_dlend() // nothing
+# define sdl2_dlend() // nothing
 
 #endif
 

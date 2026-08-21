@@ -168,11 +168,14 @@ SCHISM_HOT void video_blitTV(unsigned char *pixels, uint32_t pitch, const uint32
  *
  * NOTE: `bpp` here is BYTES per pixel, not bits per pixel. */
 SCHISM_HOT void video_blit11(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256]);
-SCHISM_HOT void video_blitNN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256], uint32_t width, uint32_t height);
-SCHISM_HOT void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_map_rgb_spec map_rgb, void *map_rgb_data, uint32_t width, uint32_t height);
+SCHISM_HOT void video_blitNN(
+	uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t tpal[256], uint32_t width, uint32_t height);
+SCHISM_HOT void video_blitLN(uint32_t bpp, unsigned char *pixels, uint32_t pitch, schism_map_rgb_spec map_rgb,
+	void *map_rgb_data, uint32_t width, uint32_t height);
 
 /* scaled blit, according to user settings (lots of params here) */
-SCHISM_HOT void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t pal[256], schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h);
+SCHISM_HOT void video_blitSC(uint32_t bpp, unsigned char *pixels, uint32_t pitch, const uint32_t pal[256],
+	schism_map_rgb_spec fun, void *fun_data, uint32_t x, uint32_t y, uint32_t w, uint32_t h);
 
 /* ------------------------------------------------------------------------ */
 /* helper function to convert RGB values to YUV */
@@ -212,27 +215,27 @@ int xpmdata(const char *data[], uint32_t **pixels, int *w, int *h);
 
 /* ------------------------------------------------------------------------ */
 
-#define VIDEO_YUV_YV12          0x32315659
-#define VIDEO_YUV_IYUV          0x56555949
-#define VIDEO_YUV_YV12_TV       (VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
-#define VIDEO_YUV_IYUV_TV       (VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
-#define VIDEO_YUV_NV12          0x4E563132
-#define VIDEO_YUV_NV21          0x4E563231
+#define VIDEO_YUV_YV12    0x32315659
+#define VIDEO_YUV_IYUV    0x56555949
+#define VIDEO_YUV_YV12_TV (VIDEO_YUV_YV12 ^ 0xFFFFFFFF)
+#define VIDEO_YUV_IYUV_TV (VIDEO_YUV_IYUV ^ 0xFFFFFFFF)
+#define VIDEO_YUV_NV12    0x4E563132
+#define VIDEO_YUV_NV21    0x4E563231
 /* TODO NV12 tv format ??? */
-#define VIDEO_YUV_YVYU          0x55595659
-#define VIDEO_YUV_UYVY          0x59565955
-#define VIDEO_YUV_YUY2          0x32595559
+#define VIDEO_YUV_YVYU 0x55595659
+#define VIDEO_YUV_UYVY 0x59565955
+#define VIDEO_YUV_YUY2 0x32595559
 
 #if 0
 /* RGB formats (???) */
-#define VIDEO_YUV_RGBA          0x41424752
-#define VIDEO_YUV_RGBT          0x54424752
-#define VIDEO_YUV_RGB565        0x32424752
-#define VIDEO_YUV_RGB24         0x0
-#define VIDEO_YUV_RGB32         0x3
+# define VIDEO_YUV_RGBA   0x41424752
+# define VIDEO_YUV_RGBT   0x54424752
+# define VIDEO_YUV_RGB565 0x32424752
+# define VIDEO_YUV_RGB24  0x0
+# define VIDEO_YUV_RGB32  0x3
 #endif
 
-#define VIDEO_YUV_NONE          0xFFFFFFFF
+#define VIDEO_YUV_NONE 0xFFFFFFFF
 
 /* format: one of the #defines above */
 void video_yuv_setformat(uint32_t format);
@@ -241,8 +244,8 @@ void video_yuv_report(void);
 /* sets colors */
 void video_yuv_pal(unsigned int i, unsigned char rgb[3]);
 /* blit in the current yuv format */
-void video_yuv_blit(unsigned char *plane0, unsigned char *plane1, unsigned char *plane2,
-	uint32_t pitch0, uint32_t pitch1, uint32_t pitch2);
+void video_yuv_blit(unsigned char *plane0, unsigned char *plane1, unsigned char *plane2, uint32_t pitch0,
+	uint32_t pitch1, uint32_t pitch2);
 /* sequenced blit */
 void video_yuv_blit_sequenced(unsigned char *pixels, uint32_t pitch);
 
@@ -255,10 +258,14 @@ enum {
 	VIDEO_GL_DOUBLEBUFFER,
 	VIDEO_GL_STENCIL_SIZE,
 	VIDEO_GL_DEPTH_SIZE,
-	VIDEO_GL_ACCUM_RED_SIZE,   /* the minimum number of bits for the red channel of the accumulation buffer; defaults to 0. */
-	VIDEO_GL_ACCUM_GREEN_SIZE, /* the minimum number of bits for the green channel of the accumulation buffer; defaults to 0. */
-	VIDEO_GL_ACCUM_BLUE_SIZE,  /* the minimum number of bits for the blue channel of the accumulation buffer; defaults to 0. */
-	VIDEO_GL_ACCUM_ALPHA_SIZE, /* the minimum number of bits for the alpha channel of the accumulation buffer; defaults to 0. */
+	VIDEO_GL_ACCUM_RED_SIZE, /* the minimum number of bits for the red channel of the accumulation buffer; defaults
+				    to 0. */
+	VIDEO_GL_ACCUM_GREEN_SIZE, /* the minimum number of bits for the green channel of the accumulation buffer;
+				      defaults to 0. */
+	VIDEO_GL_ACCUM_BLUE_SIZE, /* the minimum number of bits for the blue channel of the accumulation buffer;
+				     defaults to 0. */
+	VIDEO_GL_ACCUM_ALPHA_SIZE, /* the minimum number of bits for the alpha channel of the accumulation buffer;
+				      defaults to 0. */
 	VIDEO_GL_SWAP_CONTROL,
 };
 
@@ -271,14 +278,10 @@ typedef int (*video_opengl_set_attribute_spec)(int attr /* one of above enum */,
 typedef void (*video_opengl_swap_buffers_spec)(void);
 
 /* initialize OpenGL */
-int video_opengl_init(video_opengl_object_load_spec object_load,
-	video_opengl_function_load_spec function_load,
-	video_opengl_extension_supported_spec extension_supported,
-	video_opengl_object_unload_spec object_unload,
-	video_opengl_set_attribute_spec set_attribute,
-	video_opengl_swap_buffers_spec swap_buffers);
-int video_opengl_setup(uint32_t w, uint32_t h,
-	int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph));
+int video_opengl_init(video_opengl_object_load_spec object_load, video_opengl_function_load_spec function_load,
+	video_opengl_extension_supported_spec extension_supported, video_opengl_object_unload_spec object_unload,
+	video_opengl_set_attribute_spec set_attribute, video_opengl_swap_buffers_spec swap_buffers);
+int video_opengl_setup(uint32_t w, uint32_t h, int (*callback)(uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph));
 void video_opengl_blit(void);
 void video_opengl_quit(void);
 
@@ -287,7 +290,6 @@ void video_opengl_report(void);
 
 void video_opengl_reset_interpolation(void);
 
-void video_calculate_clip(uint32_t w, uint32_t h,
-	uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph);
+void video_calculate_clip(uint32_t w, uint32_t h, uint32_t *px, uint32_t *py, uint32_t *pw, uint32_t *ph);
 
 #endif /* SCHISM_VIDEO_H_ */

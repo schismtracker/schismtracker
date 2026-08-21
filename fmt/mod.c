@@ -23,15 +23,15 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
-#include "version.h"
 #include "disko.h"
 #include "log.h"
+#include "version.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -41,11 +41,8 @@
 static const char *valid_tags[][2] = {
 	/* M.K. must be the first tag! (to test for WOW files) */
 	/* the first 5 descriptions are a bit weird */
-	{"M.K.", "Amiga-NewTracker"},
-	{"M!K!", "Amiga-ProTracker"},
-	{"M&K!", "Amiga-NoiseTracker"},
-	{"N.T.", "Amiga-NoiseTracker"},
-	{"FEST", "Amiga-NoiseTracker"}, /* jobbig.mod */
+	{"M.K.", "Amiga-NewTracker"}, {"M!K!", "Amiga-ProTracker"}, {"M&K!", "Amiga-NoiseTracker"},
+	{"N.T.", "Amiga-NoiseTracker"}, {"FEST", "Amiga-NoiseTracker"}, /* jobbig.mod */
 
 	/* Atari Octalyzer */
 #define FALCON(x) {"CD" #x "1", #x " Channel Falcon"}
@@ -58,8 +55,7 @@ static const char *valid_tags[][2] = {
 #undef STRTRK
 
 	/* Oktalyzer */
-	{"OCTA", "8 Channel MOD"},
-	{"OKTA", "8 Channel MOD"},
+	{"OCTA", "8 Channel MOD"}, {"OKTA", "8 Channel MOD"},
 
 #define TDZ(x) {"TDZ" #x, #x " Channel MOD"}
 	TDZ(1), TDZ(2), TDZ(3),
@@ -67,22 +63,15 @@ static const char *valid_tags[][2] = {
 
 	/* xCHN = generic */
 #define CHN(x) {#x "CHN", #x " Channel MOD"}
-	CHN(1), CHN(2), CHN(3), CHN(4),
-	CHN(5), CHN(6), CHN(7), CHN(8),
-	CHN(9),
+	CHN(1), CHN(2), CHN(3), CHN(4), CHN(5), CHN(6), CHN(7), CHN(8), CHN(9),
 #undef CHN
 
 	/* xxCN/xxCH = generic */
 #define CN(x) {#x "CN", #x " Channel MOD"}, {#x "CH", #x " Channel MOD"}
-	CN(10), CN(11), CN(12), CN(13),
-	CN(14), CN(15), CN(16), CN(17),
-	CN(18), CN(19), CN(20), CN(21),
-	CN(22), CN(23), CN(24), CN(25),
-	CN(26), CN(27), CN(28), CN(29),
-	CN(30), CN(31), CN(32),
+	CN(10), CN(11), CN(12), CN(13), CN(14), CN(15), CN(16), CN(17), CN(18), CN(19), CN(20), CN(21), CN(22), CN(23),
+	CN(24), CN(25), CN(26), CN(27), CN(28), CN(29), CN(30), CN(31), CN(32),
 #undef CN
-	{NULL, NULL}
-};
+	{NULL, NULL}};
 
 enum {
 	WARN_LINEARSLIDES,
@@ -100,47 +89,29 @@ enum {
 	MAX_WARN
 };
 
-static const char *mod_warnings[] = {
-	[WARN_LINEARSLIDES] = "Linear slides",
-	[WARN_SAMPLEVOL]    = "Sample volumes",
-	[WARN_LOOPS]        = "Sustain and Ping Pong loops",
-	[WARN_SAMPLEVIB]    = "Sample vibrato",
-	[WARN_INSTRUMENTS]  = "Instrument functions",
-	[WARN_PATTERNLEN]   = "Pattern lengths other than 64 rows",
-	[WARN_NOTERANGE]    = "Notes outside the range C-4 to B-6",
-	[WARN_VOLEFFECTS]   = "Extended volume column effects",
-	[WARN_MAXSAMPLES]   = "Over 31 samples",
-	[WARN_LONGSAMPLES]  = "Odd sample length or greater than 131070",
-	[WARN_UNUSEDPATS]   = "Patterns outside order list",
+static const char *mod_warnings[] = {[WARN_LINEARSLIDES] = "Linear slides",
+	[WARN_SAMPLEVOL] = "Sample volumes",
+	[WARN_LOOPS] = "Sustain and Ping Pong loops",
+	[WARN_SAMPLEVIB] = "Sample vibrato",
+	[WARN_INSTRUMENTS] = "Instrument functions",
+	[WARN_PATTERNLEN] = "Pattern lengths other than 64 rows",
+	[WARN_NOTERANGE] = "Notes outside the range C-4 to B-6",
+	[WARN_VOLEFFECTS] = "Extended volume column effects",
+	[WARN_MAXSAMPLES] = "Over 31 samples",
+	[WARN_LONGSAMPLES] = "Odd sample length or greater than 131070",
+	[WARN_UNUSEDPATS] = "Patterns outside order list",
 
-	[MAX_WARN]          = NULL
-};
+	[MAX_WARN] = NULL};
 
-const uint16_t amigaperiod_table[256] = {
-	0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,   0,    0,    0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,   0,    0,    0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,   0,    0,    0,
-	1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 906,
-	856,  808,  762,  720,  678,  640,  604,  570,  538,  508,  480, 453,
-	428,  404,  381,  360,  339,  320,  302,  285,  269,  254,  240, 226,
-	214,  202,  190,  180,  170,  160,  151,  143,  135,  127,  120, 113,
-	107,  101,  95,   90,   85,   80,   75,   71,   67,   63,   60,  56,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0,
-	0,    0,    0
-};
+const uint16_t amigaperiod_table[256] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 906, 856, 808,
+	762, 720, 678, 640, 604, 570, 538, 508, 480, 453, 428, 404, 381, 360, 339, 320, 302, 285, 269, 254, 240, 226,
+	214, 202, 190, 180, 170, 160, 151, 143, 135, 127, 120, 113, 107, 101, 95, 90, 85, 80, 75, 71, 67, 63, 60, 56, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 int fmt_mod_read_info(dmoz_file_t *file, slurp_t *fp)
 {
@@ -281,8 +252,8 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, uint32_t lflags, int for
 			tid = "%d Channel MOD"; // generic
 		}
 		maybe_st3 = 1;
-	} else if (tag[0] > '0' && tag[0] <= '9' && tag[1] >= '0' && tag[1] <= '9'
-		   && tag[2] == 'C' && (tag[3] == 'H' || tag[3] == 'N')) {
+	} else if (tag[0] > '0' && tag[0] <= '9' && tag[1] >= '0' && tag[1] <= '9' && tag[2] == 'C'
+		   && (tag[3] == 'H' || tag[3] == 'N')) {
 		/* nnCH = Fast Tracker (if n is even and <= 32) or TakeTracker (if n = 11, 13, 15)
 		 * Not sure what the nnCN variant is. */
 		nchan = 10 * (tag[0] - '0') + (tag[1] - '0');
@@ -479,11 +450,42 @@ static int fmt_mod_load_song(song_t *song, slurp_t *fp, uint32_t lflags, int for
 	{
 		/* "TakeTrackered with version 0.9E!!!!!" XOR with 0xDF. */
 		static const unsigned char taketracker[] = {
-			0x8B, 0xBE, 0xB4, 0xBA, 0x8B, 0xAD, 0xBE, 0xBC,
-			0xB4, 0xBA, 0xAD, 0xBA, 0xBB, 0xFF, 0xA8, 0xB6,
-			0xAB, 0xB7, 0xFF, 0xA9, 0xBA, 0xAD, 0xAC, 0xB6,
-			0xB0, 0xB1, 0xFF, 0xEF, 0xF1, 0xE6, 0xBA, 0xFE,
-			0xFE, 0xFE, 0xFE, 0xFE,
+			0x8B,
+			0xBE,
+			0xB4,
+			0xBA,
+			0x8B,
+			0xAD,
+			0xBE,
+			0xBC,
+			0xB4,
+			0xBA,
+			0xAD,
+			0xBA,
+			0xBB,
+			0xFF,
+			0xA8,
+			0xB6,
+			0xAB,
+			0xB7,
+			0xFF,
+			0xA9,
+			0xBA,
+			0xAD,
+			0xAC,
+			0xB6,
+			0xB0,
+			0xB1,
+			0xFF,
+			0xEF,
+			0xF1,
+			0xE6,
+			0xBA,
+			0xFE,
+			0xFE,
+			0xFE,
+			0xFE,
+			0xFE,
 		};
 
 		/* This is actually nine bytes, but the final three vary between
@@ -568,7 +570,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 {
 	uint8_t mod_orders[128] = {0};
 	uint8_t tmp[128];
-		
+
 	int nord, nsmp, nchn, maxpat, jmax, joutpos;
 	long tmppos;
 	int i, j, n, period;
@@ -602,7 +604,8 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 
 		if (song->samples[n].global_volume != 64)
 			warn |= 1 << WARN_SAMPLEVOL;
-		if ((song->samples[n].flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == (CHN_LOOP | CHN_PINGPONGLOOP) || (song->samples[n].flags & CHN_SUSTAINLOOP))
+		if ((song->samples[n].flags & (CHN_LOOP | CHN_PINGPONGLOOP)) == (CHN_LOOP | CHN_PINGPONGLOOP)
+			|| (song->samples[n].flags & CHN_SUSTAINLOOP))
 			warn |= 1 << WARN_LOOPS;
 		if (song->samples[n].vib_depth != 0)
 			warn |= 1 << WARN_SAMPLEVIB;
@@ -610,7 +613,8 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		if ((1 & song->samples[n].length) || (song->samples[n].length > 0x1FFFE))
 			warn |= 1 << WARN_LONGSAMPLES;
 
-		SCHISM_STATIC_ASSERT(sizeof(song->samples[n].name) >= 22, "song->samples[n].name is assumed to be at least 22 bytes long");
+		SCHISM_STATIC_ASSERT(sizeof(song->samples[n].name) >= 22,
+			"song->samples[n].name is assumed to be at least 22 bytes long");
 		disko_write(fp, song->samples[n].name, 22);
 
 		/* sample length. */
@@ -674,7 +678,7 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 		disko_write(fp, tag, 4);
 	}
 
-	for(n = 0; n <= maxpat; ++n) {
+	for (n = 0; n <= maxpat; ++n) {
 		/* this is a 16KiB stack variable. we REALLY ought to be
 		 * putting stuff directly into the file especially because
 		 * most of this array won't even be touched normally */
@@ -708,8 +712,12 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 					mod_fx_val = m->volparam;
 				} else if (m->voleffect == VOLFX_NONE) {
 					switch (m->effect) {
-					case FX_NONE: mod_fx_val = 0; break;
-					case FX_ARPEGGIO: mod_fx = 0; break;
+					case FX_NONE:
+						mod_fx_val = 0;
+						break;
+					case FX_ARPEGGIO:
+						mod_fx = 0;
+						break;
 					case FX_PORTAMENTOUP:
 						mod_fx = 1;
 						if ((mod_fx_val & 0xf0) == 0xe0) {
@@ -730,16 +738,30 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 							mod_fx_val = 0x20 | (mod_fx_val & 0xf);
 						}
 						break;
-					case FX_TONEPORTAMENTO: mod_fx = 3; break;
-					case FX_VIBRATO: mod_fx = 4; break;
-					case FX_TONEPORTAVOL: mod_fx = 5; break;
-					case FX_VIBRATOVOL: mod_fx = 6; break;
-					case FX_TREMOLO: mod_fx = 7; break;
-					case FX_PANNING: mod_fx = 8; break;
-					case FX_OFFSET: mod_fx = 9; break;
+					case FX_TONEPORTAMENTO:
+						mod_fx = 3;
+						break;
+					case FX_VIBRATO:
+						mod_fx = 4;
+						break;
+					case FX_TONEPORTAVOL:
+						mod_fx = 5;
+						break;
+					case FX_VIBRATOVOL:
+						mod_fx = 6;
+						break;
+					case FX_TREMOLO:
+						mod_fx = 7;
+						break;
+					case FX_PANNING:
+						mod_fx = 8;
+						break;
+					case FX_OFFSET:
+						mod_fx = 9;
+						break;
 					case FX_VOLUMESLIDE:
 						mod_fx = 0x0a;
-						if( (mod_fx_val & 0xf0) && (mod_fx_val & 0x0f) ) {
+						if ((mod_fx_val & 0xf0) && (mod_fx_val & 0x0f)) {
 							if ((mod_fx_val & 0xf0) == 0xf0) { // fine volslide down!
 								mod_fx = 0x0e;
 								mod_fx_val &= 0xbf;
@@ -749,23 +771,48 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 							}
 						}
 						break;
-					case FX_POSITIONJUMP: mod_fx = 0x0b; break;
-					case FX_VOLUME: mod_fx = 0x0c; break;
-					case FX_PATTERNBREAK: mod_fx = 0x0d; mod_fx_val = ((mod_fx_val / 10) << 4) | (mod_fx_val % 10); break;
-					case FX_SPEED: mod_fx = 0x0f; break;
-					case FX_TEMPO: mod_fx = 0x0f; break;
+					case FX_POSITIONJUMP:
+						mod_fx = 0x0b;
+						break;
+					case FX_VOLUME:
+						mod_fx = 0x0c;
+						break;
+					case FX_PATTERNBREAK:
+						mod_fx = 0x0d;
+						mod_fx_val = ((mod_fx_val / 10) << 4) | (mod_fx_val % 10);
+						break;
+					case FX_SPEED:
+						mod_fx = 0x0f;
+						break;
+					case FX_TEMPO:
+						mod_fx = 0x0f;
+						break;
 					case FX_SPECIAL:
 						mod_fx = 0x0e;
 						switch (mod_fx_val & 0xf0) {
-							case 0x10: mod_fx_val = (mod_fx_val & 0x0f) | 0x30; break;
-							case 0x20: mod_fx_val = (mod_fx_val & 0x0f) | 0x50; break; // there is an error in Protracker 2.1 docs!
-							case 0x30: mod_fx_val = (mod_fx_val & 0x0f) | 0x40; break;
-							case 0x40: mod_fx_val = (mod_fx_val & 0x0f) | 0x70; break;
-							case 0xb0: mod_fx_val = (mod_fx_val & 0x0f) | 0x60; break;
-							default: break; // handling silently E0x,E6x,E8x,ECx,EDx,EEx,(?EFx)
+						case 0x10:
+							mod_fx_val = (mod_fx_val & 0x0f) | 0x30;
+							break;
+						case 0x20:
+							mod_fx_val = (mod_fx_val & 0x0f) | 0x50;
+							break; // there is an error in Protracker 2.1 docs!
+						case 0x30:
+							mod_fx_val = (mod_fx_val & 0x0f) | 0x40;
+							break;
+						case 0x40:
+							mod_fx_val = (mod_fx_val & 0x0f) | 0x70;
+							break;
+						case 0xb0:
+							mod_fx_val = (mod_fx_val & 0x0f) | 0x60;
+							break;
+						default:
+							break; // handling silently E0x,E6x,E8x,ECx,EDx,EEx,(?EFx)
 						}
 						break;
-					case FX_RETRIG: mod_fx = 0x0e; mod_fx_val = 0x90 | (mod_fx_val & 0x0f); break;
+					case FX_RETRIG:
+						mod_fx = 0x0e;
+						mod_fx_val = 0x90 | (mod_fx_val & 0x0f);
+						break;
 					default:
 						warn |= 1 << WARN_VOLEFFECTS;
 						break;
@@ -786,11 +833,12 @@ int fmt_mod_save_song(disko_t *fp, song_t *song)
 	for (tmp[0] = tmp[1] = n = 0; (n < nsmp) && (n < 31); ++n) {
 		song_sample_t *smp = song->samples + (n + 1);
 		if (smp->data) {
-			if( (smp->flags & CHN_LOOP) && (smp->loop_start < smp->loop_end) && (smp->loop_end <= MIN(smp->length, 0x1FFFE)) ) {
-				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
+			if ((smp->flags & CHN_LOOP) && (smp->loop_start < smp->loop_end)
+				&& (smp->loop_end <= MIN(smp->length, 0x1FFFE))) {
+				csf_write_sample(fp, smp, SF(PCMS, 8, M, LE), 0x1FFFE);
 			} else if (smp->length >= 1) { // floor(smp->length / 2) MUST be positive!
 				tmppos = disko_tell(fp);
-				csf_write_sample(fp, smp, SF(PCMS,8,M,LE), 0x1FFFE);
+				csf_write_sample(fp, smp, SF(PCMS, 8, M, LE), 0x1FFFE);
 				disko_seek(fp, tmppos, SEEK_SET);
 				disko_write(fp, tmp, 2);
 				disko_seek(fp, 0, SEEK_END);

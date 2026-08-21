@@ -59,7 +59,11 @@ struct GF1PatchHeader {
 static int read_pat_header(struct GF1PatchHeader *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(sig);
 	READ_VALUE(ver);
@@ -85,16 +89,15 @@ static int read_pat_header(struct GF1PatchHeader *hdr, slurp_t *fp)
 
 #undef READ_VALUE
 
-	if ((memcmp(hdr->sig, "GF1PATCH", 8))
-	    || (memcmp(hdr->ver, "110\0", 4) && memcmp(hdr->ver, "100\0", 4))
-	    || (memcmp(hdr->id, "ID#000002\0", 10)))
+	if ((memcmp(hdr->sig, "GF1PATCH", 8)) || (memcmp(hdr->ver, "110\0", 4) && memcmp(hdr->ver, "100\0", 4))
+		|| (memcmp(hdr->id, "ID#000002\0", 10)))
 		return 0;
 
 	hdr->waveforms = bswapLE16(hdr->waveforms);
 	hdr->mastervol = bswapLE16(hdr->mastervol);
-	hdr->datasize  = bswapLE32(hdr->datasize);
-	hdr->insID     = bswapLE16(hdr->insID);
-	hdr->inssize   = bswapLE32(hdr->inssize);
+	hdr->datasize = bswapLE32(hdr->datasize);
+	hdr->insID = bswapLE16(hdr->insID);
+	hdr->inssize = bswapLE32(hdr->inssize);
 	hdr->layersize = bswapLE32(hdr->layersize);
 
 	return 1;
@@ -124,7 +127,11 @@ struct GF1PatchSampleHeader {
 static int read_pat_sample_header(struct GF1PatchSampleHeader *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(wavename);
 	READ_VALUE(fractions);
@@ -170,24 +177,114 @@ static int gusfreq(unsigned int freq)
 {
 	unsigned int scale_table[109] = {
 /*C-0..B-*/
-/* Octave 0 */  16351, 17323, 18354, 19445, 20601, 21826,
-		23124, 24499, 25956, 27500, 29135, 30867,
-/* Octave 1 */  32703, 34647, 36708, 38890, 41203, 43653,
-		46249, 48999, 51913, 54999, 58270, 61735,
-/* Octave 2 */  65406, 69295, 73416, 77781, 82406, 87306,
-		92498, 97998, 103826, 109999, 116540, 123470,
-/* Octave 3 */  130812, 138591, 146832, 155563, 164813, 174614,
-		184997, 195997, 207652, 219999, 233081, 246941,
-/* Octave 4 */  261625, 277182, 293664, 311126, 329627, 349228,
-		369994, 391995, 415304, 440000, 466163, 493883,
-/* Octave 5 */  523251, 554365, 587329, 622254, 659255, 698456,
-		739989, 783991, 830609, 880000, 932328, 987767,
-/* Octave 6 */  1046503, 1108731, 1174660, 1244509, 1318511, 1396914,
-		1479979, 1567983, 1661220, 1760002, 1864657, 1975536,
-/* Octave 7 */  2093007, 2217464, 2349321, 2489019, 2637024, 2793830,
-		2959960, 3135968, 3322443, 3520006, 3729316, 3951073,
-/* Octave 8 */  4186073, 4434930, 4698645, 4978041, 5274051, 5587663,
-		5919922, 6271939, 6644889, 7040015, 7458636, 7902150,
+		/* Octave 0 */ 16351,
+		17323,
+		18354,
+		19445,
+		20601,
+		21826,
+		23124,
+		24499,
+		25956,
+		27500,
+		29135,
+		30867,
+		/* Octave 1 */ 32703,
+		34647,
+		36708,
+		38890,
+		41203,
+		43653,
+		46249,
+		48999,
+		51913,
+		54999,
+		58270,
+		61735,
+		/* Octave 2 */ 65406,
+		69295,
+		73416,
+		77781,
+		82406,
+		87306,
+		92498,
+		97998,
+		103826,
+		109999,
+		116540,
+		123470,
+		/* Octave 3 */ 130812,
+		138591,
+		146832,
+		155563,
+		164813,
+		174614,
+		184997,
+		195997,
+		207652,
+		219999,
+		233081,
+		246941,
+		/* Octave 4 */ 261625,
+		277182,
+		293664,
+		311126,
+		329627,
+		349228,
+		369994,
+		391995,
+		415304,
+		440000,
+		466163,
+		493883,
+		/* Octave 5 */ 523251,
+		554365,
+		587329,
+		622254,
+		659255,
+		698456,
+		739989,
+		783991,
+		830609,
+		880000,
+		932328,
+		987767,
+		/* Octave 6 */ 1046503,
+		1108731,
+		1174660,
+		1244509,
+		1318511,
+		1396914,
+		1479979,
+		1567983,
+		1661220,
+		1760002,
+		1864657,
+		1975536,
+		/* Octave 7 */ 2093007,
+		2217464,
+		2349321,
+		2489019,
+		2637024,
+		2793830,
+		2959960,
+		3135968,
+		3322443,
+		3520006,
+		3729316,
+		3951073,
+		/* Octave 8 */ 4186073,
+		4434930,
+		4698645,
+		4978041,
+		5274051,
+		5587663,
+		5919922,
+		6271939,
+		6644889,
+		7040015,
+		7458636,
+		7902150,
 		0xFFFFFFFF,
 	};
 	int no;
@@ -211,8 +308,8 @@ int fmt_pat_read_info(dmoz_file_t *file, slurp_t *fp)
 		return 0;
 
 	if ((memcmp(hdr.sig, "GF1PATCH", 8) != 0)
-	    || (memcmp(hdr.ver, "110\0", 4) != 0 && memcmp(hdr.ver, "100\0", 4) != 0)
-	    || (memcmp(hdr.id, "ID#000002\0", 10) != 0))
+		|| (memcmp(hdr.ver, "110\0", 4) != 0 && memcmp(hdr.ver, "100\0", 4) != 0)
+		|| (memcmp(hdr.id, "ID#000002\0", 10) != 0))
 		return 0;
 
 	file->description = "Gravis Patch File";
@@ -221,7 +318,6 @@ int fmt_pat_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->sampsize = CLAMP(hdr.smpnum, 1, 16);
 	return 1;
 }
-
 
 int fmt_pat_load_instrument(slurp_t *fp, int slot)
 {

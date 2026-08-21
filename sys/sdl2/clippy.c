@@ -30,16 +30,16 @@
 static int enable_primary_selection = 0;
 
 #if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 26, 0)
-static SDL_bool (SDLCALL *sdl2_HasPrimarySelectionText)(void);
-static int (SDLCALL *sdl2_SetPrimarySelectionText)(const char *text);
-static char * (SDLCALL *sdl2_GetPrimarySelectionText)(void);
+static SDL_bool(SDLCALL *sdl2_HasPrimarySelectionText)(void);
+static int(SDLCALL *sdl2_SetPrimarySelectionText)(const char *text);
+static char *(SDLCALL *sdl2_GetPrimarySelectionText)(void);
 #endif
 
-static SDL_bool (SDLCALL *sdl2_HasClipboardText)(void);
-static int (SDLCALL *sdl2_SetClipboardText)(const char *text);
-static char * (SDLCALL *sdl2_GetClipboardText)(void);
+static SDL_bool(SDLCALL *sdl2_HasClipboardText)(void);
+static int(SDLCALL *sdl2_SetClipboardText)(const char *text);
+static char *(SDLCALL *sdl2_GetClipboardText)(void);
 
-static void (SDLCALL *sdl2_free)(void *);
+static void(SDLCALL *sdl2_free)(void *);
 
 static int sdl2_clippy_have_selection(void)
 {

@@ -23,83 +23,85 @@
 
 #include "init.h"
 
-#define NATIVE_SCREEN_WIDTH		640
-#define NATIVE_SCREEN_HEIGHT	400
-#define WINDOW_TITLE			"Schism Tracker"
+#define NATIVE_SCREEN_WIDTH  640
+#define NATIVE_SCREEN_HEIGHT 400
+#define WINDOW_TITLE         "Schism Tracker"
 
 #include "headers.h"
 
 #include "it.h"
-#include "charset.h"
 #include "bits.h"
+#include "charset.h"
 #include "config.h"
-#include "video.h"
+#include "events.h"
 #include "osdefs.h"
 #include "vgamem.h"
-#include "events.h"
+#include "video.h"
 
 #include "backend/video.h"
 
 #include <SDL_syswm.h>
 
 #ifndef SCHISM_MACOSX
-#include "auto/schismico_hires.h"
+# include "auto/schismico_hires.h"
 #endif
 
-static int (SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
-static void (SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
+static int(SDLCALL *sdl2_InitSubSystem)(Uint32 flags) = NULL;
+static void(SDLCALL *sdl2_QuitSubSystem)(Uint32 flags) = NULL;
 
 static const char *(SDLCALL *sdl2_GetCurrentVideoDriver)(void);
-static int (SDLCALL *sdl2_GetCurrentDisplayMode)(int displayIndex, SDL_DisplayMode * mode);
-static int (SDLCALL *sdl2_GetRendererInfo)(SDL_Renderer * renderer, SDL_RendererInfo * info);
-static int (SDLCALL *sdl2_ShowCursor)(int toggle);
-static SDL_bool (SDLCALL *sdl2_GetWindowWMInfo)(SDL_Window * window, SDL_SysWMinfo * info);
-static Uint32 (SDLCALL *sdl2_GetWindowFlags)(SDL_Window * window);
-static Uint32 (SDLCALL *sdl2_MapRGB)(const SDL_PixelFormat * format, Uint8 r, Uint8 g, Uint8 b);
-static void (SDLCALL *sdl2_SetWindowPosition)(SDL_Window * window, int x, int y);
-static void (SDLCALL *sdl2_SetWindowSize)(SDL_Window * window, int w, int h);
-static int (SDLCALL *sdl2_SetWindowFullscreen)(SDL_Window * window, Uint32 flags);
-static void (SDLCALL *sdl2_GetWindowPosition)(SDL_Window * window, int *x, int *y);
-static SDL_Window * (SDLCALL *sdl2_CreateWindow)(const char *title, int x, int y, int w, int h, Uint32 flags);
-static SDL_Renderer * (SDLCALL *sdl2_CreateRenderer)(SDL_Window * window, int index, Uint32 flags);
-static SDL_Texture * (SDLCALL *sdl2_CreateTexture)(SDL_Renderer * renderer, Uint32 format, int access, int w, int h);
-static SDL_PixelFormat * (SDLCALL *sdl2_AllocFormat)(Uint32 pixel_format);
-static void (SDLCALL *sdl2_FreeFormat)(SDL_PixelFormat *format);
-static void (SDLCALL *sdl2_DestroyTexture)(SDL_Texture * texture);
-static void (SDLCALL *sdl2_DestroyRenderer)(SDL_Renderer * renderer);
-static void (SDLCALL *sdl2_DestroyWindow)(SDL_Window * window);
-static Uint8 (SDLCALL *sdl2_EventState)(Uint32 type, int state);
-static SDL_bool (SDLCALL *sdl2_IsScreenSaverEnabled)(void);
-static void (SDLCALL *sdl2_EnableScreenSaver)(void);
-static void (SDLCALL *sdl2_DisableScreenSaver)(void);
-static void (SDLCALL *sdl2_RenderGetScale)(SDL_Renderer * renderer, float *scaleX, float *scaleY);
-static void (SDLCALL *sdl2_SetWindowGrab)(SDL_Window * window, SDL_bool grabbed);
-static void (SDLCALL *sdl2_WarpMouseInWindow)(SDL_Window * window, int x, int y);
-static Uint32 (SDLCALL *sdl2_GetWindowFlags)(SDL_Window * window);
-static void (SDLCALL *sdl2_GetWindowSize)(SDL_Window * window, int *w, int *h);
-static void (SDLCALL *sdl2_SetWindowSize)(SDL_Window * window, int w, int h);
-static int (SDLCALL *sdl2_RenderClear)(SDL_Renderer * renderer);
-static int (SDLCALL *sdl2_LockTexture)(SDL_Texture * texture, const SDL_Rect * rect, void **pixels, int *pitch);
-static void (SDLCALL *sdl2_UnlockTexture)(SDL_Texture * texture);
-static int (SDLCALL *sdl2_RenderCopy)(SDL_Renderer * renderer, SDL_Texture * texture, const SDL_Rect * srcrect, const SDL_Rect * dstrect);
-static void (SDLCALL *sdl2_RenderPresent)(SDL_Renderer * renderer);
-static void (SDLCALL *sdl2_SetWindowTitle)(SDL_Window * window, const char *title);
-static SDL_Surface* (SDLCALL *sdl2_CreateRGBSurfaceFrom)(void *pixels, int width, int height, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
-static void (SDLCALL *sdl2_SetWindowIcon)(SDL_Window * window, SDL_Surface * icon);
-static void (SDLCALL *sdl2_FreeSurface)(SDL_Surface * surface);
-static SDL_bool (SDLCALL *sdl2_SetHint)(const char *name, const char *value);
-static int (SDLCALL *sdl2_RenderSetLogicalSize)(SDL_Renderer * renderer, int w, int h);
-static SDL_bool (SDLCALL *sdl2_GetWindowGrab)(SDL_Window * window);
-static void (SDLCALL *sdl2_StartTextInput)(void);
-static int (SDLCALL *sdl2_GetWindowDisplayMode)(SDL_Window *, SDL_DisplayMode *);
+static int(SDLCALL *sdl2_GetCurrentDisplayMode)(int displayIndex, SDL_DisplayMode *mode);
+static int(SDLCALL *sdl2_GetRendererInfo)(SDL_Renderer *renderer, SDL_RendererInfo *info);
+static int(SDLCALL *sdl2_ShowCursor)(int toggle);
+static SDL_bool(SDLCALL *sdl2_GetWindowWMInfo)(SDL_Window *window, SDL_SysWMinfo *info);
+static Uint32(SDLCALL *sdl2_GetWindowFlags)(SDL_Window *window);
+static Uint32(SDLCALL *sdl2_MapRGB)(const SDL_PixelFormat *format, Uint8 r, Uint8 g, Uint8 b);
+static void(SDLCALL *sdl2_SetWindowPosition)(SDL_Window *window, int x, int y);
+static void(SDLCALL *sdl2_SetWindowSize)(SDL_Window *window, int w, int h);
+static int(SDLCALL *sdl2_SetWindowFullscreen)(SDL_Window *window, Uint32 flags);
+static void(SDLCALL *sdl2_GetWindowPosition)(SDL_Window *window, int *x, int *y);
+static SDL_Window *(SDLCALL *sdl2_CreateWindow)(const char *title, int x, int y, int w, int h, Uint32 flags);
+static SDL_Renderer *(SDLCALL *sdl2_CreateRenderer)(SDL_Window *window, int index, Uint32 flags);
+static SDL_Texture *(SDLCALL *sdl2_CreateTexture)(SDL_Renderer *renderer, Uint32 format, int access, int w, int h);
+static SDL_PixelFormat *(SDLCALL *sdl2_AllocFormat)(Uint32 pixel_format);
+static void(SDLCALL *sdl2_FreeFormat)(SDL_PixelFormat *format);
+static void(SDLCALL *sdl2_DestroyTexture)(SDL_Texture *texture);
+static void(SDLCALL *sdl2_DestroyRenderer)(SDL_Renderer *renderer);
+static void(SDLCALL *sdl2_DestroyWindow)(SDL_Window *window);
+static Uint8(SDLCALL *sdl2_EventState)(Uint32 type, int state);
+static SDL_bool(SDLCALL *sdl2_IsScreenSaverEnabled)(void);
+static void(SDLCALL *sdl2_EnableScreenSaver)(void);
+static void(SDLCALL *sdl2_DisableScreenSaver)(void);
+static void(SDLCALL *sdl2_RenderGetScale)(SDL_Renderer *renderer, float *scaleX, float *scaleY);
+static void(SDLCALL *sdl2_SetWindowGrab)(SDL_Window *window, SDL_bool grabbed);
+static void(SDLCALL *sdl2_WarpMouseInWindow)(SDL_Window *window, int x, int y);
+static Uint32(SDLCALL *sdl2_GetWindowFlags)(SDL_Window *window);
+static void(SDLCALL *sdl2_GetWindowSize)(SDL_Window *window, int *w, int *h);
+static void(SDLCALL *sdl2_SetWindowSize)(SDL_Window *window, int w, int h);
+static int(SDLCALL *sdl2_RenderClear)(SDL_Renderer *renderer);
+static int(SDLCALL *sdl2_LockTexture)(SDL_Texture *texture, const SDL_Rect *rect, void **pixels, int *pitch);
+static void(SDLCALL *sdl2_UnlockTexture)(SDL_Texture *texture);
+static int(SDLCALL *sdl2_RenderCopy)(
+	SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rect *srcrect, const SDL_Rect *dstrect);
+static void(SDLCALL *sdl2_RenderPresent)(SDL_Renderer *renderer);
+static void(SDLCALL *sdl2_SetWindowTitle)(SDL_Window *window, const char *title);
+static SDL_Surface *(SDLCALL *sdl2_CreateRGBSurfaceFrom)(void *pixels, int width, int height, int depth, int pitch,
+	Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
+static void(SDLCALL *sdl2_SetWindowIcon)(SDL_Window *window, SDL_Surface *icon);
+static void(SDLCALL *sdl2_FreeSurface)(SDL_Surface *surface);
+static SDL_bool(SDLCALL *sdl2_SetHint)(const char *name, const char *value);
+static int(SDLCALL *sdl2_RenderSetLogicalSize)(SDL_Renderer *renderer, int w, int h);
+static SDL_bool(SDLCALL *sdl2_GetWindowGrab)(SDL_Window *window);
+static void(SDLCALL *sdl2_StartTextInput)(void);
+static int(SDLCALL *sdl2_GetWindowDisplayMode)(SDL_Window *, SDL_DisplayMode *);
 
-static int (SDLCALL *sdl2_LockSurface)(SDL_Surface * surface);
-static void (SDLCALL *sdl2_UnlockSurface)(SDL_Surface * surface);
+static int(SDLCALL *sdl2_LockSurface)(SDL_Surface *surface);
+static void(SDLCALL *sdl2_UnlockSurface)(SDL_Surface *surface);
 
 // Introduced with SDL 2.0.4
 #if !SDL_VERSION_ATLEAST(2, 0, 4)
-#define SDL_PIXELFORMAT_NV12 (SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'))
-#define SDL_PIXELFORMAT_NV21 (SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'))
+# define SDL_PIXELFORMAT_NV12 (SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'))
+# define SDL_PIXELFORMAT_NV21 (SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'))
 #endif
 
 // SDL_SetTextureScaleMode: introduced in SDL 2.0.12
@@ -110,19 +112,20 @@ static void (SDLCALL *sdl2_UnlockSurface)(SDL_Surface * surface);
 typedef int SDL_ScaleMode;
 #endif
 
-static int (SDLCALL *sdl2_SetTextureScaleMode)(SDL_Texture *texture, SDL_ScaleMode scaleMode);
+static int(SDLCALL *sdl2_SetTextureScaleMode)(SDL_Texture *texture, SDL_ScaleMode scaleMode);
 
 // ONLY in SDL 2.0.18 and newer
-static void (SDLCALL *sdl2_RenderWindowToLogical)(SDL_Renderer * renderer, int windowX, int windowY, float *logicalX, float *logicalY);
+static void(SDLCALL *sdl2_RenderWindowToLogical)(
+	SDL_Renderer *renderer, int windowX, int windowY, float *logicalX, float *logicalY);
 
 // Only used in SDL >= 2.30.5, because of a bug in prior versions that makes
 // SDL_DestroyWindowRenderer completely useless for our use case
 //
 // See https://github.com/libsdl-org/SDL/issues/10133
 static SDL_Surface *(SDLCALL *sdl2_GetWindowSurface)(SDL_Window *window);
-static int (SDLCALL *sdl2_UpdateWindowSurface)(SDL_Window * window);
-static SDL_bool (SDLCALL *sdl2_HasWindowSurface)(SDL_Window *window);
-static int (SDLCALL *sdl2_DestroyWindowSurface)(SDL_Window *window);
+static int(SDLCALL *sdl2_UpdateWindowSurface)(SDL_Window *window);
+static SDL_bool(SDLCALL *sdl2_HasWindowSurface)(SDL_Window *window);
+static int(SDLCALL *sdl2_DestroyWindowSurface)(SDL_Window *window);
 
 static struct {
 	/* The actual window that we blit to */
@@ -179,24 +182,24 @@ static const struct {
 } native_formats[] = {
 	// RGB
 	// ------------------------------------
-	{SDL_PIXELFORMAT_RGB888, "RGB888"},
+	{SDL_PIXELFORMAT_RGB888,   "RGB888"  },
 	{SDL_PIXELFORMAT_ARGB8888, "ARGB8888"},
-	{SDL_PIXELFORMAT_RGB24, "RGB24"},
-	{SDL_PIXELFORMAT_RGB565, "RGB565"},
-	{SDL_PIXELFORMAT_RGB555, "RGB555"},
+	{SDL_PIXELFORMAT_RGB24,    "RGB24"   },
+	{SDL_PIXELFORMAT_RGB565,   "RGB565"  },
+	{SDL_PIXELFORMAT_RGB555,   "RGB555"  },
 	{SDL_PIXELFORMAT_ARGB1555, "ARGB1555"},
-	{SDL_PIXELFORMAT_RGB444, "RGB444"},
+	{SDL_PIXELFORMAT_RGB444,   "RGB444"  },
 	{SDL_PIXELFORMAT_ARGB4444, "ARGB4444"},
-	{SDL_PIXELFORMAT_RGB332, "RGB332"},
+	{SDL_PIXELFORMAT_RGB332,   "RGB332"  },
 	// ------------------------------------
 
 	// YUV
 	// ------------------------------------
-	{SDL_PIXELFORMAT_IYUV, "IYUV"},
-	{SDL_PIXELFORMAT_YV12, "YV12"},
+	{SDL_PIXELFORMAT_IYUV,     "IYUV"    },
+	{SDL_PIXELFORMAT_YV12,     "YV12"    },
 	// {SDL_PIXELFORMAT_UYVY, "UYVY"},
 	// {SDL_PIXELFORMAT_YVYU, "YVYU"},
-	{SDL_PIXELFORMAT_YUY2, "YUY2"},
+	{SDL_PIXELFORMAT_YUY2,     "YUY2"    },
 	// {SDL_PIXELFORMAT_NV12, "NV12"},
 	// {SDL_PIXELFORMAT_NV21, "NV21"},
 	// ------------------------------------
@@ -231,10 +234,8 @@ static void sdl2_video_report(void)
 		SDL_RendererInfo renderer;
 		sdl2_GetRendererInfo(video.u.r.renderer, &renderer);
 
-		log_appendf(5, " %sware%s renderer '%s'",
-			(renderer.flags & SDL_RENDERER_SOFTWARE) ? "Soft" : "Hard",
-			(renderer.flags & SDL_RENDERER_ACCELERATED) ? "-accelerated" : "",
-			renderer.name);
+		log_appendf(5, " %sware%s renderer '%s'", (renderer.flags & SDL_RENDERER_SOFTWARE) ? "Soft" : "Hard",
+			(renderer.flags & SDL_RENDERER_ACCELERATED) ? "-accelerated" : "", renderer.name);
 		break;
 	}
 	case VIDEO_TYPE_SURFACE:
@@ -279,7 +280,8 @@ static void set_icon(void)
 		uint32_t *pixels;
 		int width, height;
 		if (!xpmdata(_schism_icon_xpm_hires, &pixels, &width, &height)) {
-			SDL_Surface *icon = sdl2_CreateRGBSurfaceFrom(pixels, width, height, 32, width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+			SDL_Surface *icon = sdl2_CreateRGBSurfaceFrom(pixels, width, height, 32,
+				width * sizeof(uint32_t), 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 			if (icon) {
 				sdl2_SetWindowIcon(video.window, icon);
 				sdl2_FreeSurface(icon);
@@ -296,11 +298,12 @@ static inline void video_recalculate_fixed_width(void)
 	switch (video.type) {
 	case VIDEO_TYPE_RENDERER:
 		if (cfg_video_want_fixed)
-			sdl2_RenderSetLogicalSize(video.u.r.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
+			sdl2_RenderSetLogicalSize(
+				video.u.r.renderer, cfg_video_want_fixed_width, cfg_video_want_fixed_height);
 		break;
 	case VIDEO_TYPE_SURFACE:
-		video_calculate_clip(video.u.s.surface->w, video.u.s.surface->h,
-			&video.u.s.clip.x, &video.u.s.clip.y, &video.u.s.clip.w, &video.u.s.clip.h);
+		video_calculate_clip(video.u.s.surface->w, video.u.s.surface->h, &video.u.s.clip.x, &video.u.s.clip.y,
+			&video.u.s.clip.w, &video.u.s.clip.h);
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
 		SCHISM_UNREACHABLE;
@@ -324,7 +327,8 @@ static void video_redraw_texture(void)
 			size_t i;
 
 			for (i = 0; i < ARRAY_SIZE(native_formats); i++) {
-				if (!charset_strcasecmp(cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
+				if (!charset_strcasecmp(
+					    cfg_video_format, CHARSET_UTF8, native_formats[i].name, CHARSET_UTF8)) {
 					format = native_formats[i].format;
 					goto got_format;
 				}
@@ -346,7 +350,7 @@ static void video_redraw_texture(void)
 						format = native_formats[pref_last = j].format;
 		}
 
-got_format:
+	got_format:
 		/* option? */
 		video.yuv_tv = 0;
 
@@ -382,7 +386,8 @@ got_format:
 			break;
 		}
 
-		video.u.r.texture = sdl2_CreateTexture(video.u.r.renderer, format, SDL_TEXTUREACCESS_STREAMING, twidth, theight);
+		video.u.r.texture
+			= sdl2_CreateTexture(video.u.r.renderer, format, SDL_TEXTUREACCESS_STREAMING, twidth, theight);
 		video.format = format;
 		break;
 	}
@@ -415,7 +420,8 @@ static void sdl2_video_set_hardware(int hardware)
 			sdl2_DestroyRenderer(video.u.r.renderer);
 		break;
 	case VIDEO_TYPE_SURFACE:
-		SCHISM_RUNTIME_ASSERT(sdl2_HasWindowSurface(video.window), "Internal video type says surface, but the window doesn't have one");
+		SCHISM_RUNTIME_ASSERT(sdl2_HasWindowSurface(video.window),
+			"Internal video type says surface, but the window doesn't have one");
 		sdl2_DestroyWindowSurface(video.window);
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
@@ -425,9 +431,7 @@ static void sdl2_video_set_hardware(int hardware)
 	/* Check the actual SDL version. If it's lower than we want, just use
 	 * the render backend with the software renderer. It does exactly what
 	 * we do, just with one more layer of indirection. */
-	video.type = (!hardware && sdl2_ver_atleast(2, 30, 5))
-		? (VIDEO_TYPE_SURFACE)
-		: (VIDEO_TYPE_RENDERER);
+	video.type = (!hardware && sdl2_ver_atleast(2, 30, 5)) ? (VIDEO_TYPE_SURFACE) : (VIDEO_TYPE_RENDERER);
 
 	/* There is no way to clear an SDL hint in SDL < 2.24.0, UGH! */
 	if (ask_for_no_acceleration)
@@ -442,7 +446,8 @@ static void sdl2_video_set_hardware(int hardware)
 		video.type = VIDEO_TYPE_RENDERER;
 		SCHISM_FALLTHROUGH;
 	case VIDEO_TYPE_RENDERER:
-		video.u.r.renderer = sdl2_CreateRenderer(video.window, -1, (hardware) ? SDL_RENDERER_ACCELERATED : SDL_RENDERER_SOFTWARE);
+		video.u.r.renderer = sdl2_CreateRenderer(
+			video.window, -1, (hardware) ? SDL_RENDERER_ACCELERATED : SDL_RENDERER_SOFTWARE);
 		if (!video.u.r.renderer)
 			video.u.r.renderer = sdl2_CreateRenderer(video.window, -1, 0); // welp
 		SCHISM_RUNTIME_ASSERT(!!video.u.r.renderer, "Failed to create a renderer!");
@@ -471,7 +476,8 @@ static void sdl2_video_shutdown(void)
 			sdl2_DestroyRenderer(video.u.r.renderer);
 		break;
 	case VIDEO_TYPE_SURFACE:
-		SCHISM_RUNTIME_ASSERT(sdl2_HasWindowSurface(video.window), "Internal video type says surface, but window doesn't have one");
+		SCHISM_RUNTIME_ASSERT(sdl2_HasWindowSurface(video.window),
+			"Internal video type says surface, but window doesn't have one");
 		sdl2_DestroyWindowSurface(video.window);
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
@@ -486,8 +492,8 @@ static void sdl2_video_setup(int quality)
 	/* hint for later, in case we switch from software -> hardware */
 	static const char *names[] = {
 		[VIDEO_INTERPOLATION_NEAREST] = "nearest",
-		[VIDEO_INTERPOLATION_LINEAR]  = "linear",
-		[VIDEO_INTERPOLATION_BEST]    = "best",
+		[VIDEO_INTERPOLATION_LINEAR] = "linear",
+		[VIDEO_INTERPOLATION_BEST] = "best",
 	};
 
 	sdl2_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, names[quality]);
@@ -497,8 +503,8 @@ static void sdl2_video_setup(int quality)
 #if defined(SDL2_DYNAMIC_LOAD) || SDL_VERSION_ATLEAST(2, 0, 12)
 		static const SDL_ScaleMode modes[] = {
 			[VIDEO_INTERPOLATION_NEAREST] = SDL_ScaleModeNearest,
-			[VIDEO_INTERPOLATION_LINEAR]  = SDL_ScaleModeLinear,
-			[VIDEO_INTERPOLATION_BEST]    = SDL_ScaleModeBest,
+			[VIDEO_INTERPOLATION_LINEAR] = SDL_ScaleModeLinear,
+			[VIDEO_INTERPOLATION_BEST] = SDL_ScaleModeBest,
 		};
 
 		if (!sdl2_SetTextureScaleMode || sdl2_SetTextureScaleMode(video.u.r.texture, modes[quality]))
@@ -531,7 +537,8 @@ static int sdl2_video_startup(void)
 	video.height = cfg_video_height;
 	video.saved.x = video.saved.y = SDL_WINDOWPOS_CENTERED;
 
-	video.window = sdl2_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width, video.height, SDL_WINDOW_RESIZABLE);
+	video.window = sdl2_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, video.width,
+		video.height, SDL_WINDOW_RESIZABLE);
 	if (!video.window)
 		return 0;
 
@@ -652,8 +659,10 @@ static int sdl2_video_is_screensaver_enabled(void)
 
 static void sdl2_video_toggle_screensaver(int enabled)
 {
-	if (enabled) sdl2_EnableScreenSaver();
-	else sdl2_DisableScreenSaver();
+	if (enabled)
+		sdl2_EnableScreenSaver();
+	else
+		sdl2_DisableScreenSaver();
 }
 
 /* ---------------------------------------------------------- */
@@ -672,7 +681,7 @@ static void sdl2_video_translate(uint32_t vx, uint32_t vy, uint32_t *x, uint32_t
 		break;
 	case VIDEO_TYPE_RENDERER:
 		cx = cy = 0;
-		cw = (cfg_video_want_fixed) ? cfg_video_want_fixed_width  : video.width;
+		cw = (cfg_video_want_fixed) ? cfg_video_want_fixed_width : video.width;
 		ch = (cfg_video_want_fixed) ? cfg_video_want_fixed_height : video.height;
 		break;
 	case VIDEO_TYPE_UNINITIALIZED:
@@ -805,16 +814,9 @@ SCHISM_HOT static void sdl2_video_blit(void)
 			memset(video.u.s.surface->pixels, 0, video.u.s.surface->pitch * video.u.s.surface->h);
 		}
 
-		video_blitSC(video.u.s.surface->format->BytesPerPixel,
-			video.u.s.surface->pixels,
-			video.u.s.surface->pitch,
-			video.pal,
-			sdl2_map_rgb_callback,
-			video.pixel_format,
-			video.u.s.clip.x,
-			video.u.s.clip.y,
-			video.u.s.clip.w,
-			video.u.s.clip.h);
+		video_blitSC(video.u.s.surface->format->BytesPerPixel, video.u.s.surface->pixels,
+			video.u.s.surface->pitch, video.pal, sdl2_map_rgb_callback, video.pixel_format,
+			video.u.s.clip.x, video.u.s.clip.y, video.u.s.clip.w, video.u.s.clip.h);
 
 		if (SDL_MUSTLOCK(video.u.s.surface))
 			sdl2_UnlockSurface(video.u.s.surface);
@@ -984,10 +986,11 @@ static int sdl2_video_init(void)
 	/* cruft: have to do this before initializing video */
 #ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
 /* older SDL2 versions don't define this, don't fail the build for it */
-#define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
+# define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
 #endif
 	sdl2_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
-	sdl2_SetHint("SDL_WINDOWS_NO_CLOSE_ON_ALT_F4", "1"); /* dunno if the hint is defined for old SDL, optional anyway */
+	sdl2_SetHint(
+		"SDL_WINDOWS_NO_CLOSE_ON_ALT_F4", "1"); /* dunno if the hint is defined for old SDL, optional anyway */
 	sdl2_SetHint("SDL_WINDOWS_DPI_SCALING", "1");
 	sdl2_SetHint("SDL_WINDOWS_DPI_AWARENESS", "permonitorv2");
 	sdl2_SetHint("SDL_ENABLE_SCREEN_KEYBOARD", "0");

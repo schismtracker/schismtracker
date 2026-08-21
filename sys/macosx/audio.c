@@ -24,15 +24,15 @@
 /* Mac OS X CoreAudio driver */
 
 #include "headers.h"
-#include "charset.h"
-#include "mt.h"
-#include "mem.h"
-#include "str.h"
 #include "backend/audio.h"
+#include "charset.h"
+#include "mem.h"
+#include "mt.h"
+#include "str.h"
 
+#include <AudioUnit/AudioUnit.h>
 #include <CoreAudio/CoreAudio.h>
 #include <CoreServices/CoreServices.h>
-#include <AudioUnit/AudioUnit.h>
 #if MAC_OS_X_VERSION_MAX_ALLOWED <= 1050
 # include <AudioUnit/AUNTComponent.h>
 #endif
@@ -43,16 +43,14 @@
 #endif
 
 /* AudioObject APIs were added in 10.4 */
-#if (MAC_OS_X_VERSION_MIN_REQUIRED < 1040) || \
-	(!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1040))
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < 1040) || (!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1040))
 # define USE_AUDIODEVICE_APIS 1
 #endif
 
 /* Audio Component APIs were refactored out of Component
  * Manager in 10.6; for older versions we can simply
  * #define the new symbols to the old ones */
-#if (MAC_OS_X_VERSION_MIN_REQUIRED < 1060) || \
-	(!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1060))
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < 1060) || (!defined(AUDIO_UNIT_VERSION) || ((AUDIO_UNIT_VERSION + 0) < 1060))
 # define USE_COMPONENT_MANAGER_APIS 1
 #endif
 
@@ -60,9 +58,9 @@
 typedef struct ComponentDescription AudioComponentDescription;
 typedef Component AudioComponent;
 typedef AudioUnit AudioComponentInstance;
-# define AudioComponentInstanceNew OpenAComponent
+# define AudioComponentInstanceNew     OpenAComponent
 # define AudioComponentInstanceDispose CloseComponent
-# define AudioComponentFindNext FindNextComponent
+# define AudioComponentFindNext        FindNextComponent
 #endif
 
 struct schism_audio_device {
@@ -96,7 +94,8 @@ static int macosx_audio_driver_count(void)
 static const char *macosx_audio_driver_name(int i)
 {
 	switch (i) {
-	case 0: return "coreaudio";
+	case 0:
+		return "coreaudio";
 	}
 
 	return NULL;
@@ -134,7 +133,8 @@ static char *macosx_cfstring_to_utf8_(CFStringRef cfstr)
 	}
 
 	/* paranoia: */
-	SCHISM_RUNTIME_ASSERT(CFGetTypeID(cfstr) == CFStringGetTypeID(), "macosx_cfstring_to_utf8_ received a pointer that isn't a CFString!");
+	SCHISM_RUNTIME_ASSERT(CFGetTypeID(cfstr) == CFStringGetTypeID(),
+		"macosx_cfstring_to_utf8_ received a pointer that isn't a CFString!");
 
 	len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfstr), kCFStringEncodingUTF8);
 	buf = mem_alloc(len + 1);
@@ -157,11 +157,8 @@ static uint32_t macosx_audio_device_count(uint32_t flags)
 	uint32_t i;
 
 #ifndef USE_AUDIODEVICE_APIS
-	AudioObjectPropertyAddress addr = {
-		kAudioHardwarePropertyDevices,
-		kAudioObjectPropertyScopeGlobal,
-		kAudioObjectPropertyElementMain
-	};
+	AudioObjectPropertyAddress addr
+		= {kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
 #endif
 
 	if (flags & AUDIO_BACKEND_CAPTURE)
@@ -202,7 +199,8 @@ static uint32_t macosx_audio_device_count(uint32_t flags)
 
 		{
 #ifdef USE_AUDIODEVICE_APIS
-			result = AudioDeviceGetPropertyInfo(device_ids[i], 0, 0, kAudioDevicePropertyStreamConfiguration, &size, NULL);
+			result = AudioDeviceGetPropertyInfo(
+				device_ids[i], 0, 0, kAudioDevicePropertyStreamConfiguration, &size, NULL);
 #else
 			addr.mScope = kAudioDevicePropertyScopeOutput;
 			addr.mSelector = kAudioDevicePropertyStreamConfiguration;
@@ -214,7 +212,8 @@ static uint32_t macosx_audio_device_count(uint32_t flags)
 			AudioBufferList *buflist = (AudioBufferList *)mem_alloc(size);
 
 #ifdef USE_AUDIODEVICE_APIS
-			result = AudioDeviceGetProperty(device_ids[i], 0, 0, kAudioDevicePropertyStreamConfiguration, &size, buflist);
+			result = AudioDeviceGetProperty(
+				device_ids[i], 0, 0, kAudioDevicePropertyStreamConfiguration, &size, buflist);
 #else
 			result = AudioObjectGetPropertyData(device_ids[i], &addr, 0, NULL, &size, buflist);
 #endif
@@ -241,7 +240,8 @@ static uint32_t macosx_audio_device_count(uint32_t flags)
 			size = sizeof(cfstr);
 
 #ifdef USE_AUDIODEVICE_APIS
-			result = AudioDeviceGetProperty(device_ids[i], 0, 0, kAudioDevicePropertyDeviceNameCFString, &size, &cfstr);
+			result = AudioDeviceGetProperty(
+				device_ids[i], 0, 0, kAudioDevicePropertyDeviceNameCFString, &size, &cfstr);
 #else
 			addr.mSelector = kAudioObjectPropertyName;
 			result = AudioObjectGetPropertyData(device_ids[i], &addr, 0, NULL, &size, &cfstr);
@@ -254,13 +254,15 @@ static uint32_t macosx_audio_device_count(uint32_t flags)
 			else {
 				/* Fallback to just receiving it as a C string
 				 * XXX: what encoding is this in? */
-				result = AudioDeviceGetPropertyInfo(device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, NULL);
+				result = AudioDeviceGetPropertyInfo(
+					device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, NULL);
 				if (result != kAudioHardwareNoError)
 					continue;
 
 				ptr = mem_alloc(size + 1);
 
-				result = AudioDeviceGetProperty(device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, ptr);
+				result = AudioDeviceGetProperty(
+					device_ids[i], 0, 0, kAudioDevicePropertyDeviceName, &size, ptr);
 				if (result != kAudioHardwareNoError) {
 					free(ptr);
 					continue;
@@ -319,7 +321,8 @@ static void macosx_audio_quit_driver(void)
 
 /* -------------------------------------------------------- */
 
-static OSStatus macosx_audio_callback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData)
+static OSStatus macosx_audio_callback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
+	const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData)
 {
 	schism_audio_device_t *dev = (schism_audio_device_t *)inRefCon;
 	uint32_t i;
@@ -358,7 +361,8 @@ static OSStatus macosx_audio_callback(void *inRefCon, AudioUnitRenderActionFlags
 	return 0;
 }
 
-static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *macosx_audio_open_device(
+	uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	schism_audio_device_t *dev = mem_calloc(1, sizeof(schism_audio_device_t));
 
@@ -379,10 +383,9 @@ static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism
 		.mFormatFlags =
 #ifdef WORDS_BIGENDIAN
 			/* data is native endian */
-			kLinearPCMFormatFlagIsBigEndian |
+		kLinearPCMFormatFlagIsBigEndian |
 #endif
-			((desired->bits != 8) ? kLinearPCMFormatFlagIsSignedInteger : 0) |
-			kLinearPCMFormatFlagIsPacked,
+		((desired->bits != 8) ? kLinearPCMFormatFlagIsSignedInteger : 0) | kLinearPCMFormatFlagIsPacked,
 		.mChannelsPerFrame = desired->channels,
 		.mSampleRate = desired->freq,
 		.mBitsPerChannel = desired->bits,
@@ -422,7 +425,8 @@ static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism
 	 * If we can't find it, punt, and the audio code will explicitly request a
 	 * default device. */
 	if (id != AUDIO_BACKEND_DEFAULT) {
-		result = AudioUnitSetProperty(dev->au, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &devices[id].id, sizeof(devices[id].id));
+		result = AudioUnitSetProperty(dev->au, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global,
+			0, &devices[id].id, sizeof(devices[id].id));
 		if (result != noErr) {
 			mt_mutex_delete(dev->mutex);
 			free(dev);
@@ -431,7 +435,8 @@ static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism
 	}
 
 	/* Set the input format of the audio unit. */
-	result = AudioUnitSetProperty(dev->au, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &desired_ca, sizeof(desired_ca));
+	result = AudioUnitSetProperty(
+		dev->au, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &desired_ca, sizeof(desired_ca));
 	if (result != noErr) {
 		mt_mutex_delete(dev->mutex);
 		free(dev);
@@ -442,7 +447,8 @@ static schism_audio_device_t *macosx_audio_open_device(uint32_t id, const schism
 		.inputProc = macosx_audio_callback,
 		.inputProcRefCon = dev,
 	};
-	result = AudioUnitSetProperty(dev->au, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &callback, sizeof(callback));
+	result = AudioUnitSetProperty(
+		dev->au, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &callback, sizeof(callback));
 	if (result != noErr) {
 		mt_mutex_delete(dev->mutex);
 		free(dev);
@@ -480,7 +486,8 @@ static void macosx_audio_close_device(schism_audio_device_t *dev)
 
 	/* Remove the callback (yes, this is ridiculous) */
 	struct AURenderCallbackStruct callback = {0};
-	result = AudioUnitSetProperty(dev->au, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &callback, sizeof(callback));
+	result = AudioUnitSetProperty(
+		dev->au, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Input, 0, &callback, sizeof(callback));
 	if (result != noErr)
 		return;
 

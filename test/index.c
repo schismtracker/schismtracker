@@ -23,12 +23,10 @@
 
 #include "test.h"
 
-test_index_entry automated_tests[] =
-	{
-#define TEST_FUNC(x) { #x, x },
+test_index_entry automated_tests[] = {
+#define TEST_FUNC(x) {#x, x},
 #include "test-funcs.h"
-		{0}
-	};
+	{0}};
 
 test_index_entry *test_get_case(const char *name)
 {

@@ -27,15 +27,15 @@
 
 #include "init.h"
 
-static bool (SDLCALL *sdl3_HasPrimarySelectionText)(void);
-static bool (SDLCALL *sdl3_SetPrimarySelectionText)(const char *text);
-static char * (SDLCALL *sdl3_GetPrimarySelectionText)(void);
+static bool(SDLCALL *sdl3_HasPrimarySelectionText)(void);
+static bool(SDLCALL *sdl3_SetPrimarySelectionText)(const char *text);
+static char *(SDLCALL *sdl3_GetPrimarySelectionText)(void);
 
-static bool (SDLCALL *sdl3_HasClipboardText)(void);
-static bool (SDLCALL *sdl3_SetClipboardText)(const char *text);
-static char * (SDLCALL *sdl3_GetClipboardText)(void);
+static bool(SDLCALL *sdl3_HasClipboardText)(void);
+static bool(SDLCALL *sdl3_SetClipboardText)(const char *text);
+static char *(SDLCALL *sdl3_GetClipboardText)(void);
 
-static void (SDLCALL *sdl3_free)(void *);
+static void(SDLCALL *sdl3_free)(void *);
 
 static int sdl3_clippy_have_selection(void)
 {

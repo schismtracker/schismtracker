@@ -22,12 +22,12 @@
  */
 
 #include "headers.h"
-#include "bits.h"
-#include "slurp.h"
-#include "fmt.h"
 #include "it.h" /* for get_effect_char */
+#include "bits.h"
+#include "fmt.h"
 #include "log.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -39,8 +39,7 @@ int fmt_ult_read_info(dmoz_file_t *file, slurp_t *fp)
 {
 	unsigned char magic[14], title[32];
 
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "MAS_UTrack_V00", sizeof(magic)))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "MAS_UTrack_V00", sizeof(magic)))
 		return 0;
 
 	slurp_seek(fp, 15, SEEK_SET);
@@ -58,7 +57,7 @@ int fmt_ult_read_info(dmoz_file_t *file, slurp_t *fp)
 
 enum {
 	ULT_16BIT = 4,
-	ULT_LOOP  = 8,
+	ULT_LOOP = 8,
 	ULT_PINGPONGLOOP = 16,
 };
 
@@ -78,7 +77,8 @@ struct ult_sample {
 static int read_sample_ult(struct ult_sample *smp, slurp_t *fp, uint8_t ver)
 {
 #define READ_VALUE(name) \
-	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) return 0
+	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) \
+	return 0
 
 	READ_VALUE(name);
 	READ_VALUE(filename);
@@ -111,7 +111,6 @@ static int read_sample_ult(struct ult_sample *smp, slurp_t *fp, uint8_t ver)
 
 	return 1;
 }
-
 
 /* Unhandled effects:
 5x1 - do not loop sample (x is unused)
@@ -206,7 +205,8 @@ static void translate_fx(uint8_t *pe, uint8_t *pp)
 			*pe = FX_VOLUMESLIDE;
 			p = 0xf0 | (p & 0xf);
 			break;
-		case 0xc: case 0xd:
+		case 0xc:
+		case 0xd:
 			*pe = FX_SPECIAL;
 			break;
 		}
@@ -309,8 +309,7 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	buf[25] = '\0';
 	strcpy(song->title, buf);
 
-	snprintf(song->tracker_id, sizeof(song->tracker_id),
-		"Ultra Tracker %s", verstr[ver - 1]);
+	snprintf(song->tracker_id, sizeof(song->tracker_id), "Ultra Tracker %s", verstr[ver - 1]);
 	song->flags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
 
 	nmsg = slurp_getc(fp);
@@ -390,8 +389,7 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			row = 0;
 			while (row < 64) {
 				repeat = read_ult_event(fp, &evnote, &lostfx);
-				if (evnote.effect == FX_TONEPORTAMENTO
-				    || evnote.voleffect == VOLFX_TONEPORTAMENTO) {
+				if (evnote.effect == FX_TONEPORTAMENTO || evnote.voleffect == VOLFX_TONEPORTAMENTO) {
 					gxx |= 1;
 				}
 				if (repeat + row > 64)
@@ -411,10 +409,8 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 	if (!(lflags & LOAD_NOSAMPLES)) {
 		for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
-			csf_read_sample(smp,
-				SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
+			csf_read_sample(smp, SF_LE | SF_M | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8), fp);
 		}
 	}
 	return LOAD_SUCCESS;
 }
-

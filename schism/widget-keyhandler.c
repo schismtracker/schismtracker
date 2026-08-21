@@ -25,15 +25,16 @@
 #include "it.h"
 #include "page.h"
 #include "song.h"
-#include "keyboard.h"
 #include "widget.h"
+#include "keyboard.h"
 
 /* --------------------------------------------------------------------- */
 
 /* n => the delta-value */
 static void numentry_move_cursor(struct widget *widget, int n)
 {
-	if (widget->d.numentry.reverse) return;
+	if (widget->d.numentry.reverse)
+		return;
 	n += *(widget->d.numentry.cursor_pos);
 	n = CLAMP(n, 0, widget->width - 1);
 	if (*(widget->d.numentry.cursor_pos) == n)
@@ -55,7 +56,7 @@ static void textentry_move_cursor(struct widget *widget, int n)
 static void bitset_move_cursor(struct widget *widget, int n)
 {
 	n += *widget->d.bitset.cursor_pos;
-	n = CLAMP(n, 0, widget->d.bitset.nbits-1);
+	n = CLAMP(n, 0, widget->d.bitset.nbits - 1);
 	if (*widget->d.bitset.cursor_pos == n)
 		return;
 	*widget->d.bitset.cursor_pos = n;
@@ -69,7 +70,8 @@ static void thumbbar_prompt_finish(int n)
 {
 	if (n >= ACTIVE_WIDGET.d.thumbbar.min && n <= ACTIVE_WIDGET.d.thumbbar.max) {
 		ACTIVE_WIDGET.d.thumbbar.value = n;
-		if (ACTIVE_WIDGET.changed) ACTIVE_WIDGET.changed();
+		if (ACTIVE_WIDGET.changed)
+			ACTIVE_WIDGET.changed();
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -140,22 +142,22 @@ static inline int find_right_or_down_to(int target, int checkNotEqual)
 	if (status.flags & CLASSIC_MODE) {
 		int right_to = find_right_to(target);
 
-		if(right_to > -1 && right_to != checkNotEqual)
+		if (right_to > -1 && right_to != checkNotEqual)
 			return right_to;
 
 		int down_to = find_down_to(target);
 
-		if(down_to > -1 && down_to != checkNotEqual)
+		if (down_to > -1 && down_to != checkNotEqual)
 			return down_to;
 	} else {
 		int down_to = find_down_to(target);
 
-		if(down_to > -1 && down_to != checkNotEqual)
+		if (down_to > -1 && down_to != checkNotEqual)
 			return down_to;
 
 		int right_to = find_right_to(target);
 
-		if(right_to > -1 && right_to != checkNotEqual)
+		if (right_to > -1 && right_to != checkNotEqual)
 			return right_to;
 	}
 
@@ -166,16 +168,18 @@ static inline int find_tab_to_recursive(int target)
 {
 	int current = target;
 
-	for(int i = 0; i < *total_widgets; i++) {
+	for (int i = 0; i < *total_widgets; i++) {
 		int widget_backtab = widgets[current].next.backtab;
-		if(widget_backtab > -1) return widget_backtab;
+		if (widget_backtab > -1)
+			return widget_backtab;
 
 		int tab_to = find_tab_to(current);
-		if(tab_to > -1) return tab_to;
+		if (tab_to > -1)
+			return tab_to;
 
 		int right_or_down_to = find_right_or_down_to(current, target);
 
-		if(right_or_down_to > -1) {
+		if (right_or_down_to > -1) {
 			current = right_or_down_to;
 			continue;
 		}
@@ -189,56 +193,59 @@ static inline int find_tab_to_recursive(int target)
 static void _backtab(void)
 {
 	/* hunt for a widget that leads back to this one */
-	if (!total_widgets || !selected_widget) return;
+	if (!total_widgets || !selected_widget)
+		return;
 
 	int selected = *selected_widget;
 	int backtab = find_tab_to_recursive(selected);
 
-	if(backtab > -1) {
+	if (backtab > -1) {
 		widget_change_focus_to(backtab);
 		return;
 	}
 
 	int right_or_down_to = find_right_or_down_to(selected, selected);
-	if(right_or_down_to > -1) widget_change_focus_to(right_or_down_to);
+	if (right_or_down_to > -1)
+		widget_change_focus_to(right_or_down_to);
 }
 
 /* return: 1 = handled text, 0 = didn't */
 int widget_handle_text_input(const char *text_input)
 {
-	struct widget* widget = &ACTIVE_WIDGET;
+	struct widget *widget = &ACTIVE_WIDGET;
 	if (!widget)
 		return 0;
 
 	switch (widget->type) {
-		case WIDGET_OTHER:
-			if (widget->accept_text && widget->d.other.handle_text_input
-				&& ACTIVE_WIDGET.d.other.handle_text_input(text_input))
-				return 1;
-			break;
-		case WIDGET_NUMENTRY:
-			if (widget_numentry_handle_text(widget, text_input))
-				return 1;
-			break;
-		case WIDGET_TEXTENTRY:
-			if (widget_textentry_add_text(widget, text_input))
-				return 1;
-			break;
-		default:
-			break;
+	case WIDGET_OTHER:
+		if (widget->accept_text && widget->d.other.handle_text_input
+			&& ACTIVE_WIDGET.d.other.handle_text_input(text_input))
+			return 1;
+		break;
+	case WIDGET_NUMENTRY:
+		if (widget_numentry_handle_text(widget, text_input))
+			return 1;
+		break;
+	case WIDGET_TEXTENTRY:
+		if (widget_textentry_add_text(widget, text_input))
+			return 1;
+		break;
+	default:
+		break;
 	}
 	return 0;
 }
 
 static int widget_menutoggle_handle_key(struct widget *w, struct key_event *k)
 {
-	if( ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0)
-	   && w->d.menutoggle.activation_keys) {
-		const char* m = w->d.menutoggle.activation_keys;
-		const char* p = strchr(m, (char)k->sym);
+	if (((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0)
+		&& w->d.menutoggle.activation_keys) {
+		const char *m = w->d.menutoggle.activation_keys;
+		const char *p = strchr(m, (char)k->sym);
 		if (p && *p) {
 			w->d.menutoggle.state = p - m;
-			if(w->changed) w->changed();
+			if (w->changed)
+				w->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -248,14 +255,15 @@ static int widget_menutoggle_handle_key(struct widget *w, struct key_event *k)
 
 static int widget_bitset_handle_key(struct widget *w, struct key_event *k)
 {
-	if( ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0)
-	   && w->d.bitset.activation_keys) {
-		const char* m = w->d.bitset.activation_keys;
-		const char* p = strchr(m, (char)k->sym);
+	if (((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0)
+		&& w->d.bitset.activation_keys) {
+		const char *m = w->d.bitset.activation_keys;
+		const char *p = strchr(m, (char)k->sym);
 		if (p && *p) {
-			int bit_index = p-m;
+			int bit_index = p - m;
 			w->d.bitset.value ^= (1 << bit_index);
-			if(w->changed) w->changed();
+			if (w->changed)
+				w->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -274,7 +282,8 @@ static int widget_listbox_handle_key(struct widget *w, struct key_event *k)
 	case MOUSE_CLICK:
 		if (k->state != KEY_PRESS)
 			return 0;
-		if (k->x < w->x || k->y < w->y || k->y > (w->y + w->height - 1) || k->x > (w->x + w->width - 1)) return 0;
+		if (k->x < w->x || k->y < w->y || k->y > (w->y + w->height - 1) || k->x > (w->x + w->width - 1))
+			return 0;
 		new_focus = (int32_t)w->d.listbox.top + k->y - w->y;
 		if (k->mouse == MOUSE_DBLCLICK || new_focus == w->d.listbox.focus)
 			raise_activate_event = 1;
@@ -395,7 +404,7 @@ static int widget_listbox_handle_key(struct widget *w, struct key_event *k)
 }
 
 /* return: 1 = handled key, 0 = didn't */
-int widget_handle_key(struct key_event * k)
+int widget_handle_key(struct key_event *k)
 {
 	struct widget *widget = &ACTIVE_WIDGET;
 	if (!widget)
@@ -406,13 +415,12 @@ int widget_handle_key(struct key_event * k)
 	enum widget_type current_type = widget->type;
 
 	if (!(status.flags & DISKWRITER_ACTIVE)
-	    && ((current_type == WIDGET_OTHER && widget->d.other.handle_key(k))
+		&& ((current_type == WIDGET_OTHER && widget->d.other.handle_key(k))
 			|| (current_type == WIDGET_LISTBOX && widget_listbox_handle_key(widget, k))))
 		return 1;
 
-	if (!(status.flags & DISKWRITER_ACTIVE) && k->mouse
-	    && (status.flags & CLASSIC_MODE)) {
-		switch(current_type) {
+	if (!(status.flags & DISKWRITER_ACTIVE) && k->mouse && (status.flags & CLASSIC_MODE)) {
+		switch (current_type) {
 		case WIDGET_NUMENTRY:
 			if (k->mouse_button == MOUSE_BUTTON_LEFT) {
 				k->sym = SCHISM_KEYSYM_MINUS;
@@ -438,13 +446,15 @@ int widget_handle_key(struct key_event * k)
 		default:
 			pad = 0;
 		};
-		onw = ((signed) k->x < widget->x
-		       || (signed) k->x >= widget->x + widget->width + pad
-		       || (signed) k->y != widget->y) ? 0 : 1;
+		onw = ((signed)k->x < widget->x || (signed)k->x >= widget->x + widget->width + pad
+			      || (signed)k->y != widget->y)
+			      ? 0
+			      : 1;
 	}
 
 	if (k->mouse == MOUSE_CLICK) {
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (onw) {
 			switch (current_type) {
 			case WIDGET_TOGGLE:
@@ -453,7 +463,8 @@ int widget_handle_key(struct key_event * k)
 				if (k->state != KEY_PRESS)
 					return 1;
 				widget->d.toggle.state = !widget->d.toggle.state;
-				if (widget->changed) widget->changed();
+				if (widget->changed)
+					widget->changed();
 				status.flags |= NEED_UPDATE;
 				return 1;
 			case WIDGET_MENUTOGGLE:
@@ -461,9 +472,10 @@ int widget_handle_key(struct key_event * k)
 					return 0;
 				if (k->state != KEY_PRESS)
 					return 1;
-				widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
-					% widget->d.menutoggle.num_choices;
-				if (widget->changed) widget->changed();
+				widget->d.menutoggle.state
+					= (widget->d.menutoggle.state + 1) % widget->d.menutoggle.num_choices;
+				if (widget->changed)
+					widget->changed();
 				status.flags |= NEED_UPDATE;
 				return 1;
 			default:
@@ -471,21 +483,22 @@ int widget_handle_key(struct key_event * k)
 			}
 		}
 	} else if (k->mouse == MOUSE_DBLCLICK) {
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (onw) {
 			if (current_type == WIDGET_PANBAR) {
 				if (!NO_MODIFIER(k->mod))
 					return 0;
 				widget->d.panbar.muted = !widget->d.panbar.muted;
 				changed = widget->changed;
-				if (changed) changed();
+				if (changed)
+					changed();
 				return 1;
 			}
 		}
 	}
 
-	if (k->mouse == MOUSE_CLICK
-	    || (k->mouse == MOUSE_NONE && k->sym == SCHISM_KEYSYM_RETURN)) {
+	if (k->mouse == MOUSE_CLICK || (k->mouse == MOUSE_NONE && k->sym == SCHISM_KEYSYM_RETURN)) {
 #if 0
 		if (k->mouse && k->mouse_button == MOUSE_BUTTON_MIDDLE) {
 			if (status.flags & DISKWRITER_ACTIVE) return 0;
@@ -495,12 +508,13 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		}
 #endif
-		if (k->mouse && (current_type == WIDGET_THUMBBAR
-		|| current_type == WIDGET_PANBAR)) {
-			if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (k->mouse && (current_type == WIDGET_THUMBBAR || current_type == WIDGET_PANBAR)) {
+			if (status.flags & DISKWRITER_ACTIVE)
+				return 0;
 
 			/* swallow it */
-			if (!k->on_target && (k->state != KEY_DRAG)) return 0;
+			if (!k->on_target && (k->state != KEY_DRAG))
+				return 0;
 
 			fmin = widget->d.thumbbar.min;
 			fmax = widget->d.thumbbar.max;
@@ -509,7 +523,7 @@ int widget_handle_key(struct key_event * k)
 				wx = (widget->width - 16) * k->rx;
 			} else {
 				n = k->fx - (widget->x * k->rx);
-				wx = (widget->width-1) * k->rx;
+				wx = (widget->width - 1) * k->rx;
 			}
 
 			n = CLAMP(n, 0, wx);
@@ -519,8 +533,10 @@ int widget_handle_key(struct key_event * k)
 			if (current_type == WIDGET_PANBAR) {
 				widget->d.panbar.muted = 0;
 				widget->d.panbar.surround = 0;
-				if (k->x - widget->x < 11) return 1;
-				if (k->x - widget->x > 19) return 1;
+				if (k->x - widget->x < 11)
+					return 1;
+				if (k->x - widget->x > 19)
+					return 1;
 			}
 			widget_numentry_change_value(widget, n);
 			return 1;
@@ -550,25 +566,28 @@ int widget_handle_key(struct key_event * k)
 		}
 
 		if (k->mouse) {
-			switch(current_type) {
+			switch (current_type) {
 			case WIDGET_MENUTOGGLE:
 			case WIDGET_BUTTON:
 			case WIDGET_TOGGLEBUTTON:
-				if (k->on_target && widget->activate) widget->activate();
+				if (k->on_target && widget->activate)
+					widget->activate();
 			default:
 				break;
 			};
 		} else if (current_type != WIDGET_OTHER) {
-			if (widget->activate) widget->activate();
+			if (widget->activate)
+				widget->activate();
 		}
 
 		switch (current_type) {
 		case WIDGET_OTHER:
 			break;
 		case WIDGET_TEXTENTRY:
-			if (status.flags & DISKWRITER_ACTIVE) return 0;
+			if (status.flags & DISKWRITER_ACTIVE)
+				return 0;
 			/* LOL WOW THIS SUCKS */
-			if (/*k->state == KEY_PRESS && */k->mouse == MOUSE_CLICK && k->on_target) {
+			if (/*k->state == KEY_PRESS && */ k->mouse == MOUSE_CLICK && k->on_target) {
 				size_t len;
 
 				/* position cursor */
@@ -576,8 +595,8 @@ int widget_handle_key(struct key_event * k)
 				n = CLAMP(n, 0, widget->width - 1);
 				wx = k->sx - widget->x;
 				wx = CLAMP(wx, 0, widget->width - 1);
-				widget->d.textentry.cursor_pos = n+widget->d.textentry.firstchar;
-				wx  = wx+widget->d.textentry.firstchar;
+				widget->d.textentry.cursor_pos = n + widget->d.textentry.firstchar;
+				wx = wx + widget->d.textentry.firstchar;
 
 				len = strlen(widget->d.textentry.text);
 
@@ -593,8 +612,9 @@ int widget_handle_key(struct key_event * k)
 			return (widget->activate != NULL);
 
 		case WIDGET_NUMENTRY:
-			if (status.flags & DISKWRITER_ACTIVE) return 0;
-			if (/*k->state == KEY_PRESS && */k->mouse == MOUSE_CLICK && k->on_target) {
+			if (status.flags & DISKWRITER_ACTIVE)
+				return 0;
+			if (/*k->state == KEY_PRESS && */ k->mouse == MOUSE_CLICK && k->on_target) {
 				/* position cursor */
 				n = k->x - widget->x;
 				n = CLAMP(n, 0, widget->width - 1);
@@ -609,7 +629,8 @@ int widget_handle_key(struct key_event * k)
 			break;
 
 		case WIDGET_TOGGLEBUTTON:
-			if (status.flags & DISKWRITER_ACTIVE) return 0;
+			if (status.flags & DISKWRITER_ACTIVE)
+				return 0;
 			if (widget->d.togglebutton.group) {
 				/* this also runs the changed callback and redraws the button(s) */
 				if (k->state == KEY_DRAG) {
@@ -629,7 +650,8 @@ int widget_handle_key(struct key_event * k)
 			} else {
 				/* maybe buttons should ignore the changed callback, and use activate instead...
 				(but still call the changed callback for togglebuttons if they *actually* changed) */
-				if (widget->changed) widget->changed();
+				if (widget->changed)
+					widget->changed();
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
@@ -656,19 +678,22 @@ int widget_handle_key(struct key_event * k)
 		characters instead of showing the menu */
 		return 0;
 	case SCHISM_KEYSYM_UP:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(widget->next.up);
 		return 1;
 	case SCHISM_KEYSYM_DOWN:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		widget_change_focus_to(widget->next.down);
 		return 1;
 	case SCHISM_KEYSYM_TAB:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			_backtab();
 			return 1;
@@ -678,12 +703,13 @@ int widget_handle_key(struct key_event * k)
 		widget_change_focus_to(widget->next.tab);
 		return 1;
 	case SCHISM_KEYSYM_LEFT:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		switch (current_type) {
 		case WIDGET_BITSET:
-		    if (NO_MODIFIER(k->mod))
-			bitset_move_cursor(widget, -1);
-		    break;
+			if (NO_MODIFIER(k->mod))
+				bitset_move_cursor(widget, -1);
+			break;
 		case WIDGET_NUMENTRY:
 			if (!NO_MODIFIER(k->mod)) {
 				return 0;
@@ -721,14 +747,15 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_RIGHT:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		/* pretty much the same as left, but with a few small
 		 * changes here and there... */
 		switch (current_type) {
 		case WIDGET_BITSET:
-		    if (NO_MODIFIER(k->mod))
-			bitset_move_cursor(widget, 1);
-		    break;
+			if (NO_MODIFIER(k->mod))
+				bitset_move_cursor(widget, 1);
+			break;
 		case WIDGET_NUMENTRY:
 			if (!NO_MODIFIER(k->mod)) {
 				return 0;
@@ -764,7 +791,8 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_HOME:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		/* Impulse Tracker only does home/end for the thumbbars.
 		 * This stuff is all extra. */
 		switch (current_type) {
@@ -793,7 +821,8 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_END:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		switch (current_type) {
 		case WIDGET_NUMENTRY:
 			if (!NO_MODIFIER(k->mod))
@@ -820,28 +849,32 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_SPACE:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		switch (current_type) {
 		case WIDGET_BITSET:
-		    if (!NO_MODIFIER(k->mod))
-			return 0;
-		    widget->d.bitset.value ^= (1 << *widget->d.bitset.cursor_pos);
-			if (widget->changed) widget->changed();
-		    status.flags |= NEED_UPDATE;
-		    return 1;
+			if (!NO_MODIFIER(k->mod))
+				return 0;
+			widget->d.bitset.value ^= (1 << *widget->d.bitset.cursor_pos);
+			if (widget->changed)
+				widget->changed();
+			status.flags |= NEED_UPDATE;
+			return 1;
 		case WIDGET_TOGGLE:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
 			widget->d.toggle.state = !widget->d.toggle.state;
-			if (widget->changed) widget->changed();
+			if (widget->changed)
+				widget->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_MENUTOGGLE:
 			if (!NO_MODIFIER(k->mod))
 				return 0;
-			widget->d.menutoggle.state = (widget->d.menutoggle.state + 1)
-				% widget->d.menutoggle.num_choices;
-			if (widget->changed) widget->changed();
+			widget->d.menutoggle.state
+				= (widget->d.menutoggle.state + 1) % widget->d.menutoggle.num_choices;
+			if (widget->changed)
+				widget->changed();
 			status.flags |= NEED_UPDATE;
 			return 1;
 		case WIDGET_PANBAR:
@@ -850,19 +883,22 @@ int widget_handle_key(struct key_event * k)
 			widget->d.panbar.muted = !widget->d.panbar.muted;
 			changed = widget->changed;
 			widget_change_focus_to(widget->next.down);
-			if (changed) changed();
+			if (changed)
+				changed();
 			return 1;
 		default:
 			break;
 		}
 		break;
 	case SCHISM_KEYSYM_BACKSPACE:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_NUMENTRY) {
 			if (widget->d.numentry.reverse) {
 				/* woot! */
 				widget->d.numentry.value /= 10;
-				if (widget->changed) widget->changed();
+				if (widget->changed)
+					widget->changed();
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
@@ -882,47 +918,51 @@ int widget_handle_key(struct key_event * k)
 		} else {
 			if (widget->d.textentry.cursor_pos == 0) {
 				/* act like ST3 */
-				text_delete_next_char(widget->d.textentry.text,
-						      &(widget->d.textentry.cursor_pos),
-						      widget->d.textentry.max_length);
+				text_delete_next_char(widget->d.textentry.text, &(widget->d.textentry.cursor_pos),
+					widget->d.textentry.max_length);
 			} else {
-				text_delete_char(widget->d.textentry.text,
-						 &(widget->d.textentry.cursor_pos),
-						 widget->d.textentry.max_length);
+				text_delete_char(widget->d.textentry.text, &(widget->d.textentry.cursor_pos),
+					widget->d.textentry.max_length);
 			}
 		}
-		if (widget->changed) widget->changed();
+		if (widget->changed)
+			widget->changed();
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SCHISM_KEYSYM_DELETE:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type != WIDGET_TEXTENTRY)
 			break;
 		if (!widget->d.textentry.text[0]) {
 			/* nothing to do */
 			return 1;
 		}
-		text_delete_next_char(widget->d.textentry.text,
-				      &(widget->d.textentry.cursor_pos), widget->d.textentry.max_length);
-		if (widget->changed) widget->changed();
+		text_delete_next_char(
+			widget->d.textentry.text, &(widget->d.textentry.cursor_pos), widget->d.textentry.max_length);
+		if (widget->changed)
+			widget->changed();
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SCHISM_KEYSYM_PLUS:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_NUMENTRY) {
 			widget_numentry_change_value(widget, widget->d.numentry.value + 1);
 			return 1;
 		}
 		break;
 	case SCHISM_KEYSYM_MINUS:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_NUMENTRY && NO_MODIFIER(k->mod)) {
 			widget_numentry_change_value(widget, widget->d.numentry.value - 1);
 			return 1;
 		}
 		break;
 	case SCHISM_KEYSYM_l:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_PANBAR) {
 			if (k->mod & SCHISM_KEYMOD_ALT) {
 				song_set_pan_scheme(PANS_LEFT);
@@ -936,7 +976,8 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_m:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_PANBAR) {
 			if (k->mod & SCHISM_KEYMOD_ALT) {
 				song_set_pan_scheme(PANS_MONO);
@@ -950,7 +991,8 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_r:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_PANBAR) {
 			if (k->mod & SCHISM_KEYMOD_ALT) {
 				song_set_pan_scheme(PANS_RIGHT);
@@ -964,22 +1006,25 @@ int widget_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_s:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_PANBAR) {
 			if (k->mod & SCHISM_KEYMOD_ALT) {
 				song_set_pan_scheme(PANS_STEREO);
 				return 1;
-			} else if(NO_MODIFIER(k->mod)) {
+			} else if (NO_MODIFIER(k->mod)) {
 				widget->d.panbar.muted = 0;
 				widget->d.panbar.surround = 1;
-				if (widget->changed) widget->changed();
+				if (widget->changed)
+					widget->changed();
 				status.flags |= NEED_UPDATE;
 				return 1;
 			}
 		}
 		break;
 	case SCHISM_KEYSYM_a:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_PANBAR && (k->mod & SCHISM_KEYMOD_ALT)) {
 			song_set_pan_scheme(PANS_AMIGA);
 			return 1;
@@ -996,14 +1041,16 @@ int widget_handle_key(struct key_event * k)
 #endif
 	case SCHISM_KEYSYM_SLASH:
 	case SCHISM_KEYSYM_KP_DIVIDE:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_PANBAR && (k->mod & SCHISM_KEYMOD_ALT)) {
 			song_set_pan_scheme(PANS_SLASH);
 			return 1;
 		}
 		break;
 	case SCHISM_KEYSYM_BACKSLASH:
-		if (status.flags & DISKWRITER_ACTIVE) return 0;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return 0;
 		if (current_type == WIDGET_PANBAR && (k->mod & SCHISM_KEYMOD_ALT)) {
 			song_set_pan_scheme(PANS_BACKSLASH);
 			return 1;
@@ -1014,7 +1061,8 @@ int widget_handle_key(struct key_event * k)
 		(sheesh, it's already hundreds of lines long as it is!) */
 		break;
 	}
-	if (status.flags & DISKWRITER_ACTIVE) return 0;
+	if (status.flags & DISKWRITER_ACTIVE)
+		return 0;
 
 	/* if we're here, that mess didn't completely handle the key (gosh...) so now here's another mess. */
 	switch (current_type) {
@@ -1032,13 +1080,13 @@ int widget_handle_key(struct key_event * k)
 			return 1;
 		break;
 	case WIDGET_TEXTENTRY:
-		if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0 &&
-			k->text && widget_textentry_add_text(widget, k->text))
+		if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0 && k->text
+			&& widget_textentry_add_text(widget, k->text))
 			return 1;
 		break;
 	case WIDGET_NUMENTRY:
-		if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0 &&
-			k->text && widget_numentry_handle_text(widget, k->text))
+		if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0 && k->text
+			&& widget_numentry_handle_text(widget, k->text))
 			return 1;
 
 		/* weird hack ? */
@@ -1052,4 +1100,3 @@ int widget_handle_key(struct key_event * k)
 	/* if we got down here the key wasn't handled */
 	return 0;
 }
-

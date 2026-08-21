@@ -24,12 +24,12 @@
 #include "headers.h"
 
 #include "it.h"
-#include "song.h"
 #include "page.h"
+#include "song.h"
 #include "widget.h"
-#include "vgamem.h"
 #include "keyboard.h"
 #include "str.h"
+#include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -67,7 +67,6 @@ void update_current_order(void)
 	draw_text(str_from_num(3, csf_last_order(current_song), buf), 16, 5, 5, 0);
 }
 
-
 void set_current_order(int order)
 {
 	current_order = CLAMP(order, 0, 255);
@@ -94,9 +93,8 @@ void prev_order_pattern(void)
 			new_order = 0;
 			break;
 		}
-	} while (!(status.flags & CLASSIC_MODE)
-			&& last_pattern == current_song->orderlist[new_order]
-			&& current_song->orderlist[new_order] == ORDER_SKIP);
+	} while (!(status.flags & CLASSIC_MODE) && last_pattern == current_song->orderlist[new_order]
+		 && current_song->orderlist[new_order] == ORDER_SKIP);
 
 	if (current_song->orderlist[new_order] < 200) {
 		current_order = new_order;
@@ -115,9 +113,8 @@ void next_order_pattern(void)
 			new_order = 255;
 			break;
 		}
-	} while (!(status.flags & CLASSIC_MODE)
-			&& last_pattern == current_song->orderlist[new_order]
-			&&  current_song->orderlist[new_order] == ORDER_SKIP);
+	} while (!(status.flags & CLASSIC_MODE) && last_pattern == current_song->orderlist[new_order]
+		 && current_song->orderlist[new_order] == ORDER_SKIP);
 
 	if (current_song->orderlist[new_order] < 200) {
 		current_order = new_order;
@@ -133,21 +130,25 @@ static void orderlist_cheater(void)
 	int rows;
 
 	if (current_song->orderlist[current_order] != ORDER_SKIP
-	    && current_song->orderlist[current_order] != ORDER_LAST) {
+		&& current_song->orderlist[current_order] != ORDER_LAST) {
 		return;
 	}
 	cp = get_current_pattern();
 	best = first = -1;
 	for (i = 0; i < 199; i++) {
 		if (csf_pattern_is_empty(current_song, i)) {
-			if (first == -1) first = i;
-			if (best == -1) best = i;
+			if (first == -1)
+				first = i;
+			if (best == -1)
+				best = i;
 		} else {
 			best = -1;
 		}
 	}
-	if (best == -1) best = first;
-	if (best == -1) return;
+	if (best == -1)
+		best = first;
+	if (best == -1)
+		return;
 
 	status_text_flash("Pattern %d copied to pattern %d, order %d", cp, best, current_order);
 
@@ -206,8 +207,7 @@ static void orderlist_draw(void)
 
 static void orderlist_insert_pos(void)
 {
-	memmove(current_song->orderlist + current_order + 1,
-		current_song->orderlist + current_order,
+	memmove(current_song->orderlist + current_order + 1, current_song->orderlist + current_order,
 		255 - current_order);
 	current_song->orderlist[current_order] = ORDER_LAST;
 
@@ -222,7 +222,8 @@ static void orderlist_save(void)
 static void orderlist_restore(void)
 {
 	unsigned char oldlist[256];
-	if (!_did_save_orderlist) return;
+	if (!_did_save_orderlist)
+		return;
 	memcpy(oldlist, current_song->orderlist, 255);
 	memcpy(current_song->orderlist, saved_orderlist, 255);
 	memcpy(saved_orderlist, oldlist, 255);
@@ -230,8 +231,7 @@ static void orderlist_restore(void)
 
 static void orderlist_delete_pos(void)
 {
-	memmove(current_song->orderlist + current_order,
-		current_song->orderlist + current_order + 1,
+	memmove(current_song->orderlist + current_order, current_song->orderlist + current_order + 1,
 		255 - current_order);
 	current_song->orderlist[255] = ORDER_LAST;
 
@@ -304,7 +304,7 @@ static void orderlist_add_unused_patterns(void)
 static void orderlist_reorder(void)
 {
 	/* err, I hope this is going to be done correctly...
-	*/
+	 */
 	song_note_t *np[256] = {0};
 	int nplen[256];
 	unsigned char mapol[256];
@@ -319,13 +319,13 @@ static void orderlist_reorder(void)
 		if (current_song->orderlist[i] == ORDER_LAST || current_song->orderlist[i] == ORDER_SKIP) {
 			continue;
 		}
-		if (mapol[ current_song->orderlist[i] ] == ORDER_LAST) {
+		if (mapol[current_song->orderlist[i]] == ORDER_LAST) {
 			np[j] = song_pattern_allocate_copy(current_song->orderlist[i], &nplen[j]);
-			mapol[ current_song->orderlist[i] ] = j;
+			mapol[current_song->orderlist[i]] = j;
 			j++;
 		}
 		/* replace orderlist entry */
-		current_song->orderlist[i] = mapol[ current_song->orderlist[i] ];
+		current_song->orderlist[i] = mapol[current_song->orderlist[i]];
 	}
 	for (i = 0; i < 200; i++) {
 		if (!np[i]) {
@@ -348,7 +348,7 @@ static int orderlist_handle_char(char sym)
 	int cur_pattern;
 	//unsigned char *list;
 	song_note_t *tmp;
-	int n[3] = { 0 };
+	int n[3] = {0};
 
 	switch (sym) {
 	case '+':
@@ -398,7 +398,8 @@ static int orderlist_handle_char(char sym)
 	return 1;
 }
 
-static int orderlist_handle_text_input_on_list(const char *text) {
+static int orderlist_handle_text_input_on_list(const char *text)
+{
 	int success = 0;
 
 	/* need proper UTF-8 handling but this is ok for now */
@@ -409,7 +410,7 @@ static int orderlist_handle_text_input_on_list(const char *text) {
 	return success;
 }
 
-static int orderlist_handle_key_on_list(struct key_event * k)
+static int orderlist_handle_key_on_list(struct key_event *k)
 {
 	int prev_order = current_order;
 	int new_order = prev_order;
@@ -432,7 +433,7 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 				new_order = current_order;
 
 				if (current_song->orderlist[current_order] != ORDER_LAST
-				&& current_song->orderlist[current_order] != ORDER_SKIP) {
+					&& current_song->orderlist[current_order] != ORDER_SKIP) {
 					new_cursor_pos = (k->x - 6);
 				}
 			}
@@ -441,18 +442,22 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 
 	switch (k->sym) {
 	case SCHISM_KEYSYM_BACKSPACE:
-		if (status.flags & CLASSIC_MODE) return 0;
-		if (!(k->mod & SCHISM_KEYMOD_ALT)) return 0;
+		if (status.flags & CLASSIC_MODE)
+			return 0;
+		if (!(k->mod & SCHISM_KEYMOD_ALT))
+			return 0;
 		if (k->state == KEY_PRESS)
 			return 1;
-		if (!_did_save_orderlist) return 1;
+		if (!_did_save_orderlist)
+			return 1;
 		status_text_flash("Restored orderlist");
 		orderlist_restore();
 		return 1;
 
 	case SCHISM_KEYSYM_RETURN:
 	case SCHISM_KEYSYM_KP_ENTER:
-		if (status.flags & CLASSIC_MODE) return 0;
+		if (status.flags & CLASSIC_MODE)
+			return 0;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS)
 				return 1;
@@ -482,7 +487,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 				return 1;
 			widget_change_focus_to(33);
 		} else {
-			if (!NO_MODIFIER(k->mod)) return 0;
+			if (!NO_MODIFIER(k->mod))
+				return 0;
 			if (k->state == KEY_RELEASE)
 				return 1;
 			widget_change_focus_to(1);
@@ -520,10 +526,11 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		break;
 	case SCHISM_KEYSYM_UP:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
-			if (status.flags & CLASSIC_MODE) return 0;
+			if (status.flags & CLASSIC_MODE)
+				return 0;
 			if (k->state == KEY_RELEASE)
 				return 1;
-			sample_set(sample_get_current()-1);
+			sample_set(sample_get_current() - 1);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -535,10 +542,11 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		break;
 	case SCHISM_KEYSYM_DOWN:
 		if (k->mod & SCHISM_KEYMOD_CTRL) {
-			if (status.flags & CLASSIC_MODE) return 0;
+			if (status.flags & CLASSIC_MODE)
+				return 0;
 			if (k->state == KEY_RELEASE)
 				return 1;
-			sample_set(sample_get_current()+1);
+			sample_set(sample_get_current() + 1);
 			status.flags |= NEED_UPDATE;
 			return 1;
 		}
@@ -577,7 +585,8 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 		orderlist_delete_pos();
 		return 1;
 	case SCHISM_KEYSYM_F7:
-		if (!(k->mod & SCHISM_KEYMOD_CTRL)) return 0;
+		if (!(k->mod & SCHISM_KEYMOD_CTRL))
+			return 0;
 		/* fall through */
 	case SCHISM_KEYSYM_SPACE:
 		if (k->state == KEY_RELEASE)
@@ -610,11 +619,12 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 	case SCHISM_KEYSYM_c:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
-		if (status.flags & CLASSIC_MODE) return 0;
+		if (status.flags & CLASSIC_MODE)
+			return 0;
 		if (k->state == KEY_PRESS)
 			return 1;
 		p = get_current_pattern();
-		for (n = current_order+1; n < 256; n++) {
+		for (n = current_order + 1; n < 256; n++) {
 			if (current_song->orderlist[n] == p) {
 				new_order = n;
 				break;
@@ -660,26 +670,28 @@ static int orderlist_handle_key_on_list(struct key_event * k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		song_pattern_to_sample(current_song->orderlist[current_order],
-				!!(k->mod & SCHISM_KEYMOD_SHIFT), !!(k->sym == SCHISM_KEYSYM_b));
+		song_pattern_to_sample(current_song->orderlist[current_order], !!(k->mod & SCHISM_KEYMOD_SHIFT),
+			!!(k->sym == SCHISM_KEYSYM_b));
 		return 1;
 
 	case SCHISM_KEYSYM_LESS:
 	case SCHISM_KEYSYM_SEMICOLON:
 	case SCHISM_KEYSYM_COLON:
-		if (!NO_MODIFIER(k->mod)) return 0;
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		sample_set(sample_get_current()-1);
+		sample_set(sample_get_current() - 1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	case SCHISM_KEYSYM_GREATER:
 	case SCHISM_KEYSYM_QUOTE:
 	case SCHISM_KEYSYM_QUOTEDBL:
-		if (!NO_MODIFIER(k->mod)) return 0;
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		sample_set(sample_get_current()+1);
+		sample_set(sample_get_current() + 1);
 		status.flags |= NEED_UPDATE;
 		return 1;
 	default:
@@ -758,7 +770,7 @@ static void ordervol_draw_const(void)
 
 		fg = 0;
 		if (!(status.flags & CLASSIC_MODE)) {
-			if (ACTIVE_PAGE.selected_widget == n+32) {
+			if (ACTIVE_PAGE.selected_widget == n + 32) {
 				fg = 3;
 			}
 		}
@@ -841,7 +853,7 @@ static void order_pan_vol_song_changed_cb(void)
 
 /* --------------------------------------------------------------------- */
 
-static void order_pan_vol_handle_key(struct key_event * k)
+static void order_pan_vol_handle_key(struct key_event *k)
 {
 	int n = ACTIVE_PAGE.selected_widget;
 
@@ -871,13 +883,13 @@ static int order_pre_key(struct key_event *k)
 {
 	// hack to sync the active widget between pan/vol pages
 	if (!(status.flags & CLASSIC_MODE)) {
-		pages[PAGE_ORDERLIST_PANNING].selected_widget
-			= pages[PAGE_ORDERLIST_VOLUMES].selected_widget
+		pages[PAGE_ORDERLIST_PANNING].selected_widget = pages[PAGE_ORDERLIST_VOLUMES].selected_widget
 			= ACTIVE_PAGE.selected_widget;
 	}
 
 	if (k->sym == SCHISM_KEYSYM_F7) {
-		if (!NO_MODIFIER(k->mod)) return 0;
+		if (!NO_MODIFIER(k->mod))
+			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
 		play_song_from_mark_orderpan();
@@ -910,8 +922,8 @@ void orderpan_load_page(struct page *page)
 	page->help_index = HELP_ORDERLIST_PANNING;
 
 	/* 0 = order list */
-	widget_create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list,
-		orderlist_handle_text_input_on_list, orderlist_draw);
+	widget_create_other(widgets_orderpan + 0, 1, orderlist_handle_key_on_list, orderlist_handle_text_input_on_list,
+		orderlist_draw);
 	widgets_orderpan[0].accept_text = 0;
 	widgets_orderpan[0].x = 6;
 	widgets_orderpan[0].y = 15;
@@ -921,10 +933,10 @@ void orderpan_load_page(struct page *page)
 	/* 1-64 = panbars */
 	widget_create_panbar(widgets_orderpan + 1, 20, 15, 1, 2, 33, orderpan_update_values_in_song, 1);
 	for (n = 2; n <= (MAX_CHANNELS / 2); n++) {
-		widget_create_panbar(widgets_orderpan + n, 20, 14 + n, n - 1, n + 1, n + 32,
-			      orderpan_update_values_in_song, n);
+		widget_create_panbar(
+			widgets_orderpan + n, 20, 14 + n, n - 1, n + 1, n + 32, orderpan_update_values_in_song, n);
 		widget_create_panbar(widgets_orderpan + n + 31, 54, 13 + n, n + 30, n + 32, 0,
-			      orderpan_update_values_in_song, n + 31);
+			orderpan_update_values_in_song, n + 31);
 	}
 	widget_create_panbar(widgets_orderpan + MAX_CHANNELS, 54, 46, 63, 64, 0, orderpan_update_values_in_song, 64);
 }
@@ -943,8 +955,8 @@ void ordervol_load_page(struct page *page)
 	page->help_index = HELP_ORDERLIST_VOLUME;
 
 	/* 0 = order list */
-	widget_create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list,
-		orderlist_handle_text_input_on_list, orderlist_draw);
+	widget_create_other(widgets_ordervol + 0, 1, orderlist_handle_key_on_list, orderlist_handle_text_input_on_list,
+		orderlist_draw);
 	widgets_ordervol[0].accept_text = 1;
 	widgets_ordervol[0].x = 6;
 	widgets_ordervol[0].y = 15;
@@ -955,11 +967,12 @@ void ordervol_load_page(struct page *page)
 	widget_create_thumbbar(widgets_ordervol + 1, 31, 15, 9, 1, 2, 33, ordervol_update_values_in_song, 0, 64);
 	for (n = 2; n <= (MAX_CHANNELS / 2); n++) {
 		widget_create_thumbbar(widgets_ordervol + n, 31, 14 + n, 9, n - 1, n + 1, n + 32,
-				ordervol_update_values_in_song, 0, 64);
+			ordervol_update_values_in_song, 0, 64);
 		widget_create_thumbbar(widgets_ordervol + n + 31, 65, 13 + n, 9, n + 30, n + 32, 0,
-				ordervol_update_values_in_song, 0, 64);
+			ordervol_update_values_in_song, 0, 64);
 	}
-	widget_create_thumbbar(widgets_ordervol + MAX_CHANNELS, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
+	widget_create_thumbbar(
+		widgets_ordervol + MAX_CHANNELS, 65, 46, 9, 63, 64, 0, ordervol_update_values_in_song, 0, 64);
 }
 
 /* --------------------------------------------------------------------- */
@@ -1065,4 +1078,3 @@ void song_set_pan_scheme(int scheme)
 	// get the values on the page to correspond to the song...
 	order_pan_vol_song_changed_cb();
 }
-

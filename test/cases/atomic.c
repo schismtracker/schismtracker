@@ -22,8 +22,8 @@
  */
 
 #include "headers.h"
-#include "test.h"
 #include "test-assertions.h"
+#include "test.h"
 
 #include "atomic.h"
 

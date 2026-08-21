@@ -29,7 +29,7 @@
 #define SCHISM_PAGE_H_
 
 /* How much to scroll. */
-#define MOUSE_SCROLL_LINES       3
+#define MOUSE_SCROLL_LINES 3
 
 /* --------------------------------------------------------------------- */
 /* help text */
@@ -59,10 +59,15 @@ extern const char *help_text[HELP_NUM_ITEMS];
 /* there's a value in this enum for each kind of widget... */
 
 enum widget_type {
-	WIDGET_TOGGLE, WIDGET_MENUTOGGLE,
-	WIDGET_BUTTON, WIDGET_TOGGLEBUTTON,
+	WIDGET_TOGGLE,
+	WIDGET_MENUTOGGLE,
+	WIDGET_BUTTON,
+	WIDGET_TOGGLEBUTTON,
 	WIDGET_TEXTENTRY,
-	WIDGET_NUMENTRY, WIDGET_THUMBBAR, WIDGET_BITSET, WIDGET_PANBAR,
+	WIDGET_NUMENTRY,
+	WIDGET_THUMBBAR,
+	WIDGET_BITSET,
+	WIDGET_PANBAR,
 	WIDGET_LISTBOX,
 	/* this last one is for anything that doesn't fit some standard
 	type, like the sample list, envelope editor, etc.; a widget of
@@ -162,7 +167,6 @@ struct widget_bitset {
 	const char *activation_keys;
 };
 
-
 /* special case of the thumbbar; range goes from 0 to 64. if mute is
  * set, the bar is replaced with the word "muted"; if surround is set,
  * it's replaced with the word "surround". some keys: L/M/R set the
@@ -177,8 +181,8 @@ struct widget_panbar {
 	int32_t max;
 	int32_t value;
 	int channel;
-	unsigned int muted:1;
-	unsigned int surround:1;
+	unsigned int muted : 1;
+	unsigned int surround : 1;
 };
 
 /* this was heavily inspired by Qt's "virtual" listbox API,
@@ -224,13 +228,13 @@ struct widget_other {
 	 * pretty much stuck)
 	 * this MUST be set to a valid function.
 	 * return value is 1 if the key was handled, 0 if not. */
-	int (*handle_key) (struct key_event * k);
-	int (*handle_text_input) (const char *text_input);
+	int (*handle_key)(struct key_event *k);
+	int (*handle_text_input)(const char *text_input);
 
 	/* also the widget drawing function can't possibly know how to
 	 * draw a custom widget, so it calls this instead.
 	 * this MUST be set to a valid function. */
-	void (*redraw) (void);
+	void (*redraw)(void);
 };
 
 /* --------------------------------------------------------------------- */
@@ -267,10 +271,10 @@ struct widget {
 	} next;
 
 	/* called whenever the value is changed... duh ;) */
-	void (*changed) (void);
+	void (*changed)(void);
 
 	/* called when the enter key is pressed */
-	void (*activate) (void);
+	void (*activate)(void);
 
 	/* called by the clipboard manager; really, only "other" widgets
 	should "override" this... */
@@ -295,30 +299,30 @@ struct page {
 	/* font editor takes over full screen */
 	void (*draw_full)(void);
 	/* draw the labels, etc. that don't change */
-	void (*draw_const) (void);
+	void (*draw_const)(void);
 	/* called after the song is changed. this is to copy the new
 	 * values from the song to the widgets on the page. */
-	void (*song_changed_cb) (void);
+	void (*song_changed_cb)(void);
 	/* called before widgets are drawn, mostly to fix the values
 	 * (for example, on the sample page this sets everything to
 	 * whatever values the current sample has) - this is a lousy
 	 * hack. sorry. :P */
-	void (*predraw_hook) (void);
+	void (*predraw_hook)(void);
 	/* draw the parts of the page that change when the song is playing
 	 * (this is called *very* frequently) */
-	void (*playback_update) (void);
+	void (*playback_update)(void);
 	/* this gets first shot at keys (to do unnatural overrides) */
-	int (*pre_handle_key) (struct key_event * k);
+	int (*pre_handle_key)(struct key_event *k);
 	/* this catches any keys that the main handler doesn't deal with */
-	void (*handle_key) (struct key_event * k);
+	void (*handle_key)(struct key_event *k);
 	/* handle any text input events from SDL */
-	void (*handle_text_input) (const char* text_input);
+	void (*handle_text_input)(const char *text_input);
 	/* called when the page is set. this is for reloading the
 	 * directory in the file browsers. */
-	void (*set_page) (void);
+	void (*set_page)(void);
 
 	/* called when the song-mode changes */
-	void (*song_mode_changed_cb) (void);
+	void (*song_mode_changed_cb)(void);
 
 	/* called by the clipboard manager */
 	int (*clipboard_paste)(int cb, const void *cptr);
@@ -465,7 +469,7 @@ void preferences_audio_driver_changed(void);
 void menu_show(void);
 void menu_hide(void);
 void menu_draw(void);
-int menu_handle_key(struct key_event * k);
+int menu_handle_key(struct key_event *k);
 
 /* status.c */
 void status_text_redraw(void);

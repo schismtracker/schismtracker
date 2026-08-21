@@ -33,18 +33,15 @@
 # define putenv _putenv
 #endif
 
-static int (SDLCALL *sdl12_Init)(Uint32 flags);
-static void (SDLCALL *sdl12_Quit)(void);
+static int(SDLCALL *sdl12_Init)(Uint32 flags);
+static void(SDLCALL *sdl12_Quit)(void);
 static char *(SDLCALL *sdl12_GetError)(void);
 
-static int (SDLCALL *sdl12_putenv_)(const char *penv);
+static int(SDLCALL *sdl12_putenv_)(const char *penv);
 
 /* FIXME do autoconf test for this -- this is flaky */
-#if !defined(SDL12_DYNAMIC_LOAD) \
-	&& SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 2, 96, 0) \
-	&& !defined(SCHISM_WIN32) \
-	&& !defined(SCHISM_MACOS) \
-	&& !defined(SCHISM_MACOSX)
+#if !defined(SDL12_DYNAMIC_LOAD) && SCHISM_GNUC_HAS_ATTRIBUTE(__weak__, 2, 96, 0) && !defined(SCHISM_WIN32) \
+	&& !defined(SCHISM_MACOS) && !defined(SCHISM_MACOSX)
 # define SDL12_WEAK_LINK
 #endif
 
@@ -58,7 +55,7 @@ static int load_sdl12_syms(void);
 
 #ifdef SDL12_DYNAMIC_LOAD
 
-#include "loadso.h"
+# include "loadso.h"
 
 static void *sdl12_dltrick_handle_ = NULL;
 
@@ -90,7 +87,8 @@ static int sdl12_dlinit(void)
 	return retval;
 }
 
-SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+SCHISM_STATIC_ASSERT(sizeof(void(*)) == sizeof(void *),
+	"dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 int sdl12_load_sym(const char *fn, void *addr)
 {
@@ -111,7 +109,7 @@ static int sdl12_dlinit(void)
 	return 0;
 }
 
-#define sdl12_dlend() // nothing
+# define sdl12_dlend() // nothing
 
 #endif
 

@@ -115,12 +115,12 @@ void *charset_case_fold_to_set(const void *in, charset_t inset, charset_t outset
 /* ------------------------------------------------------------------------ */
 
 /* charset-aware replacements for C stdlib functions */
-size_t charset_strlen(const void* in, charset_t inset);
-int32_t charset_strcmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
-int32_t charset_strncmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
-int32_t charset_strcasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set);
-int32_t charset_strncasecmp(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
-size_t charset_strncasecmplen(const void* in1, charset_t in1set, const void* in2, charset_t in2set, size_t num);
+size_t charset_strlen(const void *in, charset_t inset);
+int32_t charset_strcmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
+int32_t charset_strncmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t num);
+int32_t charset_strcasecmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
+int32_t charset_strncasecmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t num);
+size_t charset_strncasecmplen(const void *in1, charset_t in1set, const void *in2, charset_t in2set, size_t num);
 int32_t charset_strverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
 int32_t charset_strcaseverscmp(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
 void *charset_strstr(const void *in1, charset_t in1set, const void *in2, charset_t in2set);
@@ -129,7 +129,7 @@ void *charset_strcasestr(const void *in1, charset_t in1set, const void *in2, cha
 /* basic fnmatch */
 enum {
 	CHARSET_FNM_CASEFOLD = (1 << 0),
-	CHARSET_FNM_PERIOD   = (1 << 1),
+	CHARSET_FNM_PERIOD = (1 << 1),
 };
 
 int charset_fnmatch(const void *match, charset_t match_set, const void *str, charset_t str_set, int flags);
@@ -137,14 +137,14 @@ int charset_fnmatch(const void *match, charset_t match_set, const void *str, cha
 /* iconv replacement */
 #define CHARSET_NUL_TERMINATED SIZE_MAX /* Use this size if you know the input has a NUL terminator character */
 
-const char* charset_iconv_error_lookup(charset_error_t err);
-charset_error_t charset_iconv(const void* in, void* out, charset_t inset, charset_t outset, size_t insize);
+const char *charset_iconv_error_lookup(charset_error_t err);
+charset_error_t charset_iconv(const void *in, void *out, charset_t inset, charset_t outset, size_t insize);
 
 /* charset_iconv for newbies.
  * This is preferred to using the below macro, because it is less prone to memory leaks.
  * Do note that it assumes the input is NUL terminated. */
-SCHISM_ALWAYS_INLINE static inline
-void *charset_iconv_easy(const void *in, charset_t inset, charset_t outset) {
+SCHISM_ALWAYS_INLINE static inline void *charset_iconv_easy(const void *in, charset_t inset, charset_t outset)
+{
 	void *out;
 	if (!charset_iconv(in, &out, inset, outset, SIZE_MAX))
 		return out;
@@ -159,7 +159,8 @@ void *charset_iconv_easy(const void *in, charset_t inset, charset_t outset) {
 struct charset_iconv_v2;
 
 struct charset_iconv_v2 *charset_iconv_v2_open(charset_t inset, charset_t outset, SCHISM_UNUSED uint32_t flags);
-charset_error_t charset_iconv_v2(struct charset_iconv_v2 *x, char **inbuf, size_t *inbufsz, char **outbuf, size_t *outbufsz);
+charset_error_t charset_iconv_v2(
+	struct charset_iconv_v2 *x, char **inbuf, size_t *inbufsz, char **outbuf, size_t *outbufsz);
 void charset_iconv_v2_close(struct charset_iconv_v2 *x);
 
 /* ------------------------------------------------------------------------ */
@@ -202,7 +203,7 @@ typedef struct {
  *     while (decoder->state == DECODER_STATE_NEED_MORE && !charset_decode_next(decoder, CHARSET_WHATEVER)) {
  *         // codepoint is in decoder->codepoint
  *     }
-*/
+ */
 charset_error_t charset_decode_next(charset_decode_t *decoder, charset_t inset);
 
 /* Performs any necessary deconstruction */

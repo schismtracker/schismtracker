@@ -23,9 +23,9 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -41,10 +41,9 @@ int fmt_stm_read_info(dmoz_file_t *file, slurp_t *fp)
 	what = slurp_getc(fp);
 	type = slurp_getc(fp);
 	version = slurp_getc(fp);
-	
+
 	/* data[29] is the type: 1 = song, 2 = module (with samples) */
-	if ((what != 0x1a && what != 0x02) || (type != 1 && type != 2)
-		|| version != 2)
+	if ((what != 0x1a && what != 0x02) || (type != 1 && type != 2) || version != 2)
 		return 0;
 
 	slurp_seek(fp, 20, SEEK_SET);
@@ -81,7 +80,8 @@ struct stm_sample {
 static int read_stm_sample(struct stm_sample *smp, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) return 0
+	if (slurp_read(fp, &smp->name, sizeof(smp->name)) != sizeof(smp->name)) \
+	return 0
 
 	READ_VALUE(name);
 	slurp_seek(fp, 1, SEEK_CUR); // zero
@@ -111,7 +111,7 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 
 	for (row = 0; row < 64; row++, note += 64 - 4) {
 		for (chan = 0; chan < 4; chan++) {
-			song_note_t* chan_note = note + chan;
+			song_note_t *chan_note = note + chan;
 			slurp_read(fp, v, 4);
 
 			// mostly copied from modplug...
@@ -132,7 +132,7 @@ static void load_stm_pattern(song_note_t *note, slurp_t *fp)
 		}
 
 		for (chan = 0; chan < 4; chan++) {
-			song_note_t* chan_note = note + chan;
+			song_note_t *chan_note = note + chan;
 			if (chan_note->effect == FX_SPEED) {
 				uint32_t tempo = chan_note->param;
 				chan_note->param >>= 4;
@@ -149,25 +149,24 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	char id[8];
 	uint8_t tmp[4];
 	int npat, n;
-	uint16_t para_sdata[MAX_SAMPLES] = { 0 };
+	uint16_t para_sdata[MAX_SAMPLES] = {0};
 
 	slurp_seek(fp, 20, SEEK_SET);
 	slurp_read(fp, id, 8);
 	slurp_read(fp, tmp, 4);
 
 	if (!(
-		// this byte is *usually* guaranteed to be 0x1a,
-		// however putup10.stm and putup11.stm are outliers
-		// for some reason?...
-		(tmp[0] == 0x1a || tmp[0] == 0x02)
-		// from the doc:
-		//      1 - song (contains no samples)
-		//      2 - module (contains samples)
-		// I'm not going to care about "songs".
-		&& tmp[1] == 2
-		// do version 1 STM's even exist?...
-		&& tmp[2] == 2
-	)) {
+                // this byte is *usually* guaranteed to be 0x1a,
+                // however putup10.stm and putup11.stm are outliers
+                // for some reason?...
+		    (tmp[0] == 0x1a || tmp[0] == 0x02)
+                // from the doc:
+                //      1 - song (contains no samples)
+                //      2 - module (contains samples)
+                // I'm not going to care about "songs".
+		    && tmp[1] == 2
+                // do version 1 STM's even exist?...
+		    && tmp[2] == 2)) {
 		return LOAD_UNSUPPORTED;
 	}
 	// check the file tag for printable ASCII
@@ -180,21 +179,16 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		// Unfortunately tools never differentiated themselves...
 		if (tmp[3] > 20)
 			// Future Crew chose to never increase their version numbers after 2.21 it seems!
-			snprintf(song->tracker_id, sizeof(song->tracker_id),
-				"Scream Tracker 2.2+ or compatible");
+			snprintf(song->tracker_id, sizeof(song->tracker_id), "Scream Tracker 2.2+ or compatible");
 		else
-			snprintf(song->tracker_id, sizeof(song->tracker_id),
-				"Scream Tracker %1d.%02d or compatible",
-				CLAMP(tmp[2], 0, 9),
-				CLAMP(tmp[3], 0, 99));
+			snprintf(song->tracker_id, sizeof(song->tracker_id), "Scream Tracker %1d.%02d or compatible",
+				CLAMP(tmp[2], 0, 9), CLAMP(tmp[3], 0, 99));
 	else if (!memcmp(id, "BMOD2STM", 8))
 		snprintf(song->tracker_id, sizeof(song->tracker_id), "BMOD2STM");
 	else if (!memcmp(id, "WUZAMOD!", 8))
 		snprintf(song->tracker_id, sizeof(song->tracker_id), "Wuzamod"); // once a MOD always a MOD
 	else if (!memcmp(id, "SWavePro", 8))
-		snprintf(song->tracker_id, sizeof(song->tracker_id),
-			"SoundWave Pro %1d.%02d",
-			CLAMP(tmp[2], 0, 9),
+		snprintf(song->tracker_id, sizeof(song->tracker_id), "SoundWave Pro %1d.%02d", CLAMP(tmp[2], 0, 9),
 			CLAMP(tmp[3], 0, 99));
 	else if (!memcmp(id, "!Scrvrt!", 8))
 		snprintf(song->tracker_id, sizeof(song->tracker_id), "Screamverter");
@@ -243,9 +237,7 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		sample->loop_end = bswapLE16(stmsmp.loop_end);
 		sample->c5speed = bswapLE16(stmsmp.c5speed);
 		sample->volume = stmsmp.volume * 4; //mphack
-		if (sample->loop_start < blen
-			&& sample->loop_end != 0xffff
-			&& sample->loop_start < sample->loop_end) {
+		if (sample->loop_start < blen && sample->loop_end != 0xffff && sample->loop_start < sample->loop_end) {
 			sample->flags |= CHN_LOOP;
 			sample->loop_end = CLAMP(sample->loop_end, sample->loop_start, blen);
 		}
@@ -293,4 +285,3 @@ int fmt_stm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 	return LOAD_SUCCESS;
 }
-

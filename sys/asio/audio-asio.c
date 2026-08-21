@@ -24,13 +24,13 @@
 #include "headers.h"
 
 #include "backend/audio.h"
-#include "mem.h"
-#include "osdefs.h"
 #include "loadso.h"
 #include "log.h"
+#include "mem.h"
 #include "mt.h"
-#include "video.h"
+#include "osdefs.h"
 #include "str.h"
+#include "video.h"
 
 #include "audio-asio.h"
 
@@ -63,8 +63,10 @@ static int asio_driver_count(void)
 static const char *asio_driver_name(int i)
 {
 	switch (i) {
-	case 0: return "asio";
-	default: return NULL;
+	case 0:
+		return "asio";
+	default:
+		return NULL;
 	}
 }
 
@@ -78,7 +80,9 @@ static int asio_init_driver(const char *driver)
 	return 0;
 }
 
-static void asio_quit_driver(void) { /* eh, okay */ }
+static void asio_quit_driver(void)
+{ /* eh, okay */
+}
 
 /* ---------------------------------------------------------------------------- */
 
@@ -113,8 +117,7 @@ struct schism_audio_device {
 /* butt-ugly global because ASIO has an API from the stone age */
 static schism_audio_device_t *current_device = NULL;
 
-static uint32_t ASIO_CDECL asio_msg(uint32_t class, uint32_t msg,
-	SCHISM_UNUSED void *unk3, SCHISM_UNUSED void *unk4)
+static uint32_t ASIO_CDECL asio_msg(uint32_t class, uint32_t msg, SCHISM_UNUSED void *unk3, SCHISM_UNUSED void *unk4)
 {
 	schism_audio_device_t *dev = current_device;
 
@@ -145,8 +148,7 @@ static void ASIO_CDECL asio_dummy2(void)
 	log_appendf(1, "[ASIO] asio_dummy2 was called by the driver");
 }
 
-static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
-	SCHISM_UNUSED uint32_t unk1)
+static void ASIO_CDECL asio_buffer_flip(uint32_t buf, SCHISM_UNUSED uint32_t unk1)
 {
 	schism_audio_device_t *dev = current_device;
 
@@ -164,22 +166,30 @@ static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
 		mt_mutex_unlock(dev->mutex);
 
 		switch (dev->bps) {
-		/* I have a love-hate relationship with the preprocessor */
+                /* I have a love-hate relationship with the preprocessor */
 
 #define DEINTERLEAVE_INT(BITS) \
 	do { \
 		for (i = 0; i < dev->bufsmps; i++) { \
 			((uint##BITS##_t *)(dev->buffers[0].ptrs[buf]))[i] \
-				= ((uint##BITS##_t *)dev->membuf)[i*2+0]; \
+				= ((uint##BITS##_t *)dev->membuf)[i * 2 + 0]; \
 			((uint##BITS##_t *)(dev->buffers[1].ptrs[buf]))[i] \
-				= ((uint##BITS##_t *)dev->membuf)[i*2+1]; \
+				= ((uint##BITS##_t *)dev->membuf)[i * 2 + 1]; \
 		} \
 	} while (0)
 
-		case 1: DEINTERLEAVE_INT(8);  break;
-		case 2: DEINTERLEAVE_INT(16); break;
-		case 4: DEINTERLEAVE_INT(32); break;
-		case 8: DEINTERLEAVE_INT(64); break;
+		case 1:
+			DEINTERLEAVE_INT(8);
+			break;
+		case 2:
+			DEINTERLEAVE_INT(16);
+			break;
+		case 4:
+			DEINTERLEAVE_INT(32);
+			break;
+		case 8:
+			DEINTERLEAVE_INT(64);
+			break;
 
 #undef DEINTERLEAVE_INT
 
@@ -195,8 +205,12 @@ static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
 
 		/* gcc is usually smart enough to inline calls to memcpy with
 		 * an integer literal */
-		case 3:  DEINTERLEAVE_MEMCPY(3); break;
-		default: DEINTERLEAVE_MEMCPY(dev->bps); break;
+		case 3:
+			DEINTERLEAVE_MEMCPY(3);
+			break;
+		default:
+			DEINTERLEAVE_MEMCPY(dev->bps);
+			break;
 
 #undef DEINTERLEAVE_MEMCPY
 		}
@@ -207,7 +221,7 @@ static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
 #define BSWAP_EX(BITS, INLOOP) \
 	do { \
 		uint32_t j; \
-	\
+\
 		for (j = 0; j < dev->numbufs; j++) { \
 			uint##BITS##_t *xx = dev->buffers[j].ptrs[buf]; \
 			for (i = 0; i < dev->bufsmps; i++) { \
@@ -216,18 +230,29 @@ static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
 		} \
 	} while (0)
 
-#define BSWAP(BITS) BSWAP_EX(BITS, { xx[i] = bswap_##BITS(xx[i]); } )
+#define BSWAP(BITS) BSWAP_EX(BITS, { xx[i] = bswap_##BITS(xx[i]); })
 
-			case 2: BSWAP(16); break;
-			case 4: BSWAP(32); break;
-			case 8: BSWAP(64); break;
+			case 2:
+				BSWAP(16);
+				break;
+			case 4:
+				BSWAP(32);
+				break;
+			case 8:
+				BSWAP(64);
+				break;
 
 #undef BSWAP
 
-			case 3: BSWAP_EX(8, { uint8_t tmp = xx[i*3+0]; xx[i*3+0] = xx[i*3+2]; xx[i*3+2] = tmp; } ); break;
+			case 3:
+				BSWAP_EX(8, {
+					uint8_t tmp = xx[i * 3 + 0];
+					xx[i * 3 + 0] = xx[i * 3 + 2];
+					xx[i * 3 + 2] = tmp;
+				});
+				break;
 
 #undef BSWAP_EX
-
 			}
 		}
 	}
@@ -235,8 +260,7 @@ static void ASIO_CDECL asio_buffer_flip(uint32_t buf,
 	IAsio_OutputReady(dev->asio);
 }
 
-static void *ASIO_CDECL asio_buffer_flip_ex(SCHISM_UNUSED void *unk1,
-	uint32_t buf, SCHISM_UNUSED uint32_t unk2)
+static void *ASIO_CDECL asio_buffer_flip_ex(SCHISM_UNUSED void *unk1, uint32_t buf, SCHISM_UNUSED uint32_t unk2)
 {
 	/* BUG: Steinberg's "built-in" ASIO driver completely ignores the
 	 * return value for ASIO_CLASS_SUPPORTS_BUFFER_FLIP_EX, instead
@@ -264,8 +288,8 @@ static void asio_control_panel(schism_audio_device_t *dev)
 
 static void asio_close_device(schism_audio_device_t *dev);
 
-static schism_audio_device_t *asio_open_device(uint32_t id,
-	const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *asio_open_device(
+	uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	schism_audio_device_t *dev;
 	AsioError err;
@@ -319,8 +343,7 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 	{
 		uint32_t bufmin, bufmax, bufpref, bufunk;
 
-		err = IAsio_GetBufferSize(dev->asio, &bufmin, &bufmax, &bufpref,
-			&bufunk);
+		err = IAsio_GetBufferSize(dev->asio, &bufmin, &bufmax, &bufpref, &bufunk);
 		if (err < 0) {
 			log_appendf(4, "[ASIO] IAsio_GetBufferSize error %d", err);
 			goto ASIO_fail;
@@ -346,7 +369,6 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 
 		obtained->freq = rate;
 	}
-
 
 	{
 		/* don't care about input channels, throw out the value */
@@ -415,8 +437,7 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 			be = 0;
 			break;
 		default:
-			log_appendf(4, "[ASIO] unknown sample type %" PRIx32,
-				chninfo.sample_type);
+			log_appendf(4, "[ASIO] unknown sample type %" PRIx32, chninfo.sample_type);
 			goto ASIO_fail;
 		}
 
@@ -424,9 +445,11 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 
 #ifdef WORDS_BIGENDIAN
 		/* toggle byteswapping */
-		if (!be) dev->swap = 1;
+		if (!be)
+			dev->swap = 1;
 #else
-		if (be) dev->swap = 1;
+		if (be)
+			dev->swap = 1;
 #endif
 
 		dev->buffers[i].input = 0;
@@ -439,8 +462,7 @@ static schism_audio_device_t *asio_open_device(uint32_t id,
 		dev->callbacks.msg = asio_msg;
 		dev->callbacks.buffer_flip_ex = asio_buffer_flip_ex;
 
-		err = IAsio_CreateBuffers(dev->asio, dev->buffers, dev->numbufs,
-			dev->bufsmps, &dev->callbacks);
+		err = IAsio_CreateBuffers(dev->asio, dev->buffers, dev->numbufs, dev->bufsmps, &dev->callbacks);
 		if (err < 0) {
 			log_appendf(4, "[ASIO] IAsio_CreateBuffers error %" PRId32, err);
 			goto ASIO_fail;

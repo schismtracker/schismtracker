@@ -29,9 +29,9 @@
 #include "headers.h"
 
 #include "fmt.h"
-#include "slurp.h"
-#include "mem.h"
 #include "loadso.h"
+#include "mem.h"
+#include "slurp.h"
 
 #ifdef SCHISM_WIN32
 typedef long off_t;
@@ -68,7 +68,7 @@ static void *slurp_zlib_start(void)
 	}
 
 	ZLIB_inflateGetHeader(&zl->zs, &zl->gz);
-	return zl;	
+	return zl;
 }
 
 static int slurp_zlib_inflate(void *opaque)
@@ -139,17 +139,26 @@ int slurp_gzip(slurp_t *src)
 # define GZIP_SYM(x) ZLIB_##x = x
 # define GZIP_END
 #else
-# define GZIP_GLOBALS \
-	static void *lib_z;
+# define GZIP_GLOBALS static void *lib_z;
 # define GZIP_START \
-	do { lib_z = library_load("z", ZLIB_VERNUM >> 12, 0); if (!lib_z) return -2; } while (0)
+	 do { \
+		 lib_z = library_load("z", ZLIB_VERNUM >> 12, 0); \
+		 if (!lib_z) \
+			 return -2; \
+	 } while (0)
 # define GZIP_SYM(x) \
-	do { ZLIB_##x = loadso_function_load(lib_z, #x); if (!ZLIB_##x) { printf("%s\n", #x); return -1; } } while (0)
+	 do { \
+		 ZLIB_##x = loadso_function_load(lib_z, #x); \
+		 if (!ZLIB_##x) { \
+			 printf("%s\n", #x); \
+			 return -1; \
+		 } \
+	 } while (0)
 # define GZIP_END \
-do { \
-	loadso_object_unload(lib_z); \
-	lib_z = NULL; \
-} while (0)
+	 do { \
+		 loadso_object_unload(lib_z); \
+		 lib_z = NULL; \
+	 } while (0)
 #endif
 
 GZIP_GLOBALS

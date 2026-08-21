@@ -25,10 +25,10 @@
 
 #include "it.h"
 #include "page.h"
-#include "keyboard.h"
-#include "midi.h"
 #include "song.h"
 #include "widget.h"
+#include "keyboard.h"
+#include "midi.h"
 #include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
@@ -44,27 +44,27 @@ static void midiout_draw_const(void)
 	char buf[4] = "SFx";
 	unsigned int i;
 
-	draw_text(    "MIDI Start", 6, 13, 0, 2);
-	draw_text(     "MIDI Stop", 7, 14, 0, 2);
-	draw_text(     "MIDI Tick", 7, 15, 0, 2);
-	draw_text(       "Note On", 9, 16, 0, 2);
-	draw_text(      "Note Off", 8, 17, 0, 2);
-	draw_text( "Change Volume", 3, 18, 0, 2);
-	draw_text(    "Change Pan", 6, 19, 0, 2);
-	draw_text(   "Bank Select", 5, 20, 0, 2);
+	draw_text("MIDI Start", 6, 13, 0, 2);
+	draw_text("MIDI Stop", 7, 14, 0, 2);
+	draw_text("MIDI Tick", 7, 15, 0, 2);
+	draw_text("Note On", 9, 16, 0, 2);
+	draw_text("Note Off", 8, 17, 0, 2);
+	draw_text("Change Volume", 3, 18, 0, 2);
+	draw_text("Change Pan", 6, 19, 0, 2);
+	draw_text("Bank Select", 5, 20, 0, 2);
 	draw_text("Program Change", 2, 21, 0, 2);
 
-	draw_text(   "Macro   SF0", 5, 24, 0, 2);
-	draw_text(   "Setup   SF1", 5, 25, 0, 2);
+	draw_text("Macro   SF0", 5, 24, 0, 2);
+	draw_text("Setup   SF1", 5, 25, 0, 2);
 
 	for (i = 2; i < 16; i++) {
 		buf[2] = hexdigits[i];
 		draw_text(buf, 13, i + 24, 0, 2);
 	}
 
-	draw_box(16, 12, 60, 22, BOX_THIN|BOX_INNER|BOX_INSET);
-	draw_box(16, 23, 60, 40, BOX_THIN|BOX_INNER|BOX_INSET);
-	draw_box(16, 41, 60, 49, BOX_THIN|BOX_INNER|BOX_INSET);
+	draw_box(16, 12, 60, 22, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(16, 23, 60, 40, BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(16, 41, 60, 49, BOX_THIN | BOX_INNER | BOX_INSET);
 
 	for (i = 0; i < 7; i++) {
 		snprintf(buf, sizeof(buf), "Z%02X", i + zxx_top + 0x80);
@@ -100,7 +100,6 @@ static void zxx_setpos(int pos)
 
 	status.flags |= NEED_UPDATE;
 }
-
 
 static int pre_handle_key(struct key_event *k)
 {
@@ -148,8 +147,15 @@ void midiout_load_page(struct page *page)
 {
 	int i;
 	char *editcfg_top[] = {
-		editcfg.start, editcfg.stop, editcfg.tick, editcfg.note_on, editcfg.note_off,
-		editcfg.set_volume, editcfg.set_panning, editcfg.set_bank, editcfg.set_program,
+		editcfg.start,
+		editcfg.stop,
+		editcfg.tick,
+		editcfg.note_on,
+		editcfg.note_off,
+		editcfg.set_volume,
+		editcfg.set_panning,
+		editcfg.set_bank,
+		editcfg.set_program,
 	};
 
 	page->title = "MIDI Output Configuration";
@@ -161,19 +167,15 @@ void midiout_load_page(struct page *page)
 	page->help_index = HELP_MIDI_OUTPUT;
 
 	for (i = 0; i < 9; i++) {
-		widget_create_textentry(widgets_midiout + i, 17, 13 + i, 43,
-				(i == 0 ? 0 : (i - 1)), i + 1, 9,
-				copy_out, editcfg_top[i], 31);
+		widget_create_textentry(widgets_midiout + i, 17, 13 + i, 43, (i == 0 ? 0 : (i - 1)), i + 1, 9, copy_out,
+			editcfg_top[i], 31);
 	}
 	for (i = 0; i < 16; i++) {
-		widget_create_textentry(widgets_midiout + 9 + i, 17, 24 + i, 43,
-				9 + i - 1, 9 + i + 1, 25,
-				copy_out, editcfg.sfx[i], 31);
+		widget_create_textentry(widgets_midiout + 9 + i, 17, 24 + i, 43, 9 + i - 1, 9 + i + 1, 25, copy_out,
+			editcfg.sfx[i], 31);
 	}
 	for (i = 0; i < 7; i++) {
-		widget_create_textentry(widgets_midiout + 25 + i, 17, 42 + i, 43,
-				25 + i - 1, 25 + ((i == 6) ? 6 : (i + 1)), 0,
-				copy_out, editcfg.zxx[i], 31);
+		widget_create_textentry(widgets_midiout + 25 + i, 17, 42 + i, 43, 25 + i - 1,
+			25 + ((i == 6) ? 6 : (i + 1)), 0, copy_out, editcfg.zxx[i], 31);
 	}
 }
-

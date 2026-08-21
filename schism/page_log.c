@@ -29,12 +29,12 @@
 #include "it.h"
 #include "page.h"
 #include "widget.h"
-#include "vgamem.h"
-#include "keyboard.h"
 #include "charset.h"
+#include "config.h"
+#include "keyboard.h"
 #include "mem.h"
 #include "str.h"
-#include "config.h"
+#include "vgamem.h"
 
 #define MAX_LINE_LENGTH 74
 
@@ -70,7 +70,7 @@ static void log_draw_const(void)
 	draw_fill_chars(2, 13, 77, 47, DEFAULT_FG, 0);
 }
 
-static int log_handle_key(struct key_event * k)
+static int log_handle_key(struct key_event *k)
 {
 	switch (k->sym) {
 	case SCHISM_KEYSYM_UP:
@@ -116,7 +116,7 @@ static int log_handle_key(struct key_event * k)
 
 		return 0;
 	};
-	top_line = CLAMP(top_line, 0, (last_line-32));
+	top_line = CLAMP(top_line, 0, (last_line - 32));
 	if (top_line < 0)
 		top_line = 0;
 	status.flags |= NEED_UPDATE;
@@ -132,8 +132,7 @@ static void log_redraw(void)
 		if (!lines[i].text)
 			continue;
 
-		draw_text_charset_len(lines[i].text, lines[i].set, MAX_LINE_LENGTH,
-			3, 14 + n, lines[i].color, 0);
+		draw_text_charset_len(lines[i].text, lines[i].set, MAX_LINE_LENGTH, 3, 14 + n, lines[i].color, 0);
 	}
 }
 
@@ -167,15 +166,15 @@ void log_append3(charset_t set, int color, int must_free, const char *text)
 		} else {
 			/* XXX: would probably be faster to just use a circular buffer */
 			if (lines[0].must_free)
-				free((void *) lines[0].text);
+				free((void *)lines[0].text);
 
 			memmove(lines, lines + 1, last_line * sizeof(struct log_line));
 		}
 
-		lines[last_line].text          = text;
-		lines[last_line].set           = set;
-		lines[last_line].color         = color;
-		lines[last_line].must_free     = must_free;
+		lines[last_line].text = text;
+		lines[last_line].set = set;
+		lines[last_line].color = color;
+		lines[last_line].must_free = must_free;
 		lines[last_line].underline_len = charset_strlen(text, set);
 
 		top_line = CLAMP(last_line - 32, 0, NUM_LINES - 32);
@@ -220,12 +219,11 @@ void log_appendf(int color, const char *format, ...)
 	log_append3(CHARSET_UTF8, color, 1, ptr);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-void log_underline_impl(int chars)
+static inline SCHISM_ALWAYS_INLINE void log_underline_impl(int chars)
 {
 	char buf[MAX_LINE_LENGTH + 1];
 
-	chars = CLAMP(chars, 0, (int) sizeof(buf) - 1);
+	chars = CLAMP(chars, 0, (int)sizeof(buf) - 1);
 	buf[chars--] = '\0';
 	do {
 		buf[chars] = 0x81;
@@ -255,7 +253,7 @@ void log_append_timestamp(int color, const char *text)
 	char datestr[27], timestr[27];
 	time_t thetime;
 	struct tm tm;
-	size_t s, ds, ts/*pmo*/, i;
+	size_t s, ds, ts /*pmo*/, i;
 	charset_decode_t dec;
 	uint32_t ucs4text[MAX_LINE_LENGTH + 1];
 
@@ -282,7 +280,7 @@ void log_append_timestamp(int color, const char *text)
 		if (dec.codepoint == 0)
 			break;
 
-		if (ds+ts+4+s >= MAX_LINE_LENGTH) {
+		if (ds + ts + 4 + s >= MAX_LINE_LENGTH) {
 			/* can't fit the timestamp; give up */
 			log_append3(CHARSET_UTF8, color, 1, str_dup(text));
 			return;

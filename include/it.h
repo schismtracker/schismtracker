@@ -28,25 +28,23 @@
 
 #include "backend/timer.h"
 
+#include "keyboard.h"
+#include "log.h"
 #include "util.h"
 #include "video.h"
-#include "log.h"
-#include "keyboard.h"
 
 /* --------------------------------------------------------------------- */
 /* preprocessor stuff */
 
-#define NO_MODIFIER(mod) \
-	(((mod) & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_SHIFT)) == 0)
-#define NO_CAM_MODS(mod) \
-	(((mod) & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0)
+#define NO_MODIFIER(mod) (((mod) & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_SHIFT)) == 0)
+#define NO_CAM_MODS(mod) (((mod) & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT)) == 0)
 
 /* --------------------------------------------------------------------- */
 /* structs 'n enums */
 
 /* tracker_status dialog_types */
 enum {
-	DIALOG_NONE = (0),                              /* 0000 0000 */
+	DIALOG_NONE = (0),         /* 0000 0000 */
 	DIALOG_MENU = (1 << 0),                         /* 0000 0001 */
 	DIALOG_MAIN_MENU = (DIALOG_MENU | (1 << 1)),    /* 0000 0011 */
 	DIALOG_SUBMENU = (DIALOG_MENU | (1 << 2)),      /* 0000 0101 */
@@ -131,13 +129,25 @@ enum {
 
 /* note! TIME_PLAYBACK is only for internal calculations -- don't use it directly */
 enum tracker_time_display {
-	TIME_OFF, TIME_PLAY_ELAPSED, TIME_PLAY_CLOCK, TIME_PLAY_OFF,
-	TIME_ELAPSED, TIME_CLOCK, TIME_ABSOLUTE, TIME_PLAYBACK,
+	TIME_OFF,
+	TIME_PLAY_ELAPSED,
+	TIME_PLAY_CLOCK,
+	TIME_PLAY_OFF,
+	TIME_ELAPSED,
+	TIME_CLOCK,
+	TIME_ABSOLUTE,
+	TIME_PLAYBACK,
 };
 
 /* what should go in the little box on the top right? */
 enum tracker_vis_style {
-	VIS_OFF, VIS_FAKEMEM, VIS_OSCILLOSCOPE, VIS_VU_METER, VIS_MONOSCOPE, VIS_FFT, VIS_SENTINEL
+	VIS_OFF,
+	VIS_FAKEMEM,
+	VIS_OSCILLOSCOPE,
+	VIS_VU_METER,
+	VIS_MONOSCOPE,
+	VIS_FFT,
+	VIS_SENTINEL
 };
 
 struct midi_port; /* midi.h */
@@ -169,7 +179,8 @@ struct tracker_status {
 	int fix_numlock_setting;
 };
 
-#define LAST_KEY_IS(sym, mod) (((mod == 0) ? !status.last_keymod : (status.last_keymod & mod)) && (status.last_keysym == sym))
+#define LAST_KEY_IS(sym, mod) \
+	(((mod == 0) ? !status.last_keymod : (status.last_keymod & mod)) && (status.last_keysym == sym))
 
 /* numlock hackery */
 enum {
@@ -211,14 +222,13 @@ extern struct tracker_status status;
 
 extern int playback_tracing, midi_playback_tracing;
 
-extern const char hexdigits[16];	/* in keyboard.c at the moment */
+extern const char hexdigits[16]; /* in keyboard.c at the moment */
 
 /* this used to just translate keys to notes, but it's sort of become the
  * keyboard map... perhaps i should rename it. */
-extern const char *note_trans;	/* keyboard.c */
+extern const char *note_trans; /* keyboard.c */
 
-
-extern int show_default_volumes;	/* pattern-view.c */
+extern int show_default_volumes; /* pattern-view.c */
 
 /* --------------------------------------------------------------------- */
 /* text functions */
@@ -248,7 +258,7 @@ void set_page(int new_page);
 void load_pages(void);  /* called once at start of program */
 void playback_update(void);     /* once per cycle */
 struct key_event;
-void handle_key(struct key_event * k);        /* whenever there's a keypress ;) */
+void handle_key(struct key_event *k);        /* whenever there's a keypress ;) */
 void handle_text_input(const char *text_input);
 
 /* this should only be called from main.
@@ -312,7 +322,7 @@ void show_song_timejump(void);
 /* some platforms have different entrypoints (see: macosx) which set up
  * platform-specific stuff, and eventually call this function to actually
  * run schism */
-int schism_main(int argc, char** argv);
+int schism_main(int argc, char **argv);
 
 /* Shutdown the SDL2 system from anywhere without having to use atexit() */
 SCHISM_NORETURN void schism_exit(int status);
@@ -337,4 +347,3 @@ void fft_get_columns(uint32_t width, unsigned char *out, uint32_t chan);
 /* --------------------------------------------------------------------- */
 
 #endif /* SCHISM_IT_H_ */
-

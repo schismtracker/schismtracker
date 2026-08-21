@@ -31,9 +31,9 @@ and possibly other files as well. Only one osdefs.c should be in use at a time. 
 #include "events.h"
 
 /* message box styles. */
-#define OS_MESSAGE_BOX_INFO     (0)
-#define OS_MESSAGE_BOX_ERROR    (1)
-#define OS_MESSAGE_BOX_WARNING  (2)
+#define OS_MESSAGE_BOX_INFO    (0)
+#define OS_MESSAGE_BOX_ERROR   (1)
+#define OS_MESSAGE_BOX_WARNING (2)
 
 /*
 os_sysinit: any platform-dependent setup that needs to occur directly upon startup.
@@ -54,39 +54,39 @@ os_onframe: called every frame (or so)
 # define os_sysexit wiiu_sysexit
 # define os_onframe wiiu_onframe
 #elif defined(SCHISM_WIN32)
-# define os_sysinit win32_sysinit
-# define os_sysexit win32_sysexit
-# define os_get_modkey win32_get_modkey
-# define os_fopen win32_fopen
-# define os_stat win32_stat
-# define os_mkdir win32_mkdir
-# define os_access win32_access
-# define os_get_key_repeat win32_get_key_repeat
+# define os_sysinit          win32_sysinit
+# define os_sysexit          win32_sysexit
+# define os_get_modkey       win32_get_modkey
+# define os_fopen            win32_fopen
+# define os_stat             win32_stat
+# define os_mkdir            win32_mkdir
+# define os_access           win32_access
+# define os_get_key_repeat   win32_get_key_repeat
 # define os_show_message_box win32_show_message_box
 #elif defined(SCHISM_MACOSX)
-# define os_sysexit macosx_sysexit
-# define os_sysinit macosx_sysinit
-# define os_get_modkey macosx_get_modkey
-# define os_get_key_repeat macosx_get_key_repeat
+# define os_sysexit          macosx_sysexit
+# define os_sysinit          macosx_sysinit
+# define os_get_modkey       macosx_get_modkey
+# define os_get_key_repeat   macosx_get_key_repeat
 # define os_show_message_box macosx_show_message_box
 #elif defined(SCHISM_MACOS)
-# define os_mkdir macos_mkdir
-# define os_stat macos_stat
+# define os_mkdir            macos_mkdir
+# define os_stat             macos_stat
 # define os_show_message_box macos_show_message_box
-# define os_sysinit macos_sysinit
-# define os_get_key_repeat macos_get_key_repeat
-# define os_fopen macos_fopen
+# define os_sysinit          macos_sysinit
+# define os_get_key_repeat   macos_get_key_repeat
+# define os_fopen            macos_fopen
 #elif defined(SCHISM_OS2)
-# define os_mkdir os2_mkdir
-# define os_stat os2_stat
-# define os_fopen os2_fopen
-# define os_get_key_repeat os2_get_key_repeat
+# define os_mkdir            os2_mkdir
+# define os_stat             os2_stat
+# define os_fopen            os2_fopen
+# define os_get_key_repeat   os2_get_key_repeat
 # define os_show_message_box os2_show_message_box
 #elif defined(SCHISM_XBOX)
 # define os_sysinit xbox_sysinit
-# define os_stat xbox_stat
-# define os_mkdir xbox_mkdir
-# define os_fopen xbox_fopen
+# define os_stat    xbox_stat
+# define os_mkdir   xbox_mkdir
+# define os_fopen   xbox_fopen
 #endif
 
 /* os_exec: runs a program, and optionally returns the status code.
@@ -96,21 +96,21 @@ os_onframe: called every frame (or so)
  * e.g.:
  * os_exec(&st, "/usr/bin", "schismtracker", "--audio-driver", "alsa", (char *)NULL); */
 #if defined(SCHISM_WIN32)
-# define os_exec win32_exec
+# define os_exec     win32_exec
 # define os_run_hook win32_run_hook
 #elif defined(HAVE_EXECL) && defined(HAVE_FORK) && (defined(HAVE_WAITID) || defined(HAVE_WAITPID))
-# define os_exec posix_exec
+# define os_exec     posix_exec
 # define os_run_hook posix_run_hook
 #endif
 
 #ifndef os_sysinit
-# define os_sysinit(pargc,argv)
+# define os_sysinit(pargc, argv)
 #endif
 #ifndef os_sysexit
 # define os_sysexit()
 #endif
 #ifndef os_get_modkey
-#define os_get_modkey(m)
+# define os_get_modkey(m)
 #endif
 #ifndef os_onframe
 # define os_onframe()
@@ -159,25 +159,25 @@ os_onframe: called every frame (or so)
 static inline void msgbox_printf_impl(const char *title, const char *text, int style)
 {
 	const char *styles[] = {
-		[OS_MESSAGE_BOX_INFO]    = "INFO",
-		[OS_MESSAGE_BOX_ERROR]   = "ERROR",
+		[OS_MESSAGE_BOX_INFO] = "INFO",
+		[OS_MESSAGE_BOX_ERROR] = "ERROR",
 		[OS_MESSAGE_BOX_WARNING] = "WARNING",
 	};
 
-#ifdef SCHISM_XBOX
+# ifdef SCHISM_XBOX
 	debugPrint("[%s] %s: %s", styles[style], title, text);
-#else
+# else
 	{
 		FILE *out = (style == OS_MESSAGE_BOX_INFO) ? stdout : stderr;
 
 		fprintf(out, "[%s] %s: %s\n", styles[style], title, text);
 	}
-#endif
+# endif
 }
 # define os_show_message_box(title, text, style) (msgbox_printf_impl(title, text, style))
 #endif
 #ifndef os_run_hook
-# define os_run_hook(dir,exe,maybe_arg) (0)
+# define os_run_hook(dir, exe, maybe_arg) (0)
 #endif
 
 /* Whether or not to compile ANSI variants of functions; we only actually do
@@ -210,7 +210,7 @@ void win32_filecreated_callback(const char *filename);
 void win32_toggle_menu(void *window, int on); // window should be a pointer to the window HWND
 int win32_stat(const char *path, struct stat *st);
 int win32_mkdir(const char *path, uint32_t mode);
-FILE* win32_fopen(const char *path, const char *flags);
+FILE *win32_fopen(const char *path, const char *flags);
 int win32_exec(int *status, int *abnormal_exit, const char *dir, const char *name, ...);
 int win32_run_hook(const char *dir, const char *exe, const char *maybe_arg);
 int win32_get_key_repeat(int *pdelay, int *prate);
@@ -249,15 +249,15 @@ FILE *macos_fopen(const char *path, const char *flags);
 
 int x11_event(schism_event_t *event);
 
-int os2_stat(const char* path, struct stat* st);
-int os2_mkdir(const char* path, uint32_t mode);
-FILE* os2_fopen(const char* path, const char* flags);
+int os2_stat(const char *path, struct stat *st);
+int os2_mkdir(const char *path, uint32_t mode);
+FILE *os2_fopen(const char *path, const char *flags);
 int os2_get_key_repeat(int *pdelay, int *prate);
 void os2_show_message_box(const char *title, const char *text, int style);
 
 int xbox_stat(const char *path, struct stat *st);
 int xbox_mkdir(const char *path, uint32_t mode);
-FILE* xbox_fopen(const char* path, const char* flags);
+FILE *xbox_fopen(const char *path, const char *flags);
 void xbox_sysinit(int *pargc, char ***pargv);
 
 /* ------------------------------------------------------------------------ */
@@ -270,26 +270,23 @@ void xbox_sysinit(int *pargc, char ***pargv);
  * which does what we want in all cases, without sprinkling stupid preprocessor
  * crap everywhere (see dmoz.c for some fun) */
 #ifdef SCHISM_XBOX
-# define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
-	{ ansiblock }
+# define SCHISM_ANSI_UNICODE(ansiblock, uniblock) {ansiblock}
 #elif defined(SCHISM_WIN32)
 # ifdef SCHISM_WIN32_COMPILE_ANSI
 #  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
-	if (win32_ver_unicode()) { \
-		uniblock \
-	} else { \
-		ansiblock \
-	}
+	  if (win32_ver_unicode()) { \
+		  uniblock \
+	  } else { \
+		  ansiblock \
+	  }
 # else
-#  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) \
-	{ uniblock }
+#  define SCHISM_ANSI_UNICODE(ansiblock, uniblock) {uniblock}
 # endif
 #endif
 
 /* ------------------------------------------------------------------------ */
 
-static inline SCHISM_ALWAYS_INLINE
-int os_shell(const char *name, const char *arg)
+static inline SCHISM_ALWAYS_INLINE int os_shell(const char *name, const char *arg)
 {
 #ifdef HAVE_OS_EXEC
 	int st;
@@ -299,9 +296,9 @@ int os_shell(const char *name, const char *arg)
 
 	return st;
 #else
-#ifdef ENOTSUP
+# ifdef ENOTSUP
 	errno = ENOTSUP;
-#endif
+# endif
 	return -1;
 #endif
 }

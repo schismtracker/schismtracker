@@ -54,13 +54,13 @@ int sdl3_ver_atleast(int major, int minor, int patch);
 // must be called AFTER sdl3_init()
 int sdl3_load_sym(const char *fn, void *addr);
 
-#define SCHISM_SDL3_SYM(x) \
-	if (!sdl3_load_sym("SDL_" #x, &sdl3_##x)) return -1
+# define SCHISM_SDL3_SYM(x) \
+	 if (!sdl3_load_sym("SDL_" #x, &sdl3_##x)) \
+	 return -1
 
 #else
 
-#define SCHISM_SDL3_SYM(x) \
-	sdl3_##x = SDL_##x
+# define SCHISM_SDL3_SYM(x) sdl3_##x = SDL_##x
 
 #endif
 

@@ -38,9 +38,12 @@ void vgamem_clear(void);
 void vgamem_flip(void);
 
 /* scan to pixel data */
-SCHISM_HOT void vgamem_scan8 (uint32_t y, uint8_t  *out, const uint32_t tc[16], const uint32_t mouseline[80], const uint32_t mouseline_mask[80]);
-SCHISM_HOT void vgamem_scan16(uint32_t y, uint16_t *out, const uint32_t tc[16], const uint32_t mouseline[80], const uint32_t mouseline_mask[80]);
-SCHISM_HOT void vgamem_scan32(uint32_t y, uint32_t *out, const uint32_t tc[16], const uint32_t mouseline[80], const uint32_t mouseline_mask[80]);
+SCHISM_HOT void vgamem_scan8(uint32_t y, uint8_t *out, const uint32_t tc[16], const uint32_t mouseline[80],
+	const uint32_t mouseline_mask[80]);
+SCHISM_HOT void vgamem_scan16(uint32_t y, uint16_t *out, const uint32_t tc[16], const uint32_t mouseline[80],
+	const uint32_t mouseline_mask[80]);
+SCHISM_HOT void vgamem_scan32(uint32_t y, uint32_t *out, const uint32_t tc[16], const uint32_t mouseline[80],
+	const uint32_t mouseline_mask[80]);
 
 /* ---------------------------------------------------------------------------
  * drawing overlays; can draw practically anything given the length
@@ -74,22 +77,22 @@ void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg);
 void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the number of characters drawn */
-int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg);
-int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg);
-int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text(const char *text, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_bios(const char *text, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_utf8(const char *text, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_charset(const void *text, charset_t set, int x, int y, uint32_t fg, uint32_t bg);
 
 /* return value is the length of text drawn
  * (so len - return is the number of spaces) */
-int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
-int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
-int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_bios_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg);
+int draw_text_utf8_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg);
 int draw_text_charset_len(const void *text, charset_t set, int len, int x, int y, uint32_t fg, uint32_t bg);
 
 void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg);
 
-void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
-			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);
+void draw_half_width_chars(
+	uint8_t c1, uint8_t c2, int x, int y, uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2);
 
 /* --------------------------------------------------------------------- */
 /* boxes */
@@ -135,19 +138,18 @@ void draw_sample_data(struct vgamem_overlay *r, struct song_sample *sample);
 /* this works like draw_sample_data, just without having to allocate a
  * song_sample structure, and without caching the waveform.
  * mostly it's just for the oscilloscope view. */
-void draw_sample_data_rect_32(struct vgamem_overlay *r, int32_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans);
-void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data, int length,
-	unsigned int inputchans, unsigned int outputchans);
-void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data, int length,
-	unsigned int inputchans, unsigned int outputchans);
+void draw_sample_data_rect_32(
+	struct vgamem_overlay *r, int32_t *data, int length, unsigned int inputchans, unsigned int outputchans);
+void draw_sample_data_rect_16(
+	struct vgamem_overlay *r, int16_t *data, int length, unsigned int inputchans, unsigned int outputchans);
+void draw_sample_data_rect_8(
+	struct vgamem_overlay *r, int8_t *data, int length, unsigned int inputchans, unsigned int outputchans);
 
 /* ------------------------------------------------------------ */
 /* I think these are the visualizers in the top right ... ? */
 
 /* draw-misc.c */
-void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
-		    int selected);
+void draw_thumb_bar(int x, int y, int width, int min, int max, int val, int selected);
 /* vu meter values should range from 0 to 64. the color is generally 5
  * unless the channel is disabled (in which case it's 1). impulse tracker
  * doesn't do peak color; st3 style, use color 4 (unless it's disabled,

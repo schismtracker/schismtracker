@@ -28,7 +28,11 @@ void GM_Pan(song_t *csf, int32_t ch, signed char val); // param: -128..+127
 //
 // Note that vibrato etc. are emulated by issuing multiple SetFreqAndVol
 // commands; they are not translated into MIDI vibrato operator calls.
-typedef enum { MIDI_BEND_NORMAL, MIDI_BEND_DOWN, MIDI_BEND_UP } MidiBendMode;
+typedef enum {
+	MIDI_BEND_NORMAL,
+	MIDI_BEND_DOWN,
+	MIDI_BEND_UP
+} MidiBendMode;
 void GM_SetFreqAndVol(song_t *csf, int32_t channel, int32_t Hertz, int32_t Vol, MidiBendMode bend_mode, int32_t keyoff);
 
 void GM_SendSongStartCode(song_t *csf);

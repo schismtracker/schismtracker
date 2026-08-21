@@ -33,8 +33,7 @@ struct tree {
 	treenode_t *root;
 };
 
-typedef void (*nodewalk_t) (treenode_t *node);
-
+typedef void (*nodewalk_t)(treenode_t *node);
 
 static void _treenode_walk(treenode_t *node, treewalk_t tapply, nodewalk_t napply)
 {
@@ -69,7 +68,6 @@ void tree_free(tree_t *tree, treewalk_t freeval)
 	_treenode_walk(tree->root, freeval, _treenode_free);
 	free(tree);
 }
-
 
 static treenode_t *_treenode_find(treenode_t *node, treecmp_t cmp, void *value)
 {
@@ -107,7 +105,6 @@ void tree_walk(tree_t *tree, treewalk_t apply)
 	_treenode_walk(tree->root, apply, NULL);
 }
 
-
 void *tree_insert(tree_t *tree, void *value)
 {
 	treenode_t *node = _treenode_find(tree->root, tree->cmp, value);
@@ -144,9 +141,6 @@ void *tree_find(tree_t *tree, void *value)
 	return node ? node->value : NULL;
 }
 
-
-
-
 #ifdef TEST
 struct node {
 	char *k, *v;
@@ -154,8 +148,7 @@ struct node {
 
 int sncmp(const void *a, const void *b)
 {
-	return strcmp(((struct node *) a)->k,
-		      ((struct node *) b)->k);
+	return strcmp(((struct node *)a)->k, ((struct node *)b)->k);
 }
 
 struct node *snalloc(char *k, char *v)
@@ -170,15 +163,15 @@ int main(int argc, char **argv)
 {
 	// some random junk
 	struct node nodes[] = {
-		{"caches", "disgruntled"},
-		{"logician", "daemon"},
-		{"silence", "rinse"},
-		{"shipwreck", "formats"},
-		{"justifying", "gnash"},
-		{"gadgetry", "ever"},
-		{"silence", "oxidized"}, // note: duplicate key
-		{"plumbing", "rickshaw"},
-		{NULL, NULL},
+		{"caches",     "disgruntled"},
+		{"logician",   "daemon"     },
+		{"silence",    "rinse"      },
+		{"shipwreck",  "formats"    },
+		{"justifying", "gnash"      },
+		{"gadgetry",   "ever"       },
+		{"silence",    "oxidized"   }, // note: duplicate key
+		{"plumbing",   "rickshaw"   },
+		{NULL,         NULL         },
 	};
 	struct node find;
 	struct node *p;
@@ -199,7 +192,6 @@ int main(int argc, char **argv)
 	printf("%s: %s (should be 'rinse')\n", p->k, p->v);
 	tree_free(tree, free);
 
-
 	// test 2: populate with tree_replace
 	tree = tree_alloc(sncmp);
 	for (n = 0; nodes[n].k; n++) {
@@ -218,4 +210,3 @@ int main(int argc, char **argv)
 	return 0;
 }
 #endif /* TEST */
-

@@ -27,16 +27,15 @@
 
 #define MMD0_ID "MMD0"
 
-struct MMD0
-{
-	/* 0 */  char     id[4];
-	/* 4 */  uint32_t modlen;
-	/* 8 */  uint32_t song_ptr; /* struct MMD0song */
+struct MMD0 {
+	/* 0 */ char id[4];
+	/* 4 */ uint32_t modlen;
+	/* 8 */ uint32_t song_ptr; /* struct MMD0song */
 	/* 12 */ uint16_t psecnum;    /* for the player routine, MMD2 only */
 	/* 14 */ uint16_t pseq;       /*  "   "   "   "    */
 	/* 16 */ uint32_t blockarr_ptr; /* struct MMD0Block *[] (array of pointers) */
-	/* 20 */ uint8_t  mmdflags;
-	/* 21 */ uint8_t  reserved[3];
+	/* 20 */ uint8_t mmdflags;
+	/* 21 */ uint8_t reserved[3];
 	/* 24 */ uint32_t smplarr_ptr; /* struct InstrHdr *[] (array of pointers) */
 	/* 28 */ uint32_t reserved2;
 	/* 32 */ uint32_t expdata_ptr; /* struct MMD0exp <-- song name is hiding in here */
@@ -45,13 +44,12 @@ struct MMD0
 	/* 42 */ uint16_t pblock;
 	/* 44 */ uint16_t pline;
 	/* 46 */ uint16_t pseqnum;
-	/* 48 */ int16_t  actplayline;
-	/* 50 */ uint8_t  counter;
-	/* 51 */ uint8_t  extra_songs; /* number of songs - 1 */
+	/* 48 */ int16_t actplayline;
+	/* 50 */ uint8_t counter;
+	/* 51 */ uint8_t extra_songs; /* number of songs - 1 */
 };
 
-struct MMD0exp
-{
+struct MMD0exp {
 	/*  0 */ uint32_t nextmod_ptr; /* struct MMD0 */
 	/*  4 */ uint32_t exp_smp_ptr; /* struct InstrExp */
 	/*  8 */ uint16_t s_ext_entries;
@@ -63,7 +61,7 @@ struct MMD0exp
 	/* 26 */ uint16_t i_ext_entrsz;
 	/* 28 */ uint32_t jumpmask;
 	/* 32 */ uint32_t rgbtable_ptr; /* uint16_t[] */
-	/* 36 */ uint8_t  channelsplit[4];
+	/* 36 */ uint8_t channelsplit[4];
 	/* 40 */ uint32_t n_info_ptr /* struct NotationInfo */;
 	/* 44 */ uint32_t songname_ptr; /* char[] */
 	/* 48 */ uint32_t songnamelen;
@@ -85,20 +83,19 @@ int fmt_med_read_info(dmoz_file_t *file, slurp_t *fp)
 	if (!slurp_could_seek(fp, 52, SEEK_CUR)) /* sizeof(hdr) */
 		return 0;
 
-	if ((slurp_read(fp, hdr.id, 4) != 4)
-			|| memcmp(hdr.id, MMD0_ID, 4))
+	if ((slurp_read(fp, hdr.id, 4) != 4) || memcmp(hdr.id, MMD0_ID, 4))
 		return 0;
 
 	if (slurp_seek(fp, 32, SEEK_SET)
-			|| (slurp_read(fp, &hdr.expdata_ptr, sizeof(hdr.expdata_ptr)) != sizeof(hdr.expdata_ptr)))
+		|| (slurp_read(fp, &hdr.expdata_ptr, sizeof(hdr.expdata_ptr)) != sizeof(hdr.expdata_ptr)))
 		return 0;
 
 	uint32_t exp_struct_ptr = bswapBE32(hdr.expdata_ptr);
 
 	if (!slurp_could_seek(fp, exp_struct_ptr + 84 /* sizeof(struct MMD0exp) */, SEEK_SET)
-			|| slurp_seek(fp, exp_struct_ptr + 44, SEEK_SET)
-			|| (slurp_read(fp, &exp.songname_ptr, sizeof(exp.songname_ptr)) != sizeof(exp.songname_ptr))
-			|| (slurp_read(fp, &exp.songnamelen, sizeof(exp.songnamelen)) != sizeof(exp.songnamelen)))
+		|| slurp_seek(fp, exp_struct_ptr + 44, SEEK_SET)
+		|| (slurp_read(fp, &exp.songname_ptr, sizeof(exp.songname_ptr)) != sizeof(exp.songname_ptr))
+		|| (slurp_read(fp, &exp.songnamelen, sizeof(exp.songnamelen)) != sizeof(exp.songnamelen)))
 		return 0;
 
 	uint32_t name_ptr = bswapBE32(exp.songname_ptr);
@@ -111,9 +108,8 @@ int fmt_med_read_info(dmoz_file_t *file, slurp_t *fp)
 
 	name_buffer[name_len] = 0;
 
-	if (!slurp_could_seek(fp, name_ptr + name_len, SEEK_SET)
-			|| slurp_seek(fp, name_ptr, SEEK_SET)
-			|| (slurp_read(fp, name_buffer, name_len) != name_len)) {
+	if (!slurp_could_seek(fp, name_ptr + name_len, SEEK_SET) || slurp_seek(fp, name_ptr, SEEK_SET)
+		|| (slurp_read(fp, name_buffer, name_len) != name_len)) {
 		free(name_buffer);
 		return 0;
 	}
@@ -123,4 +119,3 @@ int fmt_med_read_info(dmoz_file_t *file, slurp_t *fp)
 	file->type = TYPE_MODULE_MOD; // err, more like XM for Amiga
 	return 1;
 }
-

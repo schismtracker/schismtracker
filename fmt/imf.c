@@ -23,10 +23,10 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
-#include "log.h"
 #include "fmt.h"
+#include "log.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -37,8 +37,7 @@ int fmt_imf_read_info(dmoz_file_t *file, slurp_t *fp)
 	unsigned char magic[4], title[32];
 
 	slurp_seek(fp, 60, SEEK_SET);
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "IM10", sizeof(magic)))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "IM10", sizeof(magic)))
 		return 0;
 
 	slurp_seek(fp, 0, SEEK_SET);
@@ -64,7 +63,11 @@ struct imf_channel {
 static int imf_read_channel(struct imf_channel *chn, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &chn->name, sizeof(chn->name)) != sizeof(chn->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &chn->name, sizeof(chn->name)) != sizeof(chn->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(name);
 	READ_VALUE(chorus);
@@ -97,7 +100,11 @@ struct imf_header {
 static int imf_read_header(struct imf_header *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(title);
 	READ_VALUE(ordnum);
@@ -126,7 +133,7 @@ static int imf_read_header(struct imf_header *hdr, slurp_t *fp)
 	hdr->ordnum = bswapLE16(hdr->ordnum);
 	hdr->patnum = bswapLE16(hdr->patnum);
 	hdr->insnum = bswapLE16(hdr->insnum);
-	hdr->flags  = bswapLE16(hdr->flags);
+	hdr->flags = bswapLE16(hdr->flags);
 
 	return 1;
 }
@@ -149,7 +156,11 @@ struct imf_env {
 static int imf_read_env(struct imf_env *env, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &env->name, sizeof(env->name)) != sizeof(env->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &env->name, sizeof(env->name)) != sizeof(env->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(points);
 	READ_VALUE(sustain);
@@ -171,14 +182,18 @@ struct imf_envnodes {
 static int imf_read_envnodes(struct imf_envnodes *envn, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &envn->name, sizeof(envn->name)) != sizeof(envn->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &envn->name, sizeof(envn->name)) != sizeof(envn->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(tick);
 	READ_VALUE(value);
 
 #undef READ_VALUE
 
-	envn->tick  = bswapLE16(envn->tick);
+	envn->tick = bswapLE16(envn->tick);
 	envn->value = bswapLE16(envn->value);
 
 	return 1;
@@ -198,7 +213,11 @@ struct imf_instrument {
 static int imf_read_instrument(struct imf_instrument *inst, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &inst->name, sizeof(inst->name)) != sizeof(inst->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &inst->name, sizeof(inst->name)) != sizeof(inst->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(name);
 	READ_VALUE(map);
@@ -224,7 +243,7 @@ static int imf_read_instrument(struct imf_instrument *inst, slurp_t *fp)
 		return 0;
 
 	inst->fadeout = bswapLE16(inst->fadeout);
-	inst->smpnum  = bswapLE16(inst->smpnum);
+	inst->smpnum = bswapLE16(inst->smpnum);
 
 	return 1;
 }
@@ -249,7 +268,11 @@ struct imf_sample {
 static int imf_read_sample(struct imf_sample *smpl, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	do { if (slurp_read(fp, &smpl->name, sizeof(smpl->name)) != sizeof(smpl->name)) { return 0; } } while (0)
+	do { \
+		if (slurp_read(fp, &smpl->name, sizeof(smpl->name)) != sizeof(smpl->name)) { \
+			return 0; \
+		} \
+	} while (0)
 
 	READ_VALUE(name);
 	slurp_seek(fp, 3, SEEK_CUR);
@@ -271,12 +294,12 @@ static int imf_read_sample(struct imf_sample *smpl, slurp_t *fp)
 	if (memcmp(smpl->is10, "IS10", 4))
 		return 0;
 
-	smpl->length     = bswapLE32(smpl->length);
+	smpl->length = bswapLE32(smpl->length);
 	smpl->loop_start = bswapLE32(smpl->loop_start);
-	smpl->loop_end   = bswapLE32(smpl->loop_end);
-	smpl->c5speed    = bswapLE32(smpl->c5speed);
+	smpl->loop_end = bswapLE32(smpl->loop_end);
+	smpl->c5speed = bswapLE32(smpl->c5speed);
 
-	smpl->ems  = bswapLE16(smpl->ems);
+	smpl->ems = bswapLE16(smpl->ems);
 	smpl->dram = bswapLE32(smpl->dram);
 
 	return 1;
@@ -403,13 +426,21 @@ static void import_imf_effect(song_note_t *note)
 			switch (note->param & 0x0F) {
 				/* predicament: we can only disable one envelope at a time.
 				volume is probably most noticeable, so let's go with that. */
-			case 0: note->param = 0x77; break;
+			case 0:
+				note->param = 0x77;
+				break;
 				// Volume
-			case 1: note->param = 0x77; break;
+			case 1:
+				note->param = 0x77;
+				break;
 				// Panning
-			case 2: note->param = 0x79; break;
+			case 2:
+				note->param = 0x79;
+				break;
 				// Filter
-			case 3: note->param = 0x7B; break;
+			case 3:
+				note->param = 0x7B;
+				break;
 			}
 			break;
 		case 0x18: // sample offset
@@ -535,10 +566,9 @@ static int load_imf_pattern(song_t *song, int pat, uint32_t ignore_channels, slu
 	return lostfx;
 }
 
-
 static unsigned int envflags[3][3] = {
-	{ENV_VOLUME,             ENV_VOLSUSTAIN,   ENV_VOLLOOP},
-	{ENV_PANNING,            ENV_PANSUSTAIN,   ENV_PANLOOP},
+	{ENV_VOLUME,             ENV_VOLSUSTAIN,   ENV_VOLLOOP  },
+	{ENV_PANNING,            ENV_PANSUSTAIN,   ENV_PANLOOP  },
 	{ENV_PITCH | ENV_FILTER, ENV_PITCHSUSTAIN, ENV_PITCHLOOP},
 };
 
@@ -569,7 +599,6 @@ static void load_imf_envelope(song_instrument_t *ins, song_envelope_t *env, stru
 	if (imfins->env[e].flags & 4)
 		ins->flags |= envflags[e][2];
 }
-
 
 int fmt_imf_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 {
@@ -741,4 +770,3 @@ int fmt_imf_load_song(song_t *song, slurp_t *fp, SCHISM_UNUSED uint32_t lflags)
 
 	return LOAD_SUCCESS;
 }
-

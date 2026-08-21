@@ -22,8 +22,8 @@
  */
 
 #include "headers.h"
-#include "osdefs.h"
 #include "events.h"
+#include "osdefs.h"
 #include "video.h"
 
 #include "init.h"
@@ -76,32 +76,38 @@ int x11_event(schism_event_t *event)
 			supportedFormats[0] = XA_TARGETS;
 			mime_formats = 1;
 			for (i = 0; i < X11_CLIPBOARD_MIME_TYPE_MAX_; i++)
-				supportedFormats[mime_formats++] = x11_get_cut_buffer_external_fmt(wm_data.data.x11.display, i);
-			X11_XChangeProperty(wm_data.data.x11.display, event->wm_msg.msg.x11.event.selection_request.requestor,
-								event->wm_msg.msg.x11.event.selection_request.property,
-								XA_ATOM, 32, PropModeReplace,
-								(unsigned char *)supportedFormats,
-								mime_formats);
+				supportedFormats[mime_formats++]
+					= x11_get_cut_buffer_external_fmt(wm_data.data.x11.display, i);
+			X11_XChangeProperty(wm_data.data.x11.display,
+				event->wm_msg.msg.x11.event.selection_request.requestor,
+				event->wm_msg.msg.x11.event.selection_request.property, XA_ATOM, 32, PropModeReplace,
+				(unsigned char *)supportedFormats, mime_formats);
 			sevent.xselection.property = event->wm_msg.msg.x11.event.selection_request.property;
 			sevent.xselection.target = XA_TARGETS;
 		} else {
 			for (i = 0; i < X11_CLIPBOARD_MIME_TYPE_MAX_; ++i) {
-				if (x11_get_cut_buffer_external_fmt(wm_data.data.x11.display, i) != event->wm_msg.msg.x11.event.selection_request.target)
+				if (x11_get_cut_buffer_external_fmt(wm_data.data.x11.display, i)
+					!= event->wm_msg.msg.x11.event.selection_request.target)
 					continue;
 
-				if (X11_XGetWindowProperty(wm_data.data.x11.display, DefaultRootWindow(wm_data.data.x11.display),
-										   x11_get_cut_buffer_type(wm_data.data.x11.display, i, event->wm_msg.msg.x11.event.selection_request.selection),
-										   0, INT_MAX / 4, False,
-										   x11_get_cut_buffer_internal_fmt(wm_data.data.x11.display, i),
-										   &sevent.xselection.target, &seln_format, &nbytes,
-										   &overflow, &seln_data) == Success) {
+				if (X11_XGetWindowProperty(wm_data.data.x11.display,
+					    DefaultRootWindow(wm_data.data.x11.display),
+					    x11_get_cut_buffer_type(wm_data.data.x11.display, i,
+						    event->wm_msg.msg.x11.event.selection_request.selection),
+					    0, INT_MAX / 4, False,
+					    x11_get_cut_buffer_internal_fmt(wm_data.data.x11.display, i),
+					    &sevent.xselection.target, &seln_format, &nbytes, &overflow, &seln_data)
+					== Success) {
 					if (seln_format != None) {
-						X11_XChangeProperty(wm_data.data.x11.display, event->wm_msg.msg.x11.event.selection_request.requestor,
-											event->wm_msg.msg.x11.event.selection_request.property,
-											event->wm_msg.msg.x11.event.selection_request.target, 8, PropModeReplace,
-											seln_data, nbytes);
-						sevent.xselection.property = event->wm_msg.msg.x11.event.selection_request.property;
-						sevent.xselection.target = event->wm_msg.msg.x11.event.selection_request.target;
+						X11_XChangeProperty(wm_data.data.x11.display,
+							event->wm_msg.msg.x11.event.selection_request.requestor,
+							event->wm_msg.msg.x11.event.selection_request.property,
+							event->wm_msg.msg.x11.event.selection_request.target, 8,
+							PropModeReplace, seln_data, nbytes);
+						sevent.xselection.property
+							= event->wm_msg.msg.x11.event.selection_request.property;
+						sevent.xselection.target
+							= event->wm_msg.msg.x11.event.selection_request.target;
 						X11_XFree(seln_data);
 						break;
 					} else {
@@ -110,7 +116,8 @@ int x11_event(schism_event_t *event)
 				}
 			}
 		}
-		X11_XSendEvent(wm_data.data.x11.display, event->wm_msg.msg.x11.event.selection_request.requestor, False, 0, &sevent);
+		X11_XSendEvent(wm_data.data.x11.display, event->wm_msg.msg.x11.event.selection_request.requestor, False,
+			0, &sevent);
 		X11_XSync(wm_data.data.x11.display, False);
 		break;
 	}

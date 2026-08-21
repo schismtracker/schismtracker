@@ -20,19 +20,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 /* Win32 directsound backend */
 
 #define COBJMACROS
 
 #include "headers.h"
-#include "charset.h"
-#include "mt.h"
-#include "mem.h"
-#include "osdefs.h"
-#include "loadso.h"
-#include "video.h" /* video_get_wm_data */
 #include "backend/audio.h"
+#include "charset.h"
+#include "loadso.h"
+#include "mem.h"
+#include "mt.h"
+#include "osdefs.h"
+#include "video.h" /* video_get_wm_data */
 
 /* request compatibility with DirectX 5 */
 #define DIRECTSOUND_VERSION 0x0500
@@ -53,13 +53,13 @@
 
 /* #define COMPILE_POSITION_NOTIFY */
 
-static HRESULT (WINAPI *DSOUND_DirectSoundCreate)(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN pUnkOuter) = NULL;
+static HRESULT(WINAPI *DSOUND_DirectSoundCreate)(LPGUID lpGuid, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter) = NULL;
 
 /* https://source.winehq.org/WineAPI/dsound.html */
 #ifdef SCHISM_WIN32_COMPILE_ANSI
-static HRESULT (WINAPI *DSOUND_DirectSoundEnumerateA)(LPDSENUMCALLBACKA lpDSEnumCallback, LPVOID lpContext) = NULL;
+static HRESULT(WINAPI *DSOUND_DirectSoundEnumerateA)(LPDSENUMCALLBACKA lpDSEnumCallback, LPVOID lpContext) = NULL;
 #endif
-static HRESULT (WINAPI *DSOUND_DirectSoundEnumerateW)(LPDSENUMCALLBACKW lpDSEnumCallback, LPVOID lpContext) = NULL;
+static HRESULT(WINAPI *DSOUND_DirectSoundEnumerateW)(LPDSENUMCALLBACKW lpDSEnumCallback, LPVOID lpContext) = NULL;
 
 struct schism_audio_device {
 	struct schism_audio_device_simple simple;
@@ -149,8 +149,7 @@ static inline void _dsound_device_append(LPGUID lpguid, char *name)
 		}
 
 		DSCAPS caps = {.dwSize = sizeof(DSCAPS)};
-		if (IDirectSound_GetCaps(dsound, &caps) != DS_OK
-			|| (caps.dwFlags & DSCAPS_EMULDRIVER)) {
+		if (IDirectSound_GetCaps(dsound, &caps) != DS_OK || (caps.dwFlags & DSCAPS_EMULDRIVER)) {
 			free(name);
 			IDirectSound_Release(dsound);
 			return;
@@ -178,17 +177,19 @@ static inline void _dsound_device_append(LPGUID lpguid, char *name)
 
 /* We need two different callbacks for ANSI and UNICODE variants */
 #define DSOUND_ENUMERATE_CALLBACK_VARIANT(type, charset, suffix) \
-	static BOOL CALLBACK _dsound_enumerate_callback_##suffix(LPGUID lpGuid, type lpcstrDescription, SCHISM_UNUSED type lpcstrModule, SCHISM_UNUSED LPVOID lpContext) \
+	static BOOL CALLBACK _dsound_enumerate_callback_##suffix(LPGUID lpGuid, type lpcstrDescription, \
+		SCHISM_UNUSED type lpcstrModule, SCHISM_UNUSED LPVOID lpContext) \
 	{ \
 		if (lpGuid != NULL) { \
 			char *name = NULL; \
-	\
-			if (win32_audio_lookup_device_name(lpGuid, NULL, &name) || !charset_iconv(lpcstrDescription, &name, charset, CHARSET_UTF8, SIZE_MAX)) \
+\
+			if (win32_audio_lookup_device_name(lpGuid, NULL, &name) \
+				|| !charset_iconv(lpcstrDescription, &name, charset, CHARSET_UTF8, SIZE_MAX)) \
 				_dsound_device_append(lpGuid, name); \
-	\
+\
 			/* device list takes ownership of `name` */ \
 		} \
-	\
+\
 		return TRUE; \
 	}
 
@@ -248,8 +249,7 @@ static void dsound_audio_quit_driver(void)
 
 /* -------------------------------------------------------- */
 
-static void *_dsound_audio_get_buffer(schism_audio_device_t *dev,
-	size_t *buflen)
+static void *_dsound_audio_get_buffer(schism_audio_device_t *dev, size_t *buflen)
 {
 	HRESULT res;
 	DWORD dw, xyzzy;
@@ -257,10 +257,12 @@ static void *_dsound_audio_get_buffer(schism_audio_device_t *dev,
 	dev->last_chunk = dev->cursor;
 	dev->cursor = (dev->cursor + 1) % NUM_CHUNKS;
 
-	res = IDirectSoundBuffer_Lock(dev->lpbuffer, dev->cursor * dev->size, dev->size, &dev->buf, &dw, NULL, &xyzzy, 0);
+	res = IDirectSoundBuffer_Lock(
+		dev->lpbuffer, dev->cursor * dev->size, dev->size, &dev->buf, &dw, NULL, &xyzzy, 0);
 	if (res == DSERR_BUFFERLOST) {
 		IDirectSoundBuffer_Restore(dev->lpbuffer);
-		res = IDirectSoundBuffer_Lock(dev->lpbuffer, dev->cursor * dev->size, dev->size, &dev->buf, &dw, NULL, &xyzzy, 0);
+		res = IDirectSoundBuffer_Lock(
+			dev->lpbuffer, dev->cursor * dev->size, dev->size, &dev->buf, &dw, NULL, &xyzzy, 0);
 	}
 	if (res != DS_OK)
 		return NULL;
@@ -388,7 +390,8 @@ static int _dsound_dx6_init_notify_position(schism_audio_device_t *dev)
 		notify_positions[i].hEventNotify = dev->event;
 	}
 
-	if (IDirectSoundNotify_SetNotificationPositions(notify, ARRAY_SIZE(notify_positions), notify_positions) != DS_OK)
+	if (IDirectSoundNotify_SetNotificationPositions(notify, ARRAY_SIZE(notify_positions), notify_positions)
+		!= DS_OK)
 		goto done;
 
 	res = 0;
@@ -402,7 +405,8 @@ done:
 #endif
 
 /* nonzero on success */
-static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *dsound_audio_open_device(
+	uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	/* If no device is specified pass NULL to DirectSoundCreate */
 	LPGUID guid = (id != AUDIO_BACKEND_DEFAULT) ? &devices[id].guid : NULL;
@@ -416,10 +420,16 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 
 	/* filter invalid bps values (should never happen, but eh...) */
 	switch (desired->bits) {
-	case 8: format.wBitsPerSample = 8; break;
+	case 8:
+		format.wBitsPerSample = 8;
+		break;
 	default:
-	case 16: format.wBitsPerSample = 16; break;
-	case 32: format.wBitsPerSample = 32; break;
+	case 16:
+		format.wBitsPerSample = 16;
+		break;
+	case 32:
+		format.wBitsPerSample = 32;
+		break;
 	}
 
 	/* ok, now allocate */
@@ -451,9 +461,9 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 		.dwSize = sizeof(DSBUFFERDESC),
 		.dwFlags = DSBCAPS_GLOBALFOCUS | DSBCAPS_STATIC | DSBCAPS_GETCURRENTPOSITION2
 #ifdef COMPILE_POSITION_NOTIFY
-			| DSBCAPS_CTRLPOSITIONNOTIFY
+			   | DSBCAPS_CTRLPOSITIONNOTIFY
 #endif
-			,
+		,
 		.lpwfxFormat = &format,
 	};
 
@@ -476,7 +486,7 @@ static schism_audio_device_t *dsound_audio_open_device(uint32_t id, const schism
 		if (err == DS_OK) {
 			break;
 		} else if (err == DSERR_BADFORMAT || err == DSERR_INVALIDPARAM /* Win2K */) {
-DS_badformat:
+		DS_badformat:
 			if (format.wBitsPerSample == 32) {
 				/* Retry again, with 16-bit audio. 32-bit audio doesn't seem
 				 * to work on Win2k at all... */
@@ -519,7 +529,9 @@ DS_badformat:
 		LPVOID ptr1, ptr2;
 		DWORD bytes1, bytes2;
 
-		if (IDirectSoundBuffer_Lock(dev->lpbuffer, 0, dsformat.dwBufferBytes, &ptr1, &bytes1, &ptr2, &bytes2, DSBLOCK_ENTIREBUFFER) == DS_OK) {
+		if (IDirectSoundBuffer_Lock(dev->lpbuffer, 0, dsformat.dwBufferBytes, &ptr1, &bytes1, &ptr2, &bytes2,
+			    DSBLOCK_ENTIREBUFFER)
+			== DS_OK) {
 			memset(ptr1, AUDIO_SPEC_SILENCE(*obtained), bytes1);
 			IDirectSoundBuffer_Unlock(dev->lpbuffer, ptr1, bytes1, ptr2, bytes2);
 		}
@@ -527,10 +539,12 @@ DS_badformat:
 
 	if (audio_simple_init(dev,
 #ifdef COMPILE_POSITION_NOTIFY
-			((dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) && !_dsound_dx6_init_notify_position(dev))
-				? &dsound_dx6_vtbl :
+		    ((dsformat.dwFlags & DSBCAPS_CTRLPOSITIONNOTIFY) && !_dsound_dx6_init_notify_position(dev))
+			    ? &dsound_dx6_vtbl
+			    :
 #endif
-				&dsound_dx5_vtbl, desired->callback, AUDIO_SPEC_SILENCE(*desired)))
+			    &dsound_dx5_vtbl,
+		    desired->callback, AUDIO_SPEC_SILENCE(*desired)))
 		goto fail;
 
 	return dev;
@@ -571,8 +585,8 @@ static void dsound_audio_close_device(schism_audio_device_t *dev)
 static void *lib_ole32 = NULL;
 static void *lib_dsound = NULL;
 
-static HRESULT (WINAPI *OLE32_CoInitializeEx)(LPVOID, DWORD) = NULL;
-static void (WINAPI *OLE32_CoUninitialize)(void) = NULL;
+static HRESULT(WINAPI *OLE32_CoInitializeEx)(LPVOID, DWORD) = NULL;
+static void(WINAPI *OLE32_CoUninitialize)(void) = NULL;
 
 static IKsPropertySet *dsound_propset = NULL;
 
@@ -617,10 +631,12 @@ static int dsound_audio_init(void)
 	dsound_propset = NULL;
 
 	/* wuh? */
-	HRESULT (WINAPI *DSOUND_DllGetClassObject)(REFCLSID, REFIID, LPVOID *) = loadso_function_load(lib_dsound, "DllGetClassObject");
+	HRESULT(WINAPI * DSOUND_DllGetClassObject)(REFCLSID, REFIID, LPVOID *)
+		= loadso_function_load(lib_dsound, "DllGetClassObject");
 	if (DSOUND_DllGetClassObject) {
 		IClassFactory *factory;
-		if (SUCCEEDED(DSOUND_DllGetClassObject(&CLSID_DirectSoundPrivate, &IID_IClassFactory, (LPVOID *)&factory)))
+		if (SUCCEEDED(DSOUND_DllGetClassObject(
+			    &CLSID_DirectSoundPrivate, &IID_IClassFactory, (LPVOID *)&factory)))
 			IClassFactory_CreateInstance(factory, NULL, &IID_IKsPropertySet, (LPVOID *)&dsound_propset);
 	}
 
@@ -693,53 +709,65 @@ struct dsound_audio_lookup_callback_data {
 };
 
 #define WIN32_DSOUND_AUDIO_LOOKUP_WAVEOUT_NAME_IMPL(AorW, TYPE, CHARSET) \
-	static BOOL CALLBACK dsound_enumerate_lookup_device_callback_##AorW##_(LPGUID lpGuid, const TYPE *lpcstrDescription, SCHISM_UNUSED const TYPE *lpcstrModule, LPVOID lpContext) \
+	static BOOL CALLBACK dsound_enumerate_lookup_device_callback_##AorW##_(LPGUID lpGuid, \
+		const TYPE *lpcstrDescription, SCHISM_UNUSED const TYPE *lpcstrModule, LPVOID lpContext) \
 	{ \
 		struct dsound_audio_lookup_callback_data *data = lpContext; \
-	\
+\
 		if (lpGuid && !memcmp(lpGuid, &data->guid, sizeof(GUID))) { \
 			data->result = charset_iconv_easy(lpcstrDescription, CHARSET, CHARSET_UTF8); \
 			return FALSE; \
 		} \
-	\
+\
 		return TRUE; \
 	} \
-	\
-	static BOOL CALLBACK dsound_enumerate_lookup_description_callback_##AorW##_(PDSPROPERTY_DIRECTSOUNDDEVICE_DESCRIPTION_##AorW##_DATA pdata, LPVOID puserdata) \
+\
+	static BOOL CALLBACK dsound_enumerate_lookup_description_callback_##AorW##_( \
+		PDSPROPERTY_DIRECTSOUNDDEVICE_DESCRIPTION_##AorW##_DATA pdata, LPVOID puserdata) \
 	{ \
 		struct dsound_audio_lookup_callback_data *pcbdata = puserdata; \
-	\
+\
 		if (pdata && (pdata->WaveDeviceId == pcbdata->id)) { \
 			memcpy(&pcbdata->guid, &pdata->DeviceId, sizeof(GUID)); \
-			if (pdata->Description) pcbdata->result = charset_iconv_easy(pdata->Description, CHARSET, CHARSET_ANSI); \
+			if (pdata->Description) \
+				pcbdata->result = charset_iconv_easy(pdata->Description, CHARSET, CHARSET_ANSI); \
 			return FALSE; \
 		} \
-	\
+\
 		return TRUE; \
 	} \
-	\
-	static inline int SCHISM_ALWAYS_INLINE win32_dsound_audio_lookup_waveout_name_##AorW(uint32_t waveoutdevid, char **result) \
+\
+	static inline int SCHISM_ALWAYS_INLINE win32_dsound_audio_lookup_waveout_name_##AorW( \
+		uint32_t waveoutdevid, char **result) \
 	{ \
 		ULONG ulxyzzy; \
-	\
+\
 		if (!DSOUND_DirectSoundEnumerate##AorW) \
 			return 0; \
-	\
-		struct dsound_audio_lookup_callback_data cbdata = { .id = waveoutdevid }; \
-	\
+\
+		struct dsound_audio_lookup_callback_data cbdata = {.id = waveoutdevid}; \
+\
 		DSPROPERTY_DIRECTSOUNDDEVICE_ENUMERATE_##AorW##_DATA data = { \
 			.Callback = dsound_enumerate_lookup_description_callback_##AorW##_, \
 			.Context = &cbdata, \
 		}; \
-	\
-		if (SUCCEEDED(IKsPropertySet_Get(dsound_propset, &DSPROPSETID_DirectSoundDevice, DSPROPERTY_DIRECTSOUNDDEVICE_ENUMERATE_##AorW, &data, sizeof(data), &data, sizeof(data), &ulxyzzy))) { \
+\
+		if (SUCCEEDED(IKsPropertySet_Get(dsound_propset, &DSPROPSETID_DirectSoundDevice, \
+			    DSPROPERTY_DIRECTSOUNDDEVICE_ENUMERATE_##AorW, &data, sizeof(data), &data, sizeof(data), \
+			    &ulxyzzy))) { \
 			/* we don't need to enumerate twice if we already received the result */ \
-			if (cbdata.result) { *result = cbdata.result; return 1; } \
-	\
+			if (cbdata.result) { \
+				*result = cbdata.result; \
+				return 1; \
+			} \
+\
 			DSOUND_DirectSoundEnumerate##AorW(dsound_enumerate_lookup_device_callback_##AorW##_, &cbdata); \
-			if (cbdata.result) { *result = cbdata.result; return 1; } \
+			if (cbdata.result) { \
+				*result = cbdata.result; \
+				return 1; \
+			} \
 		} \
-	\
+\
 		return 0; \
 	}
 
@@ -755,9 +783,7 @@ int win32_dsound_audio_lookup_waveout_name(const uint32_t *waveoutdevid, char **
 	if (!waveoutdevid || !dsound_propset)
 		return 0;
 
-	SCHISM_ANSI_UNICODE({
-		return win32_dsound_audio_lookup_waveout_name_A(*waveoutdevid, result);
-	}, {
-		return win32_dsound_audio_lookup_waveout_name_W(*waveoutdevid, result);
-	})
+	SCHISM_ANSI_UNICODE(
+		{ return win32_dsound_audio_lookup_waveout_name_A(*waveoutdevid, result); },
+		{ return win32_dsound_audio_lookup_waveout_name_W(*waveoutdevid, result); })
 }

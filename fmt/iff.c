@@ -44,7 +44,10 @@ int iff_chunk_peek_ex(iff_chunk_t *chunk, slurp_t *fp, uint32_t flags)
 		return 0;
 
 	/* align the offset on a word boundary if desired */
-	return (slurp_seek(fp, (flags & IFF_CHUNK_ALIGNED) ? ((chunk->size + UINT32_C(1)) & ~UINT32_C(1)) : (chunk->size), SEEK_CUR) == 0);
+	return (slurp_seek(fp,
+			(flags & IFF_CHUNK_ALIGNED) ? ((chunk->size + UINT32_C(1)) & ~UINT32_C(1)) : (chunk->size),
+			SEEK_CUR)
+		== 0);
 }
 
 /* returns the amount of bytes read or zero on error
@@ -152,16 +155,15 @@ int iff_read_xtra_chunk(slurp_t *fp, song_sample_t *smp)
 	return 1;
 }
 
-static inline SCHISM_ALWAYS_INLINE int iff_read_smpl_loop_chunk(slurp_t *fp, uint32_t loopflag, uint32_t bidiflag, uint32_t *loopstart, uint32_t *loopend, uint32_t *flags)
+static inline SCHISM_ALWAYS_INLINE int iff_read_smpl_loop_chunk(
+	slurp_t *fp, uint32_t loopflag, uint32_t bidiflag, uint32_t *loopstart, uint32_t *loopend, uint32_t *flags)
 {
 	uint32_t type, start, end;
 
 	/* skip "samplerData" and "identifier" */
 	slurp_seek(fp, 8, SEEK_CUR);
 
-	if (slurp_read(fp, &type, 4) != 4
-		|| slurp_read(fp, &start, 4) != 4
-		|| slurp_read(fp, &end, 4) != 4)
+	if (slurp_read(fp, &type, 4) != 4 || slurp_read(fp, &start, 4) != 4 || slurp_read(fp, &end, 4) != 4)
 		return 0;
 	type = bswapLE32(type);
 	start = bswapLE32(start);
@@ -204,11 +206,13 @@ int iff_read_smpl_chunk(slurp_t *fp, song_sample_t *smp)
 
 	/* sustain loop */
 	if (num_loops >= 2
-		&& !iff_read_smpl_loop_chunk(fp, CHN_SUSTAINLOOP, CHN_PINGPONGSUSTAIN, &smp->sustain_start, &smp->sustain_end, &smp->flags))
+		&& !iff_read_smpl_loop_chunk(
+			fp, CHN_SUSTAINLOOP, CHN_PINGPONGSUSTAIN, &smp->sustain_start, &smp->sustain_end, &smp->flags))
 		return 0;
 
 	if (num_loops >= 1
-		&& !iff_read_smpl_loop_chunk(fp, CHN_LOOP, CHN_PINGPONGLOOP, &smp->loop_start, &smp->loop_end, &smp->flags))
+		&& !iff_read_smpl_loop_chunk(
+			fp, CHN_LOOP, CHN_PINGPONGLOOP, &smp->loop_start, &smp->loop_end, &smp->flags))
 		return 0;
 
 	return 1;
@@ -267,8 +271,8 @@ void iff_fill_xtra_chunk(song_sample_t *smp, unsigned char xtra_data[IFF_XTRA_CH
 	*length = IFF_XTRA_CHUNK_SIZE;
 }
 
-static inline SCHISM_ALWAYS_INLINE void iff_fill_smpl_chunk_loop(unsigned char smpl_data[IFF_SMPL_CHUNK_SIZE], uint32_t *offset,
-	uint32_t loop_start, uint32_t loop_end, int bidi)
+static inline SCHISM_ALWAYS_INLINE void iff_fill_smpl_chunk_loop(unsigned char smpl_data[IFF_SMPL_CHUNK_SIZE],
+	uint32_t *offset, uint32_t loop_start, uint32_t loop_end, int bidi)
 {
 	uint32_t dw;
 
@@ -350,10 +354,12 @@ void iff_fill_smpl_chunk(song_sample_t *smp, unsigned char smpl_data[IFF_SMPL_CH
 	offset += 4;
 
 	if (write_sustain_loop)
-		iff_fill_smpl_chunk_loop(smpl_data, &offset, smp->sustain_start, smp->sustain_end, !!(smp->flags & CHN_PINGPONGSUSTAIN));
+		iff_fill_smpl_chunk_loop(
+			smpl_data, &offset, smp->sustain_start, smp->sustain_end, !!(smp->flags & CHN_PINGPONGSUSTAIN));
 
 	if (write_loop) {
-		iff_fill_smpl_chunk_loop(smpl_data, &offset, smp->loop_start, smp->loop_end, !!(smp->flags & CHN_PINGPONGLOOP));
+		iff_fill_smpl_chunk_loop(
+			smpl_data, &offset, smp->loop_start, smp->loop_end, !!(smp->flags & CHN_PINGPONGLOOP));
 	} else if (write_sustain_loop) {
 		/* legendary hackaround from OpenMPT:
 		 *

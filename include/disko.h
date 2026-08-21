@@ -96,7 +96,6 @@ int disko_memclose(disko_t *f, int free_buffer);
  * that :) */
 int disko_memopen_estimate(disko_t *ds, size_t estimated_size);
 
-
 /* copy a pattern into a sample */
 int disko_writeout_sample(int smpnum, int pattern, int bind);
 
@@ -115,8 +114,6 @@ int disko_export_song(const char *filename, const struct save_format *format);
 /* call periodically if (status.flags & DISKWRITER_ACTIVE) to write more stuff.
 return: DW_SYNC_*, self explanatory */
 int disko_sync(void);
-
-
 
 /* For use by the diskwriter drivers: */
 

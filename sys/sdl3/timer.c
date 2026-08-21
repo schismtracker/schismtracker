@@ -22,22 +22,22 @@
  */
 
 #include "headers.h"
-#include "mt.h"
-#include "mem.h"
 #include "backend/timer.h"
+#include "mem.h"
+#include "mt.h"
 
 #include "init.h"
 
 /* apparently this has a memleak, and it's taking over valgrind output. */
 #define SDL3_ENABLE_TIMER_WITH_MEMLEAK 1
 
-static void (SDLCALL *sdl3_Delay)(uint32_t ms) = NULL;
-static void (SDLCALL *sdl3_DelayNS)(uint64_t ns) = NULL;
+static void(SDLCALL *sdl3_Delay)(uint32_t ms) = NULL;
+static void(SDLCALL *sdl3_DelayNS)(uint64_t ns) = NULL;
 
-static uint64_t (SDLCALL *sdl3_GetTicks)(void) = NULL;
-static uint64_t (SDLCALL *sdl3_GetTicksNS)(void) = NULL;
+static uint64_t(SDLCALL *sdl3_GetTicks)(void) = NULL;
+static uint64_t(SDLCALL *sdl3_GetTicksNS)(void) = NULL;
 
-static SDL_TimerID (SDLCALL *sdl3_AddTimer)(uint32_t ms, SDL_TimerCallback callback, void *param);
+static SDL_TimerID(SDLCALL *sdl3_AddTimer)(uint32_t ms, SDL_TimerCallback callback, void *param);
 
 static timer_ticks_t sdl3_timer_ticks(void)
 {
@@ -68,8 +68,8 @@ struct _sdl3_timer_oneshot_curry {
 	void *param;
 };
 
-static uint32_t SDLCALL _sdl3_timer_oneshot_callback(void *param,
-	SCHISM_UNUSED SDL_TimerID timerID, SCHISM_UNUSED uint32_t interval)
+static uint32_t SDLCALL _sdl3_timer_oneshot_callback(
+	void *param, SCHISM_UNUSED SDL_TimerID timerID, SCHISM_UNUSED uint32_t interval)
 {
 	struct _sdl3_timer_oneshot_curry *curry = (struct _sdl3_timer_oneshot_curry *)param;
 
@@ -79,8 +79,7 @@ static uint32_t SDLCALL _sdl3_timer_oneshot_callback(void *param,
 	return 0;
 }
 
-static int sdl3_timer_oneshot(uint32_t interval, void (*callback)(void *param),
-	void *param)
+static int sdl3_timer_oneshot(uint32_t interval, void (*callback)(void *param), void *param)
 {
 	struct _sdl3_timer_oneshot_curry *curry = mem_alloc(sizeof(*curry));
 

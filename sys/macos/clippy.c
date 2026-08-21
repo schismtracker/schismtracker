@@ -24,13 +24,13 @@
 #include "headers.h"
 
 #include "backend/clippy.h"
-#include "loadso.h"
 #include "charset.h"
+#include "loadso.h"
 #include "mem.h"
 #include "util.h"
 
-#include <Scrap.h>
 #include <Memory.h>
+#include <Scrap.h>
 
 /* Since I've implemented clipboard support between instances,
  * we now officially implement the clipboard better than the
@@ -94,8 +94,7 @@ static char *macos_clippy_get_clipboard(void)
 			HLock(hdata);
 			((unsigned char *)hdata)[size] = 0;
 			/* convert system script to UTF-8 */
-			data = charset_iconv_easy(*hdata, CHARSET_SYSTEMSCRIPT,
-				CHARSET_UTF8);
+			data = charset_iconv_easy(*hdata, CHARSET_SYSTEMSCRIPT, CHARSET_UTF8);
 			/* convert macintosh newlines to unix newlines */
 			for (i = 0; i < size; i++)
 				if (data[i] == '\r')

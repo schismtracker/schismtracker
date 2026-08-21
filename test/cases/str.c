@@ -21,11 +21,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
 #include "test-assertions.h"
+#include "test.h"
 
-#include "str.h"
 #include "mem.h"
+#include "str.h"
 
 static testresult_t test_str_from_num_thousands(int32_t n, const char *expect)
 {
@@ -37,8 +37,7 @@ static testresult_t test_str_from_num_thousands(int32_t n, const char *expect)
 
 	// Assert
 	ASSERT(result == &buf[0]);
-	ASSERT_PRINTF(strcmp(result, expect) == 0,
-		"result %s was not %s as expected for %" PRId32, result, expect, n);
+	ASSERT_PRINTF(strcmp(result, expect) == 0, "result %s was not %s as expected for %" PRId32, result, expect, n);
 	RETURN_PASS;
 }
 
@@ -80,24 +79,19 @@ TEST_STR_FROM_NUM_THOUSANDS_TEMPLATE(digits_10_negative, INT32_C(-2082850450), "
 
 /* ------------------------------------------------------------------------ */
 
-static testresult_t test_str_concat_common(const char *expected,
-	const char *arg1, const char *arg2, const char *arg3, const char *arg4,
-	const char *arg5)
+static testresult_t test_str_concat_common(
+	const char *expected, const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5)
 {
 	char *r;
 
 	r = str_concat(arg1, arg2, arg3, arg4, arg5, (char *)NULL);
 	REQUIRE(r);
 
-	ASSERT_PRINTF(!strcmp(expected, r), "result \"%s\" with args "
+	ASSERT_PRINTF(!strcmp(expected, r),
+		"result \"%s\" with args "
 		"(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\") was not \"%s\" as expected",
-		r,
-		(arg1) ? (arg1) : "NULL",
-		(arg2) ? (arg2) : "NULL",
-		(arg3) ? (arg3) : "NULL",
-		(arg4) ? (arg4) : "NULL",
-		(arg5) ? (arg5) : "NULL",
-		expected);
+		r, (arg1) ? (arg1) : "NULL", (arg2) ? (arg2) : "NULL", (arg3) ? (arg3) : "NULL",
+		(arg4) ? (arg4) : "NULL", (arg5) ? (arg5) : "NULL", expected);
 
 	free(r);
 
@@ -105,7 +99,7 @@ static testresult_t test_str_concat_common(const char *expected,
 }
 
 #define TEST_STR_CONCAT_TEMPLATE(name, expect, arg1, arg2, arg3, arg4, arg5) \
-    TEST_CASE_STUB(str_concat_##name, test_str_concat_common, expect, arg1, arg2, arg3, arg4, arg5)
+	TEST_CASE_STUB(str_concat_##name, test_str_concat_common, expect, arg1, arg2, arg3, arg4, arg5)
 
 TEST_STR_CONCAT_TEMPLATE(123456789012, "123456789012", "123", "456", "789", "012", NULL)
 TEST_STR_CONCAT_TEMPLATE(123ok67, "123ok67", "123", "ok", "67", NULL, NULL)
@@ -114,86 +108,86 @@ TEST_STR_CONCAT_TEMPLATE(123ok67, "123ok67", "123", "ok", "67", NULL, NULL)
 
 /* ------------------------------------------------------------------------ */
 
-static testresult_t test_str_from_num_common(int digits, uint32_t num,
-	const char *expect)
+static testresult_t test_str_from_num_common(int digits, uint32_t num, const char *expect)
 {
 	char buf[11];
 	char *r;
 
 	r = str_from_num(digits, num, buf);
 
-	ASSERT_PRINTF(r == &buf[0], "return value \"%p\" is not the same "
-		"as input pointer \"%p\"", r, buf);
-	ASSERT_PRINTF(!strcmp(expect, buf), "result with integer %" PRIu32
-		" was \"%s\", not \"%s\" as expected", num, buf, expect);
+	ASSERT_PRINTF(r == &buf[0],
+		"return value \"%p\" is not the same "
+		"as input pointer \"%p\"",
+		r, buf);
+	ASSERT_PRINTF(!strcmp(expect, buf), "result with integer %" PRIu32 " was \"%s\", not \"%s\" as expected", num,
+		buf, expect);
 
 	RETURN_PASS;
 }
 
 #define TEST_STR_FROM_NUM_TEMPLATE(name, digits, num, expect) \
-    TEST_CASE_STUB(str_from_num_##name, test_str_from_num_common, digits, num, expect)
+	TEST_CASE_STUB(str_from_num_##name, test_str_from_num_common, digits, num, expect)
 
-TEST_STR_FROM_NUM_TEMPLATE(0_1, 0, UINT32_C(1),          "1")
-TEST_STR_FROM_NUM_TEMPLATE(0_10, 0, UINT32_C(10),         "10")
-TEST_STR_FROM_NUM_TEMPLATE(0_100, 0, UINT32_C(100),        "100")
-TEST_STR_FROM_NUM_TEMPLATE(0_1000, 0, UINT32_C(1000),       "1000")
-TEST_STR_FROM_NUM_TEMPLATE(0_10000, 0, UINT32_C(10000),      "10000")
-TEST_STR_FROM_NUM_TEMPLATE(0_100000, 0, UINT32_C(100000),     "100000")
-TEST_STR_FROM_NUM_TEMPLATE(0_1000000, 0, UINT32_C(1000000),    "1000000")
-TEST_STR_FROM_NUM_TEMPLATE(0_10000000, 0, UINT32_C(10000000),   "10000000")
-TEST_STR_FROM_NUM_TEMPLATE(0_100000000, 0, UINT32_C(100000000),  "100000000")
+TEST_STR_FROM_NUM_TEMPLATE(0_1, 0, UINT32_C(1), "1")
+TEST_STR_FROM_NUM_TEMPLATE(0_10, 0, UINT32_C(10), "10")
+TEST_STR_FROM_NUM_TEMPLATE(0_100, 0, UINT32_C(100), "100")
+TEST_STR_FROM_NUM_TEMPLATE(0_1000, 0, UINT32_C(1000), "1000")
+TEST_STR_FROM_NUM_TEMPLATE(0_10000, 0, UINT32_C(10000), "10000")
+TEST_STR_FROM_NUM_TEMPLATE(0_100000, 0, UINT32_C(100000), "100000")
+TEST_STR_FROM_NUM_TEMPLATE(0_1000000, 0, UINT32_C(1000000), "1000000")
+TEST_STR_FROM_NUM_TEMPLATE(0_10000000, 0, UINT32_C(10000000), "10000000")
+TEST_STR_FROM_NUM_TEMPLATE(0_100000000, 0, UINT32_C(100000000), "100000000")
 TEST_STR_FROM_NUM_TEMPLATE(0_1000000000, 0, UINT32_C(1000000000), "1000000000")
-TEST_STR_FROM_NUM_TEMPLATE(2_1, 2, UINT32_C(1),          "01")
-TEST_STR_FROM_NUM_TEMPLATE(4_5, 4, UINT32_C(5),          "0005")
-TEST_STR_FROM_NUM_TEMPLATE(9_9, 9, UINT32_C(9),          "000000009")
+TEST_STR_FROM_NUM_TEMPLATE(2_1, 2, UINT32_C(1), "01")
+TEST_STR_FROM_NUM_TEMPLATE(4_5, 4, UINT32_C(5), "0005")
+TEST_STR_FROM_NUM_TEMPLATE(9_9, 9, UINT32_C(9), "000000009")
 
 #undef TEST_STR_FROM_NUM_TEMPLATE
 
 /* ------------------------------------------------------------------------ */
 
-static testresult_t test_str_from_num_signed_common(int digits, int32_t num,
-	const char *expect)
+static testresult_t test_str_from_num_signed_common(int digits, int32_t num, const char *expect)
 {
 	char buf[12];
 	char *r;
 
 	r = str_from_num_signed(digits, num, buf);
 
-	ASSERT_PRINTF(r == &buf[0], "return value \"%p\" is not the same "
-		"as input pointer \"%p\"", r, buf);
-	ASSERT_PRINTF(!strcmp(expect, buf), "result with integer %" PRId32
-		" was \"%s\", not \"%s\" as expected", num, buf, expect);
+	ASSERT_PRINTF(r == &buf[0],
+		"return value \"%p\" is not the same "
+		"as input pointer \"%p\"",
+		r, buf);
+	ASSERT_PRINTF(!strcmp(expect, buf), "result with integer %" PRId32 " was \"%s\", not \"%s\" as expected", num,
+		buf, expect);
 
 	RETURN_PASS;
 }
 
 #define TEST_STR_FROM_NUM_SIGNED_TEMPLATE(name, digits, num, expect) \
-    TEST_CASE_STUB(str_from_num_signed_##name, \
-    	test_str_from_num_signed_common, digits, num, expect)
+	TEST_CASE_STUB(str_from_num_signed_##name, test_str_from_num_signed_common, digits, num, expect)
 
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_1, 0, INT32_C(1),          "1")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_10, 0, INT32_C(10),         "10")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_100, 0, INT32_C(100),        "100")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_1000, 0, INT32_C(1000),       "1000")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_10000, 0, INT32_C(10000),      "10000")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_100000, 0, INT32_C(100000),     "100000")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_1000000, 0, INT32_C(1000000),    "1000000")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_10000000, 0, INT32_C(10000000),   "10000000")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_100000000, 0, INT32_C(100000000),  "100000000")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_1, 0, INT32_C(1), "1")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_10, 0, INT32_C(10), "10")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_100, 0, INT32_C(100), "100")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_1000, 0, INT32_C(1000), "1000")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_10000, 0, INT32_C(10000), "10000")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_100000, 0, INT32_C(100000), "100000")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_1000000, 0, INT32_C(1000000), "1000000")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_10000000, 0, INT32_C(10000000), "10000000")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_100000000, 0, INT32_C(100000000), "100000000")
 TEST_STR_FROM_NUM_SIGNED_TEMPLATE(0_1000000000, 0, INT32_C(1000000000), "1000000000")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(2_1, 2, INT32_C(1),          "01")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(4_5, 4, INT32_C(5),          "0005")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(9_9, 9, INT32_C(9),          "000000009")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(3_neg9, 3, INT32_C(-9),         "-09")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(5_neg9, 5, INT32_C(-9),         "-0009")
-TEST_STR_FROM_NUM_SIGNED_TEMPLATE(9_neg9, 9, INT32_C(-9),         "-00000009")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(2_1, 2, INT32_C(1), "01")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(4_5, 4, INT32_C(5), "0005")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(9_9, 9, INT32_C(9), "000000009")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(3_neg9, 3, INT32_C(-9), "-09")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(5_neg9, 5, INT32_C(-9), "-0009")
+TEST_STR_FROM_NUM_SIGNED_TEMPLATE(9_neg9, 9, INT32_C(-9), "-00000009")
 
 #undef TEST_STR_FROM_NUM_SIGNED_TEMPLATE
 
 /* ------------------------------------------------------------------------ */
 
-static testresult_t test_str_get_num_lines_common(const char *text,
-	int result)
+static testresult_t test_str_get_num_lines_common(const char *text, int result)
 {
 	int x;
 
@@ -205,8 +199,7 @@ static testresult_t test_str_get_num_lines_common(const char *text,
 }
 
 #define TEST_STR_GET_NUM_LINES_TEMPLATE(name, text, result) \
-    TEST_CASE_STUB(str_get_num_lines_##name, \
-    	test_str_get_num_lines_common, text, result)
+	TEST_CASE_STUB(str_get_num_lines_##name, test_str_get_num_lines_common, text, result)
 
 TEST_STR_GET_NUM_LINES_TEMPLATE(wow_LF, "wow\n", 1)
 TEST_STR_GET_NUM_LINES_TEMPLATE(wow, "wow", 0 /* wait, what? */)
@@ -240,8 +233,7 @@ testresult_t test_str_dup(void)
 	RETURN_PASS;
 }
 
-static testresult_t test_str_trim_gen(const char *text, const char *expect,
-		int (*f)(char *s))
+static testresult_t test_str_trim_gen(const char *text, const char *expect, int (*f)(char *s))
 {
 	int r;
 	char *x = str_dup(text);
@@ -258,12 +250,11 @@ static testresult_t test_str_trim_gen(const char *text, const char *expect,
 	RETURN_PASS;
 }
 
-static testresult_t test_str_trims(const char *text, const char *expectl,
-		const char *expectr, const char *expect)
+static testresult_t test_str_trims(const char *text, const char *expectl, const char *expectr, const char *expect)
 {
 	ASSERT_PRINTF(test_str_trim_gen(text, expectl, str_ltrim) == SCHISM_TESTRESULT_PASS, "%s", "str_ltrim");
 	ASSERT_PRINTF(test_str_trim_gen(text, expectr, str_rtrim) == SCHISM_TESTRESULT_PASS, "%s", "str_rtrim");
-	ASSERT_PRINTF(test_str_trim_gen(text, expect,  str_trim)  == SCHISM_TESTRESULT_PASS, "%s", "str_trim");
+	ASSERT_PRINTF(test_str_trim_gen(text, expect, str_trim) == SCHISM_TESTRESULT_PASS, "%s", "str_trim");
 
 	RETURN_PASS;
 }

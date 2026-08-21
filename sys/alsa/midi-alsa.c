@@ -26,23 +26,23 @@
 #include "it.h"
 #include "midi.h"
 
-#include "util.h"
 #include "mem.h"
+#include "util.h"
 
 #ifdef USE_ALSA
-#include <sys/poll.h>
+# include <sys/poll.h>
 
-#include <alsa/asoundlib.h>
+# include <alsa/asoundlib.h>
 
-#include <sys/stat.h>
+# include <sys/stat.h>
 
-#define PORT_NAME       "Schism Tracker"
+# define PORT_NAME "Schism Tracker"
 
 struct alsa_midi_provider {
 	snd_seq_t *seq;
 	int local_port;
 
-#define MIDI_BUFSIZE    65536
+# define MIDI_BUFSIZE 65536
 	unsigned char big_midi_buf[MIDI_BUFSIZE];
 	int alsa_queue;
 
@@ -63,68 +63,70 @@ struct alsa_midi {
 static size_t (*ALSA_snd_seq_port_info_sizeof)(void);
 static size_t (*ALSA_snd_seq_client_info_sizeof)(void);
 static size_t (*ALSA_snd_seq_queue_tempo_sizeof)(void);
-static int (*ALSA_snd_seq_control_queue)(snd_seq_t*s,int q,int type, int value, snd_seq_event_t *ev);
+static int (*ALSA_snd_seq_control_queue)(snd_seq_t *s, int q, int type, int value, snd_seq_event_t *ev);
 static void (*ALSA_snd_seq_queue_tempo_set_tempo)(snd_seq_queue_tempo_t *info, unsigned int tempo);
 static void (*ALSA_snd_seq_queue_tempo_set_ppq)(snd_seq_queue_tempo_t *info, int ppq);
 static int (*ALSA_snd_seq_set_queue_tempo)(snd_seq_t *handle, int q, snd_seq_queue_tempo_t *tempo);
-static long (*ALSA_snd_midi_event_encode)(snd_midi_event_t *dev,const unsigned char *buf,long count,snd_seq_event_t *ev);
+static long (*ALSA_snd_midi_event_encode)(
+	snd_midi_event_t *dev, const unsigned char *buf, long count, snd_seq_event_t *ev);
 static int (*ALSA_snd_seq_event_output)(snd_seq_t *handle, snd_seq_event_t *ev);
 static int (*ALSA_snd_seq_event_output_direct)(snd_seq_t *handle, snd_seq_event_t *ev);
-static int (*ALSA_snd_seq_alloc_queue)(snd_seq_t*h);
+static int (*ALSA_snd_seq_alloc_queue)(snd_seq_t *h);
 static int (*ALSA_snd_seq_free_event)(snd_seq_event_t *ev);
-static int (*ALSA_snd_seq_connect_from)(snd_seq_t*seeq,int my_port,int src_client, int src_port);
-static int (*ALSA_snd_seq_connect_to)(snd_seq_t*seeq,int my_port,int dest_client,int dest_port);
-static int (*ALSA_snd_seq_disconnect_from)(snd_seq_t*seeq,int my_port,int src_client, int src_port);
-static int (*ALSA_snd_seq_disconnect_to)(snd_seq_t*seeq,int my_port,int dest_client,int dest_port);
-static const char * (*ALSA_snd_strerror)(int errnum);
-static int (*ALSA_snd_seq_poll_descriptors_count)(snd_seq_t*h,short e);
-static int (*ALSA_snd_seq_poll_descriptors)(snd_seq_t*h,struct pollfd*pfds,unsigned int space, short e);
-static int (*ALSA_snd_seq_event_input)(snd_seq_t*h,snd_seq_event_t**ev);
-static int (*ALSA_snd_seq_event_input_pending)(snd_seq_t*h,int fs);
-static int (*ALSA_snd_midi_event_new)(size_t s,snd_midi_event_t **rd);
-static long (*ALSA_snd_midi_event_decode)(snd_midi_event_t *dev,unsigned char *buf,long count, const snd_seq_event_t*ev);
-static void (*ALSA_snd_midi_event_reset_decode)(snd_midi_event_t*d);
-static int (*ALSA_snd_seq_create_simple_port)(snd_seq_t*h,const char *name,unsigned int caps,unsigned int type);
-static int (*ALSA_snd_seq_drain_output)(snd_seq_t*h);
-static int (*ALSA_snd_seq_query_next_client)(snd_seq_t*h,snd_seq_client_info_t*info);
+static int (*ALSA_snd_seq_connect_from)(snd_seq_t *seeq, int my_port, int src_client, int src_port);
+static int (*ALSA_snd_seq_connect_to)(snd_seq_t *seeq, int my_port, int dest_client, int dest_port);
+static int (*ALSA_snd_seq_disconnect_from)(snd_seq_t *seeq, int my_port, int src_client, int src_port);
+static int (*ALSA_snd_seq_disconnect_to)(snd_seq_t *seeq, int my_port, int dest_client, int dest_port);
+static const char *(*ALSA_snd_strerror)(int errnum);
+static int (*ALSA_snd_seq_poll_descriptors_count)(snd_seq_t *h, short e);
+static int (*ALSA_snd_seq_poll_descriptors)(snd_seq_t *h, struct pollfd *pfds, unsigned int space, short e);
+static int (*ALSA_snd_seq_event_input)(snd_seq_t *h, snd_seq_event_t **ev);
+static int (*ALSA_snd_seq_event_input_pending)(snd_seq_t *h, int fs);
+static int (*ALSA_snd_midi_event_new)(size_t s, snd_midi_event_t **rd);
+static long (*ALSA_snd_midi_event_decode)(
+	snd_midi_event_t *dev, unsigned char *buf, long count, const snd_seq_event_t *ev);
+static void (*ALSA_snd_midi_event_reset_decode)(snd_midi_event_t *d);
+static int (*ALSA_snd_seq_create_simple_port)(snd_seq_t *h, const char *name, unsigned int caps, unsigned int type);
+static int (*ALSA_snd_seq_drain_output)(snd_seq_t *h);
+static int (*ALSA_snd_seq_query_next_client)(snd_seq_t *h, snd_seq_client_info_t *info);
 static int (*ALSA_snd_seq_client_info_get_client)(const snd_seq_client_info_t *info);
-static void (*ALSA_snd_seq_client_info_set_client)(snd_seq_client_info_t*inf,int cl);
-static void (*ALSA_snd_seq_port_info_set_client)(snd_seq_port_info_t*inf,int cl);
-static void (*ALSA_snd_seq_port_info_set_port)(snd_seq_port_info_t*inf,int pl);
-static int (*ALSA_snd_seq_query_next_port)(snd_seq_t*h,snd_seq_port_info_t*inf);
+static void (*ALSA_snd_seq_client_info_set_client)(snd_seq_client_info_t *inf, int cl);
+static void (*ALSA_snd_seq_port_info_set_client)(snd_seq_port_info_t *inf, int cl);
+static void (*ALSA_snd_seq_port_info_set_port)(snd_seq_port_info_t *inf, int pl);
+static int (*ALSA_snd_seq_query_next_port)(snd_seq_t *h, snd_seq_port_info_t *inf);
 static unsigned int (*ALSA_snd_seq_port_info_get_capability)(const snd_seq_port_info_t *inf);
-static int (*ALSA_snd_seq_port_info_get_client)(const snd_seq_port_info_t*inf);
-static int (*ALSA_snd_seq_port_info_get_port)(const snd_seq_port_info_t*inf);
-static const char * (*ALSA_snd_seq_client_info_get_name)(snd_seq_client_info_t*inf);
-static const char * (*ALSA_snd_seq_port_info_get_name)(const snd_seq_port_info_t*inf);
-static int (*ALSA_snd_seq_open)(snd_seq_t**h,const char *name,int str, int mode);
-static int (*ALSA_snd_seq_set_client_name)(snd_seq_t*seeq,const char *name);
+static int (*ALSA_snd_seq_port_info_get_client)(const snd_seq_port_info_t *inf);
+static int (*ALSA_snd_seq_port_info_get_port)(const snd_seq_port_info_t *inf);
+static const char *(*ALSA_snd_seq_client_info_get_name)(snd_seq_client_info_t *inf);
+static const char *(*ALSA_snd_seq_port_info_get_name)(const snd_seq_port_info_t *inf);
+static int (*ALSA_snd_seq_open)(snd_seq_t **h, const char *name, int str, int mode);
+static int (*ALSA_snd_seq_set_client_name)(snd_seq_t *seeq, const char *name);
 static int (*ALSA_snd_seq_delete_simple_port)(snd_seq_t *seq, int port);
 static int (*ALSA_snd_seq_close)(snd_seq_t *);
 static void (*ALSA_snd_midi_event_free)(snd_midi_event_t *dev);
 
 /* these are inline functions; prefix them anyway */
-#define ALSA_snd_seq_ev_clear snd_seq_ev_clear
-#define ALSA_snd_seq_ev_set_source snd_seq_ev_set_source
-#define ALSA_snd_seq_ev_set_subs snd_seq_ev_set_subs
-#define ALSA_snd_seq_ev_set_direct snd_seq_ev_set_direct
-#define ALSA_snd_seq_ev_schedule_tick snd_seq_ev_schedule_tick
-#define ALSA_snd_seq_client_info_alloca snd_seq_client_info_alloca
-#define ALSA_snd_seq_port_info_alloca snd_seq_port_info_alloca
-#define ALSA_snd_seq_queue_tempo_alloca snd_seq_queue_tempo_alloca
-#define ALSA_snd_seq_start_queue snd_seq_start_queue
+# define ALSA_snd_seq_ev_clear           snd_seq_ev_clear
+# define ALSA_snd_seq_ev_set_source      snd_seq_ev_set_source
+# define ALSA_snd_seq_ev_set_subs        snd_seq_ev_set_subs
+# define ALSA_snd_seq_ev_set_direct      snd_seq_ev_set_direct
+# define ALSA_snd_seq_ev_schedule_tick   snd_seq_ev_schedule_tick
+# define ALSA_snd_seq_client_info_alloca snd_seq_client_info_alloca
+# define ALSA_snd_seq_port_info_alloca   snd_seq_port_info_alloca
+# define ALSA_snd_seq_queue_tempo_alloca snd_seq_queue_tempo_alloca
+# define ALSA_snd_seq_start_queue        snd_seq_start_queue
 
 static int load_alsa_syms(void);
 
-#ifdef ALSA_DYNAMIC_LOAD
+# ifdef ALSA_DYNAMIC_LOAD
 
-#include "loadso.h"
+#  include "loadso.h"
 
 /* said inline functions call these... */
-#define snd_seq_client_info_sizeof ALSA_snd_seq_client_info_sizeof
-#define snd_seq_port_info_sizeof ALSA_snd_seq_port_info_sizeof
-#define snd_seq_queue_tempo_sizeof ALSA_snd_seq_queue_tempo_sizeof
-#define snd_seq_control_queue ALSA_snd_seq_control_queue
+#  define snd_seq_client_info_sizeof ALSA_snd_seq_client_info_sizeof
+#  define snd_seq_port_info_sizeof   ALSA_snd_seq_port_info_sizeof
+#  define snd_seq_queue_tempo_sizeof ALSA_snd_seq_queue_tempo_sizeof
+#  define snd_seq_control_queue      ALSA_snd_seq_control_queue
 
 void *alsa_dltrick_handle_;
 
@@ -153,7 +155,8 @@ static int alsa_dlinit(void)
 	return retval;
 }
 
-SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+SCHISM_STATIC_ASSERT(sizeof(void(*)) == sizeof(void *),
+	"dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 static int load_alsa_sym(const char *fn, void *addr)
 {
@@ -166,19 +169,20 @@ static int load_alsa_sym(const char *fn, void *addr)
 	return 1;
 }
 
-#define SCHISM_ALSA_SYM(x) \
-	if (!load_alsa_sym(#x, &ALSA_##x)) return -1
+#  define SCHISM_ALSA_SYM(x) \
+	  if (!load_alsa_sym(#x, &ALSA_##x)) \
+	  return -1
 
-#else
+# else
 
-#define SCHISM_ALSA_SYM(x) ALSA_##x = x
+#  define SCHISM_ALSA_SYM(x) ALSA_##x = x
 
 static int alsa_dlinit(void)
 {
 	return load_alsa_syms();
 }
 
-#endif
+# endif
 
 static int load_alsa_syms(void)
 {
@@ -261,7 +265,8 @@ static void _alsa_send(struct midi_port *p, const unsigned char *data, uint32_t 
 		ev.dest.client = ex->c;
 
 		rr = ALSA_snd_midi_event_encode(ex->dev, data, len, &ev);
-		if (rr < 1) break;
+		if (rr < 1)
+			break;
 		if (delay) {
 			ALSA_snd_seq_event_output(amp->seq, &ev);
 		} else {
@@ -324,7 +329,8 @@ static int _alsa_work(struct midi_provider *p)
 	snd_seq_event_t *ev;
 	long s;
 
-	if (!amp || !amp->pfd) return 0;
+	if (!amp || !amp->pfd)
+		return 0;
 
 	if (ALSA_snd_seq_poll_descriptors(amp->seq, amp->pfd, amp->npfd, POLLIN) != amp->npfd) {
 		free(amp->pfd);
@@ -342,14 +348,13 @@ static int _alsa_work(struct midi_provider *p)
 		if (ALSA_snd_seq_event_input(amp->seq, &ev) < 0)
 			break;
 
-		if (!ev) continue;
+		if (!ev)
+			continue;
 
 		ptr = src = NULL;
 		while (midi_port_foreach(p, &ptr)) {
 			data = (struct alsa_midi *)ptr->userdata;
-			if (ev->source.client == data->c
-					&& ev->source.port == data->p
-					&& (ptr->io & MIDI_INPUT)) {
+			if (ev->source.client == data->c && ev->source.port == data->p && (ptr->io & MIDI_INPUT)) {
 				src = ptr;
 			}
 		}
@@ -358,8 +363,7 @@ static int _alsa_work(struct midi_provider *p)
 			continue;
 		}
 
-		s = ALSA_snd_midi_event_decode(amp->ev, amp->big_midi_buf,
-				sizeof(amp->big_midi_buf), ev);
+		s = ALSA_snd_midi_event_decode(amp->ev, amp->big_midi_buf, sizeof(amp->big_midi_buf), ev);
 		if (s > 0)
 			midi_received_cb(src, amp->big_midi_buf, s);
 		ALSA_snd_midi_event_reset_decode(amp->ev);
@@ -405,13 +409,13 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 			io = 0;
 
 			if ((ALSA_snd_seq_port_info_get_capability(pinfo)
-			 & (SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ))
-			== (SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ))
+				    & (SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ))
+				== (SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ))
 				io |= MIDI_INPUT;
 
 			if ((ALSA_snd_seq_port_info_get_capability(pinfo)
-			 & (SND_SEQ_PORT_CAP_WRITE|SND_SEQ_PORT_CAP_SUBS_WRITE))
-			== (SND_SEQ_PORT_CAP_WRITE|SND_SEQ_PORT_CAP_SUBS_WRITE))
+				    & (SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE))
+				== (SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE))
 				io |= MIDI_OUTPUT;
 
 			if (!io)
@@ -419,7 +423,8 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 
 			/* Now get clients and ports */
 			c = ALSA_snd_seq_port_info_get_client(pinfo);
-			if (c == SND_SEQ_CLIENT_SYSTEM) continue;
+			if (c == SND_SEQ_CLIENT_SYSTEM)
+				continue;
 
 			p = ALSA_snd_seq_port_info_get_port(pinfo);
 			ptr = NULL;
@@ -452,8 +457,7 @@ static void _alsa_poll(struct midi_provider *_alsa_provider)
 				continue;
 			}
 
-			if (asprintf(&buffer, "%3d:%-3d %-20.20s %s",
-					c, p, ctext, ptext) == -1) {
+			if (asprintf(&buffer, "%3d:%-3d %-20.20s %s", c, p, ctext, ptext) == -1) {
 				free(data);
 				continue;
 			}
@@ -471,7 +475,8 @@ static void _alsa_destroy_userdata(void *ud)
 {
 	struct alsa_midi_provider *amp = ud;
 
-	if (!amp) return; /* what */
+	if (!amp)
+		return; /* what */
 
 	ALSA_snd_midi_event_free(amp->ev);
 	ALSA_snd_seq_delete_simple_port(amp->seq, amp->local_port);
@@ -505,9 +510,9 @@ int alsa_midi_setup(void)
 	if (stat("/dev/snd/seq", &sbuf) != 0)
 		return 0;
 
-#ifdef ALSA_DYNAMIC_LOAD
+# ifdef ALSA_DYNAMIC_LOAD
 	if (!alsa_dltrick_handle_)
-#endif
+# endif
 		if (alsa_dlinit())
 			return 0;
 
@@ -539,24 +544,13 @@ int alsa_midi_setup(void)
 	ALSA_snd_seq_start_queue(amp->seq, amp->alsa_queue, NULL);
 	ALSA_snd_seq_drain_output(amp->seq);
 
-	amp->local_port = ALSA_snd_seq_create_simple_port(
-		amp->seq,
-		PORT_NAME,
-		SND_SEQ_PORT_CAP_READ
-		| SND_SEQ_PORT_CAP_WRITE
-		| SND_SEQ_PORT_CAP_SYNC_READ
-		| SND_SEQ_PORT_CAP_SYNC_WRITE
-		| SND_SEQ_PORT_CAP_DUPLEX
-		| SND_SEQ_PORT_CAP_SUBS_READ
-		| SND_SEQ_PORT_CAP_SUBS_WRITE,
-		SND_SEQ_PORT_TYPE_APPLICATION
-		| SND_SEQ_PORT_TYPE_SYNTH
-		| SND_SEQ_PORT_TYPE_MIDI_GENERIC
-		| SND_SEQ_PORT_TYPE_MIDI_GM
-		| SND_SEQ_PORT_TYPE_MIDI_GS
-		| SND_SEQ_PORT_TYPE_MIDI_XG
-		| SND_SEQ_PORT_TYPE_MIDI_MT32
-	);
+	amp->local_port = ALSA_snd_seq_create_simple_port(amp->seq, PORT_NAME,
+		SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SYNC_READ
+			| SND_SEQ_PORT_CAP_SYNC_WRITE | SND_SEQ_PORT_CAP_DUPLEX | SND_SEQ_PORT_CAP_SUBS_READ
+			| SND_SEQ_PORT_CAP_SUBS_WRITE,
+		SND_SEQ_PORT_TYPE_APPLICATION | SND_SEQ_PORT_TYPE_SYNTH | SND_SEQ_PORT_TYPE_MIDI_GENERIC
+			| SND_SEQ_PORT_TYPE_MIDI_GM | SND_SEQ_PORT_TYPE_MIDI_GS | SND_SEQ_PORT_TYPE_MIDI_XG
+			| SND_SEQ_PORT_TYPE_MIDI_MT32);
 	if (amp->local_port < 0) {
 		log_appendf(4, "ALSA: %s", ALSA_snd_strerror(amp->local_port));
 		ALSA_snd_seq_close(amp->seq);
@@ -587,6 +581,5 @@ int alsa_midi_setup(void)
 
 	return 1;
 }
-
 
 #endif

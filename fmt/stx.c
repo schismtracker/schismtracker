@@ -23,9 +23,9 @@
 
 #include "headers.h"
 #include "bits.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "mem.h"
+#include "slurp.h"
 
 #include "player/sndfile.h"
 
@@ -40,8 +40,7 @@ int fmt_stx_read_info(dmoz_file_t *file, slurp_t *fp)
 	int i;
 
 	slurp_seek(fp, 60, SEEK_SET);
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "SCRM", sizeof(magic)))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "SCRM", sizeof(magic)))
 		return 0;
 
 	slurp_seek(fp, 20, SEEK_SET);
@@ -87,7 +86,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	uint16_t para_chnptr;   // supposedly settings...
 	uint16_t para_smp[MAX_SAMPLES];
 	uint16_t para_pat[MAX_PATTERNS];
-	uint32_t para_sdata[MAX_SAMPLES] = { 0 };
+	uint32_t para_sdata[MAX_SAMPLES] = {0};
 	song_sample_t *sample;
 	int subversion = 1;
 	uint16_t first_pattern_size;
@@ -297,7 +296,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 				}
 
 				for (chn = 0; chn < 32; chn++) {
-					song_note_t* chan_note = note + chn;
+					song_note_t *chan_note = note + chn;
 					if (chan_note->effect == FX_SPEED) {
 						uint32_t param = chan_note->param;
 						chan_note->param >>= 4;
@@ -325,8 +324,7 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		song->channels[n].flags |= CHN_MUTE;
 	song->pan_separation = 64;
 
-	snprintf(song->tracker_id, sizeof(song->tracker_id),
-		"ST Music Interface Kit (1.%d)", subversion);
+	snprintf(song->tracker_id, sizeof(song->tracker_id), "ST Music Interface Kit (1.%d)", subversion);
 
 //      if (ferror(fp)) {
 //              return LOAD_FILE_ERROR;
@@ -334,4 +332,3 @@ int fmt_stx_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	/* done! */
 	return LOAD_SUCCESS;
 }
-

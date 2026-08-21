@@ -23,22 +23,22 @@
 #include "headers.h"
 
 #include "it.h"
-#include "keyboard.h"
 #include "page.h"
 #include "song.h"
 #include "widget.h"
-#include "vgamem.h"
+#include "keyboard.h"
 #include "mem.h"
+#include "vgamem.h"
 
 /* #define for using one malloc call for all tables */
 #define FFT_USE_ONE_MALLOC 1
 
-#define NATIVE_SCREEN_WIDTH     640
-#define NATIVE_SCREEN_HEIGHT    400
-#define SCOPE_ROWS      32
+#define NATIVE_SCREEN_WIDTH  640
+#define NATIVE_SCREEN_HEIGHT 400
+#define SCOPE_ROWS           32
 
 /* 1920 = least common multiple of 120, 640, and 320 */
-#define FFT_BANDS_SIZE          (1920)
+#define FFT_BANDS_SIZE (1920)
 
 /* current FFT size. this should always be a power of 2. */
 static uint32_t fft_size;
@@ -48,7 +48,7 @@ static uint32_t fft_sizelog2; /* log2(fft_bufsize) */
 /* This value is used internally to scale the power output of the FFT to decibels. */
 static float fft_inv_bufsize;
 /* Scaling for FFT. Input is expected to be int16_t. */
-static const float inv_s_range = 1.0f/32768.0f;
+static const float inv_s_range = 1.0f / 32768.0f;
 
 /* Table to change the scale from linear to log. */
 static uint32_t fftlog[FFT_BANDS_SIZE];
@@ -57,13 +57,12 @@ static uint32_t fftlog[FFT_BANDS_SIZE];
 static int mono = 0;
 //gain, in dBs.
 //static int gain = 0;
-static int noisefloor=72;
+static int noisefloor = 72;
 
 /* get the _whole_ display */
-static struct vgamem_overlay ovl = { 0, 0, 79, 49, NULL, 0, 0, 0 };
+static struct vgamem_overlay ovl = {0, 0, 79, 49, NULL, 0, 0, 0};
 
-#define FFT_VAR(type, name, size) \
-	static type *name;
+#define FFT_VAR(type, name, size) static type *name;
 #include "fft-vars.h"
 
 #ifdef FFT_USE_ONE_MALLOC
@@ -71,8 +70,7 @@ static struct vgamem_overlay ovl = { 0, 0, 79, 49, NULL, 0, 0, 0 };
 static void *fft_allocation;
 #endif
 
-static inline SCHISM_ALWAYS_INLINE
-uint32_t _reverse_bits(uint32_t in, uint32_t bufsizelog)
+static inline SCHISM_ALWAYS_INLINE uint32_t _reverse_bits(uint32_t in, uint32_t bufsizelog)
 {
 	/* This outputs less instructions than the old plain C algorithm,
 	 * because breverse32 uses a divide-and-conquer algorithm rather
@@ -102,25 +100,23 @@ static void vis_realloc(uint32_t size)
 #ifdef FFT_USE_ONE_MALLOC
 	free(fft_allocation);
 	fft_allocation = mem_alloc(
-#define FFT_VAR(type, name, size) \
-	((size) * sizeof(type)) +
-#include "fft-vars.h"
+# define FFT_VAR(type, name, size) ((size) * sizeof(type)) +
+# include "fft-vars.h"
 		/* no-op for size */
-		0
-	);
+		0);
 
 	/* This pointer will be used to iterate the fft allocation */
 	ptr = fft_allocation;
-#define FFT_VAR(type, name, size) \
-	do { \
-		name = (type *)(ptr); \
-		ptr += (size) * sizeof(type); \
-	} while (0);
-#include "fft-vars.h"
+# define FFT_VAR(type, name, size) \
+	 do { \
+		 name = (type *)(ptr); \
+		 ptr += (size) * sizeof(type); \
+	 } while (0);
+# include "fft-vars.h"
 #else
 # define FFT_VAR(type, name, size) \
-	free(name); \
-	name = mem_alloc((size) * sizeof(type));
+	 free(name); \
+	 name = mem_alloc((size) * sizeof(type));
 # include "fft-vars.h"
 #endif
 
@@ -172,7 +168,7 @@ void vis_set_size(uint32_t size)
 	}
 
 	/* ?? */
-	fft_inv_bufsize = 1.0f/(fft_bufsize >> 2);
+	fft_inv_bufsize = 1.0f / (fft_bufsize >> 2);
 
 #if 0
 	/* linear */
@@ -249,13 +245,15 @@ static void _vis_data_work(uint8_t *output, int16_t *input)
 }
 
 /* "chan" is either zero for all, or nonzero for a specific output channel */
-static inline SCHISM_ALWAYS_INLINE
-uint8_t _fft_get_value(uint32_t chan, uint32_t offset)
+static inline SCHISM_ALWAYS_INLINE uint8_t _fft_get_value(uint32_t chan, uint32_t offset)
 {
 	switch (chan) {
-	case 1: return current_fft_datal[offset];
-	case 2: return current_fft_datar[offset];
-	default: break;
+	case 1:
+		return current_fft_datal[offset];
+	case 2:
+		return current_fft_datar[offset];
+	default:
+		break;
 	}
 
 	return bavgu32(current_fft_datal[offset], current_fft_datar[offset]);
@@ -295,26 +293,25 @@ void fft_get_columns(uint32_t width, unsigned char *out, uint32_t chan)
 }
 
 /* Convert the output of */
-static inline SCHISM_ALWAYS_INLINE unsigned char *_dobits(unsigned char *q,
-			unsigned char *in, int length, int y)
+static inline SCHISM_ALWAYS_INLINE unsigned char *_dobits(unsigned char *q, unsigned char *in, int length, int y)
 {
 	int i, c;
-	for (i = 0; i < length; i++)  {
+	for (i = 0; i < length; i++) {
 		/* j is has range 0 to 128. Now use the upper side for drawing.*/
 		c = 128 + in[i];
-		if (c > 255) c = 255;
-		*q = c; q += y;
+		if (c > 255)
+			c = 255;
+		*q = c;
+		q += y;
 	}
 	return q;
 }
 /*x = screen.x, h = 0..128, c = colour */
 static inline SCHISM_ALWAYS_INLINE void _drawslice(int x, int h, int c)
 {
-	int y = ((h>>2) & (SCOPE_ROWS-1))+1;
+	int y = ((h >> 2) & (SCOPE_ROWS - 1)) + 1;
 
-	vgamem_ovl_drawline(&ovl,
-		x, (NATIVE_SCREEN_HEIGHT-y),
-		x, (NATIVE_SCREEN_HEIGHT-1), c);
+	vgamem_ovl_drawline(&ovl, x, (NATIVE_SCREEN_HEIGHT - y), x, (NATIVE_SCREEN_HEIGHT - 1), c);
 }
 
 static void _vis_process(void)
@@ -332,11 +329,11 @@ static void _vis_process(void)
 		fft_get_columns(NATIVE_SCREEN_WIDTH, outfft, 0);
 		_dobits(q, outfft, NATIVE_SCREEN_WIDTH, 1);
 	} else {
-		fft_get_columns(k, outfft,     1);
+		fft_get_columns(k, outfft, 1);
 		fft_get_columns(k, outfft + k, 2);
 
-		_dobits(q + k - 1, outfft,     k, -1);
-		_dobits(q + k,     outfft + k, k, 1);
+		_dobits(q + k - 1, outfft, k, -1);
+		_dobits(q + k, outfft + k, k, 1);
 	}
 
 	/* draw the scope at the bottom */
@@ -345,10 +342,13 @@ static void _vis_process(void)
 	memset(q, 0, i);
 
 	if (mono) {
-		for (i = 0; i < NATIVE_SCREEN_WIDTH; i++) _drawslice(i, outfft[i], 5);
+		for (i = 0; i < NATIVE_SCREEN_WIDTH; i++)
+			_drawslice(i, outfft[i], 5);
 	} else {
-		for (i = 0; i < k; i++) _drawslice(k - i - 1, outfft[i],     5);
-		for (i = 0; i < k; i++) _drawslice(k + i,     outfft[k + i], 5);
+		for (i = 0; i < k; i++)
+			_drawslice(k - i - 1, outfft[i], 5);
+		for (i = 0; i < k; i++)
+			_drawslice(k + i, outfft[k + i], 5);
 	}
 
 	status.flags |= NEED_UPDATE;
@@ -358,7 +358,7 @@ static void _vis_process(void)
 	void vis_work_##BITS##SUFFIX(const int##BITS##_t *in, size_t samples) \
 	{ \
 		size_t i, j, k; \
-	\
+\
 		if (!samples) { \
 			memset(current_fft_datal, 0, fft_size * sizeof(*current_fft_datal)); \
 			memset(current_fft_datar, 0, fft_size * sizeof(*current_fft_datar)); \
@@ -368,21 +368,25 @@ static void _vis_process(void)
 					INLOOP \
 				} \
 			} \
-	\
+\
 			_vis_data_work(current_fft_datal, incomingl); \
 			_vis_data_work(current_fft_datar, incomingr); \
 		} \
-		if (status.current_page == PAGE_WATERFALL) _vis_process(); \
+		if (status.current_page == PAGE_WATERFALL) \
+			_vis_process(); \
 	}
 
 #define VIS_WORK(BITS) \
 	VIS_WORK_EX(s, BITS, { \
-		incomingl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
-		incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+		incomingl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); \
+		j++; \
+		incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); \
+		j++; \
 	}) \
-	\
+\
 	VIS_WORK_EX(m, BITS, { \
-		incomingl[i] = incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+		incomingl[i] = incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); \
+		j++; \
 	})
 
 VIS_WORK(32)
@@ -454,14 +458,14 @@ static int waterfall_handle_key(struct key_event *k)
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		noisefloor-=4;
+		noisefloor -= 4;
 		break;
 	case SCHISM_KEYSYM_RIGHT:
 		if (!NO_MODIFIER(k->mod))
 			return 0;
 		if (k->state == KEY_RELEASE)
 			return 1;
-		noisefloor+=4;
+		noisefloor += 4;
 		break;
 	case SCHISM_KEYSYM_g:
 		if (k->mod & SCHISM_KEYMOD_ALT) {
@@ -550,9 +554,10 @@ static int waterfall_handle_key(struct key_event *k)
 	return 1;
 }
 
-
 static struct widget waterfall_widget_hack[1];
-static void do_nil(void) {}
+static void do_nil(void)
+{
+}
 
 static void waterfall_set_page(void)
 {

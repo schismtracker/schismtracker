@@ -23,12 +23,12 @@
 
 #include "headers.h"
 
-#include "it.h"
-#include "vgamem.h"
-#include "song.h"
-#include "page.h"
 #include "dialog.h"
+#include "it.h"
+#include "page.h"
+#include "song.h"
 #include "events.h"
+#include "vgamem.h"
 
 /* --------------------------------------------------------------------- */
 
@@ -36,12 +36,13 @@
  * will emit a warning and cause the function to return
  * if a menu is not active. */
 #ifndef NDEBUG
-# define ENSURE_MENU(q) do {\
-	if ((status.dialog_type & DIALOG_MENU) == 0) {\
-		fprintf(stderr, "%s called with no menu\n", __func__);\
-		q;\
-	}\
-} while(0)
+# define ENSURE_MENU(q) \
+	 do { \
+		 if ((status.dialog_type & DIALOG_MENU) == 0) { \
+			 fprintf(stderr, "%s called with no menu\n", __func__); \
+			 q; \
+		 } \
+	 } while (0)
 #else
 # define ENSURE_MENU(q)
 #endif
@@ -65,7 +66,7 @@ struct menu {
 	const char *items[14];  /* writing **items doesn't work here :( */
 	int selected_item;      /* the highlighted item */
 	int active_item;        /* "pressed" menu item, for submenus */
-	void (*selected_cb) (void);     /* triggered by return key */
+	void (*selected_cb)(void);     /* triggered by return key */
 };
 
 static struct menu main_menu = {
@@ -190,7 +191,7 @@ static struct menu settings_menu = {
  * this generalises the key handling.
  * if status.dialog_type == DIALOG_SUBMENU, use current_menu[1]
  * else, use current_menu[0] */
-static struct menu *current_menu[2] = { NULL, NULL };
+static struct menu *current_menu[2] = {NULL, NULL};
 
 /* --------------------------------------------------------------------- */
 
@@ -199,12 +200,11 @@ static void _draw_menu(struct menu *menu)
 	int h = 6, n = menu->num_items;
 
 	while (n--) {
-		draw_box(2 + menu->x, 4 + menu->y + 3 * n,
-			 5 + menu->x + menu->w, 6 + menu->y + 3 * n,
-			 BOX_THIN | BOX_CORNER | (n == menu->active_item ? BOX_INSET : BOX_OUTSET));
+		draw_box(2 + menu->x, 4 + menu->y + 3 * n, 5 + menu->x + menu->w, 6 + menu->y + 3 * n,
+			BOX_THIN | BOX_CORNER | (n == menu->active_item ? BOX_INSET : BOX_OUTSET));
 
 		draw_text_len(menu->items[n], menu->w, 4 + menu->x, 5 + menu->y + 3 * n,
-			      (n == menu->selected_item ? 3 : 0), 2);
+			(n == menu->selected_item ? 3 : 0), 2);
 
 		draw_char(0, 3 + menu->x, 5 + menu->y + 3 * n, 0, 2);
 		draw_char(0, 4 + menu->x + menu->w, 5 + menu->y + 3 * n, 0, 2);
@@ -212,10 +212,9 @@ static void _draw_menu(struct menu *menu)
 		h += 3;
 	}
 
-	draw_box(menu->x, menu->y, menu->x + menu->w + 7, menu->y + h - 1,
-		 BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
-	draw_box(menu->x + 1, menu->y + 1, menu->x + menu->w + 6,
-		 menu->y + h - 2, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
+	draw_box(menu->x, menu->y, menu->x + menu->w + 7, menu->y + h - 1, BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
+	draw_box(
+		menu->x + 1, menu->y + 1, menu->x + menu->w + 6, menu->y + h - 2, BOX_THIN | BOX_OUTER | BOX_FLAT_DARK);
 	draw_fill_chars(menu->x + 2, menu->y + 2, menu->x + menu->w + 5, menu->y + 3, DEFAULT_FG, 2);
 	draw_text(menu->title, menu->x + 6, menu->y + 2, 3, 2);
 }
@@ -349,7 +348,7 @@ static void playback_menu_selected_cb(void)
 	switch (playback_menu.selected_item) {
 	case 0: /* show infopage */
 		if (song_get_mode() == MODE_STOPPED
-		    || (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
+			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO))
 			song_start();
 		set_page(PAGE_INFO);
 		return;
@@ -445,14 +444,13 @@ int menu_handle_key(struct key_event *k)
 	if ((status.dialog_type & DIALOG_MENU) == 0)
 		return 0;
 
-	menu = (status.dialog_type == DIALOG_SUBMENU
-		? current_menu[1] : current_menu[0]);
+	menu = (status.dialog_type == DIALOG_SUBMENU ? current_menu[1] : current_menu[0]);
 
 	if (k->mouse) {
 		if (k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) {
 			h = menu->num_items * 3;
-			if (k->x >= menu->x + 2 && k->x <= menu->x + menu->w + 5
-			    && k->y >= menu->y + 4 && k->y <= menu->y + h + 4) {
+			if (k->x >= menu->x + 2 && k->x <= menu->x + menu->w + 5 && k->y >= menu->y + 4
+				&& k->y <= menu->y + h + 4) {
 				n = ((k->y - 4) - menu->y) / 3;
 				if (n >= 0 && n < menu->num_items) {
 					menu->selected_item = n;
@@ -464,8 +462,9 @@ int menu_handle_key(struct key_event *k)
 						menu->active_item = n;
 					}
 				}
-			} else if (k->state == KEY_RELEASE && (k->x < menu->x || k->x > 7+menu->x+menu->w
-			|| k->y < menu->y || k->y >= 5+menu->y+h)) {
+			} else if (k->state == KEY_RELEASE
+				   && (k->x < menu->x || k->x > 7 + menu->x + menu->w || k->y < menu->y
+					   || k->y >= 5 + menu->y + h)) {
 				/* get rid of the menu */
 				current_menu[1] = NULL;
 				if (status.dialog_type == DIALOG_SUBMENU) {

@@ -48,7 +48,7 @@ struct sheep {
 
 static size_t fake_read(void *buf, size_t size, size_t nmemb, void *void_data)
 {
-	struct sheep *file_data = (struct sheep *) void_data;
+	struct sheep *file_data = (struct sheep *)void_data;
 
 	off_t length_left = file_data->length - file_data->position;
 	off_t read_size = nmemb * size;
@@ -66,7 +66,7 @@ static size_t fake_read(void *buf, size_t size, size_t nmemb, void *void_data)
 
 static int fake_seek(void *void_data, ogg_int64_t offset, int whence)
 {
-	struct sheep *file_data = (struct sheep *) void_data;
+	struct sheep *file_data = (struct sheep *)void_data;
 
 	switch (whence) {
 	case SEEK_SET:
@@ -93,14 +93,14 @@ static int fake_close(SCHISM_UNUSED void *void_data)
 
 static long fake_tell(void *void_data)
 {
-	struct sheep *file_data = (struct sheep *) void_data;
+	struct sheep *file_data = (struct sheep *)void_data;
 
 	return file_data->position;
 }
 
 /* --------------------------------------------------------------------- */
 
-static void get_title_from_ogg(OggVorbis_File * vf, char **artist_ptr, char **title_ptr)
+static void get_title_from_ogg(OggVorbis_File *vf, char **artist_ptr, char **title_ptr)
 {
 	char *buf, *key, *value;
 	char **ptr = ov_comment(vf, -1)->user_comments;

@@ -24,10 +24,10 @@
 #include "headers.h"
 #include "bits.h"
 #include "charset.h"
-#include "slurp.h"
 #include "fmt.h"
 #include "log.h"
 #include "mem.h"
+#include "slurp.h"
 #include "str.h"
 
 #include "player/sndfile.h"
@@ -65,14 +65,12 @@ static int psm_verify_header(slurp_t *fp)
 {
 	unsigned char magic[4];
 
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "PSM ", 4))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "PSM ", 4))
 		return 0;
 
 	slurp_seek(fp, 4, SEEK_CUR);
 
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "FILE", 4))
+	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic) || memcmp(magic, "FILE", 4))
 		return 0;
 
 	return 1;
@@ -111,11 +109,10 @@ int fmt_psm_read_info(dmoz_file_t *file, slurp_t *fp)
 /* eh */
 static uint8_t psm_convert_portamento(uint8_t param, int sinaria)
 {
-	if (sinaria) return param;
+	if (sinaria)
+		return param;
 
-	return (param < 4)
-		? (param | 0xF0)
-		: (param >> 2);
+	return (param < 4) ? (param | 0xF0) : (param >> 2);
 }
 
 static int psm_import_effect(song_note_t *note, slurp_t *fp, int sinaria)
@@ -133,18 +130,14 @@ static int psm_import_effect(song_note_t *note, slurp_t *fp, int sinaria)
 	case 0x01: /* Fine volume slide up */
 		note->effect = FX_VOLUMESLIDE;
 
-		note->param = (sinaria)
-			? (e[1] << 4)
-			: ((e[1] & 0x1E) << 3);
+		note->param = (sinaria) ? (e[1] << 4) : ((e[1] & 0x1E) << 3);
 
 		note->param |= 0x0F;
 		break;
 	case 0x02: /* Volume slide up */
 		note->effect = FX_VOLUMESLIDE;
 
-		note->param = (sinaria)
-			? (e[1] << 4)
-			: (e[1] << 3);
+		note->param = (sinaria) ? (e[1] << 4) : (e[1] << 3);
 
 		note->param &= 0x0F;
 
@@ -152,9 +145,7 @@ static int psm_import_effect(song_note_t *note, slurp_t *fp, int sinaria)
 	case 0x03: /* Fine volume slide down */
 		note->effect = FX_VOLUMESLIDE;
 
-		note->param = (sinaria)
-			? (e[1])
-			: (e[1] >> 1);
+		note->param = (sinaria) ? (e[1]) : (e[1] >> 1);
 
 		note->param |= 0xF0;
 
@@ -162,11 +153,7 @@ static int psm_import_effect(song_note_t *note, slurp_t *fp, int sinaria)
 	case 0x04: /* Volume slide down */
 		note->effect = FX_VOLUMESLIDE;
 
-		note->param = (sinaria)
-			? (e[1] & 0x0F)
-			: (e[1] < 2)
-				? (e[1] | 0xF0)
-				: ((e[1] >> 1) & 0x0F);
+		note->param = (sinaria) ? (e[1] & 0x0F) : (e[1] < 2) ? (e[1] | 0xF0) : ((e[1] >> 1) & 0x0F);
 		break;
 
 	/* Portamento! */
@@ -190,9 +177,7 @@ static int psm_import_effect(song_note_t *note, slurp_t *fp, int sinaria)
 	case 0x0F: /* Tone portamento */
 		note->effect = FX_TONEPORTAMENTO;
 
-		note->param = (sinaria)
-			? (e[1])
-			: (e[1] >> 2);
+		note->param = (sinaria) ? (e[1]) : (e[1] >> 2);
 		break;
 	case 0x10: /* Tone portamento + volume slide up */
 		note->effect = FX_TONEPORTAVOL;
@@ -432,15 +417,11 @@ static int psm_read_pattern(iff_chunk_t *c, slurp_t *fp, song_t *song, int *sina
 					return 0;
 
 				if (*sinaria) {
-					note->note = (n < 85)
-						? (n + 36)
-						: n;
+					note->note = (n < 85) ? (n + 36) : n;
 				} else {
-					note->note = (n == 0xFF)
-						? NOTE_CUT
-						: (n < 129)
-							? (n & 0x0F) + (12 * (n >> 4) + 13)
-							: NOTE_NONE;
+					note->note = (n == 0xFF) ? NOTE_CUT
+						     : (n < 129) ? (n & 0x0F) + (12 * (n >> 4) + 13)
+								 : NOTE_NONE;
 				}
 			}
 
@@ -472,16 +453,9 @@ static int psm_read_pattern(iff_chunk_t *c, slurp_t *fp, song_t *song, int *sina
 int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 {
 	/* the (way too much) stack data */
-	iff_chunk_t song_chunks[MAX_ORDERS] = {0},
-	            titl_chunk = {0},
-	            dsmp_chunks[MAX_SAMPLES] = {0},
-	            pbod_chunks[MAX_PATTERNS] = {0};
-	uint32_t nsubsongs = 0,
-	         nsamples = 0,
-	         npatterns = 0,
-	         norders = 0,
-	         nchns = 0,
-	         i;
+	iff_chunk_t song_chunks[MAX_ORDERS] = {0}, titl_chunk = {0}, dsmp_chunks[MAX_SAMPLES] = {0},
+		    pbod_chunks[MAX_PATTERNS] = {0};
+	uint32_t nsubsongs = 0, nsamples = 0, npatterns = 0, norders = 0, nchns = 0, i;
 
 	/* "Now, grovel at the feet of the Archdemon Satanichia!" */
 	int sinaria = 0;
@@ -540,13 +514,16 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 			slurp_seek(fp, dsmp_chunks[i].offset, SEEK_SET);
 
-			if (slurp_read(fp, &flags, 1) != 1) break;
-			if (slurp_read(fp, &filename, sizeof(filename)) != sizeof(filename)) break;
+			if (slurp_read(fp, &flags, 1) != 1)
+				break;
+			if (slurp_read(fp, &filename, sizeof(filename)) != sizeof(filename))
+				break;
 
 			/* skip sample ID */
 			slurp_seek(fp, (sinaria ? 8 : 4), SEEK_CUR);
 
-			if (slurp_read(fp, &name, sizeof(name)) != sizeof(name)) break;
+			if (slurp_read(fp, &name, sizeof(name)) != sizeof(name))
+				break;
 
 			/* skip unknown bytes */
 			slurp_seek(fp, 6, SEEK_CUR);
@@ -568,22 +545,26 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			memcpy(smp->name, name, MIN(sizeof(smp->name), sizeof(name)));
 			memcpy(smp->filename, filename, MIN(sizeof(smp->filename), sizeof(filename)));
 
-			if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw)) break;
+			if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+				break;
 			smp->length = bswapLE32(dw);
 
-			if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw)) break;
+			if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+				break;
 			smp->loop_start = bswapLE32(dw);
 
-			if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw)) break;
+			if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+				break;
 
 			if (sinaria) {
 				smp->loop_end = bswapLE32(dw);
 			} else if (dw) {
 				/* blurb from OpenMPT:
 				 * Note that we shouldn't add + 1 for MTM conversions here (e.g. the OMF 2097 music),
-				 * but I think there is no way to figure out the original format, and in the case of the OMF 2097 soundtrack
-				 * it doesn't make a huge audible difference anyway (no chip samples are used).
-				 * On the other hand, sample 8 of MUSIC_A.PSM from Extreme Pinball will sound detuned if we don't adjust the loop end here. */
+				 * but I think there is no way to figure out the original format, and in the case of the
+				 * OMF 2097 soundtrack it doesn't make a huge audible difference anyway (no chip samples
+				 * are used). On the other hand, sample 8 of MUSIC_A.PSM from Extreme Pinball will sound
+				 * detuned if we don't adjust the loop end here. */
 				smp->loop_end = bswapLE32(dw) + 1;
 			}
 
@@ -593,24 +574,27 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			/* skip finetune */
 			slurp_seek(fp, 1, SEEK_CUR);
 
-			if (slurp_read(fp, &b, sizeof(b)) != sizeof(b)) break;
+			if (slurp_read(fp, &b, sizeof(b)) != sizeof(b))
+				break;
 			smp->volume = (b + 1) * 2; /* this is what OpenMPT does */
 
 			/* skip unknown bytes */
 			slurp_seek(fp, 4, SEEK_CUR);
 
 			if (sinaria) {
-				if (slurp_read(fp, &w, sizeof(w)) != sizeof(w)) break;
+				if (slurp_read(fp, &w, sizeof(w)) != sizeof(w))
+					break;
 				smp->c5speed = bswapLE16(w);
 			} else {
-				if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw)) break;
+				if (slurp_read(fp, &dw, sizeof(dw)) != sizeof(dw))
+					break;
 				smp->c5speed = bswapLE32(dw);
 			}
 
 			/* skip padding */
 			slurp_seek(fp, (sinaria) ? 16 : 19, SEEK_CUR);
 
-			csf_read_sample(smp, SF(LE,M,8,PCMD), fp);
+			csf_read_sample(smp, SF(LE, M, 8, PCMD), fp);
 		}
 	}
 
@@ -640,7 +624,8 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 		}
 
 		/* sub-chunks */
-		while (iff_chunk_peek_ex(&c, fp, IFF_CHUNK_SIZE_LE) && (slurp_tell(fp) <= song_chunks[i].offset + song_chunks[i].size)) {
+		while (iff_chunk_peek_ex(&c, fp, IFF_CHUNK_SIZE_LE)
+			&& (slurp_tell(fp) <= song_chunks[i].offset + song_chunks[i].size)) {
 			switch (c.id) {
 			/* should we handle DATE? */
 			case ID_OPLH: /* Order list, channel, and module settings */
@@ -687,7 +672,8 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 
 					song->orderlist[norders++] = index;
 
-					// Decide whether this is the first order chunk or not (for finding out the correct restart position)
+					// Decide whether this is the first order chunk or not (for finding out the
+					// correct restart position)
 					if (first_order_chunk == UINT32_MAX)
 						first_order_chunk = chunk_count;
 					break;
@@ -705,7 +691,7 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 					 * following -- nope, it does not appear to be a loop count) */
 				case 0x04: {
 					/* Jump Line (Restart position) */
-				
+
 					uint16_t restart_chunk = 0;
 					slurp_read(fp, &restart_chunk, 2);
 					restart_chunk = bswapLE16(restart_chunk);
@@ -800,7 +786,8 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 				}
 
 				default:
-					log_appendf(4, " PSM/OPLH: unknown opcode: %" PRIx8 " at %" PRIu32, opcode, chunk_count);
+					log_appendf(4, " PSM/OPLH: unknown opcode: %" PRIx8 " at %" PRIu32, opcode,
+						chunk_count);
 					return LOAD_UNSUPPORTED;
 				}
 
@@ -813,8 +800,8 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			uint32_t j;
 
 			/* FIXME don't crash here? lol */
-			SCHISM_RUNTIME_ASSERT(ppan_chunk.size >= (uint32_t)subsong_channels * 2,
-				"PSM: PPAN chunk is too small");
+			SCHISM_RUNTIME_ASSERT(
+				ppan_chunk.size >= (uint32_t)subsong_channels * 2, "PSM: PPAN chunk is too small");
 
 			slurp_seek(fp, ppan_chunk.offset, SEEK_SET);
 
@@ -844,9 +831,7 @@ int fmt_psm_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
 
 	snprintf(song->tracker_id, sizeof(song->tracker_id), "%s",
-		(sinaria)
-			? "Epic MegaGames MASI (New Version / Sinaria)"
-			: "Epic MegaGames MASI (New Version)");
+		(sinaria) ? "Epic MegaGames MASI (New Version / Sinaria)" : "Epic MegaGames MASI (New Version)");
 
 	return LOAD_SUCCESS;
 }
@@ -962,8 +947,7 @@ int fmt_psm16_read_info(dmoz_file_t *file, slurp_t *fp)
 
 /* if this function succeeds, the file position is at the offset.
  * otherwise, it is unknown, and needs manual readjustment :) */
-static int psm16_check_parapointer(slurp_t *fp, uint32_t paraptr,
-	const char magic[4])
+static int psm16_check_parapointer(slurp_t *fp, uint32_t paraptr, const char magic[4])
 {
 	unsigned char x[4];
 
@@ -1215,10 +1199,12 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 					int note, instr;
 
 					note = slurp_getc(fp);
-					if (note == EOF) break;
+					if (note == EOF)
+						break;
 
 					instr = slurp_getc(fp);
-					if (instr == EOF) break;
+					if (instr == EOF)
+						break;
 
 					nn->note = note + (3 * 12); /* 3 octaves up to adjust for c2freq */
 					nn->instrument = instr;
@@ -1228,7 +1214,8 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 					int volume;
 
 					volume = slurp_getc(fp);
-					if (volume == EOF) break;
+					if (volume == EOF)
+						break;
 
 					nn->voleffect = VOLFX_VOLUME;
 					nn->volparam = MIN(volume, 64);
@@ -1238,10 +1225,12 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 					int effect, param;
 
 					effect = slurp_getc(fp);
-					if (effect == EOF) break;
+					if (effect == EOF)
+						break;
 
 					param = slurp_getc(fp);
-					if (param == EOF) break;
+					if (param == EOF)
+						break;
 
 					switch (effect) {
 					/* Volume Commands */
@@ -1414,8 +1403,7 @@ int fmt_psm16_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	/* FIXME: should compat Gxx be here? */
 	song->flags = SONG_ITOLDEFFECTS | SONG_COMPATGXX;
 
-	snprintf(song->tracker_id, sizeof(song->tracker_id), "%s",
-		"Epic MegaGames MASI (Old Version)");
+	snprintf(song->tracker_id, sizeof(song->tracker_id), "%s", "Epic MegaGames MASI (Old Version)");
 
 	return LOAD_SUCCESS;
 }

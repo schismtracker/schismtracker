@@ -29,19 +29,19 @@
 
 #include <X11/Xlib.h>
 
-
-
 /* Our dynamically loaded symbols */
 Display *(*X11_XOpenDisplay)(const char *display_name) = NULL;
 int (*X11_XCloseDisplay)(Display *display) = NULL;
 Atom (*X11_XInternAtom)(Display *display, const char *atom_name, Bool only_if_exists) = NULL;
-int (*X11_XChangeProperty)(Display *display, Window w, Atom property, Atom type, int format, int mode, const unsigned char *data, int nelements) = NULL;
+int (*X11_XChangeProperty)(Display *display, Window w, Atom property, Atom type, int format, int mode,
+	const unsigned char *data, int nelements) = NULL;
 Window (*X11_XGetSelectionOwner)(Display *display, Atom selection) = NULL;
-int (*X11_XConvertSelection)(Display *display, Atom selection, Atom target, Atom property, Window requestor, Time time) = NULL;
+int (*X11_XConvertSelection)(Display *display, Atom selection, Atom target, Atom property, Window requestor, Time time)
+	= NULL;
 int (*X11_XFree)(void *ptr) = NULL;
-int (*X11_XGetWindowProperty)(Display *display, Window w, Atom property, long long_offset, long long_length, Bool delete, Atom req_type, 
-	Atom *actual_type_return, int *actual_format_return, unsigned long *nitems_return, unsigned long *bytes_after_return,
-	unsigned char **prop_return) = NULL;
+int (*X11_XGetWindowProperty)(Display *display, Window w, Atom property, long long_offset, long long_length,
+	Bool delete, Atom req_type, Atom *actual_type_return, int *actual_format_return, unsigned long *nitems_return,
+	unsigned long *bytes_after_return, unsigned char **prop_return) = NULL;
 int (*X11_XSetSelectionOwner)(Display *display, Atom selection, Window owner, Time time) = NULL;
 Status (*X11_XSendEvent)(Display *display, Window w, Bool propagate, long event_mask, XEvent *event_send) = NULL;
 int (*X11_XSync)(Display *display, Bool discard) = NULL;
@@ -50,16 +50,16 @@ static int load_x11_syms(void);
 
 #ifdef X11_DYNAMIC_LOAD
 
-#include "loadso.h"
+# include "loadso.h"
 
 enum {
 	X11_LIBRARY_LIBX11,
 	X11_LIBRARY_MAX_,
 };
 
-#ifndef X11_LIBRARY_LIBX11_PATH
-# define X11_LIBRARY_LIBX11_PATH NULL
-#endif
+# ifndef X11_LIBRARY_LIBX11_PATH
+#  define X11_LIBRARY_LIBX11_PATH NULL
+# endif
 
 /* Libraries table. Currently, we only ever use libX11. */
 static struct {
@@ -102,7 +102,8 @@ static int x11_dlinit(void)
 	return retval;
 }
 
-SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+SCHISM_STATIC_ASSERT(sizeof(void(*)) == sizeof(void *),
+	"dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 // `library' is the enum above
 static int x11_load_sym(int library, const char *fn, void *addr)
@@ -120,7 +121,8 @@ static int x11_load_sym(int library, const char *fn, void *addr)
 }
 
 # define SCHISM_X11_SYM(library, x) \
-	if (!x11_load_sym(X11_LIBRARY_LIB ## library, #x, &X11_##x)) return -1
+	 if (!x11_load_sym(X11_LIBRARY_LIB##library, #x, &X11_##x)) \
+	 return -1
 
 #else
 
@@ -130,10 +132,9 @@ static int x11_dlinit(void)
 	return 0;
 }
 
-#define x11_dlend() // nothing
+# define x11_dlend() // nothing
 
-# define SCHISM_X11_SYM(library, x) \
-	X11_##x = x
+# define SCHISM_X11_SYM(library, x) X11_##x = x
 
 #endif
 

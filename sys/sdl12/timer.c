@@ -22,17 +22,17 @@
  */
 
 #include "headers.h"
-#include "mt.h"
-#include "mem.h"
 #include "backend/timer.h"
+#include "mem.h"
+#include "mt.h"
 
 #include "init.h"
 
-static int (SDLCALL *sdl12_InitSubSystem)(Uint32 flags);
-static void (SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
-static uint32_t (SDLCALL *sdl12_GetTicks)(void);
-static void (SDLCALL *sdl12_Delay)(uint32_t ms);
-static SDL_TimerID (SDLCALL *sdl12_AddTimer)(uint32_t ms, SDL_NewTimerCallback callback, void *param);
+static int(SDLCALL *sdl12_InitSubSystem)(Uint32 flags);
+static void(SDLCALL *sdl12_QuitSubSystem)(Uint32 flags);
+static uint32_t(SDLCALL *sdl12_GetTicks)(void);
+static void(SDLCALL *sdl12_Delay)(uint32_t ms);
+static SDL_TimerID(SDLCALL *sdl12_AddTimer)(uint32_t ms, SDL_NewTimerCallback callback, void *param);
 
 static timer_ticks_t sdl12_timer_ticks(void)
 {

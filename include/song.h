@@ -24,10 +24,10 @@
 #ifndef SCHISM_SONG_H_
 #define SCHISM_SONG_H_
 
-#include "player/sndfile.h"
-#include "util.h"
 #include "disko.h"
 #include "fmt.h"
+#include "player/sndfile.h"
+#include "util.h"
 
 /* --------------------------------------------------------------------- */
 /* things that used to be in mplink */
@@ -65,10 +65,10 @@ extern struct audio_settings audio_settings;
 
 struct audio_device {
 	uint32_t id;
-	char* name; /* UTF-8; must be free'd */
+	char *name; /* UTF-8; must be free'd */
 };
 
-extern struct audio_device* audio_device_list;
+extern struct audio_device *audio_device_list;
 extern size_t audio_device_list_size;
 
 /* --------------------------------------------------------------------- */
@@ -87,8 +87,7 @@ typedef struct {
 typedef struct schism_audio_device schism_audio_device_t;
 
 /* The value to pass to memset to generate silence. */
-#define AUDIO_SPEC_SILENCE(spec) \
-	(((spec).bits == 8) ? 0x80 : 0)
+#define AUDIO_SPEC_SILENCE(spec) (((spec).bits == 8) ? 0x80 : 0)
 
 /* --------------------------------------------------------------------- */
 /* some enums */
@@ -177,7 +176,6 @@ song_note_t *song_pattern_allocate_copy(int patno, int *rows);
 void song_pattern_deallocate(song_note_t *n);
 void song_pattern_install(int patno, song_note_t *n, int rows);
 
-
 // these return NULL on failure.
 song_sample_t *song_get_sample(int n);
 song_instrument_t *song_get_instrument(int n);
@@ -197,8 +195,8 @@ void song_restore_channel_states(void);
 // deals with the saved channel state instead.)
 int song_find_last_channel(void);
 
-int song_get_pattern(int n, song_note_t ** buf);  // return 0 -> error
-int song_get_pattern_offset(int * n, song_note_t ** buf, int * row, int offset);
+int song_get_pattern(int n, song_note_t **buf);  // return 0 -> error
+int song_get_pattern_offset(int *n, song_note_t **buf, int *row, int offset);
 uint8_t *song_get_orderlist(void);
 
 int song_pattern_is_empty(int p);
@@ -238,7 +236,6 @@ void song_set_linear_pitch_slides(int value);
 int song_is_instrument_mode(void);
 void song_set_instrument_mode(int value);
 
-
 /* this is called way early */
 void song_initialise(void);
 
@@ -247,7 +244,7 @@ void song_init_modplug(void);
 
 /* parses strings in the old "driver spec" format Schism used in the config
  * and still uses in the command line */
-void audio_parse_driver_spec(const char* spec, char** driver, char** device);
+void audio_parse_driver_spec(const char *spec, char **driver, char **device);
 
 void audio_flash_reinitialized_text(int success);
 
@@ -301,10 +298,10 @@ behavior which is normally internal, but is exposed on the pattern editor where 
 select sample #0. (note: this is a hack to work around another hack) */
 #define KEYJAZZ_CHAN_CURRENT 0
 // For automatic channel allocation when playing chords in the instrument editor.
-#define KEYJAZZ_CHAN_AUTO -1
-#define KEYJAZZ_NOINST -1
+#define KEYJAZZ_CHAN_AUTO  -1
+#define KEYJAZZ_NOINST     -1
 #define KEYJAZZ_DEFAULTVOL -1
-#define KEYJAZZ_INST_FAKE -2
+#define KEYJAZZ_INST_FAKE  -2
 int song_keydown(int samp, int ins, int note, int vol, int chan);
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
 int song_keyup(int samp, int ins, int note);
@@ -426,4 +423,3 @@ void song_set_pan_scheme(int scheme);
 /* --------------------------------------------------------------------- */
 
 #endif /* SCHISM_SONG_H_ */
-

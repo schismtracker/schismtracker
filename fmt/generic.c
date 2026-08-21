@@ -22,19 +22,19 @@
  */
 
 #include "headers.h"
-#include "fmt.h"
-#include "str.h"
-#include "mem.h"
 #include "bits.h"
+#include "fmt.h"
 #include "log.h"
+#include "mem.h"
+#include "str.h"
 #include "version.h"
 
 #include <math.h>
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define PERIOD_B9 14
-#define PERIOD_C0 13696
+#define PERIOD_B9  14
+#define PERIOD_C0  13696
 #define PERIOD_MIN PERIOD_B9
 #define PERIOD_MAX PERIOD_C0
 
@@ -47,9 +47,8 @@
  * Of note: Older versions of Schism incorrectly imported B-2 as C-3. */
 static int _mod_period_to_note(int period)
 {
-	return (period >= PERIOD_MIN && period <= PERIOD_MAX)
-		? round(12.0 * log2((double) PERIOD_C0 / period)) + 1
-		: NOTE_NONE;
+	return (period >= PERIOD_MIN && period <= PERIOD_MAX) ? round(12.0 * log2((double)PERIOD_C0 / period)) + 1
+							      : NOTE_NONE;
 }
 
 void mod_import_note(const uint8_t p[4], song_note_t *note)
@@ -65,44 +64,44 @@ void mod_import_note(const uint8_t p[4], song_note_t *note)
 /* --------------------------------------------------------------------------------------------------------- */
 
 const uint8_t effect_weight[FX_MAX] = {
-	[FX_PATTERNBREAK]       = 248,
-	[FX_POSITIONJUMP]       = 240,
-	[FX_SPEED]              = 232,
-	[FX_TEMPO]              = 224,
-	[FX_GLOBALVOLUME]       = 216,
-	[FX_GLOBALVOLSLIDE]     = 208,
-	[FX_CHANNELVOLUME]      = 200,
-	[FX_CHANNELVOLSLIDE]    = 192,
-	[FX_TONEPORTAVOL]       = 184,
-	[FX_TONEPORTAMENTO]     = 176,
-	[FX_ARPEGGIO]           = 168,
-	[FX_RETRIG]             = 160,
-	[FX_TREMOR]             = 152,
-	[FX_OFFSET]             = 144,
-	[FX_VOLUME]             = 136,
-	[FX_VIBRATOVOL]         = 128,
-	[FX_VOLUMESLIDE]        = 120,
-	[FX_PORTAMENTODOWN]     = 112,
-	[FX_PORTAMENTOUP]       = 104,
-	[FX_NOTESLIDEDOWN]      =  96, // IMF Hxy
-	[FX_NOTESLIDEUP]        =  88, // IMF Gxy
-	[FX_PANNING]            =  80,
-	[FX_PANNINGSLIDE]       =  72,
-	[FX_MIDI]               =  64,
-	[FX_SPECIAL]            =  56,
-	[FX_PANBRELLO]          =  48,
-	[FX_VIBRATO]            =  40,
-	[FX_FINEVIBRATO]        =  32,
-	[FX_TREMOLO]            =  24,
-	[FX_KEYOFF]             =  16,
-	[FX_SETENVPOSITION]     =   8,
-	[FX_NONE]               =   0,
+	[FX_PATTERNBREAK] = 248,
+	[FX_POSITIONJUMP] = 240,
+	[FX_SPEED] = 232,
+	[FX_TEMPO] = 224,
+	[FX_GLOBALVOLUME] = 216,
+	[FX_GLOBALVOLSLIDE] = 208,
+	[FX_CHANNELVOLUME] = 200,
+	[FX_CHANNELVOLSLIDE] = 192,
+	[FX_TONEPORTAVOL] = 184,
+	[FX_TONEPORTAMENTO] = 176,
+	[FX_ARPEGGIO] = 168,
+	[FX_RETRIG] = 160,
+	[FX_TREMOR] = 152,
+	[FX_OFFSET] = 144,
+	[FX_VOLUME] = 136,
+	[FX_VIBRATOVOL] = 128,
+	[FX_VOLUMESLIDE] = 120,
+	[FX_PORTAMENTODOWN] = 112,
+	[FX_PORTAMENTOUP] = 104,
+	[FX_NOTESLIDEDOWN] = 96, // IMF Hxy
+	[FX_NOTESLIDEUP] = 88, // IMF Gxy
+	[FX_PANNING] = 80,
+	[FX_PANNINGSLIDE] = 72,
+	[FX_MIDI] = 64,
+	[FX_SPECIAL] = 56,
+	[FX_PANBRELLO] = 48,
+	[FX_VIBRATO] = 40,
+	[FX_FINEVIBRATO] = 32,
+	[FX_TREMOLO] = 24,
+	[FX_KEYOFF] = 16,
+	[FX_SETENVPOSITION] = 8,
+	[FX_NONE] = 0,
 };
 
 void swap_effects(song_note_t *note)
 {
 	song_note_t tmp = {0};
-	
+
 	tmp.note = note->note;
 	tmp.instrument = note->instrument;
 	tmp.voleffect = note->effect;
@@ -144,9 +143,7 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 			return 1;
 		}
 		for (int n = 0; n < 10; n++) {
-			if (force
-			    ? (*p <= vc_portamento_table[n])
-			    : (*p == vc_portamento_table[n])) {
+			if (force ? (*p <= vc_portamento_table[n]) : (*p == vc_portamento_table[n])) {
 				*e = VOLFX_TONEPORTAMENTO;
 				*p = n;
 				return 1;
@@ -248,7 +245,10 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 			*e = VOLFX_PANNING;
 			*p = SHORT_PANNING(*p & 0xf);
 			return 1;
-		case 0: case 1: case 2: case 0xf:
+		case 0:
+		case 1:
+		case 2:
+		case 0xf:
 			if (force) {
 				*e = *p = 0;
 				return 1;
@@ -275,7 +275,6 @@ int convert_voleffect(uint8_t *e, uint8_t *p, int force)
 	}
 	return 1;
 }
-
 
 void read_lined_message(char *msg, slurp_t *fp, int len, int linelen)
 {
@@ -305,28 +304,162 @@ void read_lined_message(char *msg, slurp_t *fp, int len, int linelen)
 // (i range 1-15, j range 0-15);
 // unsigned int st2MixingRate = 23863;
 // const unsigned char tempo_table[18] = {140, 50, 25, 15, 10, 7, 6, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1};
-// long double samplesPerTick = (double) st2MixingRate / ((long double) 50 - ((tempo_table[high_nibble] * low_nibble) / 16));
-// st2MixingRate *= 5; // normally multiplied by the precision beyond the decimal point, however there's no decimal place here. :P
-// st2MixingRate += samplesPerTick;
-// st2MixingRate = (st2MixingRate >= 0)
+// long double samplesPerTick = (double) st2MixingRate / ((long double) 50 - ((tempo_table[high_nibble] * low_nibble) /
+// 16)); st2MixingRate *= 5; // normally multiplied by the precision beyond the decimal point, however there's no
+// decimal place here. :P st2MixingRate += samplesPerTick; st2MixingRate = (st2MixingRate >= 0)
 //                 ? (int32_t) (st2MixingRate / (samplesPerTick * 2))
 //                 : (int32_t)((st2MixingRate - ((samplesPerTick * 2) - 1)) / (samplesPerTick * 2));
 static uint8_t st2_tempo_table[15][16] = {
-	{ 125,  117,  110,  102,   95,   87,   80,   72,   62,   55,   47,   40,   32,   25,   17,   10, },
-	{ 125,  122,  117,  115,  110,  107,  102,  100,   95,   90,   87,   82,   80,   75,   72,   67, },
-	{ 125,  125,  122,  120,  117,  115,  112,  110,  107,  105,  102,  100,   97,   95,   92,   90, },
-	{ 125,  125,  122,  122,  120,  117,  117,  115,  112,  112,  110,  110,  107,  105,  105,  102, },
-	{ 125,  125,  125,  122,  122,  120,  120,  117,  117,  117,  115,  115,  112,  112,  110,  110, },
-	{ 125,  125,  125,  122,  122,  122,  120,  120,  117,  117,  117,  115,  115,  115,  112,  112, },
-	{ 125,  125,  125,  125,  122,  122,  122,  122,  120,  120,  120,  120,  117,  117,  117,  117, },
-	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
-	{ 125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  120,  120,  120,  120,  120, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  122,  122,  122,  122,  122,  122,  122,  122, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
-	{ 125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125,  125, },
+	{
+         125, 117,
+         110, 102,
+         95,  87,
+         80,  72,
+         62,  55,
+         47,  40,
+         32,  25,
+         17,  10,
+	 },
+	{
+         125,   122,
+         117, 115,
+         110, 107,
+         102, 100,
+         95, 90,
+         87,  82,
+         80,  75,
+         72,  67,
+	 },
+	{
+         125,  125,
+         122,   120,
+         117, 115,
+         112, 110,
+         107, 105,
+         102, 100,
+         97, 95,
+         92, 90,
+	 },
+	{
+         125,  125,
+         122,  122,
+         120,   117,
+         117, 115,
+         112, 112,
+         110, 110,
+         107, 105,
+         105, 102,
+	 },
+	{
+         125, 125,
+         125, 122,
+         122, 120,
+         120,   117,
+         117, 117,
+         115, 115,
+         112, 112,
+         110, 110,
+	 },
+	{
+         125, 125,
+         125, 122,
+         122, 122,
+         120, 120,
+         117,   117,
+         117, 115,
+         115, 115,
+         112, 112,
+	 },
+	{
+         125, 125,
+         125, 125,
+         122, 122,
+         122, 122,
+         120, 120,
+         120,   120,
+         117, 117,
+         117, 117,
+	 },
+	{
+         125, 125,
+         125, 125,
+         125, 125,
+         122, 122,
+         122, 122,
+         122, 120,
+         120,   120,
+         120, 120,
+	 },
+	{
+         125, 125,
+         125, 125,
+         125, 125,
+         122, 122,
+         122, 122,
+         122, 120,
+         120, 120,
+         120,   120,
+	 },
+	{
+         125, 125,
+         125, 125,
+         125, 125,
+         125, 125,
+         122, 122,
+         122, 122,
+         122, 122,
+         122, 122,
+	 },
+	{
+         125,   125,
+         125, 125,
+         125, 125,
+         125, 125,
+         122, 122,
+         122, 122,
+         122, 122,
+         122, 122,
+	 },
+	{
+         125, 125,
+         125,   125,
+         125, 125,
+         125, 125,
+         122, 122,
+         122, 122,
+         122, 122,
+         122, 122,
+	 },
+	{
+         125, 125,
+         125, 125,
+         125,   125,
+         125, 125,
+         122, 122,
+         122, 122,
+         122, 122,
+         122, 122,
+	 },
+	{
+         125, 125,
+         125, 125,
+         125, 125,
+         125,   125,
+         125, 125,
+         125, 125,
+         125, 125,
+         125, 125,
+	 },
+	{
+         125, 125,
+         125, 125,
+         125, 125,
+         125, 125,
+         125,   125,
+         125, 125,
+         125, 125,
+         125, 125,
+	 },
 };
 
 uint8_t convert_stm_tempo_to_bpm(size_t tempo)
@@ -363,7 +496,8 @@ const uint8_t stm_effects[16] = {
 	// KLMNO can be entered in the editor but don't do anything
 };
 
-void handle_stm_effects(song_note_t *chan_note) {
+void handle_stm_effects(song_note_t *chan_note)
+{
 	switch (chan_note->effect) {
 	case FX_SPEED:
 		/* do nothing; this is handled later */
@@ -472,25 +606,24 @@ void tm_to_fat_date_time(const struct tm *tm, uint16_t *fat_date, uint16_t *fat_
 
 void fmt_fill_file_from_sample(dmoz_file_t *file, const song_sample_t *smp)
 {
-	file->smp_flags         = smp->flags;
-	file->smp_speed         = smp->c5speed;
-	file->smp_length        = smp->length;
-	file->smp_loop_start    = smp->loop_start;
-	file->smp_loop_end      = smp->loop_end;
+	file->smp_flags = smp->flags;
+	file->smp_speed = smp->c5speed;
+	file->smp_length = smp->length;
+	file->smp_loop_start = smp->loop_start;
+	file->smp_loop_end = smp->loop_end;
 	file->smp_sustain_start = smp->sustain_start;
-	file->smp_sustain_end   = smp->sustain_end;
-	file->smp_defvol        = smp->volume;
-	file->smp_gblvol        = smp->global_volume;
+	file->smp_sustain_end = smp->sustain_end;
+	file->smp_defvol = smp->volume;
+	file->smp_gblvol = smp->global_volume;
 	file->smp_vibrato_speed = smp->vib_speed;
 	file->smp_vibrato_depth = smp->vib_depth;
-	file->smp_vibrato_rate  = smp->vib_rate;
+	file->smp_vibrato_rate = smp->vib_rate;
 
 	if (!file->title && smp->name[0])
 		file->title = strn_dup(smp->name, sizeof(smp->name));
 }
 
-int fmt_write_pcm(disko_t *fp, const uint8_t *data, size_t length, int bpf,
-	int bps, int swap, const char *name)
+int fmt_write_pcm(disko_t *fp, const uint8_t *data, size_t length, int bpf, int bps, int swap, const char *name)
 {
 	if (length % bpf) {
 		log_appendf(4, "%s export: received uneven length", name);
@@ -499,21 +632,23 @@ int fmt_write_pcm(disko_t *fp, const uint8_t *data, size_t length, int bpf,
 
 	if (swap && bps > 1) {
 #define PCM_BYTESWAP(BITS) \
-do { \
-	const uint##BITS##_t *ptr = (const uint##BITS##_t *) data; \
-	length /= sizeof(*ptr); \
+	do { \
+		const uint##BITS##_t *ptr = (const uint##BITS##_t *)data; \
+		length /= sizeof(*ptr); \
 \
-	while (length--) { \
-		uint##BITS##_t v; \
+		while (length--) { \
+			uint##BITS##_t v; \
 \
-		v = bswap_##BITS(*ptr); \
-		disko_write(fp, &v, sizeof(v)); \
-		ptr++; \
-	} \
-} while (0)
+			v = bswap_##BITS(*ptr); \
+			disko_write(fp, &v, sizeof(v)); \
+			ptr++; \
+		} \
+	} while (0)
 
 		switch (bps) {
-		case 4: PCM_BYTESWAP(32); break;
+		case 4:
+			PCM_BYTESWAP(32);
+			break;
 		case 3: {
 			length /= 3;
 
@@ -530,8 +665,11 @@ do { \
 			}
 			break;
 		}
-		case 2: PCM_BYTESWAP(16); break;
-		default: return DW_ERROR;
+		case 2:
+			PCM_BYTESWAP(16);
+			break;
+		default:
+			return DW_ERROR;
 		}
 	} else {
 		disko_write(fp, data, length);
@@ -558,27 +696,48 @@ void fmt_fill_schism_quirks(song_t *csf, uint32_t ver)
 		/* stupid open watcom needs these to be constants
 		 * FIXME -- need to make sure these are right. version
 		 * code was bugged */
-		{0x079a, CSF_QUIRK_PERIODS_ARE_HERTZ                 },  // https://github.com/schismtracker/schismtracker/commit/671b30311082a0e7df041fca25f989b5d2478f69
-		{0x0970, CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG            },  // https://github.com/schismtracker/schismtracker/commit/e7b1461fe751554309fd403713c2a1ef322105ca
-		{0x1087, CSF_QUIRK_IT_DO_NOT_OVERRIDE_CHANNEL_PAN    },  // https://github.com/schismtracker/schismtracker/commit/a34ec86dc819915debc9e06f4727b77bf2dd29ee
-		{0x1087, CSF_QUIRK_IT_PANNING_RESET                  },  // https://github.com/schismtracker/schismtracker/commit/648f5116f984815c69e11d018b32dfec53c6b97a
-		{0x113e, CSF_QUIRK_IT_PITCH_PAN_SEPARATION           },  // https://github.com/schismtracker/schismtracker/commit/6e9f1207015cae0fe1b829fff7bb867e02ec6dea
-		{0x11f2, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT            },  // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
-		{0x11f2, CSF_QUIRK_IT_PORTAMENTO_SWAP_RESETS_POSITION},  // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
-		{0x11f2, CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER },  // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
-		{0x132b, CSF_QUIRK_IT_INITIAL_NOTE_MEMORY            },  // https://github.com/schismtracker/schismtracker/commit/73e9d60676c2b48c8e94e582373e29517105b2b1
-		{0x1409, CSF_QUIRK_IT_DCT_BEHAVIOR                   },  // https://github.com/schismtracker/schismtracker/commit/31d36dc00013fc5ab0efa20c782af18e8b006e07
-		{0x140b, CSF_QUIRK_IT_SAMPLE_AND_HOLD_PANBRELLO      },  // https://github.com/schismtracker/schismtracker/commit/411ec16b190ba1a486d8b0907ad8d74f8fdc2840
-		{0x140b, CSF_QUIRK_IT_PORTAMENTO_NO_NOTE             },  // https://github.com/schismtracker/schismtracker/commit/8ff0a86a715efb50c89770fb9095d4c4089ff187
-		{0x140e, CSF_QUIRK_IT_FIRST_TICK_HANDLING            },  // https://github.com/schismtracker/schismtracker/commit/b9609e4f827e1b6ce9ebe6573b85e69388ca0ea0
-		{0x140e, CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER },  // https://github.com/schismtracker/schismtracker/commit/a9e5df533ab52c35190fcc1cbfed4f0347b660bb
-		{0x1499, CSF_QUIRK_IT_PANBRELLO_HOLD                 },  // https://github.com/schismtracker/schismtracker/commit/ebdebaa8c8a735a7bf49df55debded1b7aac3605
-		{0x14d9, CSF_QUIRK_IT_NO_SUSTAIN_ON_PORTAMENTO       },  // https://github.com/schismtracker/schismtracker/commit/6f68f2855a7e5e4ffe825869244e631e15741037
-		{0x14d9, CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT_IGNORE_CELL},  // https://github.com/schismtracker/schismtracker/commit/aa84148e019a65f3d52ecd33fd84bfecfdb87bf4
-		{0x14e8, CSF_QUIRK_IT_OFFSET_WITH_INSTRUMENT_NUMBER  },  // https://github.com/schismtracker/schismtracker/commit/9237960d45079a54ad73f87bacfe5dd8ae82e273
-		{0x1573, CSF_QUIRK_IT_DOUBLE_PORTAMENTO_SLIDES       },  // https://github.com/schismtracker/schismtracker/commit/223e327d9448561931b8cac8a55180286b17276c
-		{0x15ca, CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF           },  // https://github.com/schismtracker/schismtracker/commit/ff7a817df327c8f13d97b8c6546a9329f59edff8
-		{0x17ca, CSF_QUIRK_IT_COMPAT_GXX_CARRY_PORTA_WITH_INS},  // https://github.com/schismtracker/schismtracker/commit/21bbd9a74df8266efe10c1c7c8aaccfc7512ede5
+		{0x079a,
+                 CSF_QUIRK_PERIODS_ARE_HERTZ                 }, // https://github.com/schismtracker/schismtracker/commit/671b30311082a0e7df041fca25f989b5d2478f69
+		{0x0970,
+                 CSF_QUIRK_IT_SHORT_SAMPLE_RETRIG            }, // https://github.com/schismtracker/schismtracker/commit/e7b1461fe751554309fd403713c2a1ef322105ca
+		{0x1087,
+                 CSF_QUIRK_IT_DO_NOT_OVERRIDE_CHANNEL_PAN    }, // https://github.com/schismtracker/schismtracker/commit/a34ec86dc819915debc9e06f4727b77bf2dd29ee
+		{0x1087,
+                 CSF_QUIRK_IT_PANNING_RESET                  }, // https://github.com/schismtracker/schismtracker/commit/648f5116f984815c69e11d018b32dfec53c6b97a
+		{0x113e,
+                 CSF_QUIRK_IT_PITCH_PAN_SEPARATION           }, // https://github.com/schismtracker/schismtracker/commit/6e9f1207015cae0fe1b829fff7bb867e02ec6dea
+		{0x11f2,
+                 CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT            }, // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
+		{0x11f2,
+                 CSF_QUIRK_IT_PORTAMENTO_SWAP_RESETS_POSITION}, // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
+		{0x11f2,
+                 CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER }, // https://github.com/schismtracker/schismtracker/commit/1b2f7d5522fcb971f134a6664182ca569f7c8008
+		{0x132b,
+                 CSF_QUIRK_IT_INITIAL_NOTE_MEMORY            }, // https://github.com/schismtracker/schismtracker/commit/73e9d60676c2b48c8e94e582373e29517105b2b1
+		{0x1409,
+                 CSF_QUIRK_IT_DCT_BEHAVIOR                   }, // https://github.com/schismtracker/schismtracker/commit/31d36dc00013fc5ab0efa20c782af18e8b006e07
+		{0x140b,
+                 CSF_QUIRK_IT_SAMPLE_AND_HOLD_PANBRELLO      }, // https://github.com/schismtracker/schismtracker/commit/411ec16b190ba1a486d8b0907ad8d74f8fdc2840
+		{0x140b,
+                 CSF_QUIRK_IT_PORTAMENTO_NO_NOTE             }, // https://github.com/schismtracker/schismtracker/commit/8ff0a86a715efb50c89770fb9095d4c4089ff187
+		{0x140e,
+                 CSF_QUIRK_IT_FIRST_TICK_HANDLING            }, // https://github.com/schismtracker/schismtracker/commit/b9609e4f827e1b6ce9ebe6573b85e69388ca0ea0
+		{0x140e,
+                 CSF_QUIRK_IT_MULTI_SAMPLE_INSTRUMENT_NUMBER }, // https://github.com/schismtracker/schismtracker/commit/a9e5df533ab52c35190fcc1cbfed4f0347b660bb
+		{0x1499,
+                 CSF_QUIRK_IT_PANBRELLO_HOLD                 }, // https://github.com/schismtracker/schismtracker/commit/ebdebaa8c8a735a7bf49df55debded1b7aac3605
+		{0x14d9,
+                 CSF_QUIRK_IT_NO_SUSTAIN_ON_PORTAMENTO       }, // https://github.com/schismtracker/schismtracker/commit/6f68f2855a7e5e4ffe825869244e631e15741037
+		{0x14d9,
+                 CSF_QUIRK_IT_EMPTY_NOTE_MAP_SLOT_IGNORE_CELL}, // https://github.com/schismtracker/schismtracker/commit/aa84148e019a65f3d52ecd33fd84bfecfdb87bf4
+		{0x14e8,
+                 CSF_QUIRK_IT_OFFSET_WITH_INSTRUMENT_NUMBER  }, // https://github.com/schismtracker/schismtracker/commit/9237960d45079a54ad73f87bacfe5dd8ae82e273
+		{0x1573,
+                 CSF_QUIRK_IT_DOUBLE_PORTAMENTO_SLIDES       }, // https://github.com/schismtracker/schismtracker/commit/223e327d9448561931b8cac8a55180286b17276c
+		{0x15ca,
+                 CSF_QUIRK_IT_CARRY_AFTER_NOTE_OFF           }, // https://github.com/schismtracker/schismtracker/commit/ff7a817df327c8f13d97b8c6546a9329f59edff8
+		{0x17ca,
+                 CSF_QUIRK_IT_COMPAT_GXX_CARRY_PORTA_WITH_INS}, // https://github.com/schismtracker/schismtracker/commit/21bbd9a74df8266efe10c1c7c8aaccfc7512ede5
 	};
 	size_t i;
 

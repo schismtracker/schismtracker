@@ -45,7 +45,8 @@ struct au_header {
 static int read_header_au(struct au_header *hdr, slurp_t *fp)
 {
 #define READ_VALUE(name) \
-	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) return 0
+	if (slurp_read(fp, &hdr->name, sizeof(hdr->name)) != sizeof(hdr->name)) \
+	return 0
 
 	READ_VALUE(magic);
 	READ_VALUE(data_offset);
@@ -66,8 +67,7 @@ static int read_header_au(struct au_header *hdr, slurp_t *fp)
 	hdr->sample_rate = bswapBE32(hdr->sample_rate);
 	hdr->channels = bswapBE32(hdr->channels);
 
-	if (hdr->data_offset < 24
-	 || !slurp_could_seek(fp, hdr->data_offset + hdr->data_size, SEEK_SET))
+	if (hdr->data_offset < 24 || !slurp_could_seek(fp, hdr->data_offset + hdr->data_size, SEEK_SET))
 		return 0;
 
 	switch (hdr->channels) {
@@ -238,10 +238,10 @@ int fmt_au_save_sample(disko_t *fp, song_sample_t *smp)
 
 	disko_write(fp, &au, sizeof(au));
 	disko_write(fp, smp->name, 25);
-	csf_write_sample(fp, smp, SF_BE | SF_PCMS
-			| ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
+	csf_write_sample(fp, smp,
+		SF_BE | SF_PCMS | ((smp->flags & CHN_16BIT) ? SF_16 : SF_8)
 			| ((smp->flags & CHN_STEREO) ? SF_SI : SF_M),
-			UINT32_MAX);
+		UINT32_MAX);
 
 	return SAVE_SUCCESS;
 }

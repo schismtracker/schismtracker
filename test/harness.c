@@ -21,16 +21,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "test.h"
 #include "test-tempfile.h"
+#include "test.h"
 
-#include "charset.h"
-#include "osdefs.h"
-#include "timer.h"
-#include "mem.h"
-#include "str.h"
-#include "mt.h"
 #include "atomic.h"
+#include "charset.h"
+#include "mem.h"
+#include "mt.h"
+#include "osdefs.h"
+#include "str.h"
+#include "timer.h"
 
 /* these are no-ops now  --paper */
 #define result_to_exit_code(x) (x)
@@ -138,7 +138,10 @@ int schism_test_main(int argc, char **argv)
 		start_time = timer_ticks();
 
 		for (i = 0; automated_tests[i].name; i++) {
-			if (filter_expression && charset_fnmatch(filter_expression, CHARSET_UTF8, automated_tests[i].name, CHARSET_UTF8, CHARSET_FNM_PERIOD) != 0)
+			if (filter_expression
+				&& charset_fnmatch(filter_expression, CHARSET_UTF8, automated_tests[i].name,
+					   CHARSET_UTF8, CHARSET_FNM_PERIOD)
+					   != 0)
 				continue;
 
 			testresult_t result = run_test_child(argv[0], &automated_tests[i]);
@@ -153,7 +156,8 @@ int schism_test_main(int argc, char **argv)
 				// up to the result.
 
 				if (result == SCHISM_TESTRESULT_CRASH) {
-					for (j = 6 + strlen(automated_tests[i].name) + 1; j < TESTRESULT_MAX_LINE_LEN - TESTRESULT_STR_MAX_LEN; j++)
+					for (j = 6 + strlen(automated_tests[i].name) + 1;
+						j < TESTRESULT_MAX_LINE_LEN - TESTRESULT_STR_MAX_LEN; j++)
 						fputc('.', stdout);
 
 					puts(" CRASH");
@@ -168,7 +172,8 @@ int schism_test_main(int argc, char **argv)
 		diff_time = end_time - start_time;
 
 		printf("Results: %d passed, %d failed\n", passed_tests, failed_tests);
-		printf("Elapsed: %s.%03" PRIu32 " seconds\n", str_from_num_thousands(diff_time / 1000, buf), (uint32_t)(diff_time % 1000));
+		printf("Elapsed: %s.%03" PRIu32 " seconds\n", str_from_num_thousands(diff_time / 1000, buf),
+			(uint32_t)(diff_time % 1000));
 
 		exit_code = (failed_tests == 0) ? 0 : 1;
 	}

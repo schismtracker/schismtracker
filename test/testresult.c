@@ -27,11 +27,17 @@
 const char *testresult_str(testresult_t result)
 {
 	switch (result) {
-	case SCHISM_TESTRESULT_NOT_RUN: return "NOT RUN";
-	case SCHISM_TESTRESULT_PASS: return "PASS";
-	case SCHISM_TESTRESULT_FAIL: return "FAIL";
-	case SCHISM_TESTRESULT_INCONCLUSIVE: return "INCONCLUSIVE";
-	case SCHISM_TESTRESULT_SKIP: return "SKIP";
-	default: return "#UNKNOWN";
+	case SCHISM_TESTRESULT_NOT_RUN:
+		return "NOT RUN";
+	case SCHISM_TESTRESULT_PASS:
+		return "PASS";
+	case SCHISM_TESTRESULT_FAIL:
+		return "FAIL";
+	case SCHISM_TESTRESULT_INCONCLUSIVE:
+		return "INCONCLUSIVE";
+	case SCHISM_TESTRESULT_SKIP:
+		return "SKIP";
+	default:
+		return "#UNKNOWN";
 	}
 }

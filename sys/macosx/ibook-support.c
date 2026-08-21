@@ -24,19 +24,19 @@
 #include "headers.h"
 #include "util.h"
 
+#include <ApplicationServices/ApplicationServices.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/IOReturn.h>
-#include <ApplicationServices/ApplicationServices.h>
 #include <IOKit/hidsystem/IOHIDLib.h>
 #include <IOKit/hidsystem/IOHIDParameter.h>
 
-#define kMyDriversKeyboardClassName     "AppleADBKeyboard"
-#define kfnSwitchError                  200
-#define kfnAppleMode            0
-#define kfntheOtherMode         1
+#define kMyDriversKeyboardClassName "AppleADBKeyboard"
+#define kfnSwitchError              200
+#define kfnAppleMode                0
+#define kfntheOtherMode             1
 
 #ifndef kIOHIDFKeyModeKey
-#define kIOHIDFKeyModeKey    "HIDFKeyMode"
+# define kIOHIDFKeyModeKey "HIDFKeyMode"
 #endif
 
 int macosx_ibook_fnswitch(int setting)
@@ -52,25 +52,28 @@ int macosx_ibook_fnswitch(int setting)
 	unsigned int res, dummy;
 
 	kr = IOMasterPort(bootstrap_port, &mp);
-	if (kr != KERN_SUCCESS) return -1;
+	if (kr != KERN_SUCCESS)
+		return -1;
 
 	classToMatch = IOServiceMatching(kIOHIDSystemClass);
 	if (classToMatch == NULL) {
 		return -1;
 	}
 	kr = IOServiceGetMatchingServices(mp, classToMatch, &it);
-	if (kr != KERN_SUCCESS) return -1;
+	if (kr != KERN_SUCCESS)
+		return -1;
 
 	so = IOIteratorNext(it);
 	IOObjectRelease(it);
 
-	if (!so) return -1;
+	if (!so)
+		return -1;
 
 	kr = IOServiceOpen(so, mach_task_self(), kIOHIDParamConnectType, &dp);
-	if (kr != KERN_SUCCESS) return -1;
+	if (kr != KERN_SUCCESS)
+		return -1;
 
-	kr = IOHIDGetParameter(dp, CFSTR(kIOHIDFKeyModeKey), sizeof(res),
-						&res, (IOByteCount *) &dummy);
+	kr = IOHIDGetParameter(dp, CFSTR(kIOHIDFKeyModeKey), sizeof(res), &res, (IOByteCount *)&dummy);
 	if (kr != KERN_SUCCESS) {
 		IOServiceClose(dp);
 		return -1;
@@ -78,8 +81,7 @@ int macosx_ibook_fnswitch(int setting)
 
 	if (setting == kfnAppleMode || setting == kfntheOtherMode) {
 		dummy = setting;
-		kr = IOHIDSetParameter(dp, CFSTR(kIOHIDFKeyModeKey),
-					&dummy, sizeof(dummy));
+		kr = IOHIDSetParameter(dp, CFSTR(kIOHIDFKeyModeKey), &dummy, sizeof(dummy));
 		if (kr != KERN_SUCCESS) {
 			IOServiceClose(dp);
 			return -1;

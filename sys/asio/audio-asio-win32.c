@@ -1,7 +1,7 @@
 /**
  * Incomplete ASIO interface definitions -- reverse-engineered from existing
  * binaries and various public sources.
- * 
+ *
  * Copyright (C) 2025-2026 Paper
  *
  * This software is provided 'as-is', without any express or implied
@@ -19,7 +19,7 @@
  * 2. Altered source versions must be plainly marked as such, and must not be
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
-**/
+ **/
 
 #include "audio-asio.h"
 
@@ -34,30 +34,32 @@
 typedef struct IAsioVtbl IAsioVtbl;
 
 struct IAsioVtbl {
-	HRESULT (__stdcall *QueryInterface)(IAsio *This, REFIID riid, void **ppvObject);
-	ULONG (__stdcall *AddRef)(IAsio *This);
-	ULONG (__stdcall *Release)(IAsio *This);
-	AsioError (__thiscall *Init)(IAsio *This, void *unk1);
-	void (__thiscall *GetDriverName)(IAsio *This, char name[32]);
-	uint32_t (__thiscall *GetDriverVersion)(IAsio *This);
-	void (__thiscall *GetErrorMessage)(IAsio *This, char msg[128]);
-	AsioError (__thiscall *Start)(IAsio *This);
-	AsioError (__thiscall *Stop)(IAsio *This);
-	AsioError (__thiscall *GetChannels)(IAsio *This, uint32_t *pinchns, uint32_t *poutchns);
-	AsioError (__thiscall *GetLatencies)(IAsio *This, uint32_t *pinlatency, uint32_t *poutlatency);
-	AsioError (__thiscall *GetBufferSize)(IAsio *This, uint32_t *pmin, uint32_t *pmax, uint32_t *pwanted, uint32_t *punknown);
-	AsioError (__thiscall *SupportsSampleRate)(IAsio *This, double rate);
-	AsioError (__thiscall *GetSampleRate)(IAsio *This, double *prate);
-	AsioError (__thiscall *SetSampleRate)(IAsio *This, double rate);
-	AsioError (__thiscall *GetClockSources)(IAsio *This, struct AsioClockSource *srcs, uint32_t *size);
-	AsioError (__thiscall *SetClockSource)(IAsio *This, uint32_t src);
-	AsioError (__thiscall *GetSamplePosition)(IAsio *This, uint64_t *unk1, uint64_t *unk2);
-	AsioError (__thiscall *GetChannelInfo)(IAsio *This, struct AsioChannelInfo *pinfo);
-	AsioError (__thiscall *CreateBuffers)(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs);
-	AsioError (__thiscall *DestroyBuffers)(IAsio *This);
-	AsioError (__thiscall *ControlPanel)(IAsio *This);
-	AsioError (__thiscall *Future)(IAsio *This, uint32_t which);
-	AsioError (__thiscall *OutputReady)(IAsio *This);
+	HRESULT(__stdcall *QueryInterface)(IAsio *This, REFIID riid, void **ppvObject);
+	ULONG(__stdcall *AddRef)(IAsio *This);
+	ULONG(__stdcall *Release)(IAsio *This);
+	AsioError(__thiscall *Init)(IAsio *This, void *unk1);
+	void(__thiscall *GetDriverName)(IAsio *This, char name[32]);
+	uint32_t(__thiscall *GetDriverVersion)(IAsio *This);
+	void(__thiscall *GetErrorMessage)(IAsio *This, char msg[128]);
+	AsioError(__thiscall *Start)(IAsio *This);
+	AsioError(__thiscall *Stop)(IAsio *This);
+	AsioError(__thiscall *GetChannels)(IAsio *This, uint32_t *pinchns, uint32_t *poutchns);
+	AsioError(__thiscall *GetLatencies)(IAsio *This, uint32_t *pinlatency, uint32_t *poutlatency);
+	AsioError(__thiscall *GetBufferSize)(
+		IAsio *This, uint32_t *pmin, uint32_t *pmax, uint32_t *pwanted, uint32_t *punknown);
+	AsioError(__thiscall *SupportsSampleRate)(IAsio *This, double rate);
+	AsioError(__thiscall *GetSampleRate)(IAsio *This, double *prate);
+	AsioError(__thiscall *SetSampleRate)(IAsio *This, double rate);
+	AsioError(__thiscall *GetClockSources)(IAsio *This, struct AsioClockSource *srcs, uint32_t *size);
+	AsioError(__thiscall *SetClockSource)(IAsio *This, uint32_t src);
+	AsioError(__thiscall *GetSamplePosition)(IAsio *This, uint64_t *unk1, uint64_t *unk2);
+	AsioError(__thiscall *GetChannelInfo)(IAsio *This, struct AsioChannelInfo *pinfo);
+	AsioError(__thiscall *CreateBuffers)(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs,
+		uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs);
+	AsioError(__thiscall *DestroyBuffers)(IAsio *This);
+	AsioError(__thiscall *ControlPanel)(IAsio *This);
+	AsioError(__thiscall *Future)(IAsio *This, uint32_t which);
+	AsioError(__thiscall *OutputReady)(IAsio *This);
 };
 
 struct IAsio {
@@ -140,18 +142,18 @@ static int Asio_Win32_UseANSI(void)
 }
 
 # define ASIO_ANSI_UNICODE(x, y) \
-	if (Asio_Win32_UseANSI()) { \
-		x \
-	} else { \
-		y \
-	}
+	 if (Asio_Win32_UseANSI()) { \
+		 x \
+	 } else { \
+		 y \
+	 }
 #else
 # define ASIO_ANSI_UNICODE(x, y) y
 #endif
 
-typedef HRESULT (WINAPI *OLE32_CLSIDFromStringSpec)(LPCOLESTR,LPCLSID);
-typedef BOOL (WINAPI *SHELL32_GUIDFromStringASpec)(LPCSTR,LPGUID);
-typedef BOOL (WINAPI *SHELL32_GUIDFromStringWSpec)(LPCWSTR,LPGUID);
+typedef HRESULT(WINAPI *OLE32_CLSIDFromStringSpec)(LPCOLESTR, LPCLSID);
+typedef BOOL(WINAPI *SHELL32_GUIDFromStringASpec)(LPCSTR, LPGUID);
+typedef BOOL(WINAPI *SHELL32_GUIDFromStringWSpec)(LPCWSTR, LPGUID);
 static OLE32_CLSIDFromStringSpec OLE32_CLSIDFromString;
 static SHELL32_GUIDFromStringASpec SHELL32_GUIDFromStringA;
 static SHELL32_GUIDFromStringWSpec SHELL32_GUIDFromStringW;
@@ -191,30 +193,30 @@ void Asio_DriverPoll(void)
 
 	Asio_Win32_FreeDrivers();
 
-	ASIO_ANSI_UNICODE({
-		lstatus = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\ASIO", 0,
-			KEY_ENUMERATE_SUB_KEYS|KEY_QUERY_VALUE, &hkey);
-	}, {
-		lstatus = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\ASIO", 0,
-			KEY_ENUMERATE_SUB_KEYS|KEY_QUERY_VALUE, &hkey);
-	})
+	ASIO_ANSI_UNICODE(
+		{
+			lstatus = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\ASIO", 0,
+				KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hkey);
+		},
+		{
+			lstatus = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\ASIO", 0,
+				KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hkey);
+		})
 
 	/* WHAT'S IN THE BOX? */
 	if (lstatus != ERROR_SUCCESS)
 		return;
 
-	lstatus = RegQueryInfoKeyA(hkey, NULL, NULL, NULL, &max_subkey,
-		&max_subkey_len, NULL, NULL, NULL, NULL, NULL, NULL);
+	lstatus = RegQueryInfoKeyA(
+		hkey, NULL, NULL, NULL, &max_subkey, &max_subkey_len, NULL, NULL, NULL, NULL, NULL, NULL);
 	if (lstatus != ERROR_SUCCESS) {
 		RegCloseKey(hkey);
 		return;
 	}
 
-	ASIO_ANSI_UNICODE({
-		subkey.a = malloc(max_subkey_len + 1);
-	}, {
-		subkey.w = malloc((max_subkey_len + 1) * sizeof(WCHAR));
-	})
+	ASIO_ANSI_UNICODE(
+		{ subkey.a = malloc(max_subkey_len + 1); },
+		{ subkey.w = malloc((max_subkey_len + 1) * sizeof(WCHAR)); })
 
 	drivers = malloc(sizeof(*drivers) * max_subkey);
 
@@ -241,39 +243,33 @@ void Asio_DriverPoll(void)
 		/* MSDN: "This size should include the terminating [NUL] character." */
 		subkey_len = max_subkey_len + 1;
 
-		ASIO_ANSI_UNICODE({
-			lstatus = RegEnumKeyExA(hkey, i, subkey.a, &subkey_len, NULL,
-				NULL, NULL, NULL);
-		}, {
-			lstatus = RegEnumKeyExW(hkey, i, subkey.w, &subkey_len, NULL,
-				NULL, NULL, NULL);
-		})
+		ASIO_ANSI_UNICODE(
+			{ lstatus = RegEnumKeyExA(hkey, i, subkey.a, &subkey_len, NULL, NULL, NULL, NULL); },
+			{ lstatus = RegEnumKeyExW(hkey, i, subkey.w, &subkey_len, NULL, NULL, NULL, NULL); })
 
 		if (lstatus != ERROR_SUCCESS)
 			continue; /* ??? */
 
-		ASIO_ANSI_UNICODE({
-			lstatus = RegOpenKeyExA(hkey, subkey.a, 0, KEY_READ, &hsubkey);
-		}, {
-			lstatus = RegOpenKeyExW(hkey, subkey.w, 0, KEY_READ, &hsubkey);
-		})
+		ASIO_ANSI_UNICODE(
+			{ lstatus = RegOpenKeyExA(hkey, subkey.a, 0, KEY_READ, &hsubkey); },
+			{ lstatus = RegOpenKeyExW(hkey, subkey.w, 0, KEY_READ, &hsubkey); })
 
 		if (lstatus != ERROR_SUCCESS)
 			continue;
 
-		ASIO_ANSI_UNICODE({
-			DWORD x = sizeof(clsid_s.a);
-			lstatus = RegQueryValueExA(hsubkey, "CLSID", NULL, &type,
-				clsid_s.a, &x);
-			/* NUL terminate */
-			clsid_s.a[38] = 0;
-		}, {
-			DWORD x = sizeof(clsid_s.w);
-			lstatus = RegQueryValueExW(hsubkey, L"CLSID", NULL, &type,
-				(LPBYTE)clsid_s.w, &x);
-			/* NUL terminate */
-			clsid_s.w[38] = 0;
-		})
+		ASIO_ANSI_UNICODE(
+			{
+				DWORD x = sizeof(clsid_s.a);
+				lstatus = RegQueryValueExA(hsubkey, "CLSID", NULL, &type, clsid_s.a, &x);
+                        /* NUL terminate */
+				clsid_s.a[38] = 0;
+			},
+			{
+				DWORD x = sizeof(clsid_s.w);
+				lstatus = RegQueryValueExW(hsubkey, L"CLSID", NULL, &type, (LPBYTE)clsid_s.w, &x);
+                        /* NUL terminate */
+				clsid_s.w[38] = 0;
+			})
 
 		if (lstatus != ERROR_SUCCESS || type != REG_SZ) {
 			RegCloseKey(hsubkey);
@@ -292,11 +288,9 @@ void Asio_DriverPoll(void)
 			if (OLE32_CLSIDFromString && !Asio_Win32_UseANSI()) {
 				success = SUCCEEDED(OLE32_CLSIDFromString(clsid_s.w, &clsid));
 			} else {
-				ASIO_ANSI_UNICODE({
-					success = SHELL32_GUIDFromStringA(clsid_s.a, &clsid);
-				}, {
-					success = SHELL32_GUIDFromStringW(clsid_s.w, &clsid);
-				})
+				ASIO_ANSI_UNICODE(
+					{ success = SHELL32_GUIDFromStringA(clsid_s.a, &clsid); },
+					{ success = SHELL32_GUIDFromStringW(clsid_s.w, &clsid); })
 			}
 
 			if (!success) {
@@ -305,15 +299,15 @@ void Asio_DriverPoll(void)
 			}
 		}
 
-		ASIO_ANSI_UNICODE({
-			lstatus = RegQueryValueExA(hsubkey, "Description",
-				NULL, &type, NULL, &desc_sz);
-			desc_sz += 1; /* NUL terminator */
-		}, {
-			lstatus = RegQueryValueExW(hsubkey, L"Description",
-				NULL, &type, NULL, &desc_sz);
-			desc_sz += 2; /* NUL terminator */
-		})
+		ASIO_ANSI_UNICODE(
+			{
+				lstatus = RegQueryValueExA(hsubkey, "Description", NULL, &type, NULL, &desc_sz);
+				desc_sz += 1; /* NUL terminator */
+			},
+			{
+				lstatus = RegQueryValueExW(hsubkey, L"Description", NULL, &type, NULL, &desc_sz);
+				desc_sz += 2; /* NUL terminator */
+			})
 
 		if (lstatus != ERROR_SUCCESS || type != REG_SZ) {
 			RegCloseKey(hsubkey);
@@ -326,15 +320,16 @@ void Asio_DriverPoll(void)
 			continue;
 		}
 
-		ASIO_ANSI_UNICODE({
-			lstatus = RegQueryValueExA(hsubkey, "Description",
-				NULL, &type, dev_desc.a, &desc_sz);
-			dev_desc.a[desc_sz - 1] = 0;
-		}, {
-			lstatus = RegQueryValueExW(hsubkey, L"Description",
-				NULL, &type, (LPBYTE)dev_desc.w, &desc_sz);
-			dev_desc.w[(desc_sz >> 1) - 1] = 0;
-		})
+		ASIO_ANSI_UNICODE(
+			{
+				lstatus = RegQueryValueExA(hsubkey, "Description", NULL, &type, dev_desc.a, &desc_sz);
+				dev_desc.a[desc_sz - 1] = 0;
+			},
+			{
+				lstatus = RegQueryValueExW(
+					hsubkey, L"Description", NULL, &type, (LPBYTE)dev_desc.w, &desc_sz);
+				dev_desc.w[(desc_sz >> 1) - 1] = 0;
+			})
 
 		/* done with this */
 		RegCloseKey(hsubkey);
@@ -345,11 +340,9 @@ void Asio_DriverPoll(void)
 		}
 
 		memcpy(&drivers[drivers_size].clsid, &clsid, sizeof(CLSID));
-		ASIO_ANSI_UNICODE({
-			drivers[drivers_size].description = Asio_Win32_ANSItoUTF8(dev_desc.a);
-		}, {
-			drivers[drivers_size].description = Asio_Win32_UNICODEtoUTF8(dev_desc.w);
-		})
+		ASIO_ANSI_UNICODE(
+			{ drivers[drivers_size].description = Asio_Win32_ANSItoUTF8(dev_desc.a); },
+			{ drivers[drivers_size].description = Asio_Win32_UNICODEtoUTF8(dev_desc.w); })
 
 		free(dev_desc.v);
 
@@ -376,8 +369,8 @@ const char *Asio_DriverDescription(uint32_t x)
 }
 
 /* initialized in Asio_Init() */
-typedef HRESULT (WINAPI *OLE32_CoCreateInstanceSpec)(REFCLSID rclsid,
-	LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv);
+typedef HRESULT(WINAPI *OLE32_CoCreateInstanceSpec)(
+	REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID *ppv);
 static OLE32_CoCreateInstanceSpec OLE32_CoCreateInstance;
 
 IAsio *Asio_DriverGet(uint32_t x)
@@ -396,8 +389,8 @@ IAsio *Asio_DriverGet(uint32_t x)
 	if (x >= drivers_size)
 		return NULL;
 
-	hres = OLE32_CoCreateInstance(&drivers[x].clsid, NULL,
-		CLSCTX_INPROC_SERVER, &drivers[x].clsid, (LPVOID *)&asio);
+	hres = OLE32_CoCreateInstance(
+		&drivers[x].clsid, NULL, CLSCTX_INPROC_SERVER, &drivers[x].clsid, (LPVOID *)&asio);
 
 	if (FAILED(hres))
 		return NULL;
@@ -493,7 +486,8 @@ AsioError IAsio_GetChannelInfo(IAsio *This, struct AsioChannelInfo *pinfo)
 	return This->lpVtbl->GetChannelInfo(This, pinfo);
 }
 
-AsioError IAsio_CreateBuffers(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size, struct AsioCreateBufferCallbacks *cbs)
+AsioError IAsio_CreateBuffers(IAsio *This, struct AsioBuffers *bufs, uint32_t numbufs, uint32_t buffer_size,
+	struct AsioCreateBufferCallbacks *cbs)
 {
 	return This->lpVtbl->CreateBuffers(This, bufs, numbufs, buffer_size, cbs);
 }
@@ -521,8 +515,8 @@ AsioError IAsio_OutputReady(IAsio *This)
 static HMODULE lib_ole32;
 static HMODULE lib_shell32;
 
-typedef HRESULT (WINAPI *OLE32_CoInitializeExSpec)(LPVOID, DWORD);
-typedef void (WINAPI *OLE32_CoUninitializeSpec)(void);
+typedef HRESULT(WINAPI *OLE32_CoInitializeExSpec)(LPVOID, DWORD);
+typedef void(WINAPI *OLE32_CoUninitializeSpec)(void);
 
 static OLE32_CoInitializeExSpec OLE32_CoInitializeEx;
 static OLE32_CoUninitializeSpec OLE32_CoUninitialize;
@@ -537,23 +531,15 @@ int32_t Asio_Init(void)
 	if (!lib_shell32)
 		goto fail;
 
-	OLE32_CoCreateInstance = (OLE32_CoCreateInstanceSpec)
-		GetProcAddress(lib_ole32, "CoCreateInstance");
-	OLE32_CoInitializeEx = (OLE32_CoInitializeExSpec)
-		GetProcAddress(lib_ole32, "CoInitializeEx");
-	OLE32_CoUninitialize = (OLE32_CoUninitializeSpec)
-		GetProcAddress(lib_ole32, "CoUninitialize");
-	OLE32_CLSIDFromString = (OLE32_CLSIDFromStringSpec)
-		GetProcAddress(lib_ole32, "CLSIDFromString");
-	SHELL32_GUIDFromStringA = (SHELL32_GUIDFromStringASpec)
-		GetProcAddress(lib_shell32, MAKEINTRESOURCEA(703));
-	SHELL32_GUIDFromStringW = (SHELL32_GUIDFromStringWSpec)
-		GetProcAddress(lib_shell32, MAKEINTRESOURCEA(704));
+	OLE32_CoCreateInstance = (OLE32_CoCreateInstanceSpec)GetProcAddress(lib_ole32, "CoCreateInstance");
+	OLE32_CoInitializeEx = (OLE32_CoInitializeExSpec)GetProcAddress(lib_ole32, "CoInitializeEx");
+	OLE32_CoUninitialize = (OLE32_CoUninitializeSpec)GetProcAddress(lib_ole32, "CoUninitialize");
+	OLE32_CLSIDFromString = (OLE32_CLSIDFromStringSpec)GetProcAddress(lib_ole32, "CLSIDFromString");
+	SHELL32_GUIDFromStringA = (SHELL32_GUIDFromStringASpec)GetProcAddress(lib_shell32, MAKEINTRESOURCEA(703));
+	SHELL32_GUIDFromStringW = (SHELL32_GUIDFromStringWSpec)GetProcAddress(lib_shell32, MAKEINTRESOURCEA(704));
 
-	if (!OLE32_CoInitializeEx || !OLE32_CoUninitialize
-		|| !OLE32_CoCreateInstance
-		|| (!OLE32_CLSIDFromString
-			|| (!SHELL32_GUIDFromStringA && !SHELL32_GUIDFromStringW))) {
+	if (!OLE32_CoInitializeEx || !OLE32_CoUninitialize || !OLE32_CoCreateInstance
+		|| (!OLE32_CLSIDFromString || (!SHELL32_GUIDFromStringA && !SHELL32_GUIDFromStringW))) {
 		goto fail;
 	}
 

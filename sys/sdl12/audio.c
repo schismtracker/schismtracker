@@ -22,10 +22,10 @@
  */
 
 #include "headers.h"
-#include "mem.h"
-#include "util.h"
 #include "backend/audio.h"
 #include "loadso.h"
+#include "mem.h"
+#include "util.h"
 
 #include "init.h"
 
@@ -33,14 +33,14 @@ struct schism_audio_device {
 	void (*callback)(uint8_t *stream, uint32_t len);
 };
 
-static int (SDLCALL *sdl12_InitSubSystem)(uint32_t flags);
-static void (SDLCALL *sdl12_QuitSubSystem)(uint32_t flags);
+static int(SDLCALL *sdl12_InitSubSystem)(uint32_t flags);
+static void(SDLCALL *sdl12_QuitSubSystem)(uint32_t flags);
 
-static int (SDLCALL *sdl12_OpenAudio)(SDL_AudioSpec *desired, SDL_AudioSpec *obtained);
-static void (SDLCALL *sdl12_CloseAudio)(void);
-static void (SDLCALL *sdl12_LockAudio)(void);
-static void (SDLCALL *sdl12_UnlockAudio)(void);
-static void (SDLCALL *sdl12_PauseAudio)(int);
+static int(SDLCALL *sdl12_OpenAudio)(SDL_AudioSpec *desired, SDL_AudioSpec *obtained);
+static void(SDLCALL *sdl12_CloseAudio)(void);
+static void(SDLCALL *sdl12_LockAudio)(void);
+static void(SDLCALL *sdl12_UnlockAudio)(void);
+static void(SDLCALL *sdl12_PauseAudio)(int);
 
 static char *(SDLCALL *sdl12_AudioDriverName)(char *buf, int maxlen);
 
@@ -95,45 +95,45 @@ static struct sdl12_audio_driver_info {
 	 * These in the same order as the bootstrap array in
 	 * src/audio/SDL_audio.c to hopefully mimic SDL's original
 	 * behavior. */
-	{"pipewire", 0},  // Pipewire (sdl2-compat)
-	{"pulseaudio", 0},// PulseAudio (sdl2-compat)
-	{"pulse", 0},     // PulseAudio
-	{"alsa", 0},      // ALSA
-	{"jack", 0},      // JACK (sdl2-compat)
-	{"sndio", 0},     // OpenBSD sndio
-	{"netbsd", 0},    // NetBSD audio
-	{"openbsd", 0},   // OpenBSD audio (outdated)
-	{"dsp", 0},       // /dev/dsp (OSS)
-	{"dma", 0},       // /dev/dsp DMA audio (OSS)
-	{"qsa-nto", 0},   // QNX NTO audio
-	{"audio", 0},     // Sun Microsystems audio
-	{"AL", 0},        // IRIX DMedia audio
-	{"arts", 0},      // artsc audio (?)
-	{"esd", 0},       // Enlightened Sound Daemon
-	{"nas", 0},       // Network Audio System
-	{"wasapi", 0},    // Win32 WASAPI (sdl2-compat)
-	{"dsound", 0},    // Win32 DirectSound
+	{"pipewire",   0}, // Pipewire (sdl2-compat)
+	{"pulseaudio", 0}, // PulseAudio (sdl2-compat)
+	{"pulse",      0}, // PulseAudio
+	{"alsa",       0}, // ALSA
+	{"jack",       0}, // JACK (sdl2-compat)
+	{"sndio",      0}, // OpenBSD sndio
+	{"netbsd",     0}, // NetBSD audio
+	{"openbsd",    0}, // OpenBSD audio (outdated)
+	{"dsp",        0}, // /dev/dsp (OSS)
+	{"dma",        0}, // /dev/dsp DMA audio (OSS)
+	{"qsa-nto",    0}, // QNX NTO audio
+	{"audio",      0}, // Sun Microsystems audio
+	{"AL",         0}, // IRIX DMedia audio
+	{"arts",       0}, // artsc audio (?)
+	{"esd",        0}, // Enlightened Sound Daemon
+	{"nas",        0}, // Network Audio System
+	{"wasapi",     0}, // Win32 WASAPI (sdl2-compat)
+	{"dsound",     0}, // Win32 DirectSound
 #ifdef SCHISM_WIN32
-	{"waveout", 0},   // Win32 WaveOut
+	{"waveout",    0}, // Win32 WaveOut
 #endif
-	{"paud", 0},      // AIX Paudio
-	{"baudio", 0},    // BeOS
-	{"coreaudio", 0}, // Mac OS X CoreAudio
-	{"sndmgr", 0},    // Mac OS SoundManager 3.0
-	{"AHI", 0},       // AmigaOS
-	{"dcaudio", 0},   // Dreamcast AICA audio
-	{"nds", 0},       // Nintendo DS Audio
+	{"paud",       0}, // AIX Paudio
+	{"baudio",     0}, // BeOS
+	{"coreaudio",  0}, // Mac OS X CoreAudio
+	{"sndmgr",     0}, // Mac OS SoundManager 3.0
+	{"AHI",        0}, // AmigaOS
+	{"dcaudio",    0}, // Dreamcast AICA audio
+	{"nds",        0}, // Nintendo DS Audio
 #ifndef SCHISM_WIN32
-	{"waveout", 0},   // Tru64 MME WaveOut
+	{"waveout",    0}, // Tru64 MME WaveOut
 #endif
-	{"dart", 0},      // OS/2 Direct Audio RouTines 
-	{"epoc", 0},      // EPOC streaming audio
-	{"ums", 0},       // AIX UMS audio
-	{"ogc", 0},       // Wii/GameCube audio
+	{"dart",       0}, // OS/2 Direct Audio RouTines
+	{"epoc",       0}, // EPOC streaming audio
+	{"ums",        0}, // AIX UMS audio
+	{"ogc",        0}, // Wii/GameCube audio
 
 	// These two are pretty much guaranteed to exist
-	{"disk", 1},
-	{"dummy", 1},
+	{"disk",       1},
+	{"dummy",      1},
 };
 
 static int sdl12_audio_driver_info_init(void)
@@ -212,7 +212,8 @@ static void SDLCALL sdl12_dummy_callback(void *userdata, uint8_t *stream, int le
 
 static int sdl12_audio_opened = 0;
 
-static schism_audio_device_t *sdl12_audio_open_device(SCHISM_UNUSED uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
+static schism_audio_device_t *sdl12_audio_open_device(
+	SCHISM_UNUSED uint32_t id, const schism_audio_spec_t *desired, schism_audio_spec_t *obtained)
 {
 	/* SDL 1.2 only supports opening one device at a time! */
 	if (sdl12_audio_opened)

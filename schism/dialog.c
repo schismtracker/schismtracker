@@ -23,14 +23,14 @@
 
 #include "headers.h"
 
-#include "it.h"
 #include "dialog.h"
-#include "vgamem.h"
-#include "widget.h"
-#include "song.h"
+#include "it.h"
 #include "page.h"
+#include "song.h"
+#include "widget.h"
 #include "keyboard.h"
 #include "mem.h"
+#include "vgamem.h"
 
 #include <ctype.h>
 
@@ -40,11 +40,13 @@
  * will emit a warning and cause the function to return
  * if a dialog is not active. */
 #ifndef NDEBUG
-# define ENSURE_DIALOG(q) do { if (!(status.dialog_type & DIALOG_BOX)) { \
-		fprintf(stderr, "%s called with no dialog\n", __func__);\
-		q; \
-	} \
-} while(0)
+# define ENSURE_DIALOG(q) \
+	 do { \
+		 if (!(status.dialog_type & DIALOG_BOX)) { \
+			 fprintf(stderr, "%s called with no dialog\n", __func__); \
+			 q; \
+		 } \
+	 } while (0)
 #else
 # define ENSURE_DIALOG(q)
 #endif
@@ -68,15 +70,14 @@ void dialog_draw(void)
 		n = dialogs[d].total_widgets;
 
 		/* draw the border and background */
-		draw_box(dialogs[d].x, dialogs[d].y,
-			 dialogs[d].x + dialogs[d].w - 1,
-			 dialogs[d].y + dialogs[d].h - 1, BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
-		draw_fill_chars(dialogs[d].x + 1, dialogs[d].y + 1,
-				dialogs[d].x + dialogs[d].w - 2, dialogs[d].y + dialogs[d].h - 2,
-				DEFAULT_FG, 2);
+		draw_box(dialogs[d].x, dialogs[d].y, dialogs[d].x + dialogs[d].w - 1, dialogs[d].y + dialogs[d].h - 1,
+			BOX_THICK | BOX_OUTER | BOX_FLAT_LIGHT);
+		draw_fill_chars(dialogs[d].x + 1, dialogs[d].y + 1, dialogs[d].x + dialogs[d].w - 2,
+			dialogs[d].y + dialogs[d].h - 2, DEFAULT_FG, 2);
 
 		/* then the rest of the stuff */
-		if (dialogs[d].draw_const) dialogs[d].draw_const();
+		if (dialogs[d].draw_const)
+			dialogs[d].draw_const();
 
 		if (dialogs[d].text)
 			draw_text(dialogs[d].text, dialogs[d].text_x, 27, 0, 2);
@@ -133,40 +134,46 @@ void dialog_destroy_all(void)
 
 void dialog_yes(void *data)
 {
-	void (*action) (void *);
+	void (*action)(void *);
 
 	ENSURE_DIALOG(return);
 
 	action = dialogs[num_dialogs - 1].action_yes;
-	if (!data) data = dialogs[num_dialogs - 1].data;
+	if (!data)
+		data = dialogs[num_dialogs - 1].data;
 	dialog_destroy();
-	if (action) action(data);
+	if (action)
+		action(data);
 	status.flags |= NEED_UPDATE;
 }
 
 void dialog_no(void *data)
 {
-	void (*action) (void *);
+	void (*action)(void *);
 
 	ENSURE_DIALOG(return);
 
 	action = dialogs[num_dialogs - 1].action_no;
-	if (!data) data = dialogs[num_dialogs - 1].data;
+	if (!data)
+		data = dialogs[num_dialogs - 1].data;
 	dialog_destroy();
-	if (action) action(data);
+	if (action)
+		action(data);
 	status.flags |= NEED_UPDATE;
 }
 
 void dialog_cancel(void *data)
 {
-	void (*action) (void *);
+	void (*action)(void *);
 
 	ENSURE_DIALOG(return);
 
 	action = dialogs[num_dialogs - 1].action_cancel;
-	if (!data) data = dialogs[num_dialogs - 1].data;
+	if (!data)
+		data = dialogs[num_dialogs - 1].data;
 	dialog_destroy();
-	if (action) action(data);
+	if (action)
+		action(data);
 	status.flags |= NEED_UPDATE;
 }
 
@@ -185,7 +192,7 @@ void dialog_cancel_NULL(void)
 
 /* --------------------------------------------------------------------- */
 
-int dialog_handle_key(struct key_event * k)
+int dialog_handle_key(struct key_event *k)
 {
 	struct dialog *d = dialogs + num_dialogs - 1;
 
@@ -332,8 +339,8 @@ static void dialog_create_yes_no(int textlen)
 /* type can be DIALOG_OK, DIALOG_OK_CANCEL, or DIALOG_YES_NO
  * default_widget: 0 = ok/yes, 1 = cancel/no */
 
-struct dialog *dialog_create(int type, const char *text, void (*action_yes) (void *data),
-		   void (*action_no) (void *data), int default_widget, void *data)
+struct dialog *dialog_create(int type, const char *text, void (*action_yes)(void *data), void (*action_no)(void *data),
+	int default_widget, void *data)
 {
 	int textlen = strlen(text);
 	int d = num_dialogs;
@@ -392,9 +399,8 @@ struct dialog *dialog_create(int type, const char *text, void (*action_yes) (voi
 /* --------------------------------------------------------------------- */
 /* this will probably die painfully if two threads try to make custom dialogs at the same time */
 
-struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets,
-				    int dialog_total_widgets, int dialog_selected_widget,
-				    void (*draw_const) (void), void *data)
+struct dialog *dialog_create_custom(int x, int y, int w, int h, struct widget *dialog_widgets, int dialog_total_widgets,
+	int dialog_selected_widget, void (*draw_const)(void), void *data)
 {
 	struct dialog *d = dialogs + num_dialogs;
 
@@ -489,7 +495,6 @@ void numprompt_create(const char *prompt, void (*finish)(int n), char initvalue)
 	dialog_create_custom(dlgx, y - 2, dlgwidth, 5, numprompt_widgets, 1, 0, numprompt_draw_const, NULL);
 }
 
-
 static int strtonum99(const char *s)
 {
 	// aaarghhhh
@@ -548,4 +553,3 @@ void smpprompt_create(const char *title, const char *prompt, void (*finish)(int 
 	dialog = dialog_create_custom(26, 23, 29, 10, numprompt_widgets, 2, 0, smpprompt_draw_const, NULL);
 	dialog->action_yes = smpprompt_value;
 }
-

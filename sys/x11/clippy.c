@@ -22,11 +22,11 @@
  */
 
 #include "headers.h"
-#include "video.h"
-#include "events.h"
 #include "clippy.h"
 #include "backend/clippy.h"
+#include "events.h"
 #include "mem.h"
+#include "video.h"
 
 #include "init.h"
 
@@ -63,7 +63,9 @@ Atom x11_get_cut_buffer_type(Display *display, int mime_type, Atom selection_typ
 	case X11_CLIPBOARD_MIME_TYPE_TEXT_PLAIN:
 	case X11_CLIPBOARD_MIME_TYPE_TEXT_PLAIN_UTF8:
 	case X11_CLIPBOARD_MIME_TYPE_TEXT:
-		return X11_XInternAtom(display, selection_type == XA_PRIMARY ? "SCHISM_CUTBUFFER_SELECTION" : "SCHISM_CUTBUFFER_CLIPBOARD", False);
+		return X11_XInternAtom(display,
+			selection_type == XA_PRIMARY ? "SCHISM_CUTBUFFER_SELECTION" : "SCHISM_CUTBUFFER_CLIPBOARD",
+			False);
 	default:
 		return XA_STRING;
 	}
@@ -111,9 +113,9 @@ static int x11_set_selection_text(video_wm_data_t *wm_data, const char *text, At
 
 	/* Save the selection on the root window */
 	X11_XChangeProperty(display, DefaultRootWindow(display),
-						x11_get_cut_buffer_type(display, X11_CLIPBOARD_MIME_TYPE_STRING, selection_type),
-						x11_get_cut_buffer_internal_fmt(display, X11_CLIPBOARD_MIME_TYPE_STRING), 8, PropModeReplace,
-						(const unsigned char *)text, strlen(text));
+		x11_get_cut_buffer_type(display, X11_CLIPBOARD_MIME_TYPE_STRING, selection_type),
+		x11_get_cut_buffer_internal_fmt(display, X11_CLIPBOARD_MIME_TYPE_STRING), 8, PropModeReplace,
+		(const unsigned char *)text, strlen(text));
 	X11_XSetSelectionOwner(display, selection_type, window, CurrentTime);
 
 	if (wm_data->data.x11.unlock_func)
@@ -178,8 +180,9 @@ static char *x11_get_selection_text(video_wm_data_t *wm_data, Atom selection_typ
 		} while (x11_clippy_selection_waiting);
 	}
 
-	if (X11_XGetWindowProperty(display, owner, selection, 0, INT_MAX / 4, False,
-							   format, &seln_type, &seln_format, &nbytes, &overflow, &src) == Success) {
+	if (X11_XGetWindowProperty(display, owner, selection, 0, INT_MAX / 4, False, format, &seln_type, &seln_format,
+		    &nbytes, &overflow, &src)
+		== Success) {
 		if (seln_type == format) {
 			text = mem_alloc(nbytes + 1);
 			if (text) {
@@ -307,4 +310,3 @@ const schism_clippy_backend_t schism_clippy_backend_x11 = {
 	.get_clipboard = x11_clippy_get_clipboard,
 	.set_clipboard = x11_clippy_set_clipboard,
 };
-

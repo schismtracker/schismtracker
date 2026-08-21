@@ -79,9 +79,7 @@ void test_log_dump(void)
 	if (!ds.length)
 		return;
 
-	fmt = (memchr(ds.data, '\n', ds.length))
-		? "\nTEST LOG:\n%.*s\n\n"
-		: "\nTEST LOG: %.*s\n\n";
+	fmt = (memchr(ds.data, '\n', ds.length)) ? "\nTEST LOG:\n%.*s\n\n" : "\nTEST LOG: %.*s\n\n";
 
 	printf(fmt, (int)ds.length, ds.data);
 }

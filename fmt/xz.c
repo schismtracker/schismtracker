@@ -26,9 +26,9 @@
 #include "headers.h"
 
 #include "fmt.h"
-#include "slurp.h"
-#include "mem.h"
 #include "loadso.h"
+#include "mem.h"
+#include "slurp.h"
 
 #ifdef SCHISM_WIN32
 typedef long off_t;
@@ -60,7 +60,7 @@ static void *slurp_xz_start(void)
 		return NULL;
 	}
 
-	return zl;	
+	return zl;
 }
 
 static int slurp_xz_inflate(void *opaque)
@@ -131,17 +131,26 @@ int slurp_xz(slurp_t *src)
 # define XZ_SYM(x) XZ_##x = x
 # define XZ_END
 #else
-# define XZ_GLOBALS \
-	static void *lib_lzma;
+# define XZ_GLOBALS static void *lib_lzma;
 # define XZ_START \
-	do { lib_lzma = library_load("lzma", LZMA_VERSION_MAJOR, 0); if (!lib_lzma) return -2; } while (0)
+	 do { \
+		 lib_lzma = library_load("lzma", LZMA_VERSION_MAJOR, 0); \
+		 if (!lib_lzma) \
+			 return -2; \
+	 } while (0)
 # define XZ_SYM(x) \
-	do { XZ_##x = loadso_function_load(lib_lzma, #x); if (!XZ_##x) { printf("%s\n", #x); return -1; } } while (0)
+	 do { \
+		 XZ_##x = loadso_function_load(lib_lzma, #x); \
+		 if (!XZ_##x) { \
+			 printf("%s\n", #x); \
+			 return -1; \
+		 } \
+	 } while (0)
 # define XZ_END \
-do { \
-	loadso_object_unload(lib_lzma); \
-	lib_lzma = NULL; \
-} while (0)
+	 do { \
+		 loadso_object_unload(lib_lzma); \
+		 lib_lzma = NULL; \
+	 } while (0)
 #endif
 
 XZ_GLOBALS

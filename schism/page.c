@@ -23,24 +23,24 @@
 
 #include "headers.h"
 
-#include "backend/timer.h"
+#include "dialog.h"
 #include "it.h"
-#include "vgamem.h"
-#include "keyboard.h"
-#include "song.h"
 #include "page.h"
+#include "song.h"
+#include "widget.h"
+#include "backend/timer.h"
 #include "charset.h"
-#include "util.h"
-#include "midi.h"
-#include "version.h"
-#include "video.h"
+#include "config.h"
 #include "fakemem.h"
 #include "fonts.h"
-#include "dialog.h"
-#include "widget.h"
+#include "keyboard.h"
 #include "mem.h"
+#include "midi.h"
 #include "str.h"
-#include "config.h"
+#include "util.h"
+#include "version.h"
+#include "vgamem.h"
+#include "video.h"
 
 /* --------------------------------------------------------------------- */
 /* globals */
@@ -174,8 +174,7 @@ static inline void draw_time(void)
 		}
 	}
 
-	snprintf(buf, sizeof(buf), "%3d:%02d:%02d", current_time.h % 1000,
-		current_time.m % 60, current_time.s % 60);
+	snprintf(buf, sizeof(buf), "%3d:%02d:%02d", current_time.h % 1000, current_time.m % 60, current_time.s % 60);
 	draw_text(buf, 69, 9, 0, 2);
 }
 
@@ -214,8 +213,10 @@ static void draw_page(void)
 	} else {
 
 		draw_page_title();
-		if (ACTIVE_PAGE.draw_const) ACTIVE_PAGE.draw_const();
-		if (ACTIVE_PAGE.predraw_hook) ACTIVE_PAGE.predraw_hook();
+		if (ACTIVE_PAGE.draw_const)
+			ACTIVE_PAGE.draw_const();
+		if (ACTIVE_PAGE.predraw_hook)
+			ACTIVE_PAGE.predraw_hook();
 	}
 
 	/* this doesn't use widgets[] because it needs to draw the page's
@@ -248,7 +249,12 @@ int page_is_instrument_list(int page)
 /* --------------------------------------------------------------------------------------------------------- */
 
 static struct widget new_song_widgets[10] = {0};
-static const int new_song_groups[4][3] = { {0, 1, -1}, {2, 3, -1}, {4, 5, -1}, {6, 7, -1} };
+static const int new_song_groups[4][3] = {
+	{0, 1, -1},
+        {2, 3, -1},
+        {4, 5, -1},
+        {6, 7, -1}
+};
 
 static void new_song_ok(SCHISM_UNUSED void *data)
 {
@@ -279,22 +285,22 @@ void new_song_dialog(void)
 
 	/* only create everything if it hasn't been set up already */
 	if (new_song_widgets[0].width == 0) {
-		widget_create_togglebutton(new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep",
-				    2, new_song_groups[0]);
-		widget_create_togglebutton(new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear",
-				    2, new_song_groups[0]);
-		widget_create_togglebutton(new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep",
-				    2, new_song_groups[1]);
-		widget_create_togglebutton(new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear",
-				    2, new_song_groups[1]);
-		widget_create_togglebutton(new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep",
-				    2, new_song_groups[2]);
-		widget_create_togglebutton(new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear",
-				    2, new_song_groups[2]);
-		widget_create_togglebutton(new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep",
-				    2, new_song_groups[3]);
-		widget_create_togglebutton(new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear",
-				    2, new_song_groups[3]);
+		widget_create_togglebutton(
+			new_song_widgets + 0, 35, 24, 6, 0, 2, 1, 1, 1, NULL, "Keep", 2, new_song_groups[0]);
+		widget_create_togglebutton(
+			new_song_widgets + 1, 45, 24, 7, 1, 3, 0, 0, 0, NULL, "Clear", 2, new_song_groups[0]);
+		widget_create_togglebutton(
+			new_song_widgets + 2, 35, 27, 6, 0, 4, 3, 3, 3, NULL, "Keep", 2, new_song_groups[1]);
+		widget_create_togglebutton(
+			new_song_widgets + 3, 45, 27, 7, 1, 5, 2, 2, 2, NULL, "Clear", 2, new_song_groups[1]);
+		widget_create_togglebutton(
+			new_song_widgets + 4, 35, 30, 6, 2, 6, 5, 5, 5, NULL, "Keep", 2, new_song_groups[2]);
+		widget_create_togglebutton(
+			new_song_widgets + 5, 45, 30, 7, 3, 7, 4, 4, 4, NULL, "Clear", 2, new_song_groups[2]);
+		widget_create_togglebutton(
+			new_song_widgets + 6, 35, 33, 6, 4, 8, 7, 7, 7, NULL, "Keep", 2, new_song_groups[3]);
+		widget_create_togglebutton(
+			new_song_widgets + 7, 45, 33, 7, 5, 9, 6, 6, 6, NULL, "Clear", 2, new_song_groups[3]);
 		widget_create_button(new_song_widgets + 8, 28, 36, 8, 6, 8, 9, 9, 9, dialog_yes_NULL, "OK", 4);
 		widget_create_button(new_song_widgets + 9, 41, 36, 8, 6, 9, 8, 8, 8, dialog_cancel_NULL, "Cancel", 2);
 		widget_togglebutton_set(new_song_widgets, 1, 0);
@@ -342,17 +348,17 @@ static void _mp_draw(void)
 	}
 	i = strlen(name);
 	draw_fill_chars(_mp_text_x, _mp_text_y, _mp_text_x + 17, _mp_text_y, DEFAULT_FG, 2);
-	draw_text_len( name, 17, _mp_text_x, _mp_text_y, 0, 2);
+	draw_text_len(name, 17, _mp_text_x, _mp_text_y, 0, 2);
 	if (i < 17 && name == _mp_text) {
 		draw_char(':', _mp_text_x + i, _mp_text_y, 0, 2);
 	}
-	draw_box(_mp_text_x, _mp_text_y + 1, _mp_text_x + 14, _mp_text_y + 3,
-		 BOX_THIN | BOX_INNER | BOX_INSET);
+	draw_box(_mp_text_x, _mp_text_y + 1, _mp_text_x + 14, _mp_text_y + 3, BOX_THIN | BOX_INNER | BOX_INSET);
 }
 
 static void _mp_change(void)
 {
-	if (_mp_setv) _mp_setv(_mpw[0].d.thumbbar.value);
+	if (_mp_setv)
+		_mp_setv(_mpw[0].d.thumbbar.value);
 	if (!(song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))) {
 		if (_mp_setv_noplay)
 			_mp_setv_noplay(_mpw[0].d.thumbbar.value);
@@ -368,8 +374,8 @@ static void _mp_finish(SCHISM_UNUSED void *ign)
 	}
 }
 
-static void minipop_slide(int cv, const char *name, int min, int max,
-	void (*setv)(int v), void (*setv_noplay)(int v), int midx, int midy)
+static void minipop_slide(
+	int cv, const char *name, int min, int max, void (*setv)(int v), void (*setv_noplay)(int v), int midx, int midy)
 {
 	if (_mp_active == 1) {
 		_mp_active = 2;
@@ -383,12 +389,12 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 	widget_create_thumbbar(_mpw, midx - 8, midy, 13, 0, 0, 0, _mp_change, min, max);
 	_mpw[0].d.thumbbar.value = CLAMP(cv, min, max);
 	_mpw[0].depressed = 1; /* maybe it just needs some zoloft? */
-	dialog_create_custom(midx - 10, midy - 3,  20, 6, _mpw, 1, 0, _mp_draw, NULL);
+	dialog_create_custom(midx - 10, midy - 3, 20, 6, _mpw, 1, 0, _mp_draw, NULL);
 	/* warp mouse to position of slider knob */
-	if (max == 0) max = 1; /* prevent division by zero */
-	video_warp_mouse(
-		video_width()*((midx - 8)*8 + (cv - min)*96.0/(max - min) + 1)/640,
-		video_height()*midy*8/400.0 + 4);
+	if (max == 0)
+		max = 1; /* prevent division by zero */
+	video_warp_mouse(video_width() * ((midx - 8) * 8 + (cv - min) * 96.0 / (max - min) + 1) / 640,
+		video_height() * midy * 8 / 400.0 + 4);
 
 	_mp_active = 1;
 	status.flags |= NEED_UPDATE;
@@ -397,8 +403,10 @@ static void minipop_slide(int cv, const char *name, int min, int max,
 /* --------------------------------------------------------------------------------------------------------- */
 /* text input handler */
 
-void handle_text_input(const char* text_input) {
-	if (widget_handle_text_input(text_input)) return;
+void handle_text_input(const char *text_input)
+{
+	if (widget_handle_text_input(text_input))
+		return;
 
 	if (!(status.dialog_type & DIALOG_BOX) && ACTIVE_PAGE.handle_text_input)
 		ACTIVE_PAGE.handle_text_input(text_input);
@@ -407,7 +415,7 @@ void handle_text_input(const char* text_input) {
 /* --------------------------------------------------------------------------------------------------------- */
 
 /* returns 1 if the key was handled */
-static int handle_key_global(struct key_event * k)
+static int handle_key_global(struct key_event *k)
 {
 	int i, ins_mode;
 
@@ -425,50 +433,46 @@ static int handle_key_global(struct key_event * k)
 			status.flags |= NEED_UPDATE;
 			return 1;
 		} else if (k->y == 5 && k->x == 50) {
-			minipop_slide(kbd_get_current_octave(), "Octave", 0, 8,
-				kbd_set_current_octave, NULL, 50, 5);
+			minipop_slide(kbd_get_current_octave(), "Octave", 0, 8, kbd_set_current_octave, NULL, 50, 5);
 			return 1;
 		} else if (k->y == 4 && k->x >= 50 && k->x <= 52) {
-			minipop_slide(song_get_current_speed(), "Speed", 1, 255,
-				song_set_current_speed, song_set_initial_speed, 51, 4);
+			minipop_slide(song_get_current_speed(), "Speed", 1, 255, song_set_current_speed,
+				song_set_initial_speed, 51, 4);
 			return 1;
 		} else if (k->y == 4 && k->x >= 54 && k->x <= 56) {
-			minipop_slide(song_get_current_tempo(), "Tempo", 32, 255,
-				song_set_current_tempo, song_set_initial_tempo, 55, 4);
+			minipop_slide(song_get_current_tempo(), "Tempo", 32, 255, song_set_current_tempo,
+				song_set_initial_tempo, 55, 4);
 			return 1;
-		} else if (k->y == 3 && k->x >= 50 && k-> x <= 77) {
-			if (page_is_instrument_list(status.current_page)
-			    || status.current_page == PAGE_SAMPLE_LIST
-			    || (!(status.flags & CLASSIC_MODE)
-				&& (status.current_page == PAGE_ORDERLIST_PANNING
-				    || status.current_page == PAGE_ORDERLIST_VOLUMES)))
+		} else if (k->y == 3 && k->x >= 50 && k->x <= 77) {
+			if (page_is_instrument_list(status.current_page) || status.current_page == PAGE_SAMPLE_LIST
+				|| (!(status.flags & CLASSIC_MODE)
+					&& (status.current_page == PAGE_ORDERLIST_PANNING
+						|| status.current_page == PAGE_ORDERLIST_VOLUMES)))
 				ins_mode = 0;
 			else
 				ins_mode = song_is_instrument_mode();
 			if (ins_mode) {
 				minipop_slide(instrument_get_current(), "Instrument",
-					status.current_page == PAGE_INSTRUMENT_LIST ? 1 : 0,
-					99 /* FIXME */, instrument_set, NULL, 58, 3);
+					status.current_page == PAGE_INSTRUMENT_LIST ? 1 : 0, 99 /* FIXME */,
+					instrument_set, NULL, 58, 3);
 			} else {
 				minipop_slide(sample_get_current(), "Sample",
-					status.current_page == PAGE_SAMPLE_LIST ? 1 : 0,
-					99 /* FIXME */, sample_set, NULL, 58, 3);
+					status.current_page == PAGE_SAMPLE_LIST ? 1 : 0, 99 /* FIXME */, sample_set,
+					NULL, 58, 3);
 			}
 
 		} else if (k->x >= 12 && k->x <= 18) {
 			if (k->y == 7) {
-				minipop_slide(get_current_row(), "Row",
-					0, song_get_max_row_number_in_pattern(get_current_pattern()),
-					set_current_row, NULL, 14, 7);
+				minipop_slide(get_current_row(), "Row", 0,
+					song_get_max_row_number_in_pattern(get_current_pattern()), set_current_row,
+					NULL, 14, 7);
 				return 1;
 			} else if (k->y == 6) {
-				minipop_slide(get_current_pattern(), "Pattern",
-					0, csf_get_num_patterns(current_song),
+				minipop_slide(get_current_pattern(), "Pattern", 0, csf_get_num_patterns(current_song),
 					set_current_pattern, NULL, 14, 6);
 				return 1;
 			} else if (k->y == 5) {
-				minipop_slide(get_current_order(), "Order",
-					0, csf_get_num_orders(current_song),
+				minipop_slide(get_current_order(), "Order", 0, csf_get_num_orders(current_song),
 					set_current_order, NULL, 14, 5);
 				return 1;
 			}
@@ -514,9 +518,8 @@ static int handle_key_global(struct key_event * k)
 				return 1; /* argh */
 			const int grabbed = !video_is_input_grabbed();
 			video_set_input_grabbed(grabbed);
-			status_text_flash(grabbed
-				? "Mouse and keyboard grabbed, press Ctrl+D to release"
-				: "Mouse and keyboard released");
+			status_text_flash(grabbed ? "Mouse and keyboard grabbed, press Ctrl+D to release"
+						  : "Mouse and keyboard released");
 			return 1;
 		}
 		break;
@@ -541,15 +544,19 @@ static int handle_key_global(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_HOME:
-		if (!(k->mod & SCHISM_KEYMOD_ALT)) break;
-		if (status.flags & DISKWRITER_ACTIVE) break;
+		if (!(k->mod & SCHISM_KEYMOD_ALT))
+			break;
+		if (status.flags & DISKWRITER_ACTIVE)
+			break;
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
 		return 1;
 	case SCHISM_KEYSYM_END:
-		if (!(k->mod & SCHISM_KEYMOD_ALT)) break;
-		if (status.flags & DISKWRITER_ACTIVE) break;
+		if (!(k->mod & SCHISM_KEYMOD_ALT))
+			break;
+		if (status.flags & DISKWRITER_ACTIVE)
+			break;
 		if (k->state == KEY_RELEASE)
 			return 0;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
@@ -559,7 +566,8 @@ static int handle_key_global(struct key_event * k)
 	}
 
 	/* next, if there's no dialog, check the rest of the keys */
-	if (status.flags & DISKWRITER_ACTIVE) return 0;
+	if (status.flags & DISKWRITER_ACTIVE)
+		return 0;
 
 	switch (k->sym) {
 	case SCHISM_KEYSYM_q:
@@ -667,7 +675,8 @@ static int handle_key_global(struct key_event * k)
 				set_page(PAGE_SAMPLE_LIST);
 		} else {
 			_mp_finish(NULL);
-			if (k->mod & SCHISM_KEYMOD_CTRL) set_page(PAGE_LIBRARY_SAMPLE);
+			if (k->mod & SCHISM_KEYMOD_CTRL)
+				set_page(PAGE_LIBRARY_SAMPLE);
 			break;
 		}
 		return 1;
@@ -675,14 +684,17 @@ static int handle_key_global(struct key_event * k)
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
 		if (NO_MODIFIER(k->mod)) {
-			if (status.current_page == PAGE_INSTRUMENT_LIST) return 0;
+			if (status.current_page == PAGE_INSTRUMENT_LIST)
+				return 0;
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_INSTRUMENT_LIST);
 		} else {
-			if (k->mod & SCHISM_KEYMOD_SHIFT) return 0;
+			if (k->mod & SCHISM_KEYMOD_SHIFT)
+				return 0;
 			_mp_finish(NULL);
-			if (k->mod & SCHISM_KEYMOD_CTRL) set_page(PAGE_LIBRARY_INSTRUMENT);
+			if (k->mod & SCHISM_KEYMOD_CTRL)
+				set_page(PAGE_LIBRARY_INSTRUMENT);
 			break;
 		}
 		return 1;
@@ -699,7 +711,7 @@ static int handle_key_global(struct key_event * k)
 				set_page(PAGE_PREFERENCES);
 		} else if (NO_MODIFIER(k->mod)) {
 			if (song_get_mode() == MODE_STOPPED
-			|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)) {
+				|| (song_get_mode() == MODE_SINGLE_STEP && status.current_page == PAGE_INFO)) {
 				_mp_finish(NULL);
 				if (k->state == KEY_PRESS)
 					song_start();
@@ -802,8 +814,10 @@ static int handle_key_global(struct key_event * k)
 	case SCHISM_KEYSYM_F10:
 		if (status.dialog_type != DIALOG_NONE)
 			return 0;
-		if (k->mod & SCHISM_KEYMOD_ALT) break;
-		if (k->mod & SCHISM_KEYMOD_CTRL) break;
+		if (k->mod & SCHISM_KEYMOD_ALT)
+			break;
+		if (k->mod & SCHISM_KEYMOD_CTRL)
+			break;
 
 		_mp_finish(NULL);
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
@@ -820,7 +834,8 @@ static int handle_key_global(struct key_event * k)
 		if (NO_MODIFIER(k->mod)) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
-				set_page((status.current_page == PAGE_ORDERLIST_PANNING) ? PAGE_ORDERLIST_VOLUMES : PAGE_ORDERLIST_PANNING);
+				set_page((status.current_page == PAGE_ORDERLIST_PANNING) ? PAGE_ORDERLIST_VOLUMES
+											 : PAGE_ORDERLIST_PANNING);
 		} else if (k->mod & SCHISM_KEYMOD_CTRL) {
 			if (k->state == KEY_PRESS) {
 				_mp_finish(NULL);
@@ -878,9 +893,8 @@ static int handle_key_global(struct key_event * k)
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_PRESS) {
 				midi_flags ^= (MIDI_DISABLE_RECORD);
-				status_text_flash("MIDI Input %s",
-					(midi_flags & MIDI_DISABLE_RECORD)
-					? "Disabled" : "Enabled");
+				status_text_flash(
+					"MIDI Input %s", (midi_flags & MIDI_DISABLE_RECORD) ? "Disabled" : "Enabled");
 			}
 			return 1;
 		} else {
@@ -888,15 +902,15 @@ static int handle_key_global(struct key_event * k)
 			 * so catch ctrl+scroll lock here as well */
 			if (k->state == KEY_PRESS) {
 				midi_playback_tracing = (playback_tracing = !playback_tracing);
-				status_text_flash("Playback tracing %s",
-						  (playback_tracing ? "enabled" : "disabled"));
+				status_text_flash("Playback tracing %s", (playback_tracing ? "enabled" : "disabled"));
 			}
 			return 1;
 		}
 
 		return 1;
 	case SCHISM_KEYSYM_PAUSE:
-		if ((k->mod & SCHISM_KEYMOD_LSHIFT) && (k->mod & SCHISM_KEYMOD_LALT) && (k->mod & SCHISM_KEYMOD_RALT) && (k->mod & SCHISM_KEYMOD_RCTRL)) {
+		if ((k->mod & SCHISM_KEYMOD_LSHIFT) && (k->mod & SCHISM_KEYMOD_LALT) && (k->mod & SCHISM_KEYMOD_RALT)
+			&& (k->mod & SCHISM_KEYMOD_RCTRL)) {
 			_mp_finish(NULL);
 			if (k->state == KEY_PRESS)
 				set_page(PAGE_TIME_INFORMATION);
@@ -922,14 +936,30 @@ static int handle_key_global(struct key_event * k)
 	/* got a bit ugly here, sorry */
 	if (k->mod & SCHISM_KEYMOD_ALT) {
 		switch (k->sym) {
-		case SCHISM_KEYSYM_F1: i = 0; break;
-		case SCHISM_KEYSYM_F2: i = 1; break;
-		case SCHISM_KEYSYM_F3: i = 2; break;
-		case SCHISM_KEYSYM_F4: i = 3; break;
-		case SCHISM_KEYSYM_F5: i = 4; break;
-		case SCHISM_KEYSYM_F6: i = 5; break;
-		case SCHISM_KEYSYM_F7: i = 6; break;
-		case SCHISM_KEYSYM_F8: i = 7; break;
+		case SCHISM_KEYSYM_F1:
+			i = 0;
+			break;
+		case SCHISM_KEYSYM_F2:
+			i = 1;
+			break;
+		case SCHISM_KEYSYM_F3:
+			i = 2;
+			break;
+		case SCHISM_KEYSYM_F4:
+			i = 3;
+			break;
+		case SCHISM_KEYSYM_F5:
+			i = 4;
+			break;
+		case SCHISM_KEYSYM_F6:
+			i = 5;
+			break;
+		case SCHISM_KEYSYM_F7:
+			i = 6;
+			break;
+		case SCHISM_KEYSYM_F8:
+			i = 7;
+			break;
 		default:
 			return 0;
 		};
@@ -956,11 +986,12 @@ static int _handle_ime(struct key_event *k)
 	static int cs_unicode_c = 0;
 
 	if (ACTIVE_PAGE.selected_widget > -1 && ACTIVE_PAGE.selected_widget < ACTIVE_PAGE.total_widgets
-	    && ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
+		&& ACTIVE_PAGE.widgets[ACTIVE_PAGE.selected_widget].accept_text) {
 		if (digraph_n == -1 && k->state == KEY_RELEASE) {
 			digraph_n = 0;
 
-		} else if (!(status.flags & CLASSIC_MODE) && (k->sym == SCHISM_KEYSYM_LCTRL || k->sym == SCHISM_KEYSYM_RCTRL)) {
+		} else if (!(status.flags & CLASSIC_MODE)
+			   && (k->sym == SCHISM_KEYSYM_LCTRL || k->sym == SCHISM_KEYSYM_RCTRL)) {
 			if (k->state == KEY_RELEASE && digraph_n >= 0) {
 				digraph_n++;
 				if (digraph_n >= 2)
@@ -968,9 +999,11 @@ static int _handle_ime(struct key_event *k)
 			}
 		} else if (k->sym == SCHISM_KEYSYM_LSHIFT || k->sym == SCHISM_KEYSYM_RSHIFT) {
 			/* do nothing */
-		} else if (!NO_MODIFIER((k->mod&~SCHISM_KEYMOD_SHIFT)) || (c=(k->text) ? ((uint8_t)*k->text) : k->sym) == 0 || digraph_n < 2) {
+		} else if (!NO_MODIFIER((k->mod & ~SCHISM_KEYMOD_SHIFT))
+			   || (c = (k->text) ? ((uint8_t)*k->text) : k->sym) == 0 || digraph_n < 2) {
 			if (k->state == KEY_PRESS && k->mouse == MOUSE_NONE) {
-				if (digraph_n > 0) status_text_clear();
+				if (digraph_n > 0)
+					status_text_clear();
 				digraph_n = -1;
 			}
 		} else if (digraph_n >= 2) {
@@ -984,8 +1017,8 @@ static int _handle_ime(struct key_event *k)
 				digraph_input[0] = char_digraph(digraph_c, c);
 
 				if (digraph_input[0]) {
-					status_text_flash_bios("Enter digraph: %c%c -> %c",
-							       digraph_c, c, digraph_input[0]);
+					status_text_flash_bios(
+						"Enter digraph: %c%c -> %c", digraph_c, c, digraph_input[0]);
 				} else {
 					status_text_flash_bios("Enter digraph: %c%c -> INVALID", digraph_c, c);
 				}
@@ -995,12 +1028,14 @@ static int _handle_ime(struct key_event *k)
 			}
 			return 1;
 		} else {
-			if (digraph_n > 0) status_text_clear();
+			if (digraph_n > 0)
+				status_text_clear();
 			digraph_n = 0;
 		}
 
 		/* ctrl+shift -> unicode character */
-		if (k->sym==SCHISM_KEYSYM_LCTRL || k->sym==SCHISM_KEYSYM_RCTRL || k->sym==SCHISM_KEYSYM_LSHIFT || k->sym==SCHISM_KEYSYM_RSHIFT) {
+		if (k->sym == SCHISM_KEYSYM_LCTRL || k->sym == SCHISM_KEYSYM_RCTRL || k->sym == SCHISM_KEYSYM_LSHIFT
+			|| k->sym == SCHISM_KEYSYM_RSHIFT) {
 			if (k->state == KEY_RELEASE) {
 				if (cs_unicode_c > 0) {
 					uint8_t unicode[2] = {0};
@@ -1008,10 +1043,11 @@ static int _handle_ime(struct key_event *k)
 
 					if (unicode[0] >= 32) {
 						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> %" PRIu8,
-									   cs_unicode, unicode[0]);
+							cs_unicode, unicode[0]);
 						handle_text_input((const char *)unicode);
 					} else {
-						status_text_flash_bios("Enter Unicode: U+%04" PRIX32 " -> INVALID", cs_unicode);
+						status_text_flash_bios(
+							"Enter Unicode: U+%04" PRIX32 " -> INVALID", cs_unicode);
 					}
 					cs_unicode = cs_unicode_c = 0;
 					alt_numpad = alt_numpad_c = 0;
@@ -1019,7 +1055,8 @@ static int _handle_ime(struct key_event *k)
 				}
 				return 1;
 			}
-		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & SCHISM_KEYMOD_CTRL) && (k->mod & SCHISM_KEYMOD_SHIFT)) {
+		} else if (!(status.flags & CLASSIC_MODE) && (k->mod & SCHISM_KEYMOD_CTRL)
+			   && (k->mod & SCHISM_KEYMOD_SHIFT)) {
 			if (cs_unicode_c >= 0) {
 				/* bleh... */
 				m = k->mod;
@@ -1030,7 +1067,8 @@ static int _handle_ime(struct key_event *k)
 				if (c == -1) {
 					cs_unicode = cs_unicode_c = -1;
 				} else {
-					if (k->state == KEY_PRESS) return 1;
+					if (k->state == KEY_PRESS)
+						return 1;
 					cs_unicode *= 16;
 					cs_unicode += c;
 					cs_unicode_c++;
@@ -1040,30 +1078,31 @@ static int _handle_ime(struct key_event *k)
 				}
 			}
 		} else {
-			if (k->sym==SCHISM_KEYSYM_LCTRL || k->sym==SCHISM_KEYSYM_RCTRL || k->sym==SCHISM_KEYSYM_LSHIFT || k->sym==SCHISM_KEYSYM_RSHIFT) {
+			if (k->sym == SCHISM_KEYSYM_LCTRL || k->sym == SCHISM_KEYSYM_RCTRL
+				|| k->sym == SCHISM_KEYSYM_LSHIFT || k->sym == SCHISM_KEYSYM_RSHIFT) {
 				return 1;
 			}
 			cs_unicode = cs_unicode_c = 0;
 		}
 
 		/* alt+numpad -> char number */
-		if (k->sym == SCHISM_KEYSYM_LALT || k->sym == SCHISM_KEYSYM_RALT
-			|| k->sym == SCHISM_KEYSYM_LGUI || k->sym == SCHISM_KEYSYM_RGUI) {
+		if (k->sym == SCHISM_KEYSYM_LALT || k->sym == SCHISM_KEYSYM_RALT || k->sym == SCHISM_KEYSYM_LGUI
+			|| k->sym == SCHISM_KEYSYM_RGUI) {
 			if (k->state == KEY_RELEASE && alt_numpad_c > 0 && (alt_numpad & 255) > 0) {
 				if (alt_numpad < 32)
 					return 0;
 				uint8_t unicode[2] = {0};
 				unicode[0] = (alt_numpad & 255);
 				if (!(status.flags & CLASSIC_MODE))
-					status_text_flash_bios("Enter DOS/ASCII: %d -> %c",
-							       (int)unicode[0], (int)unicode[0]);
+					status_text_flash_bios(
+						"Enter DOS/ASCII: %d -> %c", (int)unicode[0], (int)unicode[0]);
 				handle_text_input((const char *)unicode);
 				alt_numpad = alt_numpad_c = 0;
 				digraph_n = digraph_c = 0;
 				cs_unicode = cs_unicode_c = 0;
 				return 1;
 			}
-		} else if (k->mod & SCHISM_KEYMOD_ALT && !(k->mod & (SCHISM_KEYMOD_CTRL|SCHISM_KEYMOD_SHIFT))) {
+		} else if (k->mod & SCHISM_KEYMOD_ALT && !(k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_SHIFT))) {
 			if (alt_numpad_c >= 0) {
 				m = k->mod;
 				k->mod = 0;
@@ -1072,7 +1111,8 @@ static int _handle_ime(struct key_event *k)
 				if (c == -1 || c > 9) {
 					alt_numpad = alt_numpad_c = -1;
 				} else {
-					if (k->state == KEY_PRESS) return 1;
+					if (k->state == KEY_PRESS)
+						return 1;
 					alt_numpad *= 10;
 					alt_numpad += c;
 					alt_numpad_c++;
@@ -1101,18 +1141,24 @@ void handle_key(struct key_event *k)
 
 	/* okay... */
 	if (!(status.flags & DISKWRITER_ACTIVE) && ACTIVE_PAGE.pre_handle_key) {
-		if (ACTIVE_PAGE.pre_handle_key(k)) return;
+		if (ACTIVE_PAGE.pre_handle_key(k))
+			return;
 	}
 
-	if (handle_key_global(k)) return;
-	if (!(status.flags & DISKWRITER_ACTIVE) && menu_handle_key(k)) return;
-	if (widget_handle_key(k)) return;
+	if (handle_key_global(k))
+		return;
+	if (!(status.flags & DISKWRITER_ACTIVE) && menu_handle_key(k))
+		return;
+	if (widget_handle_key(k))
+		return;
 
 	/* now check a couple other keys. */
 	switch (k->sym) {
 	case SCHISM_KEYSYM_LEFT:
-		if (k->state == KEY_RELEASE) return;
-		if (status.flags & DISKWRITER_ACTIVE) return;
+		if (k->state == KEY_RELEASE)
+			return;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return;
 		if ((k->mod & SCHISM_KEYMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING)
@@ -1121,8 +1167,10 @@ void handle_key(struct key_event *k)
 		}
 		break;
 	case SCHISM_KEYSYM_RIGHT:
-		if (k->state == KEY_RELEASE) return;
-		if (status.flags & DISKWRITER_ACTIVE) return;
+		if (k->state == KEY_RELEASE)
+			return;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return;
 		if ((k->mod & SCHISM_KEYMOD_CTRL) && status.current_page != PAGE_PATTERN_EDITOR) {
 			_mp_finish(NULL);
 			if (song_get_mode() == MODE_PLAYING)
@@ -1136,10 +1184,10 @@ void handle_key(struct key_event *k)
 		   TODO | page gets a chance to grab it. This way, the load sample page can switch back
 		   TODO | to the sample list on escape like it's supposed to. (The status.current_page
 		   TODO | checks above won't be necessary, either.) */
-		if (NO_MODIFIER(k->mod) && status.dialog_type == DIALOG_NONE
-		    && status.current_page != PAGE_LOAD_SAMPLE
-		    && status.current_page != PAGE_LOAD_INSTRUMENT) {
-			if (k->state == KEY_RELEASE) return;
+		if (NO_MODIFIER(k->mod) && status.dialog_type == DIALOG_NONE && status.current_page != PAGE_LOAD_SAMPLE
+			&& status.current_page != PAGE_LOAD_INSTRUMENT) {
+			if (k->state == KEY_RELEASE)
+				return;
 			if (_mp_active) {
 				_mp_finish(NULL);
 				return;
@@ -1149,21 +1197,27 @@ void handle_key(struct key_event *k)
 		}
 		break;
 	case SCHISM_KEYSYM_SLASH:
-		if (k->state == KEY_RELEASE) return;
-		if (status.flags & DISKWRITER_ACTIVE) return;
+		if (k->state == KEY_RELEASE)
+			return;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return;
 		kbd_set_current_octave(kbd_get_current_octave() - 1);
 		break;
 	case SCHISM_KEYSYM_ASTERISK:
-		if (k->state == KEY_RELEASE) return;
-		if (status.flags & DISKWRITER_ACTIVE) return;
+		if (k->state == KEY_RELEASE)
+			return;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return;
 		kbd_set_current_octave(kbd_get_current_octave() + 1);
 		break;
 	case SCHISM_KEYSYM_LEFTBRACKET:
 	case SCHISM_KEYSYM_RIGHTBRACKET: {
 		/* FIXME: this assumes a US keyboard layout */
 		int add = (k->sym == SCHISM_KEYSYM_LEFTBRACKET) ? -1 : 1;
-		if (k->state == KEY_RELEASE) break;
-		if (status.flags & DISKWRITER_ACTIVE) return;
+		if (k->state == KEY_RELEASE)
+			break;
+		if (status.flags & DISKWRITER_ACTIVE)
+			return;
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			song_set_current_speed(song_get_current_speed() + add);
 			status_text_flash("Speed set to %d frames per row", song_get_current_speed());
@@ -1194,8 +1248,10 @@ void handle_key(struct key_event *k)
 	if (status.dialog_type & DIALOG_BOX) {
 		dialog_handle_key(k);
 	} else {
-		if (status.flags & DISKWRITER_ACTIVE) return;
-		if (ACTIVE_PAGE.handle_key) ACTIVE_PAGE.handle_key(k);
+		if (status.flags & DISKWRITER_ACTIVE)
+			return;
+		if (ACTIVE_PAGE.handle_key)
+			ACTIVE_PAGE.handle_key(k);
 	}
 }
 
@@ -1298,13 +1354,11 @@ void update_current_instrument(void)
 	char *name = NULL;
 	char buf[4];
 
-	if (page_is_instrument_list(status.current_page)
-	|| status.current_page == PAGE_SAMPLE_LIST
-	|| status.current_page == PAGE_LOAD_SAMPLE
-	|| status.current_page == PAGE_LIBRARY_SAMPLE
-	|| (!(status.flags & CLASSIC_MODE)
-		&& (status.current_page == PAGE_ORDERLIST_PANNING
-			|| status.current_page == PAGE_ORDERLIST_VOLUMES)))
+	if (page_is_instrument_list(status.current_page) || status.current_page == PAGE_SAMPLE_LIST
+		|| status.current_page == PAGE_LOAD_SAMPLE || status.current_page == PAGE_LIBRARY_SAMPLE
+		|| (!(status.flags & CLASSIC_MODE)
+			&& (status.current_page == PAGE_ORDERLIST_PANNING
+				|| status.current_page == PAGE_ORDERLIST_VOLUMES)))
 		ins_mode = 0;
 	else
 		ins_mode = song_is_instrument_mode();
@@ -1359,8 +1413,14 @@ static void _draw_vis_box(void)
 
 static int _vis_virgin = 1;
 static struct vgamem_overlay vis_overlay = {
-	63, 6, 77, 7,
-	NULL, 0, 0, 0,
+	63,
+	6,
+	77,
+	7,
+	NULL,
+	0,
+	0,
+	0,
 };
 
 static void vis_fft(void)
@@ -1378,14 +1438,16 @@ static void vis_fft(void)
 	_draw_vis_box();
 	song_lock_audio();
 
-	vgamem_ovl_clear(&vis_overlay,0);
+	vgamem_ovl_clear(&vis_overlay, 0);
 	fft_get_columns(120, outfft, 0);
 	for (i = 0; i < 120; i++) {
 		y = outfft[i];
 		/* reduce range */
 		y = rshift_signed(y, 3);
-		if (y > 15) y = 15;
-		if (y > 0) vgamem_ovl_drawline(&vis_overlay, i, 15 - y, i, 15, 5);
+		if (y > 15)
+			y = 15;
+		if (y > 0)
+			vgamem_ovl_drawline(&vis_overlay, i, 15 - y, i, 15, 5);
 	}
 	vgamem_ovl_apply(&vis_overlay);
 
@@ -1402,19 +1464,16 @@ static void vis_oscilloscope(void)
 	int out_chns = (status.vis_style == VIS_MONOSCOPE) ? 1 : audio_output_channels;
 	switch (audio_output_bits) {
 	case 8:
-		draw_sample_data_rect_8(&vis_overlay,(void *)audio_buffer,
-				audio_buffer_samples,
-				audio_output_channels,out_chns);
+		draw_sample_data_rect_8(
+			&vis_overlay, (void *)audio_buffer, audio_buffer_samples, audio_output_channels, out_chns);
 		break;
 	case 16:
-		draw_sample_data_rect_16(&vis_overlay,audio_buffer,
-				audio_buffer_samples,
-				audio_output_channels,out_chns);
+		draw_sample_data_rect_16(
+			&vis_overlay, audio_buffer, audio_buffer_samples, audio_output_channels, out_chns);
 		break;
 	case 32:
-		draw_sample_data_rect_32(&vis_overlay,(void *)audio_buffer,
-				audio_buffer_samples,
-				audio_output_channels,out_chns);
+		draw_sample_data_rect_32(
+			&vis_overlay, (void *)audio_buffer, audio_buffer_samples, audio_output_channels, out_chns);
 		break;
 	default:
 		break;
@@ -1444,12 +1503,16 @@ static void vis_fakemem(void)
 		uint32_t ems;
 
 		ems = memused_ems();
-		if (ems > 67108864) ems = 0;
-		else ems = 67108864 - ems;
+		if (ems > 67108864)
+			ems = 0;
+		else
+			ems = 67108864 - ems;
 
 		conv = memused_lowmem();
-		if (conv > 524288) conv = 0;
-		else conv = 524288 - conv;
+		if (conv > 524288)
+			conv = 0;
+		else
+			conv = 524288 - conv;
 
 		conv >>= 10;
 		ems >>= 10;
@@ -1509,7 +1572,7 @@ void redraw_screen(void)
 	char buf[11];
 
 	if (!ACTIVE_PAGE.draw_full) {
-		draw_fill_chars(0,0,79,49, DEFAULT_FG,2);
+		draw_fill_chars(0, 0, 79, 49, DEFAULT_FG, 2);
 
 		/* border around the whole screen */
 		draw_char(128, 0, 0, 3, 2);
@@ -1534,7 +1597,6 @@ void redraw_screen(void)
 	}
 
 	draw_page();
-
 }
 
 /* important :) */
@@ -1544,7 +1606,8 @@ void playback_update(void)
 	if (check_time() || song_get_mode())
 		status.flags |= NEED_UPDATE;
 
-	if (ACTIVE_PAGE.playback_update) ACTIVE_PAGE.playback_update();
+	if (ACTIVE_PAGE.playback_update)
+		ACTIVE_PAGE.playback_update();
 }
 
 /* --------------------------------------------------------------------- */
@@ -1554,7 +1617,8 @@ static void _set_from_f3(void)
 	switch (status.previous_page) {
 	case PAGE_ORDERLIST_PANNING:
 	case PAGE_ORDERLIST_VOLUMES:
-		if (status.flags & CLASSIC_MODE) return;
+		if (status.flags & CLASSIC_MODE)
+			return;
 		// XXX is this correct?
 		SCHISM_FALLTHROUGH;
 	case PAGE_SAMPLE_LIST:
@@ -1570,15 +1634,16 @@ static void _set_from_f4(void)
 	switch (status.previous_page) {
 	case PAGE_ORDERLIST_PANNING:
 	case PAGE_ORDERLIST_VOLUMES:
-		if (status.flags & CLASSIC_MODE) break;
+		if (status.flags & CLASSIC_MODE)
+			break;
 	case PAGE_SAMPLE_LIST:
 	case PAGE_LOAD_SAMPLE:
 	case PAGE_LIBRARY_SAMPLE:
 		return;
 /*
- * storlek says pattern editor syncs...
-	case PAGE_PATTERN_EDITOR:
-*/
+						 * storlek says pattern editor syncs...
+							case PAGE_PATTERN_EDITOR:
+						*/
 	};
 
 	if (song_is_instrument_mode()) {
@@ -1588,7 +1653,6 @@ static void _set_from_f4(void)
 void set_page(int new_page)
 {
 	int prev_page = status.current_page;
-
 
 	if (new_page != prev_page)
 		status.previous_page = prev_page;
@@ -1613,7 +1677,8 @@ void set_page(int new_page)
 	selected_widget = &(ACTIVE_PAGE.selected_widget);
 	total_widgets = &(ACTIVE_PAGE.total_widgets);
 
-	if (ACTIVE_PAGE.set_page) ACTIVE_PAGE.set_page();
+	if (ACTIVE_PAGE.set_page)
+		ACTIVE_PAGE.set_page();
 	status.flags |= NEED_UPDATE;
 }
 
@@ -1647,7 +1712,7 @@ void load_pages(void)
 	load_instrument_load_page(pages + PAGE_LOAD_INSTRUMENT);
 	library_instrument_load_page(pages + PAGE_LIBRARY_INSTRUMENT);
 	waterfall_load_page(pages + PAGE_WATERFALL);
-	about_load_page(pages+PAGE_ABOUT);
+	about_load_page(pages + PAGE_ABOUT);
 	config_load_page(pages + PAGE_CONFIG);
 	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
 	timeinfo_load_page(pages + PAGE_TIME_INFORMATION);
@@ -1704,8 +1769,8 @@ static int savecheck_handle_key(struct key_event *k)
 static void savecheck(void (*ok)(void *data), void (*cancel)(void *data), void *data)
 {
 	if (status.flags & SONG_NEEDS_SAVE) {
-		struct dialog *d = dialog_create(DIALOG_OK_CANCEL,
-			"Current module not saved. Proceed?", ok, cancel, 1, data);
+		struct dialog *d
+			= dialog_create(DIALOG_OK_CANCEL, "Current module not saved. Proceed?", ok, cancel, 1, data);
 
 		d->handle_key = savecheck_handle_key;
 	} else {
@@ -1749,8 +1814,7 @@ void show_exit_prompt(void)
 		schism_exit(0);
 	} else if (status.current_page == PAGE_FONT_EDIT) {
 		if (status.flags & STARTUP_FONTEDIT) {
-			dialog_create(DIALOG_OK_CANCEL, "Exit Font Editor?",
-				      exit_ok_confirm, NULL, 0, NULL);
+			dialog_create(DIALOG_OK_CANCEL, "Exit Font Editor?", exit_ok_confirm, NULL, 0, NULL);
 		} else {
 			/* don't ask, just go away */
 			dialog_destroy_all();
@@ -1759,10 +1823,8 @@ void show_exit_prompt(void)
 	} else if (status.dialog_type != DIALOG_OK_CANCEL) {
 		/* don't draw an exit prompt on top of an existing one */
 		dialog_create(DIALOG_OK_CANCEL,
-			      ((status.flags & CLASSIC_MODE)
-			       ? "Exit Impulse Tracker?"
-			       : "Exit Schism Tracker?"),
-			      exit_ok, NULL, 0, NULL);
+			((status.flags & CLASSIC_MODE) ? "Exit Impulse Tracker?" : "Exit Schism Tracker?"), exit_ok,
+			NULL, 0, NULL);
 	}
 }
 
@@ -1773,7 +1835,8 @@ static int _timejump_keyh(struct key_event *k)
 {
 	if (k->sym == SCHISM_KEYSYM_BACKSPACE) {
 		if (*selected_widget == 1 && _timejump_widgets[1].d.numentry.value == 0) {
-			if (k->state == KEY_RELEASE) widget_change_focus_to(0);
+			if (k->state == KEY_RELEASE)
+				widget_change_focus_to(0);
 			return 1;
 		}
 	}
@@ -1800,8 +1863,7 @@ static void _timejump_ok(void)
 {
 	unsigned long sec;
 	int no, np, nr;
-	sec = (_timejump_widgets[0].d.numentry.value * 60)
-		+ _timejump_widgets[1].d.numentry.value;
+	sec = (_timejump_widgets[0].d.numentry.value * 60) + _timejump_widgets[1].d.numentry.value;
 	song_get_at_time(sec, &no, &nr);
 	set_current_order(no);
 	np = current_song->orderlist[no];
@@ -1821,13 +1883,13 @@ void show_song_timejump(void)
 {
 	struct dialog *d;
 	_tj_num1 = _tj_num2 = 0;
-	widget_create_numentry(_timejump_widgets+0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
-	widget_create_numentry(_timejump_widgets+1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
+	widget_create_numentry(_timejump_widgets + 0, 44, 26, 2, 0, 2, 1, NULL, 0, 21, &_tj_num1);
+	widget_create_numentry(_timejump_widgets + 1, 47, 26, 2, 1, 2, 2, NULL, 0, 59, &_tj_num2);
 	_timejump_widgets[0].d.numentry.handle_unknown_key = _timejump_keyh;
 	_timejump_widgets[0].d.numentry.reverse = 1;
 	_timejump_widgets[1].d.numentry.reverse = 1;
-	widget_create_button(_timejump_widgets+2, 30, 29, 8, 0, 2, 2, 3, 3, _timejump_ok, "OK", 4);
-	widget_create_button(_timejump_widgets+3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
+	widget_create_button(_timejump_widgets + 2, 30, 29, 8, 0, 2, 2, 3, 3, _timejump_ok, "OK", 4);
+	widget_create_button(_timejump_widgets + 3, 42, 29, 8, 1, 3, 3, 3, 0, dialog_cancel_NULL, "Cancel", 2);
 	d = dialog_create_custom(26, 24, 30, 8, _timejump_widgets, 4, 0, _timejump_draw, NULL);
 	d->handle_key = _timejump_keyh;
 	d->action_yes = _timejump_ok_ptr;
@@ -1837,8 +1899,9 @@ void show_length_dialog(const char *label, uint32_t length)
 {
 	char *buf;
 
-	if (asprintf(&buf, "%s: %3" PRIu32 ":%02" PRIu32 ":%02" PRIu32, label,
-			(uint32_t)(length / 3600), (uint32_t)((length / 60) % 60), (uint32_t)(length % 60)) == -1) {
+	if (asprintf(&buf, "%s: %3" PRIu32 ":%02" PRIu32 ":%02" PRIu32, label, (uint32_t)(length / 3600),
+		    (uint32_t)((length / 60) % 60), (uint32_t)(length % 60))
+		== -1) {
 		perror("asprintf");
 		return;
 	}
@@ -1867,4 +1930,3 @@ void set_next_instrument(void)
 	else
 		sample_set(sample_get_current() + 1);
 }
-

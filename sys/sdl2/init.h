@@ -57,13 +57,13 @@ int sdl2_ver_atleast(int major, int minor, int patch);
 // must be called AFTER sdl2_init()
 int sdl2_load_sym(const char *fn, void *addr);
 
-#define SCHISM_SDL2_SYM(x) \
-	if (!sdl2_load_sym("SDL_" #x, &sdl2_##x)) return -1
+# define SCHISM_SDL2_SYM(x) \
+	 if (!sdl2_load_sym("SDL_" #x, &sdl2_##x)) \
+	 return -1
 
 #else
 
-#define SCHISM_SDL2_SYM(x) \
-	sdl2_##x = SDL_##x
+# define SCHISM_SDL2_SYM(x) sdl2_##x = SDL_##x
 
 #endif
 

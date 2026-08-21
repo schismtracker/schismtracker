@@ -22,15 +22,15 @@
  */
 #include "headers.h"
 
-#include "charset.h"
 #include "it.h"
-#include "vgamem.h"
-#include "fonts.h"
 #include "song.h"
+#include "charset.h"
+#include "fonts.h"
+#include "vgamem.h"
 
-#define SAMPLE_DATA_COLOR 13 /* Sample data */
-#define SAMPLE_LOOP_COLOR 3 /* Sample loop marks */
-#define SAMPLE_MARK_COLOR 6 /* Play mark color */
+#define SAMPLE_DATA_COLOR   13 /* Sample data */
+#define SAMPLE_LOOP_COLOR   3 /* Sample loop marks */
+#define SAMPLE_MARK_COLOR   6 /* Play mark color */
 #define SAMPLE_BGMARK_COLOR 7 /* Play mark color after note fade / NNA */
 
 /* ok, I'm making a hack to fit this all into 32-bits.
@@ -39,9 +39,9 @@
 
 /* for halfwidth, we need all the bytes we can get, hence why it's first ;) */
 #define VGAMEM_FONT_HALFWIDTH (0x80000000)
-#define VGAMEM_FONT_OVERLAY (0x40000000)
-#define VGAMEM_FONT_UNICODE (0x20000000) /* byte 29; leaves literally just enough space */
-#define VGAMEM_FONT_BIOS (0x10000000)
+#define VGAMEM_FONT_OVERLAY   (0x40000000)
+#define VGAMEM_FONT_UNICODE   (0x20000000) /* byte 29; leaves literally just enough space */
+#define VGAMEM_FONT_BIOS      (0x10000000)
 
 /* if none of those were filled, we're dealing with a normal character. */
 
@@ -49,44 +49,44 @@
 /* defines for UNICODE; this is packed ultra-tight :) */
 
 /* colors */
-#define VGAMEM_UNICODE_FG_BIT (25)
+#define VGAMEM_UNICODE_FG_BIT  (25)
 #define VGAMEM_UNICODE_FG_MASK (0xF << VGAMEM_UNICODE_FG_BIT)
-#define VGAMEM_UNICODE_FG(x) (((x) & VGAMEM_UNICODE_FG_MASK) >> VGAMEM_UNICODE_FG_BIT)
+#define VGAMEM_UNICODE_FG(x)   (((x) & VGAMEM_UNICODE_FG_MASK) >> VGAMEM_UNICODE_FG_BIT)
 
-#define VGAMEM_UNICODE_BG_BIT (21)
+#define VGAMEM_UNICODE_BG_BIT  (21)
 #define VGAMEM_UNICODE_BG_MASK (0xF << VGAMEM_UNICODE_BG_BIT)
-#define VGAMEM_UNICODE_BG(x) (((x) & VGAMEM_UNICODE_BG_MASK) >> VGAMEM_UNICODE_BG_BIT)
+#define VGAMEM_UNICODE_BG(x)   (((x) & VGAMEM_UNICODE_BG_MASK) >> VGAMEM_UNICODE_BG_BIT)
 
 /* character mask; just enough to fit one codepoint */
 #define VGAMEM_UNICODE_CODEPOINT_MASK (0x001FFFFF)
-#define VGAMEM_UNICODE_CODEPOINT(x) ((x) & VGAMEM_UNICODE_CODEPOINT_MASK)
+#define VGAMEM_UNICODE_CODEPOINT(x)   ((x) & VGAMEM_UNICODE_CODEPOINT_MASK)
 
 /* ------------------------------------------------------------------------ */
 /* halfwidth defines; stores 2 characters and both fg/bg */
 
-#define VGAMEM_HW_FG1_BIT (26)
+#define VGAMEM_HW_FG1_BIT  (26)
 #define VGAMEM_HW_FG1_MASK (0xF << VGAMEM_HW_FG1_BIT)
-#define VGAMEM_HW_FG1(x) (((x) & VGAMEM_HW_FG1_MASK) >> VGAMEM_HW_FG1_BIT)
+#define VGAMEM_HW_FG1(x)   (((x) & VGAMEM_HW_FG1_MASK) >> VGAMEM_HW_FG1_BIT)
 
-#define VGAMEM_HW_BG1_BIT (22)
+#define VGAMEM_HW_BG1_BIT  (22)
 #define VGAMEM_HW_BG1_MASK (0xF << VGAMEM_HW_BG1_BIT)
-#define VGAMEM_HW_BG1(x) (((x) & VGAMEM_HW_BG1_MASK) >> VGAMEM_HW_BG1_BIT)
+#define VGAMEM_HW_BG1(x)   (((x) & VGAMEM_HW_BG1_MASK) >> VGAMEM_HW_BG1_BIT)
 
-#define VGAMEM_HW_CHAR1_BIT (15)
+#define VGAMEM_HW_CHAR1_BIT  (15)
 #define VGAMEM_HW_CHAR1_MASK (0x7F << VGAMEM_HW_CHAR1_BIT)
-#define VGAMEM_HW_CHAR1(x) (((x) & VGAMEM_HW_CHAR1_MASK) >> VGAMEM_HW_CHAR1_BIT)
+#define VGAMEM_HW_CHAR1(x)   (((x) & VGAMEM_HW_CHAR1_MASK) >> VGAMEM_HW_CHAR1_BIT)
 
-#define VGAMEM_HW_FG2_BIT (11)
+#define VGAMEM_HW_FG2_BIT  (11)
 #define VGAMEM_HW_FG2_MASK (0xF << VGAMEM_HW_FG2_BIT)
-#define VGAMEM_HW_FG2(x) (((x) & VGAMEM_HW_FG2_MASK) >> VGAMEM_HW_FG2_BIT)
+#define VGAMEM_HW_FG2(x)   (((x) & VGAMEM_HW_FG2_MASK) >> VGAMEM_HW_FG2_BIT)
 
-#define VGAMEM_HW_BG2_BIT (7)
+#define VGAMEM_HW_BG2_BIT  (7)
 #define VGAMEM_HW_BG2_MASK (0xF << VGAMEM_HW_BG2_BIT)
-#define VGAMEM_HW_BG2(x) (((x) & VGAMEM_HW_BG2_MASK) >> VGAMEM_HW_BG2_BIT)
+#define VGAMEM_HW_BG2(x)   (((x) & VGAMEM_HW_BG2_MASK) >> VGAMEM_HW_BG2_BIT)
 
-#define VGAMEM_HW_CHAR2_BIT (0)
+#define VGAMEM_HW_CHAR2_BIT  (0)
 #define VGAMEM_HW_CHAR2_MASK (0x7F << VGAMEM_HW_CHAR2_BIT)
-#define VGAMEM_HW_CHAR2(x) (((x) & VGAMEM_HW_CHAR2_MASK) >> VGAMEM_HW_CHAR2_BIT)
+#define VGAMEM_HW_CHAR2(x)   (((x) & VGAMEM_HW_CHAR2_MASK) >> VGAMEM_HW_CHAR2_BIT)
 
 /* ok i think i get this now, after inspecting it further.
  * good thing no one bothered putting any comments in the code. <grumble>
@@ -125,33 +125,33 @@ static inline SCHISM_ALWAYS_INLINE int vgamem_unpack_halfw(int c)
 /* ------------------------------------------------------------------------ */
 /* BIOS and ITF defines; stores 1 character, and fg/bg */
 
-#define VGAMEM_FG_BIT (12)
+#define VGAMEM_FG_BIT  (12)
 #define VGAMEM_FG_MASK (0xF << VGAMEM_FG_BIT)
-#define VGAMEM_FG(x) (((x) & VGAMEM_FG_MASK) >> VGAMEM_FG_BIT)
+#define VGAMEM_FG(x)   (((x) & VGAMEM_FG_MASK) >> VGAMEM_FG_BIT)
 
-#define VGAMEM_BG_BIT (8)
+#define VGAMEM_BG_BIT  (8)
 #define VGAMEM_BG_MASK (0xF << VGAMEM_BG_BIT)
-#define VGAMEM_BG(x) (((x) & VGAMEM_BG_MASK) >> VGAMEM_BG_BIT)
+#define VGAMEM_BG(x)   (((x) & VGAMEM_BG_MASK) >> VGAMEM_BG_BIT)
 
-#define VGAMEM_CHAR_BIT (0)
+#define VGAMEM_CHAR_BIT  (0)
 #define VGAMEM_CHAR_MASK (0xFF << VGAMEM_CHAR_BIT)
-#define VGAMEM_CHAR(x) (((x) & VGAMEM_CHAR_MASK) >> VGAMEM_CHAR_BIT)
+#define VGAMEM_CHAR(x)   (((x) & VGAMEM_CHAR_MASK) >> VGAMEM_CHAR_BIT)
 
 /* ------------------------------------------------------------------------ */
 
 static uint32_t vgamem[4000] = {0};
 static uint32_t vgamem_read[4000] = {0};
 
-static uint8_t ovl[640*400] = {0}; /* 256K */
+static uint8_t ovl[640 * 400] = {0}; /* 256K */
 
-#define CHECK_INVERT(tl,br,n) \
-do {                                            \
-	if (status.flags & INVERTED_PALETTE) {  \
-		n = tl;                         \
-		tl = br;                        \
-		br = n;                         \
-	}                                       \
-} while(0)
+#define CHECK_INVERT(tl, br, n) \
+	do { \
+		if (status.flags & INVERTED_PALETTE) { \
+			n = tl; \
+			tl = br; \
+			br = n; \
+		} \
+	} while (0)
 
 void vgamem_flip(void)
 {
@@ -160,12 +160,12 @@ void vgamem_flip(void)
 
 void vgamem_clear(void)
 {
-	memset(vgamem,0,sizeof(vgamem));
+	memset(vgamem, 0, sizeof(vgamem));
 }
 
 void vgamem_ovl_alloc(struct vgamem_overlay *n)
 {
-	n->q = &ovl[ (n->x1*8) + (n->y1 * 5120) ];
+	n->q = &ovl[(n->x1 * 8) + (n->y1 * 5120)];
 	n->width = 8 * ((n->x2 - n->x1) + 1);
 	n->height = 8 * ((n->y2 - n->y1) + 1);
 	n->skip = (640 - n->width);
@@ -177,7 +177,7 @@ void vgamem_ovl_apply(struct vgamem_overlay *n)
 
 	for (y = n->y1; y <= n->y2; y++)
 		for (x = n->x1; x <= n->x2; x++)
-			vgamem[x + (y*80)] = VGAMEM_FONT_OVERLAY;
+			vgamem[x + (y * 80)] = VGAMEM_FONT_OVERLAY;
 }
 
 void vgamem_ovl_clear(struct vgamem_overlay *n, int color)
@@ -195,11 +195,10 @@ void vgamem_ovl_clear(struct vgamem_overlay *n, int color)
 
 void vgamem_ovl_drawpixel(struct vgamem_overlay *n, int x, int y, int color)
 {
-	n->q[ (640*y) + x ] = color;
+	n->q[(640 * y) + x] = color;
 }
 
-static inline void _draw_line_v(struct vgamem_overlay *n, int x,
-	int ys, int ye, int color)
+static inline void _draw_line_v(struct vgamem_overlay *n, int x, int ys, int ye, int color)
 {
 	unsigned char *q = n->q + x;
 	int y;
@@ -219,8 +218,7 @@ static inline void _draw_line_v(struct vgamem_overlay *n, int x,
 	}
 }
 
-static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
-	int xe, int y, int color)
+static inline void _draw_line_h(struct vgamem_overlay *n, int xs, int xe, int y, int color)
 {
 	unsigned char *q = n->q + (y * 640);
 	int x;
@@ -246,8 +244,7 @@ static inline void _draw_line_h(struct vgamem_overlay *n, int xs,
 # define SGN(x) ((x) < 0 ? -1 : 1)      /* hey, what about zero? */
 #endif
 
-void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
-	int ys, int xe, int ye, int color)
+void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs, int ys, int xe, int ye, int color)
 {
 	int d, x, y, ax, ay, sx, sy, dx, dy;
 
@@ -275,7 +272,8 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 		d = ay - (ax >> 1);
 		for (;;) {
 			vgamem_ovl_drawpixel(n, x, y, color);
-			if (x == xe) break;
+			if (x == xe)
+				break;
 			if (d >= 0) {
 				y += sy;
 				d -= ax;
@@ -288,7 +286,8 @@ void vgamem_ovl_drawline(struct vgamem_overlay *n, int xs,
 		d = ax - (ay >> 1);
 		for (;;) {
 			vgamem_ovl_drawpixel(n, x, y, color);
-			if (y == ye) break;
+			if (y == ye)
+				break;
 			if (d >= 0) {
 				x += sx;
 				d -= ay;
@@ -324,69 +323,63 @@ static const uint8_t uFFFD[] = {
  * faster processing on older systems, who usually have smaller
  * caches and slower memory accesses.  or that's the theory,
  * anyway. I have yet to put it to the test :) */
-#define VGAMEM_SCANNER_BIOSCHAR(c) (((c & 0x80)?bios:bioslow)[(c & 0x7F) << 3])
+#define VGAMEM_SCANNER_BIOSCHAR(c) (((c & 0x80) ? bios : bioslow)[(c & 0x7F) << 3])
 #define VGAMEM_SCANNER_VARIANT(BITS) \
-	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, const uint32_t tc[16],\
-		const uint32_t mouseline[80], const uint32_t mouseline_mask[80]) \
+	void vgamem_scan##BITS(uint32_t ry, uint##BITS##_t *out, const uint32_t tc[16], const uint32_t mouseline[80], \
+		const uint32_t mouseline_mask[80]) \
 	{ \
 		/* constants */ \
 		const uint_fast32_t y = (ry >> 3), yl = (ry & 7); \
 		const uint8_t *q = ovl + (ry * 640); \
-		const uint8_t *const itf = font_data + yl, \
-			*const bios = font_default_upper_alt + yl, \
-			*const bioslow = font_default_lower + yl, \
-			*const hf = font_half_data + (yl >> 1), \
-			*const hiragana = font_hiragana + yl, \
-			*const extlatin = font_extended_latin + yl, \
-			*const greek = font_greek + yl, \
-			*const cp866 = font_cp866 + yl; \
+		const uint8_t *const itf = font_data + yl, *const bios = font_default_upper_alt + yl, \
+				     *const bioslow = font_default_lower + yl, *const hf = font_half_data + (yl >> 1), \
+				     *const hiragana = font_hiragana + yl, *const extlatin = font_extended_latin + yl, \
+				     *const greek = font_greek + yl, *const cp866 = font_cp866 + yl; \
 		const uint32_t *bp = &vgamem_read[y * 80]; \
-	\
+\
 		uint_fast32_t x; \
 		for (x = 0; x < 80; x++, bp++, q += 8) { \
 			uint_fast8_t fg, bg, fg2, bg2, dg; \
-	\
+\
 			if (*bp & VGAMEM_FONT_HALFWIDTH) { \
 				/* halfwidth (used for patterns) */ \
 				{ \
 					const uint_fast8_t dg1 = hf[vgamem_unpack_halfw(VGAMEM_HW_CHAR1(*bp)) << 2]; \
 					const uint_fast8_t dg2 = hf[vgamem_unpack_halfw(VGAMEM_HW_CHAR2(*bp)) << 2]; \
-	\
-					dg = (!(ry & 1)) \
-						? ((dg1 & 0xF0) | dg2 >> 4) \
-						: (dg1 << 4 | (dg2 & 0xF)); \
+\
+					dg = (!(ry & 1)) ? ((dg1 & 0xF0) | dg2 >> 4) : (dg1 << 4 | (dg2 & 0xF)); \
 				} \
-	\
+\
 				fg = VGAMEM_HW_FG1(*bp); \
 				bg = VGAMEM_HW_BG1(*bp); \
 				fg2 = VGAMEM_HW_FG2(*bp); \
 				bg2 = VGAMEM_HW_BG2(*bp); \
 			} else if (*bp & VGAMEM_FONT_OVERLAY) { \
 				/* raw pixel data, needs special code ;) */ \
-				*out++ = tc[ (q[0]|((mouseline[x] & 0x80)?15:0)) & 0xFF]; \
-				*out++ = tc[ (q[1]|((mouseline[x] & 0x40)?15:0)) & 0xFF]; \
-				*out++ = tc[ (q[2]|((mouseline[x] & 0x20)?15:0)) & 0xFF]; \
-				*out++ = tc[ (q[3]|((mouseline[x] & 0x10)?15:0)) & 0xFF]; \
-				*out++ = tc[ (q[4]|((mouseline[x] & 0x08)?15:0)) & 0xFF]; \
-				*out++ = tc[ (q[5]|((mouseline[x] & 0x04)?15:0)) & 0xFF]; \
-				*out++ = tc[ (q[6]|((mouseline[x] & 0x02)?15:0)) & 0xFF]; \
-				*out++ = tc[ (q[7]|((mouseline[x] & 0x01)?15:0)) & 0xFF]; \
+				*out++ = tc[(q[0] | ((mouseline[x] & 0x80) ? 15 : 0)) & 0xFF]; \
+				*out++ = tc[(q[1] | ((mouseline[x] & 0x40) ? 15 : 0)) & 0xFF]; \
+				*out++ = tc[(q[2] | ((mouseline[x] & 0x20) ? 15 : 0)) & 0xFF]; \
+				*out++ = tc[(q[3] | ((mouseline[x] & 0x10) ? 15 : 0)) & 0xFF]; \
+				*out++ = tc[(q[4] | ((mouseline[x] & 0x08) ? 15 : 0)) & 0xFF]; \
+				*out++ = tc[(q[5] | ((mouseline[x] & 0x04) ? 15 : 0)) & 0xFF]; \
+				*out++ = tc[(q[6] | ((mouseline[x] & 0x02) ? 15 : 0)) & 0xFF]; \
+				*out++ = tc[(q[7] | ((mouseline[x] & 0x01) ? 15 : 0)) & 0xFF]; \
 				continue; \
 			} else if (*bp & VGAMEM_FONT_UNICODE) { \
 				/* Any unicode character. */ \
 				const uint_fast32_t c = VGAMEM_UNICODE_CODEPOINT(*bp); \
 				int c8; \
-	\
-				/* These are ordered by how often they will probably appear
+\
+				/* These are ordered by how often they will probably appear \
 				 * for an average user of Schism (i.e., English speakers). */ \
-				dg = (c >= 0x20 && c <= 0x7F)               ? itf[c << 3] \
-				   : (c >= 0xA0 && c <= 0xFF)               ? extlatin[(c - 0xA0) << 3] \
-				   : (c >= 0x390 && c <= 0x3C9)             ? greek[(c - 0x390) << 3] \
-				   : ((c8 = char_unicode_to_cp437(c)) >= 0) ? VGAMEM_SCANNER_BIOSCHAR(c8) \
-				   : ((c8 = char_unicode_to_itf(c)) >= 0)   ? itf[c8 << 3] \
-				   : ((c8 = char_unicode_to_cp866(c)) >= 0) ? cp866[(c8 & 0x7F) << 3] \
-				   : uFFFD[yl]; \
-	\
+				dg = (c >= 0x20 && c <= 0x7F)                 ? itf[c << 3] \
+				     : (c >= 0xA0 && c <= 0xFF)               ? extlatin[(c - 0xA0) << 3] \
+				     : (c >= 0x390 && c <= 0x3C9)             ? greek[(c - 0x390) << 3] \
+				     : ((c8 = char_unicode_to_cp437(c)) >= 0) ? VGAMEM_SCANNER_BIOSCHAR(c8) \
+				     : ((c8 = char_unicode_to_itf(c)) >= 0)   ? itf[c8 << 3] \
+				     : ((c8 = char_unicode_to_cp866(c)) >= 0) ? cp866[(c8 & 0x7F) << 3] \
+									      : uFFFD[yl]; \
+\
 				fg = VGAMEM_UNICODE_FG(*bp); \
 				bg = VGAMEM_UNICODE_BG(*bp); \
 				fg2 = fg; \
@@ -406,10 +399,10 @@ static const uint8_t uFFFD[] = {
 				bg2 = bg; \
 				dg = itf[VGAMEM_CHAR(*bp) << 3]; \
 			} \
-	\
+\
 			dg |= mouseline[x]; \
 			dg &= ~(mouseline_mask[x] ^ mouseline[x]); \
-	\
+\
 			*out++ = tc[(dg & 0x80) ? fg : bg]; \
 			*out++ = tc[(dg & 0x40) ? fg : bg]; \
 			*out++ = tc[(dg & 0x20) ? fg : bg]; \
@@ -431,30 +424,25 @@ void draw_char_unicode(uint32_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
-	vgamem[x + (y*80)] = (VGAMEM_FONT_UNICODE
-		| (fg << VGAMEM_UNICODE_FG_BIT)
-		| (bg << VGAMEM_UNICODE_BG_BIT)
-		| c);
+	vgamem[x + (y * 80)]
+		= (VGAMEM_FONT_UNICODE | (fg << VGAMEM_UNICODE_FG_BIT) | (bg << VGAMEM_UNICODE_BG_BIT) | c);
 }
 
 void draw_char_bios(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
-	vgamem[x + (y*80)] = (VGAMEM_FONT_BIOS
-		| (fg << VGAMEM_FG_BIT)
-		| (bg << VGAMEM_BG_BIT)
-		| c);
+	vgamem[x + (y * 80)] = (VGAMEM_FONT_BIOS | (fg << VGAMEM_FG_BIT) | (bg << VGAMEM_BG_BIT) | c);
 }
 
 void draw_char(uint8_t c, int x, int y, uint32_t fg, uint32_t bg)
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
-	vgamem[x + (y*80)] = ((fg << VGAMEM_FG_BIT) | (bg << VGAMEM_BG_BIT) | c);
+	vgamem[x + (y * 80)] = ((fg << VGAMEM_FG_BIT) | (bg << VGAMEM_BG_BIT) | c);
 }
 
-int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text(const char *text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
@@ -467,7 +455,7 @@ int draw_text(const char * text, int x, int y, uint32_t fg, uint32_t bg)
 	return n;
 }
 
-int draw_text_bios(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_bios(const char *text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
@@ -486,10 +474,13 @@ int draw_text_charset(const void *text, charset_t set, int x, int y, uint32_t fg
 	size_t i;
 
 	switch (set) {
-	case CHARSET_ITF: return draw_text(text, x, y, fg, bg);
-	case CHARSET_CP437: return draw_text_bios(text, x, y, fg, bg);
+	case CHARSET_ITF:
+		return draw_text(text, x, y, fg, bg);
+	case CHARSET_CP437:
+		return draw_text_bios(text, x, y, fg, bg);
 	/* else do unicode */
-	default: break;
+	default:
+		break;
 	}
 
 	composed = charset_compose_to_set(text, set, CHARSET_UCS4);
@@ -504,7 +495,7 @@ int draw_text_charset(const void *text, charset_t set, int x, int y, uint32_t fg
 	return i;
 }
 
-int draw_text_utf8(const char * text, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_utf8(const char *text, int x, int y, uint32_t fg, uint32_t bg)
 {
 	return draw_text_charset(text, CHARSET_UTF8, x, y, fg, bg);
 }
@@ -515,7 +506,7 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg)
 	int x, len;
 
 	mm = &vgamem[(ys * 80) + xs];
-	len = (xe - xs)+1;
+	len = (xe - xs) + 1;
 	ye -= ys;
 	do {
 		for (x = 0; x < len; x++)
@@ -525,7 +516,7 @@ void draw_fill_chars(int xs, int ys, int xe, int ye, uint32_t fg, uint32_t bg)
 	} while (ye >= 0);
 }
 
-int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
@@ -538,7 +529,7 @@ int draw_text_len(const char * text, int len, int x, int y, uint32_t fg, uint32_
 	return n;
 }
 
-int draw_text_bios_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_bios_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
 	int n = 0;
 
@@ -557,9 +548,12 @@ int draw_text_charset_len(const void *text, charset_t set, int len, int x, int y
 	int i;
 
 	switch (set) {
-	case CHARSET_ITF: return draw_text_len(text, len, x, y, fg, bg);
-	case CHARSET_CP437: return draw_text_bios_len(text, len, x, y, fg, bg);
-	default: break;
+	case CHARSET_ITF:
+		return draw_text_len(text, len, x, y, fg, bg);
+	case CHARSET_CP437:
+		return draw_text_bios_len(text, len, x, y, fg, bg);
+	default:
+		break;
 	}
 
 	composed = charset_compose_to_set(text, set, CHARSET_UCS4);
@@ -576,26 +570,21 @@ int draw_text_charset_len(const void *text, charset_t set, int len, int x, int y
 	return i;
 }
 
-int draw_text_utf8_len(const char * text, int len, int x, int y, uint32_t fg, uint32_t bg)
+int draw_text_utf8_len(const char *text, int len, int x, int y, uint32_t fg, uint32_t bg)
 {
 	return draw_text_charset_len(text, CHARSET_UTF8, len, x, y, fg, bg);
 }
 
 /* --------------------------------------------------------------------- */
 
-void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
-			   uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
+void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y, uint32_t fg1, uint32_t bg1, uint32_t fg2, uint32_t bg2)
 {
 	SCHISM_RUNTIME_ASSERT(x >= 0 && y >= 0 && x < 80 && y < 50, "Coordinates should always be inbounds");
 
-
-	vgamem[x + (y*80)] = (VGAMEM_FONT_HALFWIDTH
-		| (fg1 << VGAMEM_HW_FG1_BIT)
-		| (fg2 << VGAMEM_HW_FG2_BIT)
-		| (bg1 << VGAMEM_HW_BG1_BIT)
-		| (bg2 << VGAMEM_HW_BG2_BIT)
-		| (vgamem_pack_halfw(c1) << VGAMEM_HW_CHAR1_BIT)
-		| (vgamem_pack_halfw(c2) << VGAMEM_HW_CHAR2_BIT));
+	vgamem[x + (y * 80)] = (VGAMEM_FONT_HALFWIDTH | (fg1 << VGAMEM_HW_FG1_BIT) | (fg2 << VGAMEM_HW_FG2_BIT)
+				| (bg1 << VGAMEM_HW_BG1_BIT) | (bg2 << VGAMEM_HW_BG2_BIT)
+				| (vgamem_pack_halfw(c1) << VGAMEM_HW_CHAR1_BIT)
+				| (vgamem_pack_halfw(c2) << VGAMEM_HW_CHAR2_BIT));
 }
 
 /* --------------------------------------------------------------------- */
@@ -603,7 +592,13 @@ void draw_half_width_chars(uint8_t c1, uint8_t c2, int x, int y,
 
 void draw_box(int xs, int ys, int xe, int ye, uint32_t flags)
 {
-	static const uint8_t colors[5][2] = { {3, 1}, {1, 3}, {3, 3}, {1, 1}, {0, 0} };
+	static const uint8_t colors[5][2] = {
+		{3, 1},
+                {1, 3},
+                {3, 3},
+                {1, 1},
+                {0, 0}
+        };
 
 	enum {
 		BOX_THIN_INNER = 0,
@@ -614,11 +609,11 @@ void draw_box(int xs, int ys, int xe, int ye, uint32_t flags)
 	};
 
 	static const uint8_t boxes[5][8] = {
-		[BOX_THIN_INNER]   = {139, 138, 137, 136, 134, 129, 132, 131},
-		[BOX_THIN_OUTER]   = {128, 130, 133, 135, 129, 134, 131, 132},
+		[BOX_THIN_INNER] = {139, 138, 137, 136, 134, 129, 132, 131},
+		[BOX_THIN_OUTER] = {128, 130, 133, 135, 129, 134, 131, 132},
 		[BOX_CORNER_OUTER] = {128, 141, 140, 135, 129, 134, 131, 132},
-		[BOX_THICK_INNER]  = {153, 152, 151, 150, 148, 143, 146, 145},
-		[BOX_THICK_OUTER]  = {142, 144, 147, 149, 143, 148, 145, 146},
+		[BOX_THICK_INNER] = {153, 152, 151, 150, 148, 143, 146, 145},
+		[BOX_THICK_OUTER] = {142, 144, 147, 149, 143, 148, 145, 146},
 	};
 
 	uint8_t tl = colors[flags & BOX_SHADE_MASK][0];
@@ -673,13 +668,12 @@ void draw_box(int xs, int ys, int xe, int ye, uint32_t flags)
 
 /* ----------------------------------------------------------------- */
 
-static inline void _draw_thumb_bar_internal(int width, int x, int y,
-						int val, uint32_t fg)
+static inline void _draw_thumb_bar_internal(int width, int x, int y, int val, uint32_t fg)
 {
 	const uint8_t thumb_chars[2][8] = {
 		{155, 156, 157, 158, 159, 160, 161, 162},
-		{0, 0, 0, 163, 164, 165, 166, 167}
-	};
+                {0,   0,   0,   163, 164, 165, 166, 167}
+        };
 	int n = ++val >> 3;
 
 	val %= 8;
@@ -691,13 +685,11 @@ static inline void _draw_thumb_bar_internal(int width, int x, int y,
 		draw_fill_chars(x + n, y, x + width - 1, y, DEFAULT_FG, 0);
 }
 
-void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
-			int selected)
+void draw_thumb_bar(int x, int y, int width, int min, int max, int val, int selected)
 {
 	/* this wouldn't happen in a perfect world :P */
 	if (val < min || val > max) {
-		draw_fill_chars(x, y, x + width - 1, y, DEFAULT_FG,
-				((status.flags & CLASSIC_MODE) ? 2 : 0));
+		draw_fill_chars(x, y, x + width - 1, y, DEFAULT_FG, ((status.flags & CLASSIC_MODE) ? 2 : 0));
 		return;
 	}
 
@@ -707,12 +699,9 @@ void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
 
 	/* draw the bar */
 	if (!max)
-		_draw_thumb_bar_internal(width, x, y, 0,
-				 selected ? 3 : 2);
+		_draw_thumb_bar_internal(width, x, y, 0, selected ? 3 : 2);
 	else
-		_draw_thumb_bar_internal(width, x, y,
-				val * (width - 1) * 8 / max,
-				selected ? 3 : 2);
+		_draw_thumb_bar_internal(width, x, y, val * (width - 1) * 8 / max, selected ? 3 : 2);
 }
 
 /* --------------------------------------------------------------------- */
@@ -721,8 +710,13 @@ void draw_thumb_bar(int x, int y, int width, int min, int max, int val,
 void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 {
 	const uint8_t endtext[8][3] = {
-		{174, 0, 0}, {175, 0, 0}, {176, 0, 0}, {176, 177, 0},
-		{176, 178, 0}, {176, 179, 180}, {176, 179, 181},
+		{174, 0,   0  },
+		{175, 0,   0  },
+		{176, 0,   0  },
+		{176, 177, 0  },
+		{176, 178, 0  },
+		{176, 179, 180},
+		{176, 179, 181},
 		{176, 179, 182},
 	};
 	int leftover;
@@ -730,7 +724,7 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 	int maxval = width * 8 / 3;
 
 	/* reduced from (val * maxval / 64) */
-	val = CLAMP((val*width/24), 0, (maxval-1));
+	val = CLAMP((val * width / 24), 0, (maxval - 1));
 	if (!val)
 		return;
 
@@ -751,51 +745,55 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
 
 /* --------------------------------------------------------------------- */
 /* sample drawing
- * 
+ *
  * output channels = number of oscis
  * input channels = number of channels in data
-*/
+ */
 
 /* somewhat heavily based on CViewSample::DrawSampleData2 in modplug */
 #define DRAW_SAMPLE_DATA_VARIANT(bits, doublebits) \
-	static void _draw_sample_data_##bits(struct vgamem_overlay *r, \
-		int##bits##_t *data, uint32_t length, unsigned int inputchans, unsigned int outputchans) \
+	static void _draw_sample_data_##bits(struct vgamem_overlay *r, int##bits##_t *data, uint32_t length, \
+		unsigned int inputchans, unsigned int outputchans) \
 	{ \
 		const int32_t nh = r->height / outputchans; \
 		int32_t np = r->height - nh / 2; \
 		uint32_t cc; \
 		uint64_t step; \
-	\
+\
 		length /= inputchans; \
 		step = ((uint64_t)length << 32) / r->width; \
-	\
+\
 		for (cc = 0; cc < outputchans; cc++) { \
 			int x; \
 			uint64_t poshi = 0, poslo = 0; \
-	\
+\
 			for (x = 0; x < r->width; x++) { \
 				uint32_t scanlength; \
 				int##bits##_t min = INT##bits##_MAX, max = INT##bits##_MIN; \
-	\
+\
 				poslo += step; \
 				scanlength = ((poslo + UINT32_C(0xFFFFFFFF)) >> 32); \
-				if (poshi >= length) poshi = length - 1; \
-				if (poshi + scanlength > length) scanlength = length - poshi; \
+				if (poshi >= length) \
+					poshi = length - 1; \
+				if (poshi + scanlength > length) \
+					scanlength = length - poshi; \
 				scanlength = MAX(scanlength, 1); \
-	\
-				/* FIXME: this is wrong for outputting mono from stereo (only accounts for left channel) */ \
-				minmax_##bits(data + (poshi * inputchans) + (cc % inputchans), scanlength * inputchans, &min, &max, inputchans); \
-	\
+\
+				/* FIXME: this is wrong for outputting mono from stereo (only accounts for left \
+				 * channel) */ \
+				minmax_##bits(data + (poshi * inputchans) + (cc % inputchans), \
+					scanlength * inputchans, &min, &max, inputchans); \
+\
 				/* BUT IT'S WEB SCALE! */ \
 				min = rshift_signed((int##doublebits##_t)min * nh, bits); \
 				max = rshift_signed((int##doublebits##_t)max * nh, bits); \
-	\
+\
 				vgamem_ovl_drawline(r, x, np - 1 - max, x, np - 1 - min, SAMPLE_DATA_COLOR); \
-	\
+\
 				poshi += (poslo >> 32); \
 				poslo &= UINT32_C(0xFFFFFFFF); \
 			} \
-	\
+\
 			np -= nh; \
 		} \
 	}
@@ -809,8 +807,7 @@ DRAW_SAMPLE_DATA_VARIANT(32, 64)
 /* --------------------------------------------------------------------- */
 /* these functions assume the screen is locked! */
 
-static void _draw_loop_ex(struct vgamem_overlay *r,
-	uint32_t start, uint32_t end, uint32_t length, uint32_t colorbits,
+static void _draw_loop_ex(struct vgamem_overlay *r, uint32_t start, uint32_t end, uint32_t length, uint32_t colorbits,
 	uint32_t flags, uint32_t loopflag)
 {
 	uint32_t loopstart, loopend;
@@ -828,31 +825,38 @@ static void _draw_loop_ex(struct vgamem_overlay *r,
 	y = 0;
 	do {
 #define COLOR(x) ((colorbits & (1 << (x))) ? c : 0)
-		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(0)); vgamem_ovl_drawpixel(r, loopend, y, COLOR(0)); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(1)); vgamem_ovl_drawpixel(r, loopend, y, COLOR(1)); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(2)); vgamem_ovl_drawpixel(r, loopend, y, COLOR(2)); y++;
-		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(3)); vgamem_ovl_drawpixel(r, loopend, y, COLOR(3)); y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(0));
+		vgamem_ovl_drawpixel(r, loopend, y, COLOR(0));
+		y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(1));
+		vgamem_ovl_drawpixel(r, loopend, y, COLOR(1));
+		y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(2));
+		vgamem_ovl_drawpixel(r, loopend, y, COLOR(2));
+		y++;
+		vgamem_ovl_drawpixel(r, loopstart, y, COLOR(3));
+		vgamem_ovl_drawpixel(r, loopend, y, COLOR(3));
+		y++;
 #undef COLOR
 	} while (y < r->height);
 }
 
 /* loop drawing. we always just inline these since they just forward anyway. */
-static inline SCHISM_ALWAYS_INLINE
-void _draw_sample_loop(struct vgamem_overlay *r, song_sample_t * sample)
+static inline SCHISM_ALWAYS_INLINE void _draw_sample_loop(struct vgamem_overlay *r, song_sample_t *sample)
 {
 	/* 0 c c 0 */
 	_draw_loop_ex(r, sample->loop_start, sample->loop_end, sample->length, 0x02 | 0x04, sample->flags, CHN_LOOP);
 }
 
-static inline SCHISM_ALWAYS_INLINE
-void _draw_sample_susloop(struct vgamem_overlay *r, song_sample_t * sample)
+static inline SCHISM_ALWAYS_INLINE void _draw_sample_susloop(struct vgamem_overlay *r, song_sample_t *sample)
 {
 	/* c 0 c 0 */
-	_draw_loop_ex(r, sample->sustain_start, sample->sustain_end, sample->length, 0x01 | 0x04, sample->flags, CHN_SUSTAINLOOP);
+	_draw_loop_ex(r, sample->sustain_start, sample->sustain_end, sample->length, 0x01 | 0x04, sample->flags,
+		CHN_SUSTAINLOOP);
 }
 
 /* this does the lines for playing samples */
-static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t * sample)
+static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t *sample)
 {
 	int n, x, y;
 	int c;
@@ -869,7 +873,8 @@ static void _draw_sample_play_marks(struct vgamem_overlay *r, song_sample_t * sa
 		channel = song_get_mix_channel(channel_list[n]);
 		if (channel->current_sample_data != sample->data)
 			continue;
-		if (!channel->final_volume) continue;
+		if (!channel->final_volume)
+			continue;
 		c = (channel->flags & (CHN_KEYOFF | CHN_NOTEFADE)) ? SAMPLE_BGMARK_COLOR : SAMPLE_MARK_COLOR;
 		x = csf_smp_pos_get_whole(channel->position) * (r->width - 1) / sample->length;
 		if (x >= r->width) {
@@ -905,30 +910,23 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 		vgamem_ovl_apply(r);
 		char buf1[32], buf2[32];
 
-		int y1 = r->y1, y2 = y1+3;
+		int y1 = r->y1, y2 = y1 + 3;
 
-		draw_box(59,y1, 77,y2, BOX_THICK | BOX_INNER | BOX_INSET); // data
-		draw_box(54,y1, 58,y2, BOX_THIN | BOX_INNER | BOX_OUTSET); // button
-		draw_text_len("Mod", 3, 55,y1+1, 0,2);
-		draw_text_len("Car", 3, 55,y1+2, 0,2);
+		draw_box(59, y1, 77, y2, BOX_THICK | BOX_INNER | BOX_INSET); // data
+		draw_box(54, y1, 58, y2, BOX_THIN | BOX_INNER | BOX_OUTSET); // button
+		draw_text_len("Mod", 3, 55, y1 + 1, 0, 2);
+		draw_text_len("Car", 3, 55, y1 + 2, 0, 2);
 
 		snprintf(buf1, sizeof(buf1),
 			"%02X %02X %02X %02X %02X %02X", // length:6*3-1=17
-			sample->adlib_bytes[0],
-			sample->adlib_bytes[2],
-			sample->adlib_bytes[4],
-			sample->adlib_bytes[6],
-			sample->adlib_bytes[8],
-			sample->adlib_bytes[10]);
+			sample->adlib_bytes[0], sample->adlib_bytes[2], sample->adlib_bytes[4], sample->adlib_bytes[6],
+			sample->adlib_bytes[8], sample->adlib_bytes[10]);
 		snprintf(buf2, sizeof(buf2),
 			"%02X %02X %02X %02X %02X",      // length: 5*3-1=14
-			sample->adlib_bytes[1],
-			sample->adlib_bytes[3],
-			sample->adlib_bytes[5],
-			sample->adlib_bytes[7],
+			sample->adlib_bytes[1], sample->adlib_bytes[3], sample->adlib_bytes[5], sample->adlib_bytes[7],
 			sample->adlib_bytes[9]);
-		draw_text_len(buf1, 17, 60,y1+1, 2,0);
-		draw_text_len(buf2, 17, 60,y1+2, 2,0);
+		draw_text_len(buf1, 17, 60, y1 + 1, 2, 0);
+		draw_text_len(buf2, 17, 60, y1 + 2, 2, 0);
 		return;
 	}
 
@@ -940,13 +938,9 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 	/* do the actual drawing */
 	int chans = sample->flags & CHN_STEREO ? 2 : 1;
 	if (sample->flags & CHN_16BIT)
-		_draw_sample_data_16(r, (signed short *) sample->data,
-				sample->length * chans,
-				chans, chans);
+		_draw_sample_data_16(r, (signed short *)sample->data, sample->length * chans, chans, chans);
 	else
-		_draw_sample_data_8(r, sample->data,
-				sample->length * chans,
-				chans, chans);
+		_draw_sample_data_8(r, sample->data, sample->length * chans, chans, chans);
 
 	if ((status.flags & CLASSIC_MODE) == 0)
 		_draw_sample_play_marks(r, sample);
@@ -955,24 +949,24 @@ void draw_sample_data(struct vgamem_overlay *r, song_sample_t *sample)
 	vgamem_ovl_apply(r);
 }
 
-void draw_sample_data_rect_32(struct vgamem_overlay *r, int32_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
+void draw_sample_data_rect_32(
+	struct vgamem_overlay *r, int32_t *data, int length, unsigned int inputchans, unsigned int outputchans)
 {
 	vgamem_ovl_clear(r, 0);
 	_draw_sample_data_32(r, data, length, inputchans, outputchans);
 	vgamem_ovl_apply(r);
 }
 
-void draw_sample_data_rect_16(struct vgamem_overlay *r, int16_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
+void draw_sample_data_rect_16(
+	struct vgamem_overlay *r, int16_t *data, int length, unsigned int inputchans, unsigned int outputchans)
 {
 	vgamem_ovl_clear(r, 0);
 	_draw_sample_data_16(r, data, length, inputchans, outputchans);
 	vgamem_ovl_apply(r);
 }
 
-void draw_sample_data_rect_8(struct vgamem_overlay *r, int8_t *data,
-	int length, unsigned int inputchans, unsigned int outputchans)
+void draw_sample_data_rect_8(
+	struct vgamem_overlay *r, int8_t *data, int length, unsigned int inputchans, unsigned int outputchans)
 {
 	vgamem_ovl_clear(r, 0);
 	_draw_sample_data_8(r, data, length, inputchans, outputchans);

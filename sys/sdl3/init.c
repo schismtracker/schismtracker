@@ -26,16 +26,16 @@
 
 #include "init.h"
 
-static bool (SDLCALL *sdl3_Init)(SDL_InitFlags flags);
-static void (SDLCALL *sdl3_Quit)(void);
+static bool(SDLCALL *sdl3_Init)(SDL_InitFlags flags);
+static void(SDLCALL *sdl3_Quit)(void);
 static const char *(SDLCALL *sdl3_GetError)(void);
-static int (SDLCALL *sdl3_GetVersion)(void);
+static int(SDLCALL *sdl3_GetVersion)(void);
 
 static int load_sdl3_syms(void);
 
 #ifdef SDL3_DYNAMIC_LOAD
 
-#include "loadso.h"
+# include "loadso.h"
 
 static void *sdl3_dltrick_handle_ = NULL;
 
@@ -67,7 +67,8 @@ static int sdl3_dlinit(void)
 	return retval;
 }
 
-SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
+SCHISM_STATIC_ASSERT(sizeof(void(*)) == sizeof(void *),
+	"dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
 int sdl3_load_sym(const char *fn, void *addr)
 {
@@ -90,7 +91,7 @@ static int sdl3_dlinit(void)
 	return 0;
 }
 
-#define sdl3_dlend() // nothing
+# define sdl3_dlend() // nothing
 
 #endif
 
@@ -151,5 +152,6 @@ void sdl3_quit(void)
 
 int sdl3_ver_atleast(int major, int minor, int patch)
 {
-	return SCHISM_SEMVER_ATLEAST(major, minor, patch, SDL_VERSIONNUM_MAJOR(ver), SDL_VERSIONNUM_MINOR(ver), SDL_VERSIONNUM_MICRO(ver));
+	return SCHISM_SEMVER_ATLEAST(
+		major, minor, patch, SDL_VERSIONNUM_MAJOR(ver), SDL_VERSIONNUM_MINOR(ver), SDL_VERSIONNUM_MICRO(ver));
 }
