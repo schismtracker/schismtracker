@@ -645,12 +645,10 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 // chan->instrument_volume = 0..64  (corresponds to the sample global volume and instrument global volume)
 static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num, int32_t freq, int32_t vol)
 {
-	if (chan->flags & CHN_MUTE) {
-		// don't do anything
-		return;
-	} else if (csf->flags & SONG_INSTRUMENTMODE &&
-	    chan->ptr_instrument &&
-	    chan->ptr_instrument->midi_channel_mask > 0) {
+	if (csf->flags & SONG_INSTRUMENTMODE
+			&& chan->ptr_instrument
+			&& chan->ptr_instrument->midi_channel_mask > 0
+			&& !(chan->flags & CHN_MUTE)) {
 		MidiBendMode BendMode = MIDI_BEND_NORMAL;
 		/* TODO: If we're expecting a large bend exclusively
 		 * in either direction, update BendMode to indicate so.
@@ -669,6 +667,7 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num,
 
 		GM_SetFreqAndVol(csf, chan_num, freq, volume, BendMode, chan->flags & CHN_KEYOFF);
 	}
+
 	if (chan->flags & CHN_ADLIB) {
 		// Scaling is needed to get a frequency that matches with ST3 notes.
 		// 8363 is st3s middle C sample rate. 261.625 is the Hertz for middle C in a tempered scale (A4 = 440)
