@@ -63,6 +63,7 @@ static int _fixup_ignore_globals(struct key_event *k)
 	case SCHISM_KEYSYM_TAB:
 	case SCHISM_KEYSYM_RETURN:
 	case SCHISM_KEYSYM_ESCAPE:
+	case SCHISM_KEYSYM_SPACE:
 		/* use default handler */
 		return 0;
 	case SCHISM_KEYSYM_F2: case SCHISM_KEYSYM_F5: case SCHISM_KEYSYM_F9: case SCHISM_KEYSYM_F10:
