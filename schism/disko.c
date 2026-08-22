@@ -662,6 +662,10 @@ int disko_writeout_sample(int smpnum, int pattern, int dobind)
 	dwsong.repeat_count = -1; // FIXME do this right
 	csf_loop_pattern(&dwsong, pattern, 0);
 
+	/* emit samples at a level where if the resulting sample is inserted
+	 * back into the pattern, it will be the same volume */
+	dwsong.mixing_volume = 0x200;
+
 	do {
 		disko_write(&ds, buf, csf_read(&dwsong, buf, sizeof(buf)) * bps);
 		if (ds.length >= (size_t) (MAX_SAMPLE_LENGTH * bps)) {
@@ -738,6 +742,10 @@ int disko_multiwrite_samples(int firstsmp, int pattern)
 		errno = err;
 		return DW_ERROR;
 	}
+
+	/* emit samples at a level where if the resulting sample is inserted
+	 * back into the pattern, it will be the same volume */
+	dwsong.mixing_volume = 0x200;
 
 	for (n = 0; n < MAX_CHANNELS; n++) {
 		dwsong.multi_write[n].data = &ds[n];
