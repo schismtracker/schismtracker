@@ -36,6 +36,7 @@
 #include "pattern-view.h"
 #include "config-parser.h"
 #include "midi.h"
+#include "patedit_record.h"
 #include "osdefs.h"
 #include "fakemem.h"
 #include "dialog.h"
@@ -3076,6 +3077,37 @@ static int note_is_empty(song_note_t *p)
 }
 #endif
 
+/* Fill *smp and *ins for song_keyrecord from a pattern cell (see song_single_step). */
+static void song_keyjazz_from_cell(const song_note_t *note, int *smp, int *ins)
+{
+	*smp = *ins = note->instrument;
+	if (song_is_instrument_mode()) {
+		if (*ins < 1)
+			*ins = KEYJAZZ_NOINST;
+		*smp = KEYJAZZ_NOINST;
+	} else {
+		if (*smp < 1)
+			*smp = KEYJAZZ_NOINST;
+		*ins = KEYJAZZ_NOINST;
+	}
+}
+
+static void patedit_apply_instrument_map_fx(song_note_t *cur_note, int key_note)
+{
+	song_instrument_t *ins;
+	uint8_t fx, param;
+
+	if (template_mode || !NOTE_IS_NOTE(key_note) || !song_is_instrument_mode())
+		return;
+	if (cur_note->instrument < 1)
+		return;
+	ins = song_get_instrument(cur_note->instrument);
+	if (!song_instrument_map_fx(ins, key_note, &fx, &param))
+		return;
+	cur_note->effect = fx;
+	cur_note->param = param;
+}
+
 // FIXME: why the 'row' param? should it be removed, or should the references to current_row be replaced?
 // fwiw, every call to this uses current_row.
 // return: zero if there was a template error, nonzero otherwise
@@ -3151,51 +3183,31 @@ static int patedit_record_note(song_note_t *cur_note, int channel, SCHISM_UNUSED
 
 static int pattern_editor_insert_midi(struct key_event *k)
 {
-	song_note_t *pattern, *cur_note = NULL;
-	int n, v = 0, pd, speed, tick, offset = 0;
-	int r = current_row, c = current_channel, p = current_pattern;
-	int quantize_next_row = 0;
+	song_note_t *pattern, *patbuf, *cur_note = NULL;
+	patedit_record_target_t tgt;
+	int n, v = 0, c, pd, speed, tick, note_off_bumped = 0;
 	int ins = KEYJAZZ_NOINST, smp = KEYJAZZ_NOINST;
-	int song_was_playing = SONG_PLAYING;
-
-	if (song_is_instrument_mode()) {
-		ins = instrument_get_current();
-	} else {
-		smp = sample_get_current();
-	}
 
 	status.flags |= SONG_NEEDS_SAVE;
-
-	speed = song_get_current_speed();
-	tick = song_get_current_tick();
+	song_get_pattern(current_pattern, &pattern);
 
 	if (midi_start_record && !SONG_PLAYING) {
 		switch (midi_start_record) {
 		case 1: /* pattern loop */
-			song_loop_pattern(p, r);
+			song_loop_pattern(current_pattern, current_row);
 			midi_playback_tracing = playback_tracing;
 			playback_tracing = 1;
 			break;
 		case 2: /* song play */
-			song_start_at_pattern(p, r);
+			song_start_at_pattern(current_pattern, current_row);
 			midi_playback_tracing = playback_tracing;
 			playback_tracing = 1;
 			break;
 		};
 	}
 
-	// this is a long one
-	if (midi_flags & MIDI_TICK_QUANTIZE             // if quantize is on
-			&& song_was_playing                     // and the song was playing
-			&& playback_tracing                     // and we are following the song
-			&& tick > 0 && tick <= speed / 2 + 1) { // and the note is too late
-		/* correct late notes to the next row */
-		/* tick + 1 because processing the keydown itself takes another tick */
-		offset++;
-		quantize_next_row = 1;
-	}
-
-	song_get_pattern_offset(&p, &pattern, &r, offset);
+	speed = song_get_current_speed();
+	tick = song_get_current_tick();
 
 	if (k->midi_note == -1) {
 		/* nada */
@@ -3213,9 +3225,20 @@ static int pattern_editor_insert_midi(struct key_event *k)
 			return 0;
 		}
 
-		cur_note = pattern + MAX_CHANNELS * r + (c-1);
+		if (!patedit_resolve_record_target(&tgt, c, 1))
+			return 0;
+		cur_note = tgt.cell;
+		if (patedit_note_off_needs_bump(tgt.pattern, tgt.row, c, k->midi_note)) {
+			if (!song_get_pattern_offset(&tgt.pattern, &patbuf, &tgt.row, 1))
+				return 0;
+			cur_note = patbuf + MAX_CHANNELS * tgt.row + (c - 1);
+			note_off_bumped = 1;
+		}
 		/* never "overwrite" a note off */
-		patedit_record_note(cur_note, c, r, NOTE_OFF, 0);
+		patedit_record_note(cur_note, c, tgt.row, NOTE_OFF, 0);
+		if (note_off_bumped)
+			patedit_deferred_mark(tgt.pattern, tgt.row, c);
+		patedit_anchor_clear_channel(c);
 
 
 	} else {
@@ -3224,35 +3247,56 @@ static int pattern_editor_insert_midi(struct key_event *k)
 		} else {
 			v = 0;
 		}
-		if (!((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) && playback_tracing)) {
-			tick = 0;
-		}
 		n = k->midi_note;
+		c = current_channel;
 
-		if (!quantize_next_row) {
-			c = song_keydown(smp, ins, n, v, c);
-		}
+		if (!patedit_resolve_record_target(&tgt, c, 1))
+			return 0;
+		cur_note = tgt.cell;
+		if (!((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) && playback_tracing))
+			tick = 0;
+		else
+			tick = tgt.tick;
 
-		cur_note = pattern + MAX_CHANNELS * r + (c-1);
-		patedit_record_note(cur_note, c, r, n, 0);
+		patedit_record_note(cur_note, c, tgt.row, n, 0);
 
 		if (!template_mode) {
-			cur_note->instrument = song_get_current_instrument();
-
+			if (edit_copy_mask & MASK_INSTRUMENT) {
+				if (song_is_instrument_mode())
+					cur_note->instrument = instrument_get_current();
+				else
+					cur_note->instrument = sample_get_current();
+			}
+			if (edit_copy_mask & MASK_VOLUME) {
+				cur_note->voleffect = mask_note.voleffect;
+				cur_note->volparam = mask_note.volparam;
+			}
+			if (edit_copy_mask & MASK_EFFECT) {
+				cur_note->effect = mask_note.effect;
+				cur_note->param = mask_note.param;
+			}
 			if (midi_flags & MIDI_RECORD_VELOCITY) {
 				cur_note->voleffect = VOLFX_VOLUME;
 				cur_note->volparam = v;
 			}
-			tick %= speed;
+			patedit_apply_instrument_map_fx(cur_note, n);
+			if (speed > 0)
+				tick %= speed;
 			if (!(midi_flags & MIDI_TICK_QUANTIZE) && !cur_note->effect && tick != 0) {
 				cur_note->effect = FX_SPECIAL;
 				cur_note->param = 0xD0 | MIN(tick, 15);
 			}
+			song_keyjazz_from_cell(cur_note, &smp, &ins);
+			c = song_keyrecord(smp, ins, n, v, c, cur_note->effect, cur_note->param);
+			patedit_note_on_anchor(tgt.pattern, tgt.row, c, n);
+			if (tgt.snap_applied)
+				patedit_deferred_mark(tgt.pattern, tgt.row, c);
 		}
 	}
 
 	if (!(midi_flags & MIDI_PITCHBEND) || midi_pitch_depth == 0 || k->midi_bend == 0) {
-		if (k->state == KEY_RELEASE && k->midi_note > -1 && cur_note->instrument > 0) {
+		if (k->state == KEY_RELEASE && k->midi_note > -1 && cur_note
+				&& cur_note->instrument > 0) {
 			song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note, v, c+1,
 				cur_note->effect, cur_note->param);
 			pattern_selection_system_copyout();
@@ -3263,7 +3307,13 @@ static int pattern_editor_insert_midi(struct key_event *k)
 	/* pitch bend */
 	for (c = 0; c < MAX_CHANNELS; c++) {
 		if ((channel_multi[c] & 1) && (channel_multi[c] & (~1))) {
-			cur_note = pattern + MAX_CHANNELS * r + c;
+			if ((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))
+					&& playback_tracing
+					&& patedit_resolve_record_target(&tgt, c + 1, 1)) {
+				cur_note = tgt.cell;
+			} else {
+				cur_note = pattern + MAX_CHANNELS * current_row + c;
+			}
 
 			if (cur_note->effect) {
 				if (cur_note->effect != FX_PORTAMENTOUP
@@ -3312,7 +3362,8 @@ static int pattern_editor_insert(struct key_event *k)
 {
 	/* wow, this is horrifying */
 	int ins, smp, j, n, vol;
-	song_note_t *pattern, *cur_note;
+	song_note_t *pattern, *patbuf, *cur_note;
+	patedit_record_target_t tgt;
 
 	song_get_pattern(current_pattern, &pattern);
 	/* keydown events are handled here for multichannel */
@@ -3326,13 +3377,6 @@ static int pattern_editor_insert(struct key_event *k)
 		// FIXME: this is actually quite wrong; instrument numbers should be independent for each
 		// channel and take effect when the instrument is played (e.g. with 4/8 or keyjazz input)
 		// also, this is fully idiotic
-		smp = ins = cur_note->instrument;
-		if (song_is_instrument_mode()) {
-			smp = KEYJAZZ_NOINST;
-		} else {
-			ins = KEYJAZZ_NOINST;
-		}
-
 		if (k->sym == SCHISM_KEYSYM_4) {
 			if (k->state == KEY_RELEASE)
 				return 0;
@@ -3342,6 +3386,7 @@ static int pattern_editor_insert(struct key_event *k)
 			} else {
 				vol = KEYJAZZ_DEFAULTVOL;
 			}
+			song_keyjazz_from_cell(cur_note, &smp, &ins);
 			song_keyrecord(smp, ins, cur_note->note,
 				vol, current_channel, cur_note->effect, cur_note->param);
 			advance_cursor(!(k->mod & SCHISM_KEYMOD_SHIFT), 1);
@@ -3354,15 +3399,6 @@ static int pattern_editor_insert(struct key_event *k)
 			advance_cursor(!(k->mod & SCHISM_KEYMOD_SHIFT), 0);
 			return 1;
 		}
-
-		if (song_is_instrument_mode()) {
-			if (edit_copy_mask & MASK_INSTRUMENT)
-				ins = instrument_get_current();
-		} else {
-			if (edit_copy_mask & MASK_INSTRUMENT)
-				smp = sample_get_current();
-		}
-
 
 		if (k->sym == SCHISM_KEYSYM_SPACE) {
 			/* copy mask to note */
@@ -3388,25 +3424,37 @@ static int pattern_editor_insert(struct key_event *k)
 		if (k->state == KEY_RELEASE) {
 			if (keyjazz_noteoff && NOTE_IS_NOTE(n)) {
 				/* coda mode */
+				song_keyjazz_from_cell(cur_note, &smp, &ins);
 				song_keyup(smp, ins, n);
 			}
 			/* it would be weird to have this enabled and keyjazz_noteoff
 			 * disabled, but it's possible, so handle it separately. */
 			if (keyjazz_write_noteoff && playback_tracing && NOTE_IS_NOTE(n)) {
-				/* go to the next row if a note off would overwrite a note
-				 * you (likely) just entered */
-				if (cur_note->note) {
-					if (++current_row >
-						song_get_max_row_number_in_pattern(current_pattern)) {
-						return 1;
-					}
-					cur_note += MAX_CHANNELS;
-					/* give up if the next row has a note too */
-					if (cur_note->note) {
-						return 1;
-					}
-				}
+				int note_num = n;
+				int note_off_bumped = 0;
+
 				n = NOTE_OFF;
+				if (patedit_resolve_record_target(&tgt, current_channel, 0)) {
+					cur_note = tgt.cell;
+					if (patedit_note_off_needs_bump(tgt.pattern, tgt.row,
+							current_channel, note_num)) {
+						if (!song_get_pattern_offset(&tgt.pattern, &patbuf,
+								&tgt.row, 1))
+							return 1;
+						cur_note = patbuf + MAX_CHANNELS * tgt.row
+							+ current_channel - 1;
+						note_off_bumped = 1;
+					}
+					if (!patedit_record_note(cur_note, current_channel,
+							tgt.row, n, 1))
+						return 1;
+					if (note_off_bumped)
+						patedit_deferred_mark(tgt.pattern, tgt.row,
+							current_channel);
+					patedit_anchor_clear_channel(current_channel);
+					pattern_selection_system_copyout();
+				}
+				return 1;
 			} else {
 				return 1;
 			}
@@ -3414,18 +3462,16 @@ static int pattern_editor_insert(struct key_event *k)
 		if (k->is_repeat && !keyjazz_repeat)
 			return 1;
 
+		if (!patedit_resolve_record_target(&tgt, current_channel, 0))
+			return 0;
+		cur_note = tgt.cell;
 
 		int writenote = (keyjazz_capslock) ? !(k->mod & SCHISM_KEYMOD_CAPS) : !(k->mod & SCHISM_KEYMOD_CAPS_PRESSED);
-		if (writenote && !patedit_record_note(cur_note, current_channel, current_row, n, 1)) {
+		if (writenote && !patedit_record_note(cur_note, current_channel, tgt.row, n, 1)) {
 			// there was a template error, don't advance the cursor and so on
 			writenote = 0;
 			n = NOTE_NONE;
 		}
-		/* Be quiet when pasting templates.
-		It'd be nice to "play" a template when pasting it (maybe only for ones that are one row high)
-		so as to hear the chords being inserted etc., but that's a little complicated to do. */
-		if (NOTE_IS_NOTE(n) && !(template_mode && writenote))
-			song_keydown(smp, ins, n, vol, current_channel);
 		if (!writenote)
 			break;
 
@@ -3448,9 +3494,15 @@ static int pattern_editor_insert(struct key_event *k)
 			}
 		}
 
-		/* try again, now that we have the effect (this is a dumb way to do this...) */
-		if (NOTE_IS_NOTE(n) && !template_mode)
-			song_keyrecord(smp, ins, n, vol, current_channel, cur_note->effect, cur_note->param);
+		if (NOTE_IS_NOTE(n) && !template_mode) {
+			patedit_apply_instrument_map_fx(cur_note, n);
+			song_keyjazz_from_cell(cur_note, &smp, &ins);
+			song_keyrecord(smp, ins, n, vol, current_channel,
+				cur_note->effect, cur_note->param);
+			patedit_note_on_anchor(tgt.pattern, tgt.row, current_channel, n);
+			if (tgt.snap_applied)
+				patedit_deferred_mark(tgt.pattern, tgt.row, current_channel);
+		}
 
 		/* copy the note back to the mask */
 		mask_note.note = n;
@@ -4736,6 +4788,7 @@ static void pattern_editor_playback_update(void)
 static void pated_song_changed(void)
 {
 	pated_history_clear();
+	patedit_deferred_clear_all();
 
 	// reset ctrl-f7
 	marked_pattern = -1;

@@ -269,9 +269,11 @@ int sample_get_current(void);
 void sample_set(int n);
 int instrument_get_current(void);
 void instrument_set(int n);
+void instrument_sync_note_trans_extended(void);
 void instrument_synchronize_to_sample(void);
 void sample_synchronize_to_instrument(void);
 int sample_is_used_by_instrument(int samp);
+int sample_list_offset_jam_mouse_moved(void);
 
 /* if necessary, prompt to create a new instrument. if newpage >= 0, the page
 is changed upon completion of the dialog, or immediately if no dialog was

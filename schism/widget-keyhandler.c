@@ -406,8 +406,9 @@ int widget_handle_key(struct key_event * k)
 	enum widget_type current_type = widget->type;
 
 	if (!(status.flags & DISKWRITER_ACTIVE)
-	    && ((current_type == WIDGET_OTHER && widget->d.other.handle_key(k))
-			|| (current_type == WIDGET_LISTBOX && widget_listbox_handle_key(widget, k))))
+	    && ((current_type == WIDGET_OTHER && widget->d.other.handle_key
+			&& widget->d.other.handle_key(k))
+		|| (current_type == WIDGET_LISTBOX && widget_listbox_handle_key(widget, k))))
 		return 1;
 
 	if (!(status.flags & DISKWRITER_ACTIVE) && k->mouse

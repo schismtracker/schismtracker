@@ -132,6 +132,7 @@ noinst_HEADERS = \
 	include/mem.h           \
 	include/osdefs.h		\
 	include/page.h			\
+	include/patedit_record.h	\
 	include/palettes.h          \
 	include/pattern-view.h		\
 	include/sample-edit.h		\
@@ -706,6 +707,8 @@ schismtracker_SOURCES = \
 	schism/page_orderpan.c		\
 	schism/page_palette.c		\
 	schism/page_patedit.c		\
+	schism/patedit_record.c		\
+	schism/page_playlist.c		\
 	schism/page_preferences.c	\
 	schism/page_samples.c		\
 	schism/page_timeinfo.c		\
@@ -713,6 +716,7 @@ schismtracker_SOURCES = \
 	schism/page_waterfall.c		\
 	schism/palettes.c		\
 	schism/pattern-view.c		\
+	schism/playlist.c		\
 	schism/sample-edit.c		\
 	schism/slurp.c			\
 	schism/status.c			\
@@ -807,13 +811,15 @@ schismtrackertest_SOURCES = \
 	test/cases/disko.c			\
 	test/cases/iff.c            \
 	test/cases/mplink.c         \
+	test/cases/patedit_record.c	\
 	test/cases/sanity.c			\
 	test/cases/slurp.c          \
 	test/cases/str.c			\
 	test/cases/util.c			\
 	test/cases/video.c			\
 	test/cases/version.c		\
-	test/cases/charset.c
+	test/cases/charset.c \
+	test/cases/it_fxext.c
 
 # err, this is flaky, but okay for now i guess
 mains =									\
@@ -828,4 +834,21 @@ schismtrackertest_OBJCFLAGS = $(schimtracker_OBJCFLAGS)
 schismtrackertest_DEPENDENCIES = $(schismtracker_DEPENDENCIES) schismtracker$(EXEEXT)
 schismtrackertest_LDADD = $(filter-out $(mains),$(schismtracker_OBJECTS)) $(schismtracker_LDADD)
 schismtrackertest_LDFLAGS = $(schismtracker_LDFLAGS)
+
+if USE_MACOSX
+appbundle = dist/SchismTracker.app
+
+$(appbundle): schismtracker$(EXEEXT) $(top_srcdir)/sys/macosx/Schism_Tracker.app/Contents/Info.plist
+	$(MKDIR_P) dist
+	rm -rf $(appbundle)
+	cp -R $(top_srcdir)/sys/macosx/Schism_Tracker.app $(appbundle)
+	$(MKDIR_P) $(appbundle)/Contents/MacOS
+	cp schismtracker$(EXEEXT) $(appbundle)/Contents/MacOS/
+
+.PHONY: macos-app app
+macos-app app: $(appbundle)
+
+clean-local:
+	rm -rf $(appbundle)
+endif
 

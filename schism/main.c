@@ -41,6 +41,7 @@
 #include "config.h"
 #include "version.h"
 #include "song.h"
+#include "playlist.h"
 #include "midi.h"
 #include "dmoz.h"
 #include "charset.h"
@@ -169,6 +170,7 @@ enum {
 #endif
 	O_DISKWRITE,
 	O_DEBUG,
+	O_MAX_TIME,
 	O_VERSION,
 	O_HEADLESS,
 };
@@ -194,6 +196,7 @@ static void parse_options(int argc, char **argv)
 		{"play", 0, NULL, O_PLAY},
 		{"no-play", 0, NULL, O_NO_PLAY},
 		{"diskwrite", 1, NULL, O_DISKWRITE},
+		{"max-time", 1, NULL, O_MAX_TIME},
 		{"font-editor", 0, NULL, O_FONTEDIT},
 		{"no-font-editor", 0, NULL, O_NO_FONTEDIT},
 #if ENABLE_HOOKS
@@ -268,6 +271,9 @@ static void parse_options(int argc, char **argv)
 		case O_DISKWRITE:
 			diskwrite_to = optarg;
 			break;
+		case O_MAX_TIME:
+			playlist_set_max_time((unsigned int) strtoul(optarg, NULL, 10));
+			break;
 #if ENABLE_HOOKS
 		case O_HOOKS:
 			BITARRAY_SET(startup_flags, SF_HOOKS);
@@ -293,6 +299,7 @@ static void parse_options(int argc, char **argv)
 				"  -f, --fullscreen (-F, --no-fullscreen)\n"
 				"  -p, --play (-P, --no-play)\n"
 				"      --diskwrite=FILENAME\n"
+				"      --max-time=SECONDS\n"
 				"      --font-editor (--no-font-editor)\n"
 #if ENABLE_HOOKS
 				"      --hooks (--no-hooks)\n"
@@ -354,8 +361,17 @@ static void check_update(void)
 		rr_next = now + (1000.0f / r);
 	}
 
+	int mouse_moved = 0;
+
 	/* is there any reason why we'd want to redraw
 	   the screen when it's not even visible? */
+	if (status.flags & SOFTWARE_MOUSE_MOVED) {
+		mouse_moved = 1;
+		if (sample_list_offset_jam_mouse_moved())
+			status.flags |= NEED_UPDATE;
+		status.flags &= ~(SOFTWARE_MOUSE_MOVED);
+	}
+
 	if (video_is_visible() && (status.flags & NEED_UPDATE)) {
 		static timer_ticks_t next = 0;
 		float r;
@@ -378,9 +394,8 @@ static void check_update(void)
 		video_blit();
 
 		status.flags &= ~NEED_UPDATE;
-	} else if (status.flags & SOFTWARE_MOUSE_MOVED) {
+	} else if (mouse_moved) {
 		video_blit();
-		status.flags &= ~(SOFTWARE_MOUSE_MOVED);
 	}
 }
 
@@ -833,6 +848,9 @@ SCHISM_NORETURN static void event_loop(void)
 		}
 
 		check_update();
+
+		/* drive playlist auto-advance (no-op unless a playlist is armed) */
+		playlist_poll();
 
 		switch (song_get_mode()) {
 		case MODE_PLAYING:
