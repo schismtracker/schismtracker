@@ -625,6 +625,12 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 	// Adding the channel in the channel list
 	csf->voice_mix[csf->num_voices++] = nchan;
 
+	// Stop NNA channel processing if the channel is effectively muted.
+	// Required for Carry Envelope quirk to stop processing envelopes of affected channels.
+	// OpenMPT test case CarryCompatGxxPortaWithIns.it
+	if (nchan >= MAX_CHANNELS && !(chan->volume && chan->global_volume && chan->instrument_volume))
+		chan->length = 0;
+
 	if (csf->num_voices >= MAX_VOICES)
 		return 0;
 
@@ -640,12 +646,10 @@ static inline int32_t rn_update_sample(song_t *csf, song_voice_t *chan, int32_t 
 // chan->instrument_volume = 0..64  (corresponds to the sample global volume and instrument global volume)
 static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num, int32_t freq, int32_t vol)
 {
-	if (chan->flags & CHN_MUTE) {
-		// don't do anything
-		return;
-	} else if (csf->flags & SONG_INSTRUMENTMODE &&
-	    chan->ptr_instrument &&
-	    chan->ptr_instrument->midi_channel_mask > 0) {
+	if (csf->flags & SONG_INSTRUMENTMODE
+			&& chan->ptr_instrument
+			&& chan->ptr_instrument->midi_channel_mask > 0
+			&& !(chan->flags & CHN_MUTE)) {
 		MidiBendMode BendMode = MIDI_BEND_NORMAL;
 		/* TODO: If we're expecting a large bend exclusively
 		 * in either direction, update BendMode to indicate so.
@@ -664,6 +668,7 @@ static inline void rn_gen_key(song_t *csf, song_voice_t *chan, int32_t chan_num,
 
 		GM_SetFreqAndVol(csf, chan_num, freq, volume, BendMode, chan->flags & CHN_KEYOFF);
 	}
+
 	if (chan->flags & CHN_ADLIB) {
 		// Scaling is needed to get a frequency that matches with ST3 notes.
 		// 8363 is st3s middle C sample rate. 261.625 is the Hertz for middle C in a tempered scale (A4 = 440)
@@ -1117,14 +1122,6 @@ int32_t csf_read_note(song_t *csf)
 
 		chan->vu_meter = 0;
 
-		if ((chan->flags & CHN_NOTEFADE) &&
-		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
-			chan->length = 0;
-			chan->rofs = 0;
-			chan->lofs = 0;
-			continue;
-		}
-
 		// Check for unused channel
 		if (cn >= MAX_CHANNELS)
 			if (!chan->length && !(chan->flags & CHN_ADLIB))
@@ -1243,6 +1240,14 @@ int32_t csf_read_note(song_t *csf)
 				ninc = csf_smp_pos(0, 1);
 
 			chan->increment = ninc;
+		}
+
+		// This check used to be at the top of the loop but was moved here for OpenMPT test case CarryCompatGxxPortaWithIns.it
+		if ((chan->flags & CHN_NOTEFADE) &&
+		    !(chan->fadeout_volume | chan->right_volume | chan->left_volume)) {
+			chan->length = 0;
+			chan->rofs = 0;
+			chan->lofs = 0;
 		}
 
 		chan->final_panning = CLAMP(chan->final_panning, 0, 256);

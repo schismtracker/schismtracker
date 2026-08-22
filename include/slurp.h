@@ -117,6 +117,7 @@ struct slurp_struct_ {
 				uint64_t len;
 			} data[2];
 			int current; /* which data is currently being used */
+			int num;
 
 			/* original position from before we mutilated it */
 			int64_t origpos;
@@ -148,6 +149,9 @@ int slurp_memstream_free(slurp_t *t, uint8_t *mem, size_t memsize);
  * Both streams must be of the exact same size. */
 int slurp_2memstream(slurp_t *t, const uint8_t *mem1, const uint8_t *mem2, size_t memsize);
 
+/* Binds parts of an existing stream together. */
+int slurp_sf2v2(slurp_t *s, slurp_t *in, size_t num, int64_t off1, int64_t len1, ...);
+
 /* Binds two separate parts of an existing stream together.
  * unslurp() should be called here. */
 void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
@@ -165,7 +169,7 @@ int slurp_mmap(slurp_t *useme, const char *filename, uint64_t st);
 #endif
 
 /* stdio-style file processing */
-int slurp_seek(slurp_t *t, int64_t offset, int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END */
+int slurp_seek(slurp_t *t, int64_t offset, int whence); /* whence => SEEK_SET, SEEK_CUR, SEEK_END, return => 0 on success, -1 on error */
 int64_t slurp_tell(slurp_t *t);
 #define slurp_rewind(t) slurp_seek((t), 0, SEEK_SET)
 
@@ -221,7 +225,7 @@ int slurp_xz(slurp_t *src);
 int slurp_zstd(slurp_t *src);
 #endif
 
-int slurp_available(slurp_t *fp, size_t x, int whence);
+int slurp_could_seek(slurp_t *fp, int64_t x, int whence);
 
 /* ------------------------------------------------------------------------ */
 

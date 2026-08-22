@@ -2531,8 +2531,8 @@ void ymf262_update_multi(void *_chip, int32_t **buffers, int length, uint32_t vu
 		chan_calc(chip, &chip->P_CH[17]);
 
 		for (j = 0; j < 18; j++) {
-			int32_t xs = chanout[j];
-			uint32_t x = (xs < 0) ? (uint32_t)(~xs + 1) : (uint32_t)xs;
+			/* :> */
+			uint32_t x = babs32(chanout[j]);
 			vu_max[j] = MAX(vu_max[j], x);
 		}
 

@@ -43,6 +43,7 @@ static void _csf_reset(song_t *csf)
 	csf->flags = 0;
 	csf->pan_separation = 128;
 	csf->num_voices = 0;
+	csf->last_moved_channel = MAX_VOICES;
 	csf->freq_factor = csf->tempo_factor = 128;
 	csf->initial_global_volume = 128;
 	csf->current_global_volume = 128;
@@ -530,6 +531,7 @@ void csf_set_current_order(song_t *csf, uint32_t position)
 	csf->tick_count = 1;
 	csf->row_count = 0;
 	csf->buffer_count = 0;
+	csf->last_moved_channel = MAX_VOICES;
 
 	csf->flags &= ~(SONG_PATTERNLOOP|SONG_ENDREACHED);
 }
@@ -822,7 +824,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 		sample->flags &= ~(CHN_16BIT | CHN_STEREO);
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		slurp_read(fp, sample->data, len);
@@ -844,7 +846,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,M,BE,PCMD): {
 		len = sample->length;
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		slurp_read(fp, sample->data, len);
@@ -878,7 +880,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 		len = sample->length * 2;
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		/* Convert split to interleaved */
@@ -912,7 +914,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(8,SI,BE,PCMD): {
 		len = sample->length * 2;
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		slurp_read(fp, sample->data, len);
@@ -945,7 +947,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 		len = sample->length;
 
-		if (!slurp_available(fp, len * 2, SEEK_CUR))
+		if (!slurp_could_seek(fp, len * 2, SEEK_CUR))
 			break;
 
 		// read
@@ -973,7 +975,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,SS,BE,PCMU): {
 		len = sample->length * 2;
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		for (int c = 0; c < 2; c++) {
@@ -1002,7 +1004,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(16,SI,BE,PCMD): {
 		len = sample->length * 2;
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		slurp_read(fp, sample->data, len * 2);
@@ -1036,7 +1038,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		if (len > 3*8*(((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
@@ -1091,7 +1093,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		if (len > 4*8*(((flags & SF_CHN_MASK) == SF_SI) ? 2 : 1)) {
@@ -1140,7 +1142,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
 
-		if (!slurp_available(fp, len * 4, SEEK_CUR))
+		if (!slurp_could_seek(fp, len * 4, SEEK_CUR))
 			break;
 
 		for (uint32_t k = 0; k < len; k++) {
@@ -1164,7 +1166,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 		len = sample->length * 2;
 
-		if (!slurp_available(fp, len * 4, SEEK_CUR))
+		if (!slurp_could_seek(fp, len * 4, SEEK_CUR))
 			break;
 
 		for (i = 0; i < 2; i++) {
@@ -1198,7 +1200,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 		if ((flags & SF_CHN_MASK) == SF_SI)
 			len *= 2;
 
-		if (!slurp_available(fp, len * 8, SEEK_CUR))
+		if (!slurp_could_seek(fp, len * 8, SEEK_CUR))
 			break;
 
 		for (uint32_t k = 0; k < len; k++) {
@@ -1222,7 +1224,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 
 		len = sample->length * 2;
 
-		if (!slurp_available(fp, len * 8, SEEK_CUR))
+		if (!slurp_could_seek(fp, len * 8, SEEK_CUR))
 			break;
 
 		for (i = 0; i < 2; i++) {
@@ -1311,7 +1313,7 @@ uint32_t csf_read_sample(song_sample_t *sample, uint32_t flags, slurp_t *fp)
 	case SF(PCMD16,8,M,LE): {
 		len = (sample->length + 1) / 2 + 16;
 
-		if (!slurp_available(fp, len, SEEK_CUR))
+		if (!slurp_could_seek(fp, len, SEEK_CUR))
 			break;
 
 		int8_t table[16];

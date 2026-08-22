@@ -25,6 +25,10 @@
 # define TEST_FUNC(x) testresult_t x(void);
 #endif
 
+TEST_FUNC(test_atm_cmpxchg)
+TEST_FUNC(test_atm_load_store)
+TEST_FUNC(test_atm_add)
+
 TEST_FUNC(test_bshift_arithmetic)
 TEST_FUNC(test_bshift_right_shift_negative)
 TEST_FUNC(test_bshift_left_shift_overflow)
@@ -131,6 +135,7 @@ TEST_FUNC(test_str_concat_123ok67)
 TEST_FUNC(test_str_dup)
 TEST_FUNC(test_str_trim)
 
+TEST_FUNC(test_slurp)
 TEST_FUNC(test_slurp_memstream)
 TEST_FUNC(test_slurp_2memstream)
 TEST_FUNC(test_slurp_sf2)
@@ -243,6 +248,10 @@ TEST_FUNC(test_ver_to_date)
 TEST_FUNC(test_ver_parse_schism_version)
 TEST_FUNC(test_ver_parse_ctimestamp)
 TEST_FUNC(test_ver_parse_cdate)
+
+TEST_FUNC(test_iff_chunk_peek_ex_middle)
+TEST_FUNC(test_iff_chunk_peek_ex_end_of_file)
+TEST_FUNC(test_iff_chunk_peek_ex_truncated)
 
 TEST_FUNC(test_it_fxext_roundtrip_extended)
 TEST_FUNC(test_it_fxext_roundtrip_plain)

@@ -146,6 +146,7 @@ noinst_HEADERS = \
 	include/test-tempfile.h    \
 	include/tree.h			\
 	include/util.h			\
+	include/util-vec.h		\
 	include/version.h		\
 	include/vgamem.h      \
 	include/video.h			\
@@ -298,6 +299,12 @@ if LINK_TO_X11
 libs_x11 = $(X_LIBS) -lX11
 endif
 
+endif
+
+if SCHISM_ALTIVEC
+files_altivec = schism/util-altivec.c
+
+schism/schismtracker-util-altivec.$(OBJEXT): CFLAGS += -maltivec
 endif
 
 if USE_WIN32
@@ -543,6 +550,17 @@ endif
 
 endif
 
+if USE_GSTREAMER
+fmt/schismtracker-gstreamer.$(OBJEXT): CFLAGS += $(GSTREAMER_CFLAGS)
+
+files_gstreamer=fmt/gstreamer.c
+
+if LINK_TO_GSTREAMER
+lib_gstreamer=$(GSTREAMER_LIBS)
+endif
+
+endif
+
 if USE_NETWORK
 cflags_network=
 libs_network=$(NETWORK_LIBS)
@@ -724,8 +742,9 @@ schismtracker_SOURCES = \
 	$(files_flac)			\
 	$(files_jack)			\
 	$(files_opl)			\
-	$(files_mediafoundation) \
-	$(files_wiiu)           \
+	$(files_mediafoundation)	\
+	$(files_gstreamer)		\
+	$(files_wiiu)			\
 	$(files_sdl3)			\
 	$(files_sdl2)			\
 	$(files_sdl12)			\
@@ -738,7 +757,8 @@ schismtracker_SOURCES = \
 	$(files_zlib)			\
 	$(files_bzip2)			\
 	$(files_lzma)			\
-	$(files_zstd)
+	$(files_zstd)			\
+	$(files_altivec)
 
 # have version.o rely on all files
 schism/version.$(OBJEXT): $(filter-out schism/version.$(OBJEXT),$(schismtrackertest_OBJECTS)) $(HEADERS)
@@ -761,6 +781,7 @@ schismtracker_LDADD = $(LIBM) $(libs_sdl3) \
 	$(libs_jack) $(libs_macosx) $(lib_asound) \
 	$(lib_win32) $(libs_network) $(libs_flac) \
 	$(lib_mediafoundation) $(UTF8PROC_LIBS) \
+	$(lib_gstreamer) \
 	$(libs_sdl2) $(libs_sdl12) $(libs_macos) \
 	$(libs_os2) $(libs_xbox) $(libs_avformat) \
 	$(libs_asio) $(libs_zlib) $(libs_bzip2) \
@@ -784,9 +805,11 @@ schismtrackertest_SOURCES = \
 	test/index.c                \
 	test/tempfile.c             \
 	test/vmem.c					\
+	test/cases/atomic.c			\
 	test/cases/bits.c           \
 	test/cases/config-parser.c  \
 	test/cases/disko.c			\
+	test/cases/iff.c            \
 	test/cases/mplink.c         \
 	test/cases/patedit_record.c	\
 	test/cases/sanity.c			\

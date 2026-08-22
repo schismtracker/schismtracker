@@ -424,11 +424,21 @@ int slurp_2memstream(slurp_t *t, const uint8_t *mem1, const uint8_t *mem2, size_
 /* implementation specialized for sf2 stuff
  * it allows reading from two different places in a file as if they
  * were sequential, since sf2 allows for stereo samples to not be
- * in the split stereo format schism likes to have. */
+ * in the split stereo format schism likes to have.
+ * FIXME: */
 
 static inline uint64_t sf2_slurp_length(slurp_t *s)
 {
-	return s->internal.sf2.data[0].len + s->internal.sf2.data[1].len;
+	int i;
+	uint64_t len;
+
+	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
+
+	len = 0;
+	for (i = 0; i < s->internal.sf2.num; i++)
+		len += s->internal.sf2.data[i].len;
+
+	return len;
 }
 
 static inline int64_t sf2_slurp_tell(slurp_t *s)
@@ -436,7 +446,10 @@ static inline int64_t sf2_slurp_tell(slurp_t *s)
 	int64_t len;
 	int i;
 
-	for (i = 0, len = 0; i < s->internal.sf2.current; i++)
+	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
+
+	len = 0;
+	for (i = 0; i < s->internal.sf2.current; i++)
 		len += s->internal.sf2.data[i].len;
 
 	return len + slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
@@ -463,7 +476,7 @@ static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 	if (off < 0 || (size_t)off > len)
 		return -1;
 
-	for (i = 0; i < ARRAY_SIZE(s->internal.sf2.data); i++) {
+	for (i = 0; i < s->internal.sf2.num; i++) {
 		if (off < (int64_t)s->internal.sf2.data[i].len) {
 			s->internal.sf2.current = i;
 			return slurp_seek(s->internal.sf2.src, s->internal.sf2.data[i].off + off, SEEK_SET);
@@ -473,7 +486,7 @@ static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 	}
 
 	/* likely EOF */
-	s->internal.sf2.current = ARRAY_SIZE(s->internal.sf2.data) - 1;
+	s->internal.sf2.current = s->internal.sf2.num - 1;
 	/* fix this up */
 	off += s->internal.sf2.data[s->internal.sf2.current].len;
 	/* seek */
@@ -482,8 +495,12 @@ static inline int sf2_slurp_seek(slurp_t *s, int64_t off, int whence)
 
 static size_t sf2_slurp_cap(slurp_t *s, size_t count)
 {
-	int64_t off_current = slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
-	int64_t left = s->internal.sf2.data[s->internal.sf2.current].len - off_current;
+	int64_t off_current, left;
+
+	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
+
+	off_current = slurp_tell(s->internal.sf2.src) - s->internal.sf2.data[s->internal.sf2.current].off;
+	left = s->internal.sf2.data[s->internal.sf2.current].len - off_current;
 
 	if (left <= 0)
 		return 0; /* ??? */
@@ -498,8 +515,12 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 {
 	size_t read = 0;
 
-	while (s->internal.sf2.current < ARRAY_SIZE(s->internal.sf2.data)) {
+	SCHISM_RUNTIME_ASSERT(s->internal.sf2.current < s->internal.sf2.num, "a");
+
+	for (;;) {
 		size_t l = sf2_slurp_cap(s, count);		
+		if (!l)
+			break;
 
 		size_t tread = slurp_read(s->internal.sf2.src, (char *)data + read, l);
 
@@ -512,10 +533,10 @@ static size_t sf2_slurp_read(slurp_t *s, void *data, size_t count)
 
 		/* do we want to read? */
 		if (tread != (size_t)l)
-			return read;
+			break;
 
 		/* EOF? */
-		if ((s->internal.sf2.current + 1) >= ARRAY_SIZE(s->internal.sf2.data))
+		if ((s->internal.sf2.current + 1) >= s->internal.sf2.num)
 			return read;
 
 		/* start over at the new offset */
@@ -530,17 +551,28 @@ static void sf2_slurp_closure(slurp_t *s)
 	slurp_seek(s->internal.sf2.src, s->internal.sf2.origpos, SEEK_SET);
 }
 
-void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
-	int64_t off2, size_t len2)
+/* usage: slurp_sf2v2(&sf2, in, 2, off1, len1, off2, len2, off3, len3 ...) */
+int slurp_sf2v2(slurp_t *s, slurp_t *in, size_t num, int64_t off1, int64_t len1, ...)
 {
+	size_t i;
+	va_list ap;
+
+	if (!num || (num > ARRAY_SIZE(s->internal.sf2.data)))
+		return -1;
+
 	memset(s, 0, sizeof(slurp_t));
 
 	s->internal.sf2.src = in;
+	s->internal.sf2.num = num;
+	s->internal.sf2.current = 0;
 	s->internal.sf2.data[0].off = off1;
 	s->internal.sf2.data[0].len = len1;
-	s->internal.sf2.data[1].off = off2;
-	s->internal.sf2.data[1].len = len2;
-	s->internal.sf2.origpos = slurp_tell(in);
+	va_start(ap, len1);
+	for (i = 1; i < num; i++) {
+		s->internal.sf2.data[i].off = va_arg(ap, int64_t);
+		s->internal.sf2.data[i].len = va_arg(ap, int64_t);
+	}
+	va_end(ap);
 
 	/* now, fill in the functions :) */
 	s->length = sf2_slurp_length;
@@ -550,6 +582,14 @@ void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
 	s->closure = sf2_slurp_closure;
 
 	slurp_rewind(s);
+
+	return 0;
+}
+
+void slurp_sf2(slurp_t *s, slurp_t *in, int64_t off1, size_t len1,
+	int64_t off2, size_t len2)
+{
+	slurp_sf2v2(s, in, 2, off1, len1, off2, len2);
 }
 
 /* --------------------------------------------------------------------- */
@@ -654,6 +694,7 @@ int slurp_init_nonseek(slurp_t *fp,
 /* --------------------------------------------------------------------- */
 /* and now, the slurp interface */
 
+/* return: 0 on success, -1 on error */
 int slurp_seek(slurp_t *t, int64_t offset, int whence)
 {
 	int r;
@@ -675,7 +716,7 @@ int slurp_seek(slurp_t *t, int64_t offset, int whence)
 		break;
 	}
 
-	if (offcheck < 0 || !slurp_available(t, offcheck, SEEK_SET))
+	if (offcheck < 0 || !slurp_could_seek(t, offcheck, SEEK_SET))
 		return -1;
 
 	r = t->seek(t, offset, whence);
@@ -804,8 +845,7 @@ int slurp_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), siz
 	}
 }
 
-/* TODO actually test this function within slurp crap */
-int slurp_available(slurp_t *fp, size_t x, int whence)
+int slurp_could_seek(slurp_t *fp, int64_t x, int whence)
 {
 	if (!x)
 		return 1; /* ... */
@@ -819,7 +859,7 @@ int slurp_available(slurp_t *fp, size_t x, int whence)
 		switch (whence) {
 		case SEEK_SET: break;
 		case SEEK_CUR: pos += slurp_tell(fp); break;
-		case SEEK_END: return 0; /* ??? */
+		case SEEK_END: return (x <= 0); /* file pointers past the end are not valid */
 		}
 
 		if (pos < 0)
@@ -828,6 +868,19 @@ int slurp_available(slurp_t *fp, size_t x, int whence)
 		return (pos + x) <= fp->length(fp);
 	} else {
 		SCHISM_RUNTIME_ASSERT(0, "slurp: available or length is required");
+	}
+}
+
+static void slurp_fill_nonseek_buffer(slurp_t *t, size_t count)
+{
+	/* If we are a nonseek slurp, then a custom available() has been
+	 * installed which reads forward and buffers bytes to ensure that
+	 * they are available.
+	 *
+	 * If we are not a nonseek slurp, then there is no buffer to fill.
+	 */
+	if (t->available) {
+		t->available(t, count, SEEK_CUR);
 	}
 }
 
@@ -978,7 +1031,7 @@ int slurp_decompress(slurp_t *fp, const struct slurp_decompress_vtable *vtbl)
 	/* read a bit to ensure we've actually got the right thing.
 	 * zlib won't complain if our file Isn't Correct, so we have
 	 * to do it ourselves. */
-	slurp_available(fp, 8096, SEEK_SET);
+	slurp_fill_nonseek_buffer(fp, 8096);
 
 	/* check the error flag. if it's set, we're toast.
 	 * if it was set twice, our whole lives are different than

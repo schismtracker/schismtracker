@@ -116,7 +116,7 @@ static const schism_audio_backend_t *backends[] = {
 #ifdef SCHISM_SDL2
 	&schism_audio_backend_sdl2,
 #endif
-#if defined(SCHISM_WIN32) && defined(USE_THREADS)
+#if defined(SCHISM_WIN32)
 	&schism_audio_backend_dsound,
 	&schism_audio_backend_waveout,
 #endif
@@ -1832,43 +1832,128 @@ void song_initialise(void)
 	current_song->mix_flags |= SNDMIX_MUTECHNMODE;
 }
 
+void audio_worker(void)
+{
+	if (backend->worker)
+		backend->worker(current_audio_device);
+}
+
 // ---------------------------------------------------------------------------
 // thing for simple threaded audio devices.
 //
 // TODO: allow the 'simple' struct to NOT be the first member of the
 // device structure :)
 
-static int simple_thread_func_(void *userdata)
+static void audio_simple_mix_(struct schism_audio_device_simple *dev)
 {
-	struct schism_audio_device_simple *dev = userdata;
+	void *buf;
+	size_t buflen;
 
-	while (!atm_load(&dev->cancelled)) {
-		void *buf;
-		size_t buflen;
+	buf = dev->vtbl->get_buffer((schism_audio_device_t *)dev, &buflen);
+	if (!buf)
+		return;
 
-		buf = dev->vtbl->get_buffer((schism_audio_device_t *)dev, &buflen);
-		if (!buf)
-			return 0; /* what? */
-
-		if (atm_load(&dev->paused)) {
-			/* FIXME this is wrong for 8-bit audio */
-			memset(buf, 0, buflen);
-		} else {
-			mt_mutex_lock(dev->mutex);
-			dev->callback(buf, buflen);
-			mt_mutex_unlock(dev->mutex);
-		}
-
-		dev->vtbl->play((schism_audio_device_t *)dev);
-		dev->vtbl->wait((schism_audio_device_t *)dev);
+	if (atm_load(&dev->paused)) {
+		memset(buf, dev->silence, buflen);
+	} else {
+#if defined(USE_THREADS)
+		mt_mutex_lock(dev->mutex);
+#endif
+		dev->callback(buf, buflen);
+#if defined(USE_THREADS)
+		mt_mutex_unlock(dev->mutex);
+#endif
 	}
+
+#if !defined(USE_THREADS)
+	atm_dec(&dev->to_mix);
+#endif
+}
+
+static int audio_simple_worker_impl_(struct schism_audio_device_simple *dev)
+{
+	void *buf;
+	size_t buflen;
+
+	if (atm_load(&dev->played)) {
+#ifdef USE_THREADS
+		if (dev->vtbl->wait) {
+			dev->vtbl->wait((schism_audio_device_t *)dev);
+		} else {
+			int64_t r = dev->vtbl->ustowait((schism_audio_device_t *)dev);
+			if (r < 0) {
+				/* Don't hog CPU time */
+				timer_msleep(1);
+				return 0;
+			}
+			timer_usleep(r);
+		}
+#else
+		if (dev->vtbl->ustowait) {
+			timer_ticks_t us = timer_ticks_us();
+
+			/* Don't sleep for no reason when we could be doing
+			 * other things */
+			if (dev->nextbufferfill > us) {
+				/* nothing to do */
+				return 0;
+			} else {
+				int64_t r = dev->vtbl->ustowait((schism_audio_device_t *)dev);
+				if (r < 0)
+					return 0; /* ??? */
+				dev->nextbufferfill = us + r;
+			}
+		} else {
+			dev->vtbl->wait((schism_audio_device_t *)dev);
+		}
+#endif
+		atm_dec(&dev->played);
+	}
+
+#if !defined(USE_THREADS)
+	/* Uh oh, need to do some mangling */
+	atm_inc(&dev->to_mix);
+
+	/* If we're locked, we cannot do anything. Wait until next time. */
+	if (!atm_load(&dev->locked))
+		audio_simple_mix_(dev);
+#else
+	audio_simple_mix_(dev);
+#endif
+
+	/* PLAY! */
+	dev->vtbl->play((schism_audio_device_t *)dev);
+	atm_inc(&dev->played);
 
 	return 0;
 }
 
+int audio_simple_worker(struct schism_audio_device_simple *dev)
+{
+#ifdef USE_THREADS
+	if (dev->thread)
+		return 0;
+#endif
+
+	return audio_simple_worker_impl_(dev);
+}
+
+#if defined(USE_THREADS)
+static int simple_thread_func_(void *userdata)
+{
+	struct schism_audio_device_simple *dev = userdata;
+
+	while (!atm_load(&dev->cancelled))
+		audio_simple_worker_impl_(dev);
+
+	return 0;
+}
+#endif
+
 int audio_simple_init(schism_audio_device_t *dev_,
 	const struct schism_audio_device_simple_vtable *vtbl,
-	void (*callback)(uint8_t *stream, uint32_t len))
+	void (*callback)(uint8_t *stream, uint32_t len),
+	uint8_t silence)
 {
 	struct schism_audio_device_simple *dev = (void *)dev_;
 
@@ -1878,12 +1963,14 @@ int audio_simple_init(schism_audio_device_t *dev_,
 
 	dev->callback = callback;
 
+	/* Start paused */
+	atm_store(&dev->paused, 1);
+	atm_store(&dev->played, 0);
+
+#if defined(USE_THREADS)
 	dev->mutex = mt_mutex_create();
 	if (!dev->mutex)
 		return -1;
-
-	/* Start paused */
-	atm_store(&dev->paused, 1);
 
 	/* START! */
 	dev->thread = mt_thread_create(simple_thread_func_,
@@ -1894,6 +1981,9 @@ int audio_simple_init(schism_audio_device_t *dev_,
 		mt_mutex_delete(dev->mutex);
 		return -1;
 	}
+#else
+	atm_store(&dev->locked, 0);
+#endif
 
 	return 0;
 }
@@ -1903,6 +1993,7 @@ void audio_simple_close(struct schism_audio_device_simple *dev)
 	if (!dev)
 		return;
 
+#if defined(USE_THREADS)
 	if (dev->thread) {
 		atm_store(&dev->cancelled, 1);
 		if (dev->vtbl && dev->vtbl->aftercancel)
@@ -1912,24 +2003,41 @@ void audio_simple_close(struct schism_audio_device_simple *dev)
 
 	if (dev->mutex)
 		mt_mutex_delete(dev->mutex);
+#endif
 }
 
 /* --- default lock implementation. */
 void audio_simple_lock(struct schism_audio_device_simple *dev)
 {
+#if defined(USE_THREADS)
 	mt_mutex_lock(dev->mutex);
+#else
+	atm_inc(&dev->locked);
+#endif
 }
 
 void audio_simple_unlock(struct schism_audio_device_simple *dev)
 {
+#if defined(USE_THREADS)
 	mt_mutex_unlock(dev->mutex);
+#else
+	if (atm_sub(&dev->locked, 1) != 1)
+		return;
+
+	/* we are now fully unlocked
+	 *
+	 * if we're here, we might have missed the chance to mix a buffer.
+	 * so do it here while we have the chance */
+	if (atm_load(&dev->to_mix))
+		audio_simple_mix_(dev);
+#endif
 }
 
 void audio_simple_pause(struct schism_audio_device_simple *dev, int paused)
 {
-	mt_mutex_lock(dev->mutex);
+	audio_simple_lock(dev);
 	atm_store(&dev->paused, !!paused);
-	mt_mutex_unlock(dev->mutex);
+	audio_simple_unlock(dev);
 }
 
 // ---------------------------------------------------------------------------
@@ -1950,6 +2058,11 @@ void audio_simple_device_pause(schism_audio_device_t *dev, int paused)
 	audio_simple_pause((struct schism_audio_device_simple *)dev, paused);
 }
 
+void audio_simple_device_worker(schism_audio_device_t *dev)
+{
+	audio_simple_worker((struct schism_audio_device_simple *)dev);
+}
+
 // ---------------------------------------------------------------------------
 // hand-rolled dummy audio driver (i.e. we no longer rely on SDL's)
 
@@ -1958,7 +2071,7 @@ struct schism_audio_device {
 
 	/* slab memory buffer */
 	void *buf;
-	int buflen;
+	uint32_t buflen;
 
 	/* microseconds to sleep */
 	int64_t us;
@@ -2026,23 +2139,22 @@ static int dummy_simple_play(schism_audio_device_t *dev)
 	return 1; /* :) */
 }
 
-static int dummy_simple_wait(schism_audio_device_t *dev)
+static int64_t dummy_simple_ustowait(schism_audio_device_t *dev)
 {
 	int64_t stime = ((int64_t)timer_ticks_us() - dev->start);
 
 	if (stime >= dev->us)
 		return 0; /* don't have to sleep at all */
 
-	/* sleep for the time left */
-	timer_usleep(dev->us - stime);
-	return 1;
+	return dev->us - stime;
 }
 
 static const struct schism_audio_device_simple_vtable dummy_vtbl = {
 	dummy_simple_get_buffer,
 	dummy_simple_play,
-	dummy_simple_wait,
-	NULL
+	NULL,
+	NULL,
+	dummy_simple_ustowait,
 };
 
 /* ------------------------------------------------------------------------ */
@@ -2069,8 +2181,8 @@ static schism_audio_device_t *dummy_open_device(uint32_t id,
 	buflen *= desired->bits / 8;
 	buflen *= desired->channels;
 
-	if (buflen > INT_MAX)
-		return NULL; /* wgat */
+	if (buflen > UINT32_MAX)
+		return NULL; /* oops */
 
 	dev = mem_calloc(1, sizeof(*dev));
 
@@ -2081,7 +2193,7 @@ static schism_audio_device_t *dummy_open_device(uint32_t id,
 
 	dev->simple.vtbl = &dummy_vtbl;
 
-	if (audio_simple_init(dev, &dummy_vtbl, desired->callback)) {
+	if (audio_simple_init(dev, &dummy_vtbl, desired->callback, 0)) {
 		free(dev->buf);
 		free(dev);
 		return NULL;

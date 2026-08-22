@@ -339,7 +339,6 @@ static OSStatus macosx_audio_callback(void *inRefCon, AudioUnitRenderActionFlags
 			uint32_t len;
 
 			if (dev->buffer_offset >= dev->buffer_size) {
-				memset(dev->buffer, dev->silence, dev->buffer_size);
 				mt_mutex_lock(dev->mutex);
 				dev->callback(dev->buffer, dev->buffer_size);
 				mt_mutex_unlock(dev->mutex);

@@ -65,6 +65,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <ctype.h>
+#include <wchar.h>
 
 #include <errno.h>
 

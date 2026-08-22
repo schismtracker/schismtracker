@@ -36,12 +36,58 @@
  * a volatile union of pointer and int[32/64]_t. Then we can implement
  * everything else simply as calls to that function. :) */
 
-#if defined(SCHISM_WIIU)
+#if defined(SCHISM_MACOS)
+# ifndef ATM_DEFINED
+#  include <DriverSynchronization.h>
+
+int atm_cmpxchg(struct atm *atm, int32_t oldval, int32_t newval)
+{
+	return CompareAndSwap(oldval, newval, (UInt32 *)&atm->x);
+}
+
+int32_t atm_load(struct atm *atm)
+{
+	return AddAtomic(0, (SInt32 *)&atm->x);
+}
+
+void atm_store(struct atm *atm, int32_t v)
+{
+	int value;
+	do {
+		value = atm->x;
+	} while (!atm_cmpxchg(atm, value, v));
+}
+
+int32_t atm_add(struct atm *atm, int32_t x)
+{
+	/* AddAtomic returns the result */
+	return AddAtomic(x, (SInt32 *)&atm->x) - x;
+}
+
+int32_t atm_inc(struct atm *atm)
+{
+	return IncrementAtomic((SInt32 *)&atm->x);
+}
+
+int32_t atm_dec(struct atm *atm)
+{
+	return DecrementAtomic((SInt32 *)&atm->x);
+}
+#  define ATM_DEFINED
+#  define ATM_INC_DEFINED
+#  define ATM_DEC_DEFINED
+# endif
+#elif defined(SCHISM_WIIU)
 /* There is a critical bug in the WiiU processor, where atomics
  * do not work correctly. This is fixed on the OS side. */
 # include <coreinit/atomic.h>
 # include <coreinit/atomic64.h>
 # define COREATM(NAME, TYPE) \
+	int atm##NAME##_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
+	{ \
+		return OSCompareAndSwapAtomic##NAME(&atm->x, oldval, newval); \
+	} \
+	\
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
 	{ \
 		return OSOrAtomic##NAME(&atm->x, 0); \
@@ -50,7 +96,13 @@
 	void atm##NAME##_store(struct atm##NAME *atm, TYPE x) \
 	{ \
 		OSSwapAtomic##NAME(&atm->x, x); \
+	} \
+	\
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return OSAddAtomic##NAME(&atm->x, x); \
 	}
+
 # ifndef ATM_DEFINED
 COREATM(/* none */, int32_t)
 #  define ATM_DEFINED
@@ -62,11 +114,15 @@ COREATM(64, int64_t)
 # undef COREATM
 #endif
 
-/* Retro68 has the functions declared, but they are not actually exported
- * anywhere, which causes a link error. */
-#if (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_ATOMICS__) && !defined(SCHISM_MACOS)
+#if defined(HAVE_C11_32_ATOMICS) || defined(HAVE_C11_64_ATOMICS)
 # include <stdatomic.h>
+
 # define C11ATM(NAME, TYPE) \
+	int atm##NAME##_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
+	{ \
+		return atomic_compare_exchange_strong((_Atomic volatile TYPE *)&atm->x, &oldval, newval); \
+	} \
+	\
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
 	{ \
 		return atomic_load((const _Atomic volatile TYPE *)&atm->x); \
@@ -75,20 +131,31 @@ COREATM(64, int64_t)
 	void atm##NAME##_store(struct atm##NAME *atm, TYPE x) \
 	{ \
 		atomic_store((_Atomic volatile TYPE *)&atm->x, x); \
+	} \
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return atomic_fetch_add((_Atomic volatile TYPE *)&atm->x, x); \
 	}
-# ifndef ATM_DEFINED
+
+# if !defined(ATM_DEFINED) && defined(HAVE_C11_32_ATOMICS)
 C11ATM(/* none */, int32_t)
 #  define ATM_DEFINED
 # endif
-# ifndef ATM64_DEFINED
+# if !defined(ATM64_DEFINED) && defined(HAVE_C11_64_ATOMICS)
 C11ATM(64, int64_t)
 #  define ATM64_DEFINED
 # endif
+
 # undef C11ATM
 #endif
 
-#if SCHISM_GNUC_HAS_BUILTIN(__atomic_load, 4, 7, 0) && !defined(SCHISM_MACOS)
+#if defined(HAVE_GCC47_32_ATOMICS) || defined(HAVE_GCC47_64_ATOMICS)
 # define GNUCATM(NAME, TYPE) \
+	int atm##NAME##_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
+	{ \
+		return __atomic_compare_exchange_n(&atm->x, &oldval, newval, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+	} \
+	\
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
 	{ \
 		TYPE r; \
@@ -99,22 +166,32 @@ C11ATM(64, int64_t)
 	void atm##NAME##_store(struct atm##NAME *atm, TYPE x) \
 	{ \
 		__atomic_store(&atm->x, &x, __ATOMIC_SEQ_CST); \
+	} \
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return __atomic_fetch_add(&atm->x, x, __ATOMIC_SEQ_CST); \
 	}
-# ifndef ATM_DEFINED
+
+# if !defined(ATM_DEFINED) && defined(HAVE_GCC47_32_ATOMICS)
 GNUCATM(/* none */, int32_t)
 #  define ATM_DEFINED
 # endif
-# ifndef ATM64_DEFINED
+# if !defined(ATM64_DEFINED) && defined(HAVE_GCC47_64_ATOMICS)
 GNUCATM(64, int64_t)
 #  define ATM64_DEFINED
 # endif
 # undef GNUCATM
 #endif
 
-#if SCHISM_GNUC_HAS_BUILTIN(__sync_synchronize, 4, 1, 0)
+#if defined(HAVE_GCC41_32_ATOMICS) || defined(HAVE_GCC41_64_ATOMICS)
 /* I hope this is right */
 
 #define GNUCATM(NAME, TYPE) \
+	int atm##NAME##_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
+	{ \
+		return __sync_bool_compare_and_swap(&atm->x, oldval, newval); \
+	} \
+	\
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
 	{ \
 		__sync_synchronize(); \
@@ -125,13 +202,17 @@ GNUCATM(64, int64_t)
 	{ \
 		atm->x = x; \
 		__sync_synchronize(); \
+	} \
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return __sync_fetch_and_add(&atm->x, x); \
 	}
 
-# ifndef ATM_DEFINED
+# if !defined(ATM_DEFINED) && defined(HAVE_GCC41_32_ATOMICS)
 GNUCATM(/* none */, int32_t)
 #  define ATM_DEFINED
 # endif
-# ifndef ATM64_DEFINED
+# if !defined(ATM64_DEFINED) && defined(HAVE_GCC41_64_ATOMICS)
 GNUCATM(64, int64_t)
 #  define ATM64_DEFINED
 # endif
@@ -142,40 +223,51 @@ GNUCATM(64, int64_t)
 /* Interlocked* */
 # include <windows.h>
 
-SCHISM_STATIC_ASSERT(sizeof(LONG) == sizeof(int32_t), "LONG must be 32-bit");
-SCHISM_STATIC_ASSERT(sizeof(LONG64) == sizeof(int64_t), "LONGLONG must be 64-bit");
+# define ATM_WIN32(NAME, TYPE, WINTYPE) \
+	int atm_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
+	{ \
+		return InterlockedCompareExchange((volatile WINTYPE *)&atm->x, (WINTYPE)oldval, (WINTYPE)newval) == (WINTYPE)oldval; \
+	} \
+	\
+	TYPE atm##NAME##_load(struct atm##NAME *atm) \
+	{ \
+		return InterlockedOr((volatile WINTYPE *)&atm->x, 0); \
+	} \
+	\
+	void atm##NAME##_store(struct atm##NAME *atm, TYPE x) \
+	{ \
+		InterlockedExchange((volatile WINTYPE *)&atm->x, x); \
+	} \
+	\
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		return InterlockedExchangeAdd((volatile WINTYPE *)&atm->x, x); \
+	}
 
 #if !defined(ATM_DEFINED)
-int32_t atm_load(struct atm *atm)
-{
-	return InterlockedOr((volatile LONG *)&atm->x, 0);
-}
-
-void atm_store(struct atm *atm, int32_t x)
-{
-	InterlockedExchange((volatile LONG *)&atm->x, x);
-}
+SCHISM_STATIC_ASSERT(sizeof(LONG) == sizeof(int32_t), "LONG must be 32-bit");
+ATM_WIN32(/* nothing */, int32_t, LONG)
 # define ATM_DEFINED
 #endif
 
 #if !defined(ATM64_DEFINED)
-int64_t atm64_load(struct atm64 *atm)
-{
-	return InterlockedOr64((volatile LONG64 *)&atm->x, 0);
-}
-
-void atm64_store(struct atm64 *atm, int64_t x)
-{
-	InterlockedExchange64((volatile LONG64 *)&atm->x, x);
-}
+SCHISM_STATIC_ASSERT(sizeof(LONG64) == sizeof(int64_t), "LONGLONG must be 64-bit");
+ATM_WIN32(64, int64_t, LONG64)
 # define ATM64_DEFINED
 #endif
+
+# undef ATM_WIN32
 
 #endif
 
 #if defined(__WATCOMC__) && defined(__386__)
-SCHISM_STATIC_ASSERT(sizeof(void *) == sizeof(int32_t),
-	"atomic code assumes that pointer is 32-bit");
+static int32_t _watcom_cmpxchg(volatile int32_t *a, int32_t newval, int32_t oldval);
+#pragma aux _watcom_cmpxchg = \
+	"lock cmpxchg [edx], ecx" \
+	"setz al" \
+	parm [edx] [ecx] [eax] \
+	value [al] \
+	modify exact [eax];
 
 static int32_t _watcom_xchg(volatile int32_t *a, int32_t v);
 #pragma aux _watcom_xchg = \
@@ -191,7 +283,12 @@ static int32_t _watcom_xadd(volatile int32_t *a, int32_t v);
 	value [eax] \
 	modify exact [eax];
 
-#ifndef ATM_DEFINED
+#ifdef ATM_DEFINED
+int atm_cmpxchg(struct atm *atm, int32_t oldval, int32_t newval)
+{
+	return _watcom_cmpxchg(&atm->x, newval, oldval);
+}
+
 int32_t atm_load(struct atm *atm)
 {
 	return _watcom_xadd(&atm->x, 0);
@@ -201,6 +298,11 @@ void atm_store(struct atm *atm, int32_t x)
 {
 	_watcom_xchg(&atm->x, x);
 }
+
+int32_t atm_add(struct atm *atm, int32_t x)
+{
+	return _watcom_xadd(&atm->x, x);
+}
 # define ATM_DEFINED
 #endif
 
@@ -208,29 +310,41 @@ void atm_store(struct atm *atm, int32_t x)
 
 #if !defined(USE_THREADS)
 
-#ifndef ATM_DEFINED
-int32_t atm_load(struct atm *atm)
-{
-	return atm->x;
-}
+# define ATM_GENERIC(NAME, TYPE) \
+	int atm##NAME##_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
+	{ \
+		if (oldval != atm->x) \
+			return 0; \
+	\
+		/* yay */ \
+		atm->x = newval; \
+		return 1; \
+	} \
+	\
+	TYPE atm##NAME##_load(struct atm##NAME *atm) \
+	{ \
+		return atm->x; \
+	} \
+	\
+	void atm##NAME##_store(struct atm##NAME *atm, TYPE x) \
+	{ \
+		atm->x = x; \
+	} \
+	\
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		TYPE xx = atm->x; \
+		atm->x += x; \
+		return xx; \
+	}
 
-void atm_store(struct atm *atm, int32_t x)
-{
-	atm->x = x;
-}
+#ifndef ATM_DEFINED
+ATM_GENERIC(, int32_t)
 #define ATM_DEFINED
 #endif
 
 #ifndef ATM64_DEFINED
-int64_t atm64_load(struct atm64 *atm)
-{
-	return atm->x;
-}
-
-void atm64_store(struct atm64 *atm, int64_t x)
-{
-	atm->x = x;
-}
+ATM_GENERIC(64, int64_t)
 #define ATM64_DEFINED
 #endif
 
@@ -297,6 +411,19 @@ mt_mutex_t *atm_get_mutex_impl(void *x, size_t align)
 #define atm_get_mutex(type, x) atm_get_mutex_impl(x, SCHISM_ALIGNOF(type))
 
 #define ATM_IMPL(NAME, TYPE) \
+	int atm##NAME##_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
+	{ \
+		int r; \
+		mt_mutex_t *m = atm_get_mutex(struct atm##NAME, atm); \
+	\
+		mt_mutex_lock(m); \
+		r = (atm->x == oldval); \
+		if (r) atm->x = newval; \
+		mt_mutex_unlock(m); \
+	\
+		return r; \
+	} \
+	\
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
 	{ \
 		TYPE r; \
@@ -316,6 +443,19 @@ mt_mutex_t *atm_get_mutex_impl(void *x, size_t align)
 		mt_mutex_lock(m); \
 		atm->x = x; \
 		mt_mutex_unlock(m); \
+	} \
+	\
+	TYPE atm##NAME##_add(struct atm##NAME *atm, TYPE x) \
+	{ \
+		TYPE r; \
+		mt_mutex_t *m = atm_get_mutex(struct atm##NAME, atm); \
+	\
+		mt_mutex_lock(m); \
+		r = atm->x; \
+		atm->x += x; \
+		mt_mutex_unlock(m); \
+	\
+		return r; \
 	}
 
 #endif
@@ -327,9 +467,28 @@ ATM_IMPL(/* none */, int32_t)
 ATM_IMPL(64, int64_t)
 #endif
 
+int32_t atm_sub(struct atm *atm, int32_t x) { return atm_add(atm, -x); }
+int64_t atm64_sub(struct atm64 *atm, int64_t x) { return atm64_add(atm, -x); }
+
+/* these are slower than they could be; whatever */
+#ifndef ATM_INC_DEFINED
+int32_t atm_inc(struct atm *atm) { return atm_add(atm, 1); }
+#endif
+int64_t atm64_inc(struct atm64 *atm) { return atm64_add(atm, 1); }
+
+#ifndef ATM_DEC_DEFINED
+int32_t atm_dec(struct atm *atm) { return atm_add(atm, -1); }
+#endif
+int64_t atm64_dec(struct atm64 *atm) { return atm64_add(atm, -1); }
+
 /* pointer ---- */
 
 #define ATM_PTR_IMPL(NAME, TYPE) \
+	int atm_ptr_cmpxchg(struct atm_ptr *atm, void *oldval, void *newval) \
+	{ \
+		return atm##NAME##_cmpxchg(&atm->x, (TYPE)oldval, (TYPE)newval); \
+	} \
+	\
 	void *atm_ptr_load(struct atm_ptr *atm) \
 	{ \
 		return (void *)atm##NAME##_load(&atm->x); \

@@ -22,34 +22,47 @@
  */
 
 #include "headers.h"
-#include "fmt.h"
-#include "mem.h"
+#include "test.h"
+#include "test-assertions.h"
 
-/* FIXME:
- * - this is wrong :)
- * - look for an author name; if it's not "Unregistered" use it */
+#include "atomic.h"
 
-/* --------------------------------------------------------------------- */
+/* NOTE: We only test the behavior of atomic functions here.
+ * Unit-testing atomicity is impossible. We could maybe *fuzz*,
+ * but atomicity isn't something you can test for. */
 
-int fmt_mt2_read_info(dmoz_file_t *file, slurp_t *fp)
+testresult_t test_atm_cmpxchg(void)
 {
-	if (!slurp_could_seek(fp, 106, SEEK_CUR))
-		return 0;
+	struct atm a;
 
-	unsigned char magic[4];
-	if (slurp_read(fp, magic, sizeof(magic)) != sizeof(magic)
-		|| memcmp(magic, "MT20", 4))
-		return 0;
+	atm_store(&a, 0);
 
-	unsigned char title[64];
+	ASSERT(atm_cmpxchg(&a, 0, 1));
+	ASSERT(!atm_cmpxchg(&a, 0, 1));
+	ASSERT(atm_load(&a) == 1);
 
-	slurp_seek(fp, 42, SEEK_SET);
-	if (slurp_read(fp, title, sizeof(title)) != sizeof(title))
-		return 0;
+	RETURN_PASS;
+}
 
-	file->description = "MadTracker 2 Module";
-	/*file->extension = str_dup("mt2");*/
-	file->title = strn_dup((const char *)title, sizeof(title));
-	file->type = TYPE_MODULE_XM;
-	return 1;
+testresult_t test_atm_load_store(void)
+{
+	struct atm a;
+
+	atm_store(&a, 67);
+
+	ASSERT(atm_load(&a) == 67);
+
+	RETURN_PASS;
+}
+
+testresult_t test_atm_add(void)
+{
+	struct atm a;
+
+	atm_store(&a, 0);
+	ASSERT(atm_add(&a, 10) == 0);
+	ASSERT(atm_add(&a, 10) == 10);
+	ASSERT(atm_load(&a) == 20);
+
+	RETURN_PASS;
 }

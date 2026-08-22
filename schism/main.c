@@ -913,6 +913,9 @@ SCHISM_NORETURN static void event_loop(void)
 		if (!events_have_event())
 			timer_oneshot_worker();
 
+		/* Important! */
+		audio_worker();
+
 		/* sleep for a little bit to not hog CPU time */
 		if (!events_have_event())
 			timer_msleep(5);
@@ -1371,6 +1374,9 @@ int schism_main(int argc, char **argv)
 #endif
 #ifdef USE_ZSTD
 	zstd_init();
+#endif
+#ifdef USE_GSTREAMER
+	gstreamer_init();
 #endif
 
 #if !defined(SCHISM_WIN32) && !defined(SCHISM_OS2) && !defined(SCHISM_XBOX)

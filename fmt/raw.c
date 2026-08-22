@@ -38,7 +38,7 @@ int fmt_raw_load_sample(slurp_t *fp, song_sample_t *smp)
 
 	/* this kinda sucks, but it prevents loading the whole thing
 	 * into memory if we're working on an unseekable stream */
-	if (slurp_available(fp, SAMPLE_RAW_MAX, SEEK_SET)) {
+	if (slurp_could_seek(fp, SAMPLE_RAW_MAX, SEEK_SET)) {
 		len = SAMPLE_RAW_MAX;
 	} else {
 		len = slurp_length(fp);

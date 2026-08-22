@@ -47,7 +47,7 @@
 		ASSERT(outbufptr == (outbuf + sizeof(outbuf))); \
 		ASSERT(outbufsz == 0); \
 	\
-		ASSERT(memcmp(expect, outbuf, sizeof(inbuf)) == 0); \
+		ASSERT(memcmp(expect, outbuf, sizeof(outbuf)) == 0); \
 	\
 		charset_iconv_v2_close(x); \
 	\

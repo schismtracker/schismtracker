@@ -67,8 +67,7 @@ static int read_header_au(struct au_header *hdr, slurp_t *fp)
 	hdr->channels = bswapBE32(hdr->channels);
 
 	if (hdr->data_offset < 24
-		|| slurp_available(fp, hdr->data_offset, SEEK_SET)
-		|| slurp_available(fp, hdr->data_size + hdr->data_offset, SEEK_SET))
+	 || !slurp_could_seek(fp, hdr->data_offset + hdr->data_size, SEEK_SET))
 		return 0;
 
 	switch (hdr->channels) {

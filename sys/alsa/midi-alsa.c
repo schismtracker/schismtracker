@@ -128,14 +128,16 @@ static int load_alsa_syms(void);
 
 void *alsa_dltrick_handle_;
 
-static void alsa_dlend(void) {
+static void alsa_dlend(void)
+{
 	if (alsa_dltrick_handle_) {
 		loadso_object_unload(alsa_dltrick_handle_);
 		alsa_dltrick_handle_ = NULL;
 	}
 }
 
-static int alsa_dlinit(void) {
+static int alsa_dlinit(void)
+{
 	if (alsa_dltrick_handle_)
 		return 0;
 
@@ -153,7 +155,8 @@ static int alsa_dlinit(void) {
 
 SCHISM_STATIC_ASSERT(sizeof(void (*)) == sizeof(void *), "dynamic loading code assumes function pointer and void pointer are of equivalent size");
 
-static int load_alsa_sym(const char *fn, void *addr) {
+static int load_alsa_sym(const char *fn, void *addr)
+{
 	void *func = loadso_function_load(alsa_dltrick_handle_, fn);
 	if (!func)
 		return 0;
@@ -170,13 +173,15 @@ static int load_alsa_sym(const char *fn, void *addr) {
 
 #define SCHISM_ALSA_SYM(x) ALSA_##x = x
 
-static int alsa_dlinit(void) {
+static int alsa_dlinit(void)
+{
 	return load_alsa_syms();
 }
 
 #endif
 
-static int load_alsa_syms(void) {
+static int load_alsa_syms(void)
+{
 	SCHISM_ALSA_SYM(snd_seq_port_info_sizeof);
 	SCHISM_ALSA_SYM(snd_seq_client_info_sizeof);
 	SCHISM_ALSA_SYM(snd_seq_control_queue);
