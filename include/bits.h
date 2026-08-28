@@ -105,12 +105,32 @@ SCHISM_SIGNED_RSHIFT_VARIANT(max)
 # define bswap_16(x) __builtin_bswap16(x)
 #elif SCHISM_MSVC_ATLEAST(8, 0, 0)
 # define bswap_16(x) _byteswap_ushort(x)
+#elif defined(__WATCOMC__) && defined(__386__)
+
+uint16_t bswap_16_watcom_(uint16_t x);
+# pragma aux bswap_16_watcom_ = \
+	"xchg al, ah" \
+	parm [ax] \
+	value [ax] \
+	modify [ax];
+
+# define bswap_16(x) bswap_16_watcom_(x)
 #endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap32, 4, 3, 0)
 # define bswap_32(x) __builtin_bswap32(x)
 #elif SCHISM_MSVC_ATLEAST(8, 0, 0)
 # define bswap_32(x) _byteswap_ulong(x)
+#elif defined(__WATCOMC__) && defined(__386__)
+
+uint32_t bswap_32_watcom_(uint32_t x);
+# pragma aux bswap_32_watcom_ = \
+	"bswap eax" \
+	parm [eax] \
+	value [eax] \
+	modify [eax];
+
+# define bswap_32(x) bswap_32_watcom_(x)
 #endif
 
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_bswap64, 4, 3, 0)
@@ -334,8 +354,8 @@ SCHISM_SPLACES_VARIANT(64)
 SCHISM_CONST SCHISM_ALWAYS_INLINE static inline
 uint32_t bpow32(uint32_t base, uint32_t exponent)
 {
-	uint32_t r = 1, i;
-	for (i = 0; i < exponent; i++)
+	uint32_t r = 1;
+	while (exponent--)
 		r *= base;
 	return r;
 }
@@ -427,17 +447,34 @@ uint32_t bnextpow2(uint32_t x)
 /* ------------------------------------------------------------------------ */
 /* count leading zeroes */
 
+#if defined(__WATCOMC__) && defined(__386__)
+/* inline it
+ *
+ * NOTE: this doesn't work for the case where x == 0
+ * but that's not guaranteed with __builtin_clz either */
+
+uint32_t bclz32(uint32_t x);
+# pragma aux bclz32 = \
+	"bsr edx, eax" \
+	"mov eax, 31" \
+	"sub eax, edx" \
+	parm [eax] \
+	value [eax] \
+	modify [edx];
+
+#else /* not watcom compiling for 386 */
+
 static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 uint32_t bclz32(uint32_t x)
 {
-#if SCHISM_GNUC_HAS_BUILTIN(__builtin_clz, 3, 4, 6)
+# if SCHISM_GNUC_HAS_BUILTIN(__builtin_clz, 3, 4, 6)
 	/* On x86, this optimizes to the bsr instruction, even as
 	 * far back as gcc 3.4.6, which also happens to be the earliest
 	 * compiler available on Compiler Explorer ;) */
 	return __builtin_clz(x);
-#elif defined(HAVE_STDBIT_H)
+# elif defined(HAVE_STDBIT_H)
 	return stdc_leading_zeros(x);
-#else
+# else
 	uint32_t r;
 
 	/* removes an extra conditional from the inner for-loop */
@@ -448,8 +485,10 @@ uint32_t bclz32(uint32_t x)
 		;
 
 	return r;
-#endif
+# endif
 }
+
+#endif
 
 /* ------------------------------------------------------------------------ */
 /* fast 32-bit log2. */
