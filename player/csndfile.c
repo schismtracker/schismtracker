@@ -322,7 +322,8 @@ int csf_instrument_is_empty(song_instrument_t *ins)
 		return 1;
 
 	for (n = 0; n < NOTE_LAST - NOTE_FIRST; n++) {
-		if (ins->sample_map[n] != 0 || ins->note_map[n] != (n + NOTE_FIRST))
+		if (ins->sample_map[n] != 0 || ins->note_map[n] != (n + NOTE_FIRST)
+		|| ins->effect_map[n] != FX_NONE || ins->param_map[n] != 0)
 			return 0;
 	}
 	return (name_is_blank(ins->name)

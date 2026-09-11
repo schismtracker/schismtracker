@@ -24,6 +24,7 @@
 #include "headers.h"
 
 #include "song.h"
+#include "patedit_record.h"
 #include "player/sndfile.h"
 #include "player/snd_fm.h"
 #include "player/snd_gm.h"
@@ -995,14 +996,21 @@ int32_t csf_process_tick(song_t *csf)
 		csf->last_global_volume = csf->current_global_volume;
 
 		for (uint32_t nchan=0; nchan<MAX_CHANNELS; chan++, nchan++, m++) {
+			int deferred = patedit_deferred_test(csf->current_pattern,
+				csf->row, nchan + 1);
+			song_note_t midi_note = *m;
+
 			// this is where we're going to spit out our midi
 			// commands... ALL WE DO is dump raw midi data to
 			// our super-secret "midi buffer"
 			// -mrsb
-			if (!(csf->mix_flags & SNDMIX_CALCLENGTH))
-				csf_midi_out_note(csf, nchan, m);
+			if (!(csf->mix_flags & SNDMIX_CALCLENGTH)) {
+				if (deferred)
+					midi_note.note = NOTE_NONE;
+				csf_midi_out_note(csf, nchan, &midi_note);
+			}
 
-			chan->row_note = m->note;
+			chan->row_note = deferred ? NOTE_NONE : m->note;
 
 			if (m->instrument)
 				chan->last_instrument = m->instrument;

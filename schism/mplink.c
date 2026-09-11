@@ -25,6 +25,7 @@
 
 #include "it.h"
 #include "song.h"
+#include "patedit_record.h"
 #include "slurp.h"
 
 // ------------------------------------------------------------------------
@@ -285,6 +286,8 @@ song_note_t *song_pattern_allocate_copy(int patno, int *rows)
 void song_pattern_install(int patno, song_note_t *n, int rows)
 {
 	song_lock_audio();
+
+	patedit_deferred_clear_all();
 
 	song_note_t *olddata = current_song->patterns[patno];
 	csf_free_pattern(olddata);

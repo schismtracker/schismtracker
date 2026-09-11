@@ -320,6 +320,8 @@ int song_load_unchecked(const char *file)
 
 	main_song_changed_cb();
 
+	instrument_sync_note_trans_extended();
+
 	status.flags &= ~SONG_NEEDS_SAVE;
 
 	// print out some stuff
@@ -1134,6 +1136,8 @@ song_instrument_t *instrument_loader_init(struct instrumentloader *ii, int slot)
 	ii->slot = slot;
 	ii->basex = 1;
 	memset(ii->sample_map, 0, sizeof(ii->sample_map));
+	memset(ii->inst->effect_map, 0, sizeof(ii->inst->effect_map));
+	memset(ii->inst->param_map, 0, sizeof(ii->inst->param_map));
 	return ii->inst;
 }
 

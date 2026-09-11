@@ -27,6 +27,7 @@
 #include "config.h"
 #include "page.h"
 #include "song.h"
+#include "patedit_record.h"
 #include "slurp.h"
 #include "config-parser.h"
 #include "mem.h"
@@ -193,6 +194,12 @@ uint32_t s32_to_s24(void *ptr, const int32_t *buffer, uint32_t samples)
 	return samples * 3;
 }
 
+/* Set on the audio thread when the player reaches the natural end of a song
+   (csf_read returns 0), and consumed on the main thread by song_check_natural_end().
+   This lets the playlist distinguish a natural end from a user-initiated stop, which
+   both produce the same MODE_STOPPED state. */
+static int natural_end_pending = 0;
+
 static void audio_reallocate_buffer(uint32_t samples)
 {
 	if (samples != audio_buffer_samples)
@@ -235,6 +242,18 @@ static void audio_callback(uint8_t *stream, uint32_t len)
 		memset(audio_buffer, (audio_output_bits == 8) ? 0x80 : 0, audio_buffer_samples * audio_sample_size);
 	} else {
 		n = csf_read(current_song, audio_buffer, audio_buffer_samples * audio_sample_size);
+
+		/* If csf_read set SONG_ENDREACHED, the player just reached the natural
+		   end of the song. This happens whether the end lands on a buffer
+		   boundary (n == 0) or mid-buffer (n > 0, ENDREACHED set but the buffer
+		   still has trailing samples); the latter case never reaches the !n path
+		   below, so we must latch on the flag itself. A user stop sets
+		   SONG_ENDREACHED via song_stop() on the main thread, which leaves the
+		   song PAUSED so the callback takes the silence branch above and never
+		   re-enters here -- so this only catches genuine end-of-song. */
+		if (current_song->flags & SONG_ENDREACHED)
+			natural_end_pending = 1;
+
 		if (!n) {
 			if (status.current_page == PAGE_WATERFALL || status.vis_style == VIS_FFT)
 				vis_work_8m(NULL, 0);
@@ -483,6 +502,19 @@ static int keyjazz_note_to_chan[NOTE_LAST + 1] = {0};
 /* last note played by channel tracking */
 static int keyjazz_chan_to_note[MAX_CHANNELS + 1] = {0};
 
+/* Apply Oxx after keyjazz note start (mirrors handle_effect FX_OFFSET). */
+static void keyjazz_apply_offset(song_t *csf, song_voice_t *chan, int note, int param)
+{
+	if (!NOTE_IS_NOTE(note) || !chan->length)
+		return;
+
+	chan->mem_offset = (chan->mem_offset & ~0xff00) | (param << 8);
+
+	chan->position = csf_smp_pos(chan->mem_offset, 0);
+	if (csf_smp_pos_gt(chan->position, csf_smp_pos(chan->length, 0)))
+		chan->position = csf_smp_pos((csf->flags & SONG_ITOLDEFFECTS) ? chan->length : 0, 0);
+}
+
 /* **** chan ranges from 1 to MAX_CHANNELS   */
 static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int effect, int param)
 {
@@ -661,6 +693,9 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 		c->increment = csf_smp_pos_negate(c->increment); // lousy hack
 	csf_note_change(current_song, chan_internal, note, 0, 0, 1);
 
+	if (effect == FX_OFFSET)
+		keyjazz_apply_offset(current_song, c, note, param);
+
 	if (!(status.flags & MIDI_LIKE_TRACKER) && i) {
 		/* midi keyjazz shouldn't require a sample */
 		song_note_t mc = {0};
@@ -680,8 +715,8 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	TODO:
 	- If this is the ONLY channel playing, and the song is stopped, always reset the tick count
 	  (will fix the "random" behavior for most effects)
-	- If other channels are playing, don't reset the tick count, but do process first-tick effects
-	  for this note *right now* (this will fix keyjamming with effects like Oxx and SCx)
+	- If other channels are playing, don't reset the tick count, but do process other first-tick
+	  effects for this note *right now* (e.g. SCx note delay)
 	- Need to handle volume column effects with this function...
 	*/
 	if (current_song->flags & SONG_ENDREACHED) {
@@ -692,6 +727,34 @@ static int song_keydown_ex(int samp, int ins, int note, int vol, int chan, int e
 	song_unlock_audio();
 
 	return chan;
+}
+
+int song_instrument_map_fx(const song_instrument_t *ins, int note,
+		uint8_t *effect, uint8_t *param)
+{
+	int slot;
+
+	if (!ins || !(ins->flags & INST_NOTE_FXMAP) || !NOTE_IS_NOTE(note))
+		return 0;
+	slot = note - NOTE_FIRST;
+	if (ins->effect_map[slot] == FX_NONE)
+		return 0;
+	*effect = ins->effect_map[slot];
+	*param = ins->param_map[slot];
+	return 1;
+}
+
+int song_keyjazz_preview(int samp, int ins, int note, int vol, int chan)
+{
+	uint8_t fx = FX_PANNING, param = 0x80;
+	song_instrument_t *instrument;
+
+	if (ins >= 1 && song_is_instrument_mode()) {
+		instrument = song_get_instrument(ins);
+		if (instrument)
+			song_instrument_map_fx(instrument, note, &fx, &param);
+	}
+	return song_keyrecord(samp, ins, note, vol, chan, fx, param);
 }
 
 int song_keydown(int samp, int ins, int note, int vol, int chan)
@@ -766,6 +829,8 @@ void song_single_step(int patno, int row)
 // this should be called with the audio LOCKED
 static void song_reset_play_state(void)
 {
+	patedit_deferred_clear_all();
+
 	memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
 	memset(keyjazz_note_to_chan, 0, sizeof(keyjazz_note_to_chan));
 	memset(keyjazz_chan_to_note, 0, sizeof(keyjazz_chan_to_note));
@@ -968,6 +1033,19 @@ enum song_mode song_get_mode(void)
 	return MODE_PLAYING;
 }
 
+/* Returns (and clears) whether the player reached the natural end of the song
+   since the last call. Used by the playlist to auto-advance only on a real
+   end-of-song, not on a user-initiated stop. */
+int song_check_natural_end(void)
+{
+	int v;
+	song_lock_audio();
+	v = natural_end_pending;
+	natural_end_pending = 0;
+	song_unlock_audio();
+	return v;
+}
+
 // returned value is in seconds
 unsigned int song_get_current_time(void)
 {
@@ -1113,6 +1191,7 @@ void song_set_current_global_volume(int volume)
 void song_set_current_order(int order)
 {
 	song_lock_audio();
+	patedit_deferred_clear_all();
 	csf_set_current_order(current_song, order);
 	song_unlock_audio();
 }
