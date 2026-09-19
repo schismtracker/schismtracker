@@ -1298,17 +1298,6 @@ static void slurp_buffered_closure(slurp_t *t)
 	free(t->internal.buffered.fp);
 }
 
-/* forward to fp implementation
- *
- * note that because this is optional this pointer is only filled if
- * the child pointer is not NULL
- *
- * otherwise, we just malloc a buffer and send it off */
-static int slurp_buffered_receive(slurp_t *t, int (*callback)(const void *, size_t, void *), size_t length, void *userdata)
-{
-	return t->internal.buffered.fp->receive(t, callback, length, userdata);
-}
-
 /* wraps a slurp_t in a buffer */
 static void slurp_buffer(slurp_t *t, size_t bufsz)
 {
@@ -1333,8 +1322,7 @@ static void slurp_buffer(slurp_t *t, size_t bufsz)
 	t->length = slurp_buffered_length;
 	t->closure = slurp_buffered_closure;
 	t->available = slurp_buffered_available;
-	if (a->fp.receive)
-		t->receive = slurp_buffered_receive;
+	/* XXX fill in the receive impl */
 
 	t->internal.buffered.bufptr = NULL;
 	t->internal.buffered.buf = a->buf;
