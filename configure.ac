@@ -351,7 +351,7 @@ AM_CONDITIONAL([NEED_UNSETENV], [test "x$ac_cv_func_unsetenv" = "xno"])
 AM_CONDITIONAL([NEED_GETOPT], [test "x$ac_cv_func_getopt_long" = "xno"])
 
 dnl Headers, typedef crap, et al.
-AC_CHECK_HEADERS(assert.h alloca.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h tgmath.h sys/types.h sal.h)
+AC_CHECK_HEADERS(assert.h alloca.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h tgmath.h sys/types.h sal.h stdbit.h)
 
 AM_CONDITIONAL([USE_OSS], [false])
 if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
@@ -387,6 +387,7 @@ AC_TYPE_SIZE_T
 AC_TYPE_MODE_T
 AC_TYPE_SSIZE_T
 AC_STRUCT_TM
+AC_STRUCT_ST_BLKSIZE
 
 dnl need size of void pointer
 AC_CHECK_SIZEOF([void *])

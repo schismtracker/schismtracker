@@ -674,6 +674,78 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 	return sample_count;
 }
 
+static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_smp_pos len)
+{
+	/* Try to fake VU meters */
+	int32_t min, max;
+	uint32_t umin, umax;
+	char *buf;
+	size_t buflen;
+	int32_t lenwhole;
+
+	buf = (char *)channel->current_sample_data + (csf_smp_pos_get_whole(channel->position) * (1 + !!(channel->flags & CHN_16BIT)));
+
+	lenwhole = csf_smp_pos_get_whole(len);
+
+	/* need to handle going backwards */
+	if (lenwhole < 0) {
+		buf -= lenwhole;
+		buflen = -lenwhole;
+	} else {
+		buflen = lenwhole;
+	}
+
+	if (channel->flags & CHN_STEREO)
+		buflen <<= 1;
+
+	/* NOTE: This logic is wrong -- technically we need to apply it separately
+	 * for both stereo channels. This achieves the correct result most of the
+	 * time though, or something close enough, so I don't care. */
+	if (channel->flags & CHN_16BIT) {
+		int16_t min16, max16;
+
+		min16 = INT16_MAX;
+		max16 = INT16_MIN;
+
+		buflen <<= 1;
+
+		minmax_16((int16_t *)buf, buflen, &min16, &max16, 1);
+
+		/* convert to 23-bit -- this, combined with left volume
+		 * and right volume, will make a 32-bit result, which then
+		 * gets downscaled to 24-bit. */
+		min = min16 << 7;
+		max = max16 << 7;
+	} else {
+		int8_t min8, max8;
+
+		min8 = INT8_MAX;
+		max8 = INT8_MIN;
+
+		minmax_8((int8_t *)buf, buflen, &min8, &max8, 1);
+
+		min = min8 << 15;
+		max = max8 << 15;
+	}
+
+	umin = babs32(min);
+	umax = babs32(max);
+
+	umax = MAX(umin, umax);
+
+	/* Cap to 23 bits */
+	umax = MIN(umax, 0x7FFFFF);
+
+	/* Apply volume */
+	umax *= channel->left_volume_new + channel->right_volume_new;
+
+	/* Shift it nice and neat into 24 bits, which is the intermediate
+	 * form until we shift it down to 8 bits later in the mixer */
+	umax >>= 8;
+
+	/* lololo */
+	channel->vu_meter = MAX(channel->vu_meter, umax);
+}
 
 uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 {
@@ -783,7 +855,13 @@ uint32_t csf_create_stereo_mix(song_t *csf, uint32_t count)
 
 			if ((nchmixed >= csf->max_voices && !(csf->mix_flags & SNDMIX_DIRECTTODISK))
 				|| (!channel->ramp_length && !(channel->left_volume | channel->right_volume))) {
-				channel->position = csf_smp_pos_add(channel->position, csf_smp_pos_mul_whole(channel->increment, smpcount));
+				struct song_smp_pos len = csf_smp_pos_mul_whole(channel->increment, smpcount);
+
+				/* Don't even try */
+				if (!(channel->flags & CHN_ADLIB))
+					fake_vu_meter(channel, smpcount, len);
+
+				channel->position = csf_smp_pos_add(channel->position, len);
 				channel->rofs = channel->lofs = 0;
 				pbuffer += smpcount * 2;
 			} else if (!(channel->flags & CHN_ADLIB)) {

@@ -85,6 +85,10 @@
 # include <inttypes.h>
 #endif
 
+#ifdef HAVE_STDBIT_H
+# include <stdbit.h> /* C23 */
+#endif
+
 #include <math.h>
 // this seems to cause more problems than it solves:
 //#if defined(HAVE_TGMATH_H) && !defined(SCHISM_MACOS) /* Macintosh toolchain has tgmath.h, but it's broken as shit */
