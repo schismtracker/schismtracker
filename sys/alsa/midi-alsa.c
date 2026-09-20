@@ -28,6 +28,7 @@
 
 #include "util.h"
 #include "mem.h"
+#include "osdefs.h"
 
 #ifdef USE_ALSA
 #include <sys/poll.h>
