@@ -55,6 +55,10 @@
 /* Mingw.org */
 # undef _NO_OLDNAMES
 # define _NO_OLDNAMES
+
+/* ehhh? */
+# include <sys/types.h>
+typedef _mode_t mode_t;
 #endif
 
 /* ------------------------------------------------------------------------ */
