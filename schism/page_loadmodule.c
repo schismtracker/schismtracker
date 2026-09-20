@@ -151,7 +151,7 @@ idea for return codes:
 
 static void handle_file_entered_L(const char *ptr)
 {
-	struct stat sb;
+	schism_stat_t sb;
 
 	/* these shenanigans force the file to take another trip... */
 	if (os_stat(ptr, &sb) == -1)
@@ -232,7 +232,7 @@ void save_song_or_save_as(void)
 
 static void do_save_song_overwrite(void *ptr)
 {
-	struct stat st;
+	schism_stat_t st;
 
 	if (!(status.flags & CLASSIC_MODE)) {
 		// say what?
@@ -255,7 +255,7 @@ static void do_save_song_overwrite(void *ptr)
 
 static void handle_file_entered_S(const char *name)
 {
-	struct stat buf;
+	schism_stat_t buf;
 
 	if (os_stat(name, &buf) < 0) {
 		if (errno == ENOENT) {
@@ -357,7 +357,7 @@ static void dir_list_reposition(void)
 
 static void read_directory(void)
 {
-	struct stat st;
+	schism_stat_t st;
 
 	clear_directory();
 
@@ -1010,7 +1010,7 @@ static void dirname_entered(void)
 /* used by {load,save}_module_set_page. return 1 => contents changed */
 static int update_directory(void)
 {
-	struct stat st;
+	schism_stat_t st;
 
 	/* if we have a list, the directory didn't change, and the mtime is the same, we're set. */
 	if ((status.flags & DIR_MODULES_CHANGED) == 0

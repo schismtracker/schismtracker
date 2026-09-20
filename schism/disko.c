@@ -395,7 +395,7 @@ int disko_close(disko_t *ds, int backup)
 		/* Windows NT has a completely different idea of file permissions
 		 * than POSIX */
 #elif defined(HAVE_CHMOD)
-		struct stat st;
+		schism_stat_t st;
 
 		if (os_stat(ds->filename, &st) < 0) {
 			/* Probably didn't exist already, let's make something up. */

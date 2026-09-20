@@ -63,7 +63,7 @@ FILE *os2_fopen(const char *path, const char *rw)
 	return fp;
 }
 
-int os2_stat(const char* path, struct stat* st)
+int os2_stat(const char* path, schism_stat_t *st)
 {
 	int rc;
 	char *sys;

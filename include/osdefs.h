@@ -208,7 +208,7 @@ void win32_sysexit(void);
 void win32_get_modkey(schism_keymod_t *m);
 void win32_filecreated_callback(const char *filename);
 void win32_toggle_menu(void *window, int on); // window should be a pointer to the window HWND
-int win32_stat(const char *path, struct stat *st);
+int win32_stat(const char *path, schism_stat_t *st);
 int win32_mkdir(const char *path, uint32_t mode);
 FILE* win32_fopen(const char *path, const char *flags);
 int win32_exec(int *status, int *abnormal_exit, const char *dir, const char *name, ...);
@@ -240,7 +240,7 @@ int macosx_get_window_rect(double *x, double *y, double *w, double *h);
 int macosx_set_window_coordinates(double x, double y);
 
 int macos_mkdir(const char *path, uint32_t mode);
-int macos_stat(const char *file, struct stat *st);
+int macos_stat(const char *file, schism_stat_t *st);
 void macos_show_message_box(const char *title, const char *text, int style);
 void macos_sysinit(int *pargc, char ***pargv);
 int macos_get_key_repeat(int *pdelay, int *prate);
@@ -249,13 +249,13 @@ FILE *macos_fopen(const char *path, const char *flags);
 
 int x11_event(schism_event_t *event);
 
-int os2_stat(const char* path, struct stat* st);
+int os2_stat(const char* path, schism_stat_t *st);
 int os2_mkdir(const char* path, uint32_t mode);
 FILE* os2_fopen(const char* path, const char* flags);
 int os2_get_key_repeat(int *pdelay, int *prate);
 void os2_show_message_box(const char *title, const char *text, int style);
 
-int xbox_stat(const char *path, struct stat *st);
+int xbox_stat(const char *path, schism_stat_t *st);
 int xbox_mkdir(const char *path, uint32_t mode);
 FILE* xbox_fopen(const char* path, const char* flags);
 void xbox_sysinit(int *pargc, char ***pargv);

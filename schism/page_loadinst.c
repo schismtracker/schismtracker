@@ -105,7 +105,7 @@ static void file_list_reposition(void)
 
 static void read_directory(void)
 {
-	struct stat st;
+	schism_stat_t st;
 
 	clear_directory();
 
@@ -128,7 +128,7 @@ TODO: provide some sort of feedback if something went wrong. */
 static int change_dir(const char *dir)
 {
 	char *ptr = dmoz_path_normal(dir);
-	struct stat buf;
+	schism_stat_t buf;
 
 	if (!ptr)
 		return 0;
@@ -161,7 +161,7 @@ static void load_instrument_draw_const(void)
 
 static void _common_set_page(void)
 {
-	struct stat st;
+	schism_stat_t st;
 
 	if (!inst_cwd[0]) {
 		strcpy(inst_cwd, cfg_dir_instruments);

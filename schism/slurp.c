@@ -38,7 +38,7 @@ static int slurp_stdio_open_(slurp_t *t, const char *filename, uint64_t size);
 static void slurp_buffer(slurp_t *t, size_t bufsz);
 #endif
 
-int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
+int slurp(slurp_t *t, const char *filename, schism_stat_t * buf, uint64_t size)
 {
 	static int (*const init_funcs[])(slurp_t *t, const char *filename, uint64_t size) = {
 #ifdef SCHISM_WIN32
@@ -65,7 +65,7 @@ int slurp(slurp_t *t, const char *filename, struct stat * buf, uint64_t size)
 		slurp_stdio(t, stdin);
 	} else {
 		size_t i;
-		struct stat st;
+		schism_stat_t st;
 
 		if (!buf) {
 			if (os_stat(filename, &st) < 0)

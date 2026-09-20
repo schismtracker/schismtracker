@@ -924,7 +924,7 @@ int dmoz_path_mkdir_recursive(const char *path, int mode)
 		return -1;
 
 	for (i = 0; npath[i]; i++) {
-		struct stat st;
+		schism_stat_t st;
 
 		if (!IS_DIR_SEPARATOR(npath[i]))
 			continue;
@@ -970,7 +970,7 @@ int dmoz_path_mkdir_recursive(const char *path, int mode)
 
 int dmoz_path_is_file(const char *filename)
 {
-	struct stat buf;
+	schism_stat_t buf;
 
 	if (os_stat(filename, &buf) == -1) {
 		/* Well, at least we tried. */
@@ -982,7 +982,7 @@ int dmoz_path_is_file(const char *filename)
 
 int dmoz_path_is_directory(const char *filename)
 {
-	struct stat buf;
+	schism_stat_t buf;
 
 	if (os_stat(filename, &buf) == -1) {
 		/* Well, at least we tried. */
@@ -993,7 +993,7 @@ int dmoz_path_is_directory(const char *filename)
 }
 
 unsigned long long dmoz_path_get_file_size(const char *filename) {
-	struct stat buf;
+	schism_stat_t buf;
 
 	if (os_stat(filename, &buf) < 0)
 		return EOF;
@@ -1679,7 +1679,7 @@ void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), i
 /* --------------------------------------------------------------------------------------------------------- */
 /* adding to the lists */
 
-dmoz_file_t *dmoz_add_file(dmoz_filelist_t *flist, char *path, char *base, struct stat *st, int sort_order)
+dmoz_file_t *dmoz_add_file(dmoz_filelist_t *flist, char *path, char *base, schism_stat_t *st, int sort_order)
 {
 	dmoz_file_t *file = mem_calloc(1, sizeof(dmoz_file_t));
 
@@ -1731,7 +1731,7 @@ dmoz_dir_t *dmoz_add_dir(dmoz_dirlist_t *dlist, char *path, char *base, int sort
 }
 
 void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
-			  char *path, char *base, struct stat *st, int sort_order)
+			  char *path, char *base, schism_stat_t *st, int sort_order)
 {
 	if (dlist)
 		dmoz_add_dir(dlist, path, base, sort_order);
@@ -2170,7 +2170,7 @@ int dmoz_read(const char *path, dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
 	dmoz_DIR *dir;
 	dmoz_dirent *ent;
 	char *ptr;
-	struct stat st;
+	schism_stat_t st;
 	int pathlen, namlen, lib = 0, err = 0;
 
 	if (!path || !*path)

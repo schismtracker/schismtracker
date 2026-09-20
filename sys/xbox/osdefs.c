@@ -108,7 +108,7 @@ void xbox_sysinit(SCHISM_UNUSED int *pargc, SCHISM_UNUSED char ***pargv)
 #undef MOUNT_PARTITION
 }
 
-int xbox_stat(const char *path, struct stat *st)
+int xbox_stat(const char *path, schism_stat_t *st)
 {
 	LPSTR wpath;
 

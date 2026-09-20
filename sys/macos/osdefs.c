@@ -156,7 +156,7 @@ int macos_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 {
 	HParamBlockRec pb = {0};
 	unsigned char mpath[256];
-	struct stat st;
+	schism_stat_t st;
 
 	{
 		int truncated = 0;
@@ -219,7 +219,7 @@ int macos_mkdir(const char *path, SCHISM_UNUSED uint32_t mode)
 	}
 }
 
-int macos_stat(const char *file, struct stat *st)
+int macos_stat(const char *file, schism_stat_t *st)
 {
 	CInfoPBRec pb = {0};
 	unsigned char ppath[256];
@@ -250,7 +250,7 @@ int macos_stat(const char *file, struct stat *st)
 	}
 
 	if (!strcmp(file, ".")) {
-		*st = (struct stat){
+		*st = (schism_stat_t){
 			.st_mode = S_IFDIR,
 			.st_ino = -1,
 		};
@@ -260,7 +260,7 @@ int macos_stat(const char *file, struct stat *st)
 		OSErr err = PBGetCatInfoSync(&pb);
 		switch (err) {
 		case noErr:
-			*st = (struct stat){
+			*st = (schism_stat_t){
 				.st_mode = (pb.hFileInfo.ioFlAttrib & ioDirMask) ? S_IFDIR : S_IFREG,
 				.st_ino = pb.hFileInfo.ioFlStBlk,
 				.st_dev = pb.hFileInfo.ioVRefNum,

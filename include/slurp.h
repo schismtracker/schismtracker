@@ -154,7 +154,7 @@ errno on error. 'buf' is only meaningful if you've already stat()'d the file; in
 can simply be NULL. If size is nonzero, it overrides the file's size as returned by stat -- this
 can be used to read only part of a file, or if the file size is known but a stat structure is not
 available. */
-int slurp(slurp_t *t, const char *filename, struct stat *buf, uint64_t size);
+int slurp(slurp_t *t, const char *filename, schism_stat_t *buf, uint64_t size);
 
 /* initializes a slurp_t over an existing file */
 int slurp_stdio(slurp_t *t, FILE *fp);

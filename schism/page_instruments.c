@@ -2025,7 +2025,7 @@ static void instrument_save(const char *filename, const char *format)
 {
 	song_instrument_t *penv = song_get_instrument(current_instrument);
 	char *ptr;
-	struct stat buf;
+	schism_stat_t buf;
 
 	if (filename) {
 		ptr = (char *) dmoz_path_concat(cfg_dir_instruments, filename);

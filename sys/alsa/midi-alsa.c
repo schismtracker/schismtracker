@@ -501,8 +501,8 @@ int alsa_midi_setup(void)
 	/* only bother if alsa midi actually exists, otherwise this will
 	 * produce useless and annoying error messages on systems where alsa
 	 * libs are installed but which aren't actually running it */
-	struct stat sbuf;
-	if (stat("/dev/snd/seq", &sbuf) != 0)
+	schism_stat_t sbuf;
+	if (os_stat("/dev/snd/seq", &sbuf) != 0)
 		return 0;
 
 #ifdef ALSA_DYNAMIC_LOAD

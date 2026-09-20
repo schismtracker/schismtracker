@@ -37,30 +37,6 @@
 # include <build-config.h>
 #endif
 
-#if defined(SCHISM_WIN32) && defined(__MINGW32__)
-# undef NO_OLDNAMES
-/* need to #include this without NO_OLDNAMES defined to work
- * around a mingw-w64 bug introduced in nov 2025.
- * this isn't really guaranteed to work everywhere, but it
- * at least should work for now, until the bug is fixed.
- *
- * upstream bug: https://sourceforge.net/p/mingw-w64/bugs/1014/ */
-# include <_mingw.h>
-# ifdef __MINGW64_VERSION_MAJOR
-#  include <_mingw_off_t.h>
-# endif
-/* Mingw-w64 */
-# undef NO_OLDNAMES
-# define NO_OLDNAMES
-/* Mingw.org */
-# undef _NO_OLDNAMES
-# define _NO_OLDNAMES
-
-/* ehhh? */
-# include <sys/types.h>
-typedef _mode_t mode_t;
-#endif
-
 /* ------------------------------------------------------------------------ */
 /* Actual standard C stuff */
 
@@ -138,14 +114,16 @@ typedef _mode_t mode_t;
 
 #if defined(HAVE_STAT) && !defined(SCHISM_WIN32)
 # include <sys/stat.h>
+
+typedef struct stat schism_stat_t;
 #else
 /* This only defines the stuff we actually use.
  * Raw stat() should never be called; osdefs.h defines
  * the actual stat implementations.  */
-struct stat {
+typedef struct {
 	/* dev_t st_dev; */
 	/* ino_t st_ino; */
-	uint32_t st_mode;
+	mode_t st_mode;
 	/* nlink_t st_nlink; */
 	/* uid_t st_uid; */
 	/* gid_t st_gid; */
@@ -156,8 +134,9 @@ struct stat {
 	int64_t st_ctime;
 	/* blksize_t st_blksize; */
 	/* blkcnt_t st_blocks; */
-};
+} schism_stat_t;
 
+#ifndef S_IFMT
 # define S_IFREG (0x01)
 # define S_IFBLK (0x02)
 # define S_IFCHR (0x04)
@@ -187,18 +166,19 @@ struct stat {
 # define S_IRWXO (S_IROTH | S_IWOTH | S_IXOTH)
 
 /* Convenience macros as defined by POSIX */
-# define S_ISREG(x)  (!!((x) & S_IFREG))
-# define S_ISBLK(x)  (!!((x) & S_IFBLK))
-# define S_ISCHR(x)  (!!((x) & S_IFCHR))
-# define S_ISFIFO(x) (!!((x) & S_IFIFO))
-# define S_ISDIR(x)  (!!((x) & S_IFDIR))
-# define S_ISLNK(x)  (!!((x) & S_IFLNK))
-# define S_ISSOCK(x) (!!((x) & S_IFSOCK))
+# define S_ISREG(x)  (((x) & S_IFMT) == S_IFREG)
+# define S_ISBLK(x)  (((x) & S_IFMT) == S_IFBLK)
+# define S_ISCHR(x)  (((x) & S_IFMT) == S_IFCHR)
+# define S_ISFIFO(x) (((x) & S_IFMT) == S_IFIFO)
+# define S_ISDIR(x)  (((x) & S_IFMT) == S_IFDIR)
+# define S_ISLNK(x)  (((x) & S_IFMT) == S_IFLNK)
+# define S_ISSOCK(x) (((x) & S_IFMT) == S_IFSOCK)
 
 # define S_TYPEISMQ(x)  (0)
 # define S_TYPEISSEM(x) (0)
 # define S_TYPEISSHM(x) (0)
 # define S_TYPEISTMO(x) (0)
+#endif
 
 #endif
 

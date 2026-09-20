@@ -210,7 +210,7 @@ static off_t _ISFS_seek_r(struct _reent *r, void* fd, off_t pos, int dir) {
     return ret;
 }
 
-static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
+static void stat_entry(DIR_ENTRY *entry, schism_stat_t *st) {
     st->st_dev = 0x4957;
     st->st_ino = 0;
     st->st_mode = ((is_dir(entry)) ? S_IFDIR : S_IFREG) | (S_IRUSR | S_IRGRP | S_IROTH);
@@ -228,7 +228,7 @@ static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
     st->st_spare4[1] = 0;
 }
 
-static int _ISFS_fstat_r(struct _reent *r, void* fd, struct stat *st) {
+static int _ISFS_fstat_r(struct _reent *r, void* fd, schism_stat_t *st) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
 	r->_errno = EBADF;
@@ -238,7 +238,7 @@ static int _ISFS_fstat_r(struct _reent *r, void* fd, struct stat *st) {
     return 0;
 }
 
-static int _ISFS_stat_r(struct _reent *r, const char *path, struct stat *st) {
+static int _ISFS_stat_r(struct _reent *r, const char *path, schism_stat_t *st) {
     DIR_ENTRY *entry = entry_from_path(path);
     if (!entry) {
 	r->_errno = ENOENT;
@@ -285,7 +285,7 @@ static int _ISFS_dirreset_r(struct _reent *r, DIR_ITER *dirState) {
     return 0;
 }
 
-static int _ISFS_dirnext_r(struct _reent *r, DIR_ITER *dirState, char *filename, struct stat *st) {
+static int _ISFS_dirnext_r(struct _reent *r, DIR_ITER *dirState, char *filename, schism_stat_t *st) {
     DIR_STATE_STRUCT *state = (DIR_STATE_STRUCT *)(dirState->dirStruct);
     if (!state->inUse) {
 	r->_errno = EBADF;

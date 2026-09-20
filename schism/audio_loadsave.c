@@ -1041,7 +1041,7 @@ int dmoz_read_sample_library(const char *path, dmoz_filelist_t *flist, SCHISM_UN
 
 	const char *base = dmoz_path_get_basename(path);
 
-	struct stat st;
+	schism_stat_t st;
 	if (os_stat(path, &st) < 0) {
 		log_perror(path);
 		return -1;

@@ -322,7 +322,7 @@ static mode_t FSADOT_translate_stat_mode(FSStat *fsStat)
 	return retMode | permissionMode;
 }
 
-static void FSADOT_translate_stat(FSAClientHandle clientHandle, FSStat *fsStat, ino_t ino, struct stat *posStat)
+static void FSADOT_translate_stat(FSAClientHandle clientHandle, FSStat *fsStat, ino_t ino, schism_stat_t *posStat)
 {
 	memset(posStat, 0, sizeof(struct stat));
 	posStat->st_dev     = (dev_t)clientHandle;
@@ -549,7 +549,7 @@ int FSADOT_dirclose(struct _reent *r, DIR_ITER *dirState)
 	return 0;
 }
 
-static int FSADOT_dirnext(struct _reent *r, DIR_ITER *dirState, char *filename, struct stat *filestat)
+static int FSADOT_dirnext(struct _reent *r, DIR_ITER *dirState, char *filename, schism_stat_t *filestat)
 {
 	FSError status;
 	struct FSADOTDir *dir;
@@ -682,7 +682,7 @@ static int FSADOT_dirreset(struct _reent *r, DIR_ITER *dirState)
 	return 0;
 }
 
-static int FSADOT_fstat(struct _reent *r, void *fd, struct stat *st)
+static int FSADOT_fstat(struct _reent *r, void *fd, schism_stat_t *st)
 {
 	FSError status;
 	FSAStat fsStat;
@@ -1181,7 +1181,7 @@ static off_t FSADOT_seek(struct _reent *r, void *fd, off_t pos, int whence)
 	return file->offset;
 }
 
-static int FSADOT_stat(struct _reent *r, const char *path, struct stat *st)
+static int FSADOT_stat(struct _reent *r, const char *path, schism_stat_t *st)
 {
 	FSError status;
 	FSAStat fsStat;

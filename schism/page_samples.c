@@ -1080,7 +1080,7 @@ static void sample_save(const char *filename, const char *format)
 	song_sample_t *sample = song_get_sample(current_sample);
 	char *ptr, *q;
 	struct sample_save_data *data;
-	struct stat buf;
+	schism_stat_t buf;
 	int tmp;
 
 	if (!*(filename ? filename : sample->filename)) {

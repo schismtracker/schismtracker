@@ -1319,7 +1319,7 @@ static inline int64_t win32_filetime_to_unix_time(FILETIME *ft) {
 }
 
 /* this is highly related to the XBOX code */
-int win32_stat(const char* path, struct stat* st)
+int win32_stat(const char* path, schism_stat_t *st)
 {
 	void *wpath;
 
@@ -1671,7 +1671,7 @@ int win32_run_hook(const char *dir, const char *name, const char *maybe_arg)
 	})
 
 	for (i = 0; i < ARRAY_SIZE(extensions); i++) {
-		struct stat dummy;
+		schism_stat_t dummy;
 		char *full;
 		int r;
 

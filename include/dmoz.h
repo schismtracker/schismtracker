@@ -81,7 +81,7 @@ struct dmoz_file {
 
 	uint32_t type; /* combination of TYPE_* flags above */
 
-	/*struct stat stat;*/
+	/*schism_stat_t stat;*/
 	time_t timestamp; /* stat.st_mtime */
 	uint64_t filesize; /* stat.st_size */
 
@@ -214,7 +214,7 @@ For all of these, path and base should be free()-able. */
 /* If st == NULL, it is assumed to be a directory, and the timestamp/filesize fields are set to zero.
 This way, it's possible to add platform directories ("/", "C:\", whatever) without having to call stat first.
 The return value is the newly created file struct. */
-dmoz_file_t *dmoz_add_file(dmoz_filelist_t *flist, char *path, char *base, struct stat *st, int sort_order);
+dmoz_file_t *dmoz_add_file(dmoz_filelist_t *flist, char *path, char *base, schism_stat_t *st, int sort_order);
 
 /* The return value is the newly created dir struct. */
 dmoz_dir_t *dmoz_add_dir(dmoz_dirlist_t *dlist, char *path, char *base, int sort_order);
@@ -222,7 +222,7 @@ dmoz_dir_t *dmoz_add_dir(dmoz_dirlist_t *dlist, char *path, char *base, int sort
 /* Add a directory to either the dir list (if dlist != NULL) or the file list otherwise. This is basically a
 convenient shortcut for adding a directory. */
 void dmoz_add_file_or_dir(dmoz_filelist_t *flist, dmoz_dirlist_t *dlist,
-			  char *path, char *base, struct stat *st, int sort_order);
+			  char *path, char *base, schism_stat_t *st, int sort_order);
 
 /* this is called by main to actually do some dmoz work. returns 0 if there is no dmoz work to do...
 */
