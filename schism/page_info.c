@@ -406,7 +406,7 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 		prev_pattern = next_pattern = cur_pattern;
 		break;
 	case MODE_PLAYING:
-		if (current_song->orderlist[current_order] >= 200) {
+		if (current_song->orderlist[current_order] >= MAX_PATTERNS) {
 			/* this does, in fact, happen. just pretend that
 			 * it's stopped :P */
 	default:
@@ -416,12 +416,12 @@ static void _draw_track_view(int base, int height, int first_channel, int num_ch
 			return;
 		}
 		cur_pattern_rows = song_get_pattern(current_song->orderlist[current_order], &cur_pattern);
-		if (current_order > 0 && current_song->orderlist[current_order - 1] < 200)
+		if (current_order > 0 && current_song->orderlist[current_order - 1] < MAX_PATTERNS)
 			prev_pattern_rows = song_get_pattern(current_song->orderlist[current_order - 1],
 								&prev_pattern);
 		else
 			prev_pattern = NULL;
-		if (current_order < 255 && current_song->orderlist[current_order + 1] < 200)
+		if (current_order < 255 && current_song->orderlist[current_order + 1] < MAX_PATTERNS)
 			next_pattern_rows = song_get_pattern(current_song->orderlist[current_order + 1],
 								&next_pattern);
 		else
@@ -1078,7 +1078,7 @@ static int info_page_handle_key(struct key_event * k)
 		} else {
 			n = song_get_playing_pattern();
 		}
-		if (n < 200) {
+		if (n < MAX_PATTERNS) {
 			set_current_order(order);
 			set_current_pattern(n);
 			set_current_row(song_get_current_row());
