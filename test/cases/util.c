@@ -43,3 +43,60 @@ testresult_t test_mem_xor(void)
 
 	RETURN_PASS;
 }
+
+#define PATTERN(BITS) 0, INT##BITS##_MIN, INT##BITS##_MAX, 0
+#define PATTERN_ARR(BITS) \
+	static const int##BITS##_t minmax_data_##BITS[16] = { \
+		PATTERN(BITS), PATTERN(BITS), PATTERN(BITS), PATTERN(BITS) \
+	};
+
+PATTERN_ARR(8)
+PATTERN_ARR(16)
+PATTERN_ARR(32)
+
+#define TEST_MINMAX(BITS) \
+	testresult_t test_minmax_##BITS(void) \
+	{ \
+		int##BITS##_t min[2]; \
+		int##BITS##_t max[2]; \
+	\
+		min[0] = INT##BITS##_MAX; \
+		max[0] = INT##BITS##_MIN; \
+	 \
+		minmax_##BITS(minmax_data_##BITS, ARRAY_SIZE(minmax_data_##BITS), min, max, 1); \
+ \
+		ASSERT_PRINTF(min[0] == INT##BITS##_MIN, "%" PRId32, min[0]); \
+		ASSERT_PRINTF(max[0] == INT##BITS##_MAX, "%" PRId32, max[0]); \
+ \
+		min[0] = INT##BITS##_MAX; \
+		max[0] = INT##BITS##_MIN; \
+ \
+		minmax_##BITS(minmax_data_##BITS, ARRAY_SIZE(minmax_data_##BITS), min, max, 2); \
+ \
+		ASSERT_PRINTF(min[0] == 0, "%" PRId32, min[0]); \
+		ASSERT_PRINTF(max[0] == INT##BITS##_MAX, "%" PRId32, max[0]); \
+ \
+		min[0] = INT##BITS##_MAX; \
+		max[0] = INT##BITS##_MIN; \
+ \
+		minmax_##BITS(minmax_data_##BITS+1, ARRAY_SIZE(minmax_data_##BITS), min, max, 2); \
+ \
+		ASSERT_PRINTF(min[0] == INT##BITS##_MIN, "%" PRId32, min[0]); \
+		ASSERT_PRINTF(max[0] == 0, "%" PRId32, max[0]); \
+ \
+		min[0] = min[1] = INT##BITS##_MAX; \
+		max[0] = max[1] = INT##BITS##_MIN; \
+ \
+		minmax_##BITS##_arr(minmax_data_##BITS, ARRAY_SIZE(minmax_data_##BITS), min, max, 2); \
+ \
+		ASSERT_PRINTF(min[0] == 0, "%" PRId32, min[0]); \
+		ASSERT_PRINTF(max[0] == INT##BITS##_MAX, "%" PRId32, max[0]); \
+		ASSERT_PRINTF(min[1] == INT##BITS##_MIN, "%" PRId32, min[1]); \
+		ASSERT_PRINTF(max[1] == 0, "%" PRId32, max[1]); \
+ \
+		RETURN_PASS; \
+	}
+
+TEST_MINMAX(8)
+TEST_MINMAX(16)
+TEST_MINMAX(32)

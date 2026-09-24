@@ -24,9 +24,18 @@
 #ifndef UTIL_VEC_H_
 #define UTIL_VEC_H_
 
+/* final ptr func prototype */
+#define FINAL_SPEC(BITS) \
+	typedef void (*minmax_##BITS##_final_spec)(const int##BITS##_t *amin, const int##BITS##_t *amax, int##BITS##_t *pmin, int##BITS##_t *pmax, size_t sz, size_t stride)
+
+FINAL_SPEC(8);
+FINAL_SPEC(16);
+FINAL_SPEC(32);
+
 #define MINMAX_INTRINSICS_EX(EXTERN, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
 	__attribute__((__target__(#TARGET))) \
-	EXTERN void minmax_##BITS##_##NAME(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
+	EXTERN void minmax_##BITS##_##NAME(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride, \
+		minmax_##BITS##_final_spec final) \
 	{ \
 		size_t i; \
 	\
@@ -71,22 +80,16 @@
 			STORE((TYPE *)amin, vmin); \
 			STORE((TYPE *)amax, vmax); \
 \
-			for (i = 0; i < SIZE; i += stride) { \
-				if (amin[i] < *min) *min = amin[i]; \
-				if (amax[i] > *max) *max = amax[i]; \
-			} \
+			final(amin, amax, min, max, SIZE, stride); \
 		} \
 \
-		/* process the rest */ \
-		minmax_##BITS##_c(buf, len, min, max, stride); \
+		/* we can just reuse the same function */ \
+		final(buf, buf, min, max, len, stride); \
 	}
 
 #define MINMAX_INTRINSICS(TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
 	MINMAX_INTRINSICS_EX(static, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE)
 
-void minmax_8_c(const int8_t *buf, size_t len, int8_t *min, int8_t *max, size_t stride);
-void minmax_16_c(const int16_t *buf, size_t len, int16_t *min, int16_t *max, size_t stride);
-void minmax_32_c(const int32_t *buf, size_t len, int32_t *min, int32_t *max, size_t stride);
 void minmax_8_altivec(const int8_t *buf, size_t len, int8_t *min, int8_t *max, size_t stride);
 void minmax_16_altivec(const int16_t *buf, size_t len, int16_t *min, int16_t *max, size_t stride);
 

@@ -310,24 +310,6 @@ void mem_xor(void *vbuf, size_t len, unsigned char c)
  * for a 16-bit sample, SSE2 is about four times as fast as plain C.
  * AVX2 is about twice as fast as SSE2. */
 
-#define MINMAX_C(BITS) \
-	void minmax_##BITS##_c(const int##BITS##_t *data, size_t len, \
-		int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
-	{ \
-		size_t i; \
-	\
-		for (i = 0; i < len; i += stride) { \
-			if (data[i] < *min) *min = data[i]; \
-			if (data[i] > *max) *max = data[i]; \
-		} \
-	}
-
-MINMAX_C(8)
-MINMAX_C(16)
-MINMAX_C(32)
-
-#undef MINMAX_C
-
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0)
 
 # include "util-vec.h"
@@ -410,79 +392,123 @@ MINMAX_INTRINSICS(avx512bw, avx512bw, __m512i, 16, 32,
 # endif
 #endif
 
-void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
-	size_t stride)
+#define MINMAX_FINAL_DEFS(BITS) \
+	void minmax_##BITS##_final(const int##BITS##_t *amin, const int##BITS##_t *amax, int##BITS##_t *min, int##BITS##_t *max, size_t sz, size_t stride) \
+	{ \
+		size_t i; \
+	\
+		for (i = 0; i < sz; i += stride) { \
+			if (amin[i] < *min) *min = amin[i]; \
+			if (amax[i] > *max) *max = amax[i]; \
+		} \
+	} \
+	\
+	void minmax_##BITS##_final_arr(const int##BITS##_t *amin, const int##BITS##_t *amax, int##BITS##_t *min, int##BITS##_t *max, size_t sz, size_t stride) \
+	{ \
+		size_t i; \
+	\
+		/* process anything left over
+		 * TODO can probably do this faster if sz is a multiple of stride */ \
+		for (i = 0; ; i += stride, amin += stride, amax += stride) { \
+			size_t j; \
+			for (j = 0; j < stride; j++) { \
+				if ((i + j) >= sz) return; \
+	\
+				if (amin[j] < min[j]) min[j] = amin[j]; \
+				if (amax[j] > max[j]) max[j] = amax[j]; \
+			} \
+		} \
+	}
+
+MINMAX_FINAL_DEFS(8)
+MINMAX_FINAL_DEFS(16)
+MINMAX_FINAL_DEFS(32)
+
+static void minmax_8_p(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
+	size_t stride, minmax_8_final_spec final)
 {
 	/* NOTE: for stride > 2, plain C code is faster than avx2 or sse2. */
 #ifdef MINMAX_AVX512BW
 	if (cpu_has_feature(CPU_FEATURE_AVX512BW)) {
-		minmax_8_avx512bw(buf, len, min, max, stride);
+		minmax_8_avx512bw(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 #ifdef MINMAX_AVX2
 	if (cpu_has_feature(CPU_FEATURE_AVX2)) {
-		minmax_8_avx2(buf, len, min, max, stride);
+		minmax_8_avx2(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 #ifdef MINMAX_SSE41
 	if (cpu_has_feature(CPU_FEATURE_SSE41)) {
-		minmax_8_sse41(buf, len, min, max, stride);
+		minmax_8_sse41(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 #ifdef MINMAX_SSE2
 	if (cpu_has_feature(CPU_FEATURE_SSE2)) {
-		minmax_8_sse2(buf, len, min, max, stride);
+		minmax_8_sse2(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 #ifdef MINMAX_ALTIVEC
 	if (cpu_has_feature(CPU_FEATURE_ALTIVEC)) {
-		minmax_8_altivec(buf, len, min, max, stride);
+		minmax_8_altivec(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 
-	minmax_8_c(buf, len, min, max, stride);
+	final(buf, buf, min, max, len, stride);
 }
 
-void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
-	size_t stride)
+static void minmax_16_p(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
+	size_t stride, minmax_16_final_spec final)
 {
 	/* NOTE: for stride > 2, plain C code is faster than avx2 or sse2. */
 #ifdef MINMAX_AVX512BW
 	if (cpu_has_feature(CPU_FEATURE_AVX512BW)) {
-		minmax_16_avx512bw(buf, len, min, max, stride);
+		minmax_16_avx512bw(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 #ifdef MINMAX_AVX2
 	if (cpu_has_feature(CPU_FEATURE_AVX2)) {
-		minmax_16_avx2(buf, len, min, max, stride);
+		minmax_16_avx2(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 #ifdef MINMAX_SSE2
 	if (cpu_has_feature(CPU_FEATURE_SSE2)) {
-		minmax_16_sse2(buf, len, min, max, stride);
+		minmax_16_sse2(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 #ifdef MINMAX_ALTIVEC
 	if (cpu_has_feature(CPU_FEATURE_ALTIVEC)) {
-		minmax_16_altivec(buf, len, min, max, stride);
+		minmax_16_altivec(buf, len, min, max, stride, final);
 		return;
 	}
 #endif
 
-	minmax_16_c(buf, len, min, max, stride);
+	final(buf, buf, min, max, len, stride);
 }
 
-void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
-	size_t stride)
+static void minmax_32_p(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
+	size_t stride, minmax_32_final_spec final)
 {
 	/* TODO: vectorized versions. */
-	minmax_32_c(buf, len, min, max, stride);
+	final(buf, buf, min, max, len, stride);
 }
+
+#define MINMAX_TYPE(BITS, X) \
+	void minmax_##BITS##X(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride) \
+	{ \
+		minmax_##BITS##_p(buf, len, min, max, stride, minmax_##BITS##_final##X); \
+	}
+#define MINMAX_EE(X) \
+	MINMAX_TYPE(8, X) \
+	MINMAX_TYPE(16, X) \
+	MINMAX_TYPE(32, X)
+MINMAX_EE(/* nothing */)
+MINMAX_EE(_arr)

@@ -36,6 +36,7 @@
 #define result_to_exit_code(x) (x)
 #define exit_code_to_result(x) (x)
 
+/* NOTE: it would be cool to run tests async but that could break things */
 static int run_test(test_index_entry *entry)
 {
 	timer_ticks_t start_time, end_time;

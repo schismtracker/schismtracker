@@ -689,7 +689,8 @@ static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_
 
 	/* need to handle going backwards */
 	if (lenwhole < 0) {
-		buf -= lenwhole;
+		/* wew */
+		buf -= lenwhole * ((channel->flags & CHN_16BIT) ? 2 : 1);
 		buflen = -lenwhole;
 	} else {
 		buflen = lenwhole;
@@ -702,31 +703,27 @@ static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_
 		/* this was macroized because it got really long. so there are variable
 		 * names that don't make sense, "min16" is actually just BITS width. */
 #define DOIT(BITS) \
-	int##BITS##_t min16, max16; \
+	int##BITS##_t min16[2], max16[2]; \
 \
-	min16 = INT##BITS##_MAX; \
-	max16 = INT##BITS##_MIN; \
+	min16[0] = min16[1] = INT##BITS##_MAX; \
+	max16[0] = max16[1] = INT##BITS##_MIN; \
 \
 	buflen *= (BITS >> 3); \
 \
 	if (channel->flags & CHN_STEREO) { \
 		int##BITS##_t min16r, max16r; \
 \
-		min16r = INT##BITS##_MAX; \
-		max16r = INT##BITS##_MIN; \
+		minmax_##BITS##_arr((int##BITS##_t *)buf, buflen, min16, max16, 2); \
 \
-		minmax_##BITS((int##BITS##_t *)buf, buflen, &min16, &max16, 2); \
-		minmax_##BITS((int##BITS##_t *)buf+1, buflen, &min16r, &max16r, 2); \
-\
-		minl = min16 << (23 - BITS); \
-		maxl = min16 << (23 - BITS); \
-		maxr = max16r << (23 - BITS); \
-		minr = min16r << (23 - BITS); \
+		minl = min16[0] << (23 - BITS); \
+		maxl = min16[0] << (23 - BITS); \
+		maxr = max16[1] << (23 - BITS); \
+		minr = min16[1] << (23 - BITS); \
 	} else { \
-		minmax_##BITS((int##BITS##_t *)buf, buflen, &min16, &max16, 1); \
+		minmax_##BITS((int##BITS##_t *)buf, buflen, min16, max16, 1); \
 \
-		minl = minr = min16 << (23 - BITS); \
-		maxl = maxr = min16 << (23 - BITS); \
+		minl = minr = min16[0] << (23 - BITS); \
+		maxl = maxr = min16[0] << (23 - BITS); \
 	}
 
 		DOIT(16)
