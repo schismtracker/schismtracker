@@ -677,8 +677,8 @@ static int32_t get_sample_count(struct mix_loop_state *mls, song_voice_t *chan, 
 static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_smp_pos len)
 {
 	/* Try to fake VU meters */
-	int32_t min, max;
-	uint32_t umin, umax;
+	int32_t minl, maxl, minr, maxr;
+	uint32_t uminl, umaxl, uminr, umaxr, umax;
 	char *buf;
 	size_t buflen;
 	int32_t lenwhole;
@@ -695,49 +695,62 @@ static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_
 		buflen = lenwhole;
 	}
 
-	if (channel->flags & CHN_STEREO)
-		buflen <<= 1;
-
 	/* NOTE: This logic is wrong -- technically we need to apply it separately
 	 * for both stereo channels. This achieves the correct result most of the
 	 * time though, or something close enough, so I don't care. */
 	if (channel->flags & CHN_16BIT) {
-		int16_t min16, max16;
-
-		min16 = INT16_MAX;
-		max16 = INT16_MIN;
-
-		buflen <<= 1;
-
-		minmax_16((int16_t *)buf, buflen, &min16, &max16, 1);
-
-		/* convert to 23-bit -- this, combined with left volume
-		 * and right volume, will make a 32-bit result, which then
-		 * gets downscaled to 24-bit. */
-		min = min16 << 7;
-		max = max16 << 7;
-	} else {
-		int8_t min8, max8;
-
-		min8 = INT8_MAX;
-		max8 = INT8_MIN;
-
-		minmax_8((int8_t *)buf, buflen, &min8, &max8, 1);
-
-		min = min8 << 15;
-		max = max8 << 15;
+		/* this was macroized because it got really long. so there are variable
+		 * names that don't make sense, "min16" is actually just BITS width. */
+#define DOIT(BITS) \
+	int##BITS##_t min16, max16; \
+\
+	min16 = INT##BITS##_MAX; \
+	max16 = INT##BITS##_MIN; \
+\
+	buflen *= (BITS >> 3); \
+\
+	if (channel->flags & CHN_STEREO) { \
+		int##BITS##_t min16r, max16r; \
+\
+		min16r = INT##BITS##_MAX; \
+		max16r = INT##BITS##_MIN; \
+\
+		minmax_##BITS((int##BITS##_t *)buf, buflen, &min16, &max16, 2); \
+		minmax_##BITS((int##BITS##_t *)buf+1, buflen, &min16r, &max16r, 2); \
+\
+		minl = min16 << (23 - BITS); \
+		maxl = min16 << (23 - BITS); \
+		maxr = max16r << (23 - BITS); \
+		minr = min16r << (23 - BITS); \
+	} else { \
+		minmax_##BITS((int##BITS##_t *)buf, buflen, &min16, &max16, 1); \
+\
+		minl = minr = min16 << (23 - BITS); \
+		maxl = maxr = min16 << (23 - BITS); \
 	}
 
-	umin = babs32(min);
-	umax = babs32(max);
+		DOIT(16)
+	} else {
+		DOIT(8)
+	}
 
-	umax = MAX(umin, umax);
+	uminl = babs32(minl);
+	umaxl = babs32(maxl);
+	uminr = babs32(minr);
+	umaxr = babs32(maxr);
 
-	/* Cap to 23 bits */
-	umax = MIN(umax, 0x7FFFFF);
+	umaxl = MAX(uminl, umaxl);
+	umaxr = MAX(uminr, umaxr);
 
-	/* Apply volume */
-	umax *= channel->left_volume_new + channel->right_volume_new;
+	/* These are actually swapped */
+	umaxl *= channel->right_volume_new;
+	umaxr *= channel->left_volume_new;
+
+	umax = bavgu32(umaxl, umaxr);
+
+	/* Because our volume is from 0..256, there's a chance that a very loud sample could
+	 * cause overflow. Check whether the top bit is set, and saturate it if it is */
+	umax = (umax & 0x80000000) ? 0xFFFFFFFF : (umax << 1);
 
 	/* Shift it nice and neat into 24 bits, which is the intermediate
 	 * form until we shift it down to 8 bits later in the mixer */
