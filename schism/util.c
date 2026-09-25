@@ -310,6 +310,14 @@ void mem_xor(void *vbuf, size_t len, unsigned char c)
  * for a 16-bit sample, SSE2 is about four times as fast as plain C.
  * AVX2 is about twice as fast as SSE2. */
 
+/* final ptr func prototype */
+#define FINAL_SPEC(BITS) \
+	typedef void (*minmax_##BITS##_final_spec)(const int##BITS##_t *amin, const int##BITS##_t *amax, int##BITS##_t *pmin, int##BITS##_t *pmax, size_t sz, size_t stride)
+
+FINAL_SPEC(8);
+FINAL_SPEC(16);
+FINAL_SPEC(32);
+
 #if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0)
 
 # include "util-vec.h"

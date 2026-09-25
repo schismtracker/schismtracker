@@ -24,14 +24,6 @@
 #ifndef UTIL_VEC_H_
 #define UTIL_VEC_H_
 
-/* final ptr func prototype */
-#define FINAL_SPEC(BITS) \
-	typedef void (*minmax_##BITS##_final_spec)(const int##BITS##_t *amin, const int##BITS##_t *amax, int##BITS##_t *pmin, int##BITS##_t *pmax, size_t sz, size_t stride)
-
-FINAL_SPEC(8);
-FINAL_SPEC(16);
-FINAL_SPEC(32);
-
 #define MINMAX_INTRINSICS_EX(EXTERN, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
 	__attribute__((__target__(#TARGET))) \
 	EXTERN void minmax_##BITS##_##NAME(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride, \
