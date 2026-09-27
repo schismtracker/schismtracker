@@ -248,6 +248,51 @@ static void _vis_data_work(uint8_t *output, int16_t *input)
 	}
 }
 
+
+static void _vis_process(void);
+
+#define VIS_WORK_EX(SUFFIX, BITS, INLOOP) \
+	void vis_work_##BITS##SUFFIX(const int##BITS##_t *in, size_t samples) \
+	{ \
+		size_t i, j, k; \
+	\
+		if (!samples) { \
+			memset(current_fft_datal, 0, fft_size * sizeof(*current_fft_datal)); \
+			memset(current_fft_datar, 0, fft_size * sizeof(*current_fft_datar)); \
+		} else { \
+			for (i = 0; i < fft_size;) { \
+				for (k = j = 0; k < samples && i < fft_size; k++, i++) { \
+					INLOOP \
+				} \
+			} \
+	\
+			/* Fill any remaining FFT slots with zeroes */ \
+			for (; i < fft_size; i++) \
+				incomingl[i] = incomingr[i] = 0; \
+	\
+			_vis_data_work(current_fft_datal, incomingl); \
+			_vis_data_work(current_fft_datar, incomingr); \
+		} \
+		if (status.current_page == PAGE_WATERFALL) _vis_process(); \
+	}
+
+#define VIS_WORK(BITS) \
+	VIS_WORK_EX(s, BITS, { \
+		incomingl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+		incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+	}) \
+	\
+	VIS_WORK_EX(m, BITS, { \
+		incomingl[i] = incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
+	})
+
+VIS_WORK(32)
+VIS_WORK(16)
+VIS_WORK(8)
+
+#undef VIS_WORK
+#undef VIS_WORK_EX
+
 /* "chan" is either zero for all, or nonzero for a specific output channel */
 static inline SCHISM_ALWAYS_INLINE
 uint8_t _fft_get_value(uint32_t chan, uint32_t offset)
@@ -353,44 +398,6 @@ static void _vis_process(void)
 
 	status.flags |= NEED_UPDATE;
 }
-
-#define VIS_WORK_EX(SUFFIX, BITS, INLOOP) \
-	void vis_work_##BITS##SUFFIX(const int##BITS##_t *in, size_t samples) \
-	{ \
-		size_t i, j, k; \
-	\
-		if (!samples) { \
-			memset(current_fft_datal, 0, fft_size * sizeof(*current_fft_datal)); \
-			memset(current_fft_datar, 0, fft_size * sizeof(*current_fft_datar)); \
-		} else { \
-			for (i = 0; i < fft_size;) { \
-				for (k = j = 0; k < samples && i < fft_size; k++, i++) { \
-					INLOOP \
-				} \
-			} \
-	\
-			_vis_data_work(current_fft_datal, incomingl); \
-			_vis_data_work(current_fft_datar, incomingr); \
-		} \
-		if (status.current_page == PAGE_WATERFALL) _vis_process(); \
-	}
-
-#define VIS_WORK(BITS) \
-	VIS_WORK_EX(s, BITS, { \
-		incomingl[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
-		incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
-	}) \
-	\
-	VIS_WORK_EX(m, BITS, { \
-		incomingl[i] = incomingr[i] = rshift_signed(lshift_signed((int32_t)in[j], 32 - BITS), 16); j++; \
-	})
-
-VIS_WORK(32)
-VIS_WORK(16)
-VIS_WORK(8)
-
-#undef VIS_WORK
-#undef VIS_WORK_EX
 
 static void draw_screen(void)
 {
