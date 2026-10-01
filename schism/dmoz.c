@@ -1827,10 +1827,8 @@ int dmoz_worker(void)
 		int r;
 
 		/* Empty whatever comes out of the queue */
-		while (current_dmoz_filelist && ((r = pop_queue(current_dmoz_filelist->files[current_dmoz_file])) >= 0)) {
-			printf("%d\n", r);
+		while (current_dmoz_filelist && ((r = pop_queue(current_dmoz_filelist->files[current_dmoz_file])) >= 0))
 			handle_dmoz_ret(r);
-		}
 
 		/* Fill up any available spots for infograbbing */
 		fill_queue();
