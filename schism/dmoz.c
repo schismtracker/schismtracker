@@ -37,6 +37,7 @@
 #include "loadso.h"
 #include "mem.h"
 #include "str.h"
+#include "mt.h"
 
 #include "backend/dmoz.h"
 
@@ -1547,7 +1548,7 @@ static void allocate_more_dirs(dmoz_dirlist_t *dlist)
 	}
 }
 
-static void free_file(dmoz_file_t *file)
+static void free_file_stack(dmoz_file_t *file)
 {
 	if (!file)
 		return;
@@ -1566,6 +1567,11 @@ static void free_file(dmoz_file_t *file)
 			free(file->sample);
 		} */
 	}
+}
+
+static void free_file(dmoz_file_t *file)
+{
+	free_file_stack(file);
 	free(file);
 }
 
@@ -1609,22 +1615,112 @@ static int (*current_dmoz_filter)(dmoz_file_t *) = NULL;
 static int *current_dmoz_file_pointer = NULL;
 static void (*dmoz_worker_onmove)(void) = NULL;
 
-int dmoz_worker(void)
+#ifdef USE_THREADS
+/* Input/output queue, where the input and output type are the same */
+
+IOQ(file_queue, dmoz_file_t, dmoz_file_t)
+
+static struct ioq *queue;
+static mt_mutex_t *queue_mutex;
+static mt_thread_t *queue_process_thread;
+static volatile int queue_thread_die;
+
+/* Create a worker thread to handle all of the junk.
+ * This will stay idle until the semaphore is signaled... */
+static int worker_thread(SCHISM_UNUSED void *userdata)
 {
-	dmoz_file_t *nf;
+	while (!queue_thread_die) {
+		int r;
+		dmoz_file_t f;
 
-	if (!current_dmoz_filelist || !current_dmoz_filter)
-		return 0;
+		/* Why won't you let me die??
+		 * These functions SHOULDN'T modify global state... */
+		mt_mutex_lock(queue_mutex);
+		r = file_queue_pop_input(queue, &f);
+		mt_mutex_unlock(queue_mutex);
+		if (r < 0) {
+			/* FIXME use a semaphore */
+			timer_msleep(1);
+			continue;
+		}
 
-	if (current_dmoz_file >= current_dmoz_filelist->num_files) {
-		current_dmoz_filelist = NULL;
-		current_dmoz_filter = NULL;
-		if (dmoz_worker_onmove)
-			dmoz_worker_onmove();
-		return 0;
+		/* We abuse the type var to store whether we should delete */
+		if (!current_dmoz_filter(&f))
+			f.type |= TYPE_DELETE;
+
+		/* This part could fail if we use multiple threads, but
+		 * it is impossible FOR NOW because we only have one */
+		mt_mutex_lock(queue_mutex);
+		file_queue_push_output(queue, &f);
+		mt_mutex_unlock(queue_mutex);
 	}
 
-	if (!current_dmoz_filter(current_dmoz_filelist->files[ current_dmoz_file ])) {
+	return 0;
+}
+
+static size_t queue_base = 0;
+
+/* called from dmoz_worker, fills the global queue up as far as it can go */
+static void fill_queue(void)
+{
+	size_t i;
+
+	if (!current_dmoz_filelist)
+		return;
+
+	/* pipe all of them in (deep copy) */
+	mt_mutex_lock(queue_mutex);
+	for (; queue_base < current_dmoz_filelist->num_files; queue_base++) {
+		/* FIXME add a deep copy function */
+		dmoz_file_t f;
+		memcpy(&f, current_dmoz_filelist->files[queue_base], sizeof(f));
+		f.path = str_dup(f.path);
+		f.base = str_dup(f.base); /* couldn't this just be a ptr into path */
+		f.artist = f.artist ? str_dup(f.artist) : NULL;
+		f.title = f.title ? str_dup(f.title) : NULL;
+		f.smp_filename = f.smp_filename ? str_dup(f.smp_filename) : NULL;
+		if (file_queue_push_input(queue, &f) < 0)
+			break;
+	}
+	mt_mutex_unlock(queue_mutex);
+}
+
+static int pop_queue(dmoz_file_t *f)
+{
+	int r;
+	dmoz_file_t ff;
+
+	/* Grab from the output queue */
+	mt_mutex_lock(queue_mutex);
+	r = file_queue_pop_output(queue, &ff);
+	mt_mutex_unlock(queue_mutex);
+
+	if (r < 0)
+		return -1;
+
+	free_file_stack(f);
+	memcpy(f, &ff, sizeof(*f));
+
+	/* Using this flag */
+	return (f->type & TYPE_DELETE) ? 0 : 1;
+}
+#endif
+
+/* The filters are all quite resource heavy, as they are the ones that
+ * run the info grabbing (which opens files and reads etc).
+ *
+ * The idea is to separate all of this off the UI thread, and to do it
+ * relatively asynchronously, so the OS can better manage seeks. Of
+ * course this matters less with SSDs but HDDs are still in wide use.
+ *
+ * We can't do this on the main thread, because it accesses the dmoz
+ * list without any sync primitives. So this is the best we have for
+ * now. */
+static int handle_dmoz_ret(int r)
+{
+	if (!r) {
+		dmoz_file_t *nf;
+
 		if (current_dmoz_filelist->num_files == current_dmoz_file+1) {
 			current_dmoz_filelist->num_files--;
 			current_dmoz_filelist = NULL;
@@ -1655,7 +1751,97 @@ int dmoz_worker(void)
 	} else {
 		current_dmoz_file++;
 	}
+
 	return 1;
+}
+
+static void dmoz_queue_thread_init(void)
+{
+#ifdef USE_THREADS
+	queue = file_queue_alloc(1024);
+	if (!queue)
+		return;
+
+	/* We might already have some leftovers from last time */
+	if (!queue_mutex) queue_mutex = mt_mutex_create();
+
+	if (!queue_process_thread) {
+		/* Go! */
+		queue_thread_die = 0;
+		queue_process_thread = mt_thread_create(worker_thread, "dmoz filter thread", NULL);
+	}
+
+	queue_base = 0;
+
+	/* Give it some data why don't you!! */
+	if (queue_process_thread)
+		fill_queue();
+#endif
+}
+
+static void dmoz_queue_thread_cleanup(void)
+{
+#ifdef USE_THREADS
+	if (queue_process_thread) {
+		queue_thread_die = 1;
+
+		/* Kill it */
+		mt_thread_wait(queue_process_thread, NULL);
+		queue_process_thread = NULL;
+	}
+
+	if (queue_mutex) {
+		mt_mutex_delete(queue_mutex);
+		queue_mutex = NULL;
+	}
+
+	if (queue) {
+		/* Free any output we've collected ... */
+		dmoz_file_t f;
+		while (file_queue_pop_output(queue, &f) >= 0)
+			free_file_stack(&f);
+		ioq_free(queue);
+		queue = NULL;
+	}
+#endif
+}
+
+int dmoz_worker(void)
+{
+	if (!current_dmoz_filelist || !current_dmoz_filter) {
+		dmoz_queue_thread_cleanup();
+		return 0;
+	}
+
+	if (current_dmoz_file >= current_dmoz_filelist->num_files) {
+		current_dmoz_filelist = NULL;
+		current_dmoz_filter = NULL;
+		if (dmoz_worker_onmove)
+			dmoz_worker_onmove();
+		dmoz_queue_thread_cleanup();
+		return 0;
+	}
+
+#ifdef USE_THREADS
+	if (queue_process_thread) {
+		int r;
+
+		/* Empty whatever comes out of the queue */
+		while (current_dmoz_filelist && ((r = pop_queue(current_dmoz_filelist->files[current_dmoz_file])) >= 0)) {
+			printf("%d\n", r);
+			handle_dmoz_ret(r);
+		}
+
+		/* Fill up any available spots for infograbbing */
+		fill_queue();
+
+		/* Notify main that we don't want to be called again; we won't even do anything!! */
+		return 0;
+	} else
+#endif
+	{
+		return handle_dmoz_ret(current_dmoz_filter(current_dmoz_filelist->files[current_dmoz_file]));
+	}
 }
 
 
@@ -1663,11 +1849,16 @@ int dmoz_worker(void)
 so it can't generate error conditions. */
 void dmoz_filter_filelist(dmoz_filelist_t *flist, int (*grep)(dmoz_file_t *f), int *pointer, void (*fn)(void))
 {
+	/* Clean up any leftovers */
+	dmoz_queue_thread_cleanup();
+
 	current_dmoz_filelist = flist;
 	current_dmoz_filter = grep;
 	current_dmoz_file = 0;
 	current_dmoz_file_pointer = pointer;
 	dmoz_worker_onmove = fn;
+
+	dmoz_queue_thread_init();
 }
 
 /* TODO:
@@ -2397,6 +2588,9 @@ int dmoz_init(void)
 
 void dmoz_quit(void)
 {
+	/* cleanup after any queue thread */
+	dmoz_queue_thread_cleanup();
+
 	if (backend) {
 		backend->quit();
 		backend = NULL;

@@ -520,3 +520,147 @@ static void minmax_32_p(const int32_t *buf, size_t len, int32_t *min, int32_t *m
 	MINMAX_TYPE(32, X)
 MINMAX_EE(/* nothing */)
 MINMAX_EE(_arr)
+
+/* ------------------------------------------------------------------------ */
+/* Queue */
+
+struct queue {
+	size_t szof, start, end, size, alloc;
+	char data[SCHISM_FAM_SIZE];
+};
+
+/* Returns the size needed to allocate a queue. */
+static size_t queue_sizeof(size_t alloc, size_t szof)
+{
+	return sizeof(struct queue) + (alloc * szof);
+}
+
+static void queue_init(struct queue *q, size_t alloc, size_t szof)
+{
+	q->start = q->end = q->size = 0;
+	q->szof = szof;
+	q->alloc = alloc;
+}
+
+#if 0
+static struct queue *queue_alloc(size_t alloc, size_t szof)
+{
+	struct queue *q;
+
+	q = malloc(queue_sizeof(alloc, szof));
+	if (!q)
+		return NULL;
+
+	queue_init(q, alloc, szof);
+
+	return q;
+}
+
+static void queue_free(struct queue *q)
+{
+	free(q);
+}
+#endif
+
+static int queue_push(struct queue *q, const void *d)
+{
+	if (q->size == q->alloc)
+		return -1;
+
+	memcpy(q->data + (q->szof * q->end), d, q->szof);
+	q->end = (q->end + 1) % q->alloc;
+	q->size++;
+
+	return 0;
+}
+
+static int queue_pop(struct queue *q, void *d)
+{
+	if (!q->size)
+		return -1;
+
+	memcpy(d, q->data + (q->szof * q->start), q->szof);
+	q->start = (q->start + 1) % q->alloc;
+	q->size--;
+
+	return 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Generic input/output queue
+ *
+ * Done this way to explore possible optimization routes */
+
+struct ioq {
+	size_t outoff;
+	char data[SCHISM_FAM_SIZE];
+};
+
+static inline SCHISM_ALWAYS_INLINE
+struct queue *ioq_in(struct ioq *q)
+{
+	return (struct queue *)q->data;
+}
+
+static inline SCHISM_ALWAYS_INLINE
+struct queue *ioq_out(struct ioq *q)
+{
+	return (struct queue *)(q->data + q->outoff);
+}
+
+static inline SCHISM_ALWAYS_INLINE
+size_t nextmul(size_t x, size_t y)
+{
+	if (!(x % y)) return x;
+
+	return (x + y) - (x % y);
+}
+
+struct ioq *ioq_alloc(size_t alloc, size_t insizeof, size_t outsizeof)
+{
+	size_t inqsz, outqsz;
+	struct ioq *q;
+
+	inqsz = queue_sizeof(alloc, insizeof);
+	outqsz = queue_sizeof(alloc, outsizeof);
+
+	/* Round to nearest multiple so that its aligned.
+	 * This is nasty!! */
+	inqsz = nextmul(inqsz, sizeof(size_t));
+
+	q = malloc(sizeof(*q) + inqsz + outqsz);
+	if (!q)
+		return NULL;
+	q->outoff = inqsz;
+
+	queue_init(ioq_in(q), alloc, insizeof);
+	queue_init(ioq_out(q), alloc, outsizeof);
+
+	return q;
+}
+
+void ioq_free(struct ioq *q)
+{
+	/* simple! */
+	free(q);
+}
+
+int ioq_push_input(struct ioq *q, const void *d)
+{
+	return queue_push(ioq_in(q), d);
+}
+
+int ioq_pop_input(struct ioq *q, void *d)
+{
+	return queue_pop(ioq_in(q), d);
+}
+
+int ioq_push_output(struct ioq *q, const void *d)
+{
+	return queue_push(ioq_out(q), d);
+}
+
+int ioq_pop_output(struct ioq *q, void *d)
+{
+	return queue_pop(ioq_out(q), d);
+}
