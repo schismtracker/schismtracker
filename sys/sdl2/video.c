@@ -883,6 +883,9 @@ static void sdl2_video_show_cursor(int enabled)
 /* negative if unknown */
 static int sdl2_video_refresh_rate(float *r)
 {
+	if (r == NULL || !video.fullscreen)
+		return -1;
+
 	/* This can get nasty if the user has the window
 	 * in two, three, four monitors */
 	SDL_DisplayMode m;
