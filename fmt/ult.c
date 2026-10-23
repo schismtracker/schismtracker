@@ -314,9 +314,13 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	song->flags |= SONG_COMPATGXX | SONG_ITOLDEFFECTS;
 
 	nmsg = slurp_getc(fp);
+	if (nmsg == EOF)
+		return LOAD_FORMAT_ERROR;
 	read_lined_message(song->message, fp, nmsg * 32, 32);
 
 	nsmp = slurp_getc(fp);
+	if (nsmp == EOF || nsmp > MAX_SAMPLES)
+		return LOAD_FORMAT_ERROR;
 	for (n = 0, smp = song->samples + 1; n < nsmp; n++, smp++) {
 		if (!read_sample_ult(&usmp, fp, ver))
 			return LOAD_FORMAT_ERROR;
@@ -350,14 +354,21 @@ int fmt_ult_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 	}
 
 	// ult just so happens to use 255 for its end mark, so there's no need to fiddle with this
-	slurp_read(fp, song->orderlist, 256);
+	if (slurp_read(fp, song->orderlist, 256) != 256)
+		return LOAD_FORMAT_ERROR;
 
-	nchn = slurp_getc(fp) + 1;
-	npat = slurp_getc(fp) + 1;
+	nchn = slurp_getc(fp);
+	npat = slurp_getc(fp);
 
+	if (nchn == EOF || npat == EOF)
+		return LOAD_FORMAT_ERROR;
+
+	nchn++;
+	npat++;
 	if (nchn > 32 || npat > MAX_PATTERNS)
 		return LOAD_FORMAT_ERROR;
 
+	/* FIXME do more checks for slurp read failures, this is ridiculous */
 	if (ver >= 3) {
 		for (n = 0; n < nchn; n++)
 			song->channels[n].panning = ((slurp_getc(fp) & 0xf) << 2) + 2;
