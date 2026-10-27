@@ -307,6 +307,9 @@ select sample #0. (note: this is a hack to work around another hack) */
 #define KEYJAZZ_INST_FAKE -2
 int song_keydown(int samp, int ins, int note, int vol, int chan);
 int song_keyrecord(int samp, int ins, int note, int vol, int chan, int effect, int param);
+int song_instrument_map_fx(const song_instrument_t *ins, int note,
+		uint8_t *effect, uint8_t *param);
+int song_keyjazz_preview(int samp, int ins, int note, int vol, int chan);
 int song_keyup(int samp, int ins, int note);
 int song_keyup_channel(int samp, int ins, int note, int chan);
 
@@ -322,6 +325,10 @@ void song_single_step(int pattern, int row);
 
 /* see the enum above */
 enum song_mode song_get_mode(void);
+
+/* returns nonzero (once) if the player reached the natural end of the song
+   since the last call; used by the playlist for auto-advance */
+int song_check_natural_end(void);
 
 /* the time returned is in seconds */
 unsigned int song_get_current_time(void);

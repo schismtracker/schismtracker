@@ -38,6 +38,7 @@
 #include "mem.h"
 #include "str.h"
 #include "fakemem.h"
+#include "video.h"
 
 /* --------------------------------------------------------------------- */
 /* static in my attic */
@@ -50,6 +51,34 @@ static int dialog_f1_hack = 0;
 
 static struct widget widgets_samplelist[20];
 static const int vibrato_waveforms[] = { 15, 16, 17, 18, -1 };
+
+#define OFFSET_JAM_MAX 11
+#define OFFSET_JAM_PANEL_X1 54
+#define OFFSET_JAM_PANEL_Y1 31
+#define OFFSET_JAM_PANEL_X2 77
+#define OFFSET_JAM_PANEL_Y2 48
+#define OFFSET_JAM_LIST_Y0 (OFFSET_JAM_PANEL_Y1 + 3)
+static int offset_jam_active;
+static uint32_t offset_jam_pos[OFFSET_JAM_MAX];
+static int offset_jam_count;
+static int offset_jam_selected_row;
+static int offset_jam_hover_active;
+static uint32_t offset_jam_hover_pos;
+static int offset_jam_hover_ovl_x = -1;
+static struct widget offset_jam_saved_widgets[5];
+static int offset_jam_saved_tab_6;
+
+static const schism_scancode_t offset_jam_low_scancodes[OFFSET_JAM_MAX] = {
+	SCHISM_SCANCODE_Z, SCHISM_SCANCODE_S, SCHISM_SCANCODE_X, SCHISM_SCANCODE_D,
+	SCHISM_SCANCODE_C, SCHISM_SCANCODE_V, SCHISM_SCANCODE_G, SCHISM_SCANCODE_B,
+	SCHISM_SCANCODE_H, SCHISM_SCANCODE_N, SCHISM_SCANCODE_J,
+};
+static const schism_scancode_t offset_jam_high_scancodes[OFFSET_JAM_MAX] = {
+	SCHISM_SCANCODE_Q, SCHISM_SCANCODE_2, SCHISM_SCANCODE_W, SCHISM_SCANCODE_3,
+	SCHISM_SCANCODE_E, SCHISM_SCANCODE_R, SCHISM_SCANCODE_5, SCHISM_SCANCODE_T,
+	SCHISM_SCANCODE_6, SCHISM_SCANCODE_Y, SCHISM_SCANCODE_7,
+};
+SCHISM_NONSTRING static const char offset_jam_low_keys[] = "ZSXDCVGBHNJ";
 
 static int top_sample = 1;
 static int current_sample = 1;
@@ -69,6 +98,23 @@ static const char *const loop_states[] = { "Off", "On Forwards", "On Ping Pong",
 static int last_note = NOTE_MIDC;
 
 static int num_save_formats = 0;
+
+static void offset_jam_reset_list(void);
+static void offset_jam_toggle(void);
+static void offset_jam_host_dialog(void);
+static void offset_jam_exit(void);
+static void offset_jam_draw_list(void);
+static uint32_t offset_jam_quantize_pos(uint32_t pos);
+static int offset_jam_map_index_for_slot(int slot);
+static void offset_jam_widget_redraw(void);
+static int offset_jam_widget_handle_key(struct key_event *k);
+static void offset_jam_update_widget_geometry(void);
+static void offset_jam_clamp_selection(void);
+static void offset_jam_delete_selected(void);
+static void offset_jam_draw_waveform_marks(song_sample_t *sample);
+static void offset_jam_draw_hover_preview(song_sample_t *sample);
+static void offset_jam_draw_hover_text(void);
+static int offset_jam_handle_key(struct key_event *k);
 
 /* --------------------------------------------------------------------- */
 
@@ -150,6 +196,9 @@ void sample_set(int n)
 
 	if (current_sample == new_sample)
 		return;
+
+	if (offset_jam_active)
+		offset_jam_reset_list();
 
 	current_sample = new_sample;
 	sample_list_reposition();
@@ -235,6 +284,13 @@ static void sample_list_predraw_hook(void)
 	song_sample_t *sample;
 	int has_data;
 
+	if (offset_jam_active && selected_widget
+			&& *selected_widget >= 16 && *selected_widget <= 19)
+		widget_change_focus_to(15);
+
+	if (offset_jam_active)
+		offset_jam_update_widget_geometry();
+
 	sample = song_get_sample(current_sample);
 	has_data = (sample->data != NULL);
 
@@ -267,6 +323,7 @@ static void sample_list_predraw_hook(void)
 	widgets_samplelist[13].d.numentry.value = sample->sustain_start;
 	widgets_samplelist[14].d.numentry.value = sample->sustain_end;
 
+	if (!offset_jam_active) {
 	switch (sample->vib_type) {
 	case VIB_SINE:
 		widget_togglebutton_set(widgets_samplelist, 15, 0);
@@ -283,6 +340,7 @@ static void sample_list_predraw_hook(void)
 	}
 
 	widgets_samplelist[19].d.thumbbar.value = sample->vib_rate;
+	}
 
 	if (has_data) {
 		snprintf(buf, sizeof(buf), "%d bit%s",
@@ -296,6 +354,13 @@ static void sample_list_predraw_hook(void)
 	draw_text_len(str_from_num(0, sample->length, buf), 13, 64, 23, 2, 0);
 
 	draw_sample_data(&sample_image, sample);
+
+	if (offset_jam_active) {
+		offset_jam_draw_waveform_marks(sample);
+		offset_jam_draw_hover_preview(sample);
+		vgamem_ovl_apply(&sample_image);
+		offset_jam_draw_hover_text();
+	}
 }
 
 /* --------------------------------------------------------------------- */
@@ -1617,6 +1682,9 @@ static void sample_list_handle_alt_key(struct key_event * k)
 		/* hi virt */
 		txtsynth_dialog();
 		return;
+	case SCHISM_KEYSYM_j:
+		offset_jam_toggle();
+		return;
 	case SCHISM_KEYSYM_z:
 		{ // uguu~
 			void (*dlg)(void *) = (k->mod & SCHISM_KEYMOD_SHIFT)
@@ -1725,6 +1793,8 @@ static void sample_list_handle_key(struct key_event * k)
 		}
 		return;
 	default:
+		if (offset_jam_active && offset_jam_handle_key(k))
+			return;
 		if (k->mod & SCHISM_KEYMOD_ALT) {
 			if (k->state == KEY_RELEASE)
 				return;
@@ -1786,9 +1856,15 @@ static void sample_list_draw_const(void)
 	draw_box(36, 42, 53, 48, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(37, 45, 47, 47, BOX_THIN | BOX_INNER | BOX_INSET);
 	draw_box(54, 25, 77, 30, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_box(54, 31, 77, 41, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_box(54, 42, 77, 48, BOX_THIN | BOX_INNER | BOX_INSET);
-	draw_box(55, 45, 72, 47, BOX_THIN | BOX_INNER | BOX_INSET);
+	if (offset_jam_active) {
+		draw_box(OFFSET_JAM_PANEL_X1, OFFSET_JAM_PANEL_Y1,
+			OFFSET_JAM_PANEL_X2, OFFSET_JAM_PANEL_Y2,
+			BOX_THICK | BOX_INNER | BOX_INSET);
+	} else {
+		draw_box(54, 31, 77, 41, BOX_THIN | BOX_INNER | BOX_INSET);
+		draw_box(54, 42, 77, 48, BOX_THIN | BOX_INNER | BOX_INSET);
+		draw_box(55, 45, 72, 47, BOX_THIN | BOX_INNER | BOX_INSET);
+	}
 
 	draw_fill_chars(41, 30, 46, 30, DEFAULT_FG, 0);
 	draw_fill_chars(64, 13, 76, 23, DEFAULT_FG, 0);
@@ -1808,8 +1884,10 @@ static void sample_list_draw_const(void)
 	draw_text("SusLEnd", 56, 20, 0, 2);
 	draw_text("Quality", 56, 22, 0, 2);
 	draw_text("Length", 57, 23, 0, 2);
-	draw_text("Vibrato Waveform", 58, 33, 0, 2);
-	draw_text("Vibrato Rate", 60, 44, 0, 2);
+	if (!offset_jam_active) {
+		draw_text("Vibrato Waveform", 58, 33, 0, 2);
+		draw_text("Vibrato Rate", 60, 44, 0, 2);
+	}
 
 	for (n = 0; n < 13; n++)
 		draw_char(154, 64 + n, 21, 3, 0);
@@ -1918,6 +1996,552 @@ static void update_sample_loop_points(void)
 	song_unlock_audio();
 
 	status.flags |= NEED_UPDATE | SONG_NEEDS_SAVE;
+}
+
+static void offset_jam_reset_list(void)
+{
+	offset_jam_pos[0] = 0;
+	offset_jam_count = 1;
+	offset_jam_selected_row = 0;
+	offset_jam_hover_active = 0;
+	offset_jam_hover_ovl_x = -1;
+}
+
+static void offset_jam_clamp_selection(void)
+{
+	if (offset_jam_count < 1)
+		offset_jam_count = 1;
+	if (offset_jam_selected_row >= offset_jam_count)
+		offset_jam_selected_row = offset_jam_count - 1;
+	if (offset_jam_selected_row < 0)
+		offset_jam_selected_row = 0;
+}
+
+static void offset_jam_delete_selected(void)
+{
+	int i;
+
+	if (offset_jam_count <= 1) {
+		offset_jam_pos[0] = 0;
+		offset_jam_selected_row = 0;
+		status.flags |= NEED_UPDATE;
+		return;
+	}
+
+	for (i = offset_jam_selected_row; i < offset_jam_count - 1; i++)
+		offset_jam_pos[i] = offset_jam_pos[i + 1];
+	offset_jam_count--;
+	offset_jam_clamp_selection();
+	offset_jam_update_widget_geometry();
+	status.flags |= NEED_UPDATE;
+}
+
+static void offset_jam_update_widget_geometry(void)
+{
+	int h;
+
+	if (!offset_jam_active || widgets_samplelist[15].type != WIDGET_OTHER)
+		return;
+
+	h = offset_jam_count;
+	if (h > OFFSET_JAM_PANEL_Y2 - OFFSET_JAM_LIST_Y0)
+		h = OFFSET_JAM_PANEL_Y2 - OFFSET_JAM_LIST_Y0;
+	if (h < 1)
+		h = 1;
+
+	widgets_samplelist[15].x = OFFSET_JAM_PANEL_X1 + 1;
+	widgets_samplelist[15].y = OFFSET_JAM_LIST_Y0;
+	widgets_samplelist[15].width = OFFSET_JAM_PANEL_X2 - OFFSET_JAM_PANEL_X1 - 1;
+	widgets_samplelist[15].height = h;
+}
+
+static void offset_jam_set_vibrato_visible(int visible)
+{
+	int i, w;
+
+	if (visible) {
+		widgets_samplelist[6].next.tab = offset_jam_saved_tab_6;
+		for (i = 0; i < 5; i++) {
+			w = 15 + i;
+			widgets_samplelist[w] = offset_jam_saved_widgets[i];
+		}
+	} else {
+		for (i = 0; i < 5; i++) {
+			w = 15 + i;
+			offset_jam_saved_widgets[i] = widgets_samplelist[w];
+		}
+		offset_jam_saved_tab_6 = widgets_samplelist[6].next.tab;
+		widgets_samplelist[6].next.tab = 15;
+		widgets_samplelist[15].type = WIDGET_OTHER;
+		widgets_samplelist[15].next.up = 14;
+		widgets_samplelist[15].next.down = 5;
+		widgets_samplelist[15].next.tab = 5;
+		widgets_samplelist[15].d.other.handle_key = offset_jam_widget_handle_key;
+		widgets_samplelist[15].d.other.handle_text_input = NULL;
+		widgets_samplelist[15].d.other.redraw = offset_jam_widget_redraw;
+		offset_jam_update_widget_geometry();
+		for (i = 1; i < 5; i++) {
+			w = 15 + i;
+			widgets_samplelist[w].type = WIDGET_OTHER;
+			widgets_samplelist[w].d.other.handle_key = NULL;
+			widgets_samplelist[w].d.other.handle_text_input = NULL;
+			widgets_samplelist[w].d.other.redraw = NULL;
+			widgets_samplelist[w].width = 0;
+			widgets_samplelist[w].height = 0;
+		}
+	}
+}
+
+static void offset_jam_exit(void)
+{
+	offset_jam_active = 0;
+	offset_jam_hover_active = 0;
+	offset_jam_hover_ovl_x = -1;
+	offset_jam_set_vibrato_visible(1);
+	status.flags |= NEED_UPDATE;
+}
+
+static void offset_jam_toggle(void)
+{
+	if (offset_jam_active) {
+		offset_jam_host_dialog();
+		return;
+	}
+
+	offset_jam_active = 1;
+	offset_jam_reset_list();
+	offset_jam_set_vibrato_visible(0);
+	if (selected_widget && *selected_widget >= 16 && *selected_widget <= 19)
+		widget_change_focus_to(15);
+	status.flags |= NEED_UPDATE;
+}
+
+static void offset_jam_create_host_instrument(void)
+{
+	int ins, smp = current_sample;
+	int slot, map_idx;
+	uint8_t oxx;
+	song_instrument_t *ins_ptr;
+	song_sample_t *sample;
+
+	sample = song_get_sample(smp);
+	if (!sample || !sample->data) {
+		status_text_flash("Error: No sample loaded!");
+		return;
+	}
+
+	if (csf_instrument_is_empty(current_song->instruments[smp]))
+		ins = smp;
+	else if ((status.flags & CLASSIC_MODE)
+			|| !csf_instrument_is_empty(current_song->instruments[instrument_get_current()]))
+		ins = csf_first_blank_instrument(current_song, 0);
+	else
+		ins = instrument_get_current();
+
+	if (ins <= 0) {
+		status_text_flash("Error: No available Instruments!");
+		return;
+	}
+
+	song_init_instrument_from_sample(ins, smp);
+	ins_ptr = song_get_instrument(ins);
+	if (!ins_ptr)
+		return;
+
+	ins_ptr->flags |= INST_NOTE_FXMAP;
+	for (slot = 0; slot < 128; slot++) {
+		map_idx = offset_jam_map_index_for_slot(slot);
+		ins_ptr->sample_map[slot] = smp;
+		ins_ptr->note_map[slot] = NOTE_FIRST + (slot / 12) * 12;
+		if (map_idx < 0 || map_idx >= offset_jam_count) {
+			ins_ptr->effect_map[slot] = FX_NONE;
+			ins_ptr->param_map[slot] = 0;
+		} else {
+			oxx = (offset_jam_quantize_pos(offset_jam_pos[map_idx]) >> 8) & 0xFF;
+			if (oxx) {
+				ins_ptr->effect_map[slot] = FX_OFFSET;
+				ins_ptr->param_map[slot] = oxx;
+			} else {
+				ins_ptr->effect_map[slot] = FX_NONE;
+				ins_ptr->param_map[slot] = 0;
+			}
+		}
+	}
+
+	status.flags |= SONG_NEEDS_SAVE;
+	status_text_flash("Sample assigned to Instrument %d", ins);
+}
+
+static void offset_jam_create_host_ok(SCHISM_UNUSED void *ign)
+{
+	offset_jam_create_host_instrument();
+	offset_jam_exit();
+}
+
+static void offset_jam_create_host_no(SCHISM_UNUSED void *ign)
+{
+	offset_jam_exit();
+}
+
+static void offset_jam_host_dialog(void)
+{
+	if (!song_is_instrument_mode()) {
+		status_text_flash("Instrument mode required");
+		offset_jam_exit();
+		return;
+	}
+
+	dialog_create(DIALOG_YES_NO, "Create host instrument?",
+		offset_jam_create_host_ok, offset_jam_create_host_no,
+		sample_is_used_by_instrument(current_sample) ? 1 : 0, NULL);
+}
+
+/* Quantize to Oxx-only offsets (256-byte steps, param 0..0xFF). */
+static uint32_t offset_jam_quantize_pos(uint32_t pos)
+{
+	pos = (pos >> 8) << 8;
+	if (pos > 0xFF00)
+		pos = 0xFF00;
+	return pos;
+}
+
+/* C..A map to offset indices 0..9; A# unmapped; B -> offset index 10. */
+static int offset_jam_map_index_for_slot(int slot)
+{
+	static const int8_t semitone_to_offset[12] = {
+		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, 10
+	};
+
+	return semitone_to_offset[slot % 12];
+}
+
+static void offset_jam_draw_list(void)
+{
+	char buf[40];
+	int i, y, title_x, inner_w, fg, bg, selected;
+	uint32_t pos;
+	uint8_t oxx;
+
+	selected = (selected_widget && *selected_widget == 15);
+
+	draw_fill_chars(OFFSET_JAM_PANEL_X1 + 1, OFFSET_JAM_PANEL_Y1 + 1,
+		OFFSET_JAM_PANEL_X2 - 1, OFFSET_JAM_PANEL_Y2 - 1, DEFAULT_FG, 0);
+
+	inner_w = OFFSET_JAM_PANEL_X2 - OFFSET_JAM_PANEL_X1 - 1;
+	title_x = OFFSET_JAM_PANEL_X1 + 1 + (inner_w - 10) / 2;
+	draw_text("Offset Jam", title_x, OFFSET_JAM_PANEL_Y1 + 1, 6, 0);
+
+	offset_jam_clamp_selection();
+
+	for (i = 0; i < offset_jam_count; i++) {
+		y = OFFSET_JAM_LIST_Y0 + i;
+		if (y >= OFFSET_JAM_PANEL_Y2)
+			break;
+		pos = offset_jam_quantize_pos(offset_jam_pos[i]);
+		oxx = (pos >> 8) & 0xFF;
+		snprintf(buf, sizeof(buf), "%c O%02X (%u)",
+			offset_jam_low_keys[i], oxx, pos);
+		fg = 6;
+		bg = (selected && i == offset_jam_selected_row) ? 14 : 0;
+		draw_text_len(buf, inner_w, OFFSET_JAM_PANEL_X1 + 1, y, fg, bg);
+	}
+}
+
+static int offset_jam_widget_handle_key(struct key_event *k)
+{
+	int row;
+
+	if (k->state == KEY_RELEASE)
+		return 0;
+
+	if (k->mouse == MOUSE_CLICK) {
+		if (k->state != KEY_PRESS || k->mouse_button != MOUSE_BUTTON_LEFT)
+			return 0;
+		row = k->y - OFFSET_JAM_LIST_Y0;
+		if (row < 0 || row >= offset_jam_count)
+			return 0;
+		offset_jam_selected_row = row;
+		status.flags |= NEED_UPDATE;
+		return 1;
+	}
+
+	if (!NO_MODIFIER(k->mod))
+		return 0;
+
+	switch (k->sym) {
+	case SCHISM_KEYSYM_UP:
+		if (offset_jam_selected_row > 0) {
+			offset_jam_selected_row--;
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		return 0;
+	case SCHISM_KEYSYM_DOWN:
+		if (offset_jam_selected_row < offset_jam_count - 1) {
+			offset_jam_selected_row++;
+			status.flags |= NEED_UPDATE;
+			return 1;
+		}
+		return 0;
+	case SCHISM_KEYSYM_BACKSPACE:
+		offset_jam_delete_selected();
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static void offset_jam_widget_redraw(void)
+{
+	offset_jam_draw_list();
+}
+
+static uint32_t sample_waveform_pos_to_x(uint32_t pos, uint32_t length)
+{
+	if (length == 0 || sample_image.width <= 1)
+		return 0;
+	return pos * (sample_image.width - 1) / length;
+}
+
+static void offset_jam_draw_waveform_line(uint32_t pos, uint32_t length, int color)
+{
+	uint32_t x;
+	int y;
+
+	x = sample_waveform_pos_to_x(offset_jam_quantize_pos(pos), length);
+	if (x >= (uint32_t)sample_image.width)
+		return;
+
+	y = 0;
+	do {
+		vgamem_ovl_drawpixel(&sample_image, x, y, 0); y++;
+		vgamem_ovl_drawpixel(&sample_image, x, y, color); y++;
+		vgamem_ovl_drawpixel(&sample_image, x, y, color); y++;
+		vgamem_ovl_drawpixel(&sample_image, x, y, 0); y++;
+	} while (y < sample_image.height);
+}
+
+static void offset_jam_draw_waveform_marks(song_sample_t *sample)
+{
+	int i, c;
+
+	if (!offset_jam_active || !sample->length || !sample->data)
+		return;
+
+	c = (status.flags & CLASSIC_MODE) ? 13 : 6;
+
+	for (i = 0; i < offset_jam_count; i++)
+		offset_jam_draw_waveform_line(offset_jam_pos[i], sample->length, c);
+}
+
+static void offset_jam_draw_hover_preview(song_sample_t *sample)
+{
+	if (!offset_jam_hover_active || !sample->length || !sample->data)
+		return;
+
+	offset_jam_draw_waveform_line(offset_jam_hover_pos, sample->length, 15);
+}
+
+static void offset_jam_draw_hover_text(void)
+{
+	char buf[24];
+	uint8_t oxx;
+
+	if (!offset_jam_hover_active)
+		return;
+
+	oxx = (offset_jam_hover_pos >> 8) & 0xFF;
+	snprintf(buf, sizeof(buf), "O%02X (%u)", oxx, offset_jam_hover_pos);
+	draw_text(buf, sample_image.x1, sample_image.y1 - 1, 0, 2);
+}
+
+static void offset_jam_play_slot(int slot, int note, int vol)
+{
+	uint32_t effect_pos = offset_jam_quantize_pos(offset_jam_pos[slot]);
+	uint8_t oxx = (effect_pos >> 8) & 0xFF;
+
+	song_keyrecord(current_sample, KEYJAZZ_NOINST, note, vol,
+		KEYJAZZ_CHAN_CURRENT, FX_OFFSET, oxx);
+}
+
+static int offset_jam_lookup_slot(struct key_event *k, int *slot, int *high_row)
+{
+	int i;
+
+	if (k->mod & (SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_CTRL))
+		return 0;
+
+	for (i = 0; i < OFFSET_JAM_MAX; i++) {
+		if (k->scancode == offset_jam_low_scancodes[i]) {
+			*slot = i;
+			*high_row = 0;
+			return 1;
+		}
+		if (k->scancode == offset_jam_high_scancodes[i]) {
+			*slot = i;
+			*high_row = 1;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int offset_jam_note_for_row(int high_row)
+{
+	int octave = kbd_get_current_octave() - (high_row ? 1 : 0);
+
+	if (octave < 0)
+		return 0;
+	return 1 + 12 * octave;
+}
+
+static int offset_jam_handle_key(struct key_event *k)
+{
+	int slot, note, high_row, vol = KEYJAZZ_DEFAULTVOL;
+
+	if (k->midi_note > -1)
+		return 1;
+
+	if (!offset_jam_lookup_slot(k, &slot, &high_row))
+		return 0;
+
+	note = offset_jam_note_for_row(high_row);
+	if (note < 1)
+		return 1;
+
+	if (k->is_repeat)
+		return 1;
+
+	if (slot >= offset_jam_count)
+		return 1;
+
+	if (k->state == KEY_RELEASE) {
+		song_keyup(current_sample, KEYJAZZ_NOINST, note);
+	} else {
+		offset_jam_play_slot(slot, note, vol);
+		last_note = note;
+	}
+	return 1;
+}
+
+static int sample_waveform_in_bounds(struct key_event *k)
+{
+	return (k->x >= (int)sample_image.x1 && k->x <= (int)sample_image.x2
+		&& k->y >= (int)sample_image.y1 && k->y <= (int)sample_image.y2);
+}
+
+static int sample_waveform_in_bounds_fx(int fx, int fy, int rx, int ry)
+{
+	int x = fx / rx;
+	int y = fy / ry;
+
+	return (x >= (int)sample_image.x1 && x <= (int)sample_image.x2
+		&& y >= (int)sample_image.y1 && y <= (int)sample_image.y2);
+}
+
+static int sample_waveform_overlay_x_at(int fx, int rx, int *ovl_x)
+{
+	int x = fx - sample_image.x1 * rx;
+
+	if (x < 0)
+		x = 0;
+	if (x >= sample_image.width)
+		x = sample_image.width - 1;
+	*ovl_x = x;
+	return 1;
+}
+
+static int sample_waveform_mouse_x(struct key_event *k)
+{
+	int ovl_x;
+
+	sample_waveform_overlay_x_at(k->fx, k->rx, &ovl_x);
+	return ovl_x;
+}
+
+static uint32_t sample_waveform_x_to_pos(int x, uint32_t length)
+{
+	if (length <= 1 || sample_image.width <= 1)
+		return 0;
+	return (uint32_t)x * length / (sample_image.width - 1);
+}
+
+int sample_list_offset_jam_mouse_moved(void)
+{
+	song_sample_t *sample;
+	uint32_t mx, my, pos;
+	int rx, ry, ovl_x, hover_active;
+
+	if (!offset_jam_active || status.current_page != PAGE_SAMPLE_LIST)
+		return 0;
+
+	rx = sample_image.width / ((int)sample_image.x2 - (int)sample_image.x1 + 1);
+	ry = sample_image.height / ((int)sample_image.y2 - (int)sample_image.y1 + 1);
+	video_get_mouse_coordinates(&mx, &my);
+	hover_active = sample_waveform_in_bounds_fx(mx, my, rx, ry);
+
+	if (hover_active) {
+		sample = song_get_sample(current_sample);
+		if (!sample || !sample->data || (sample->flags & CHN_ADLIB))
+			hover_active = 0;
+		else {
+			sample_waveform_overlay_x_at(mx, rx, &ovl_x);
+			pos = offset_jam_quantize_pos(sample_waveform_x_to_pos(ovl_x, sample->length));
+			if (offset_jam_hover_active && offset_jam_hover_pos == pos
+					&& offset_jam_hover_ovl_x == ovl_x)
+				return 0;
+
+			offset_jam_hover_active = 1;
+			offset_jam_hover_pos = pos;
+			offset_jam_hover_ovl_x = ovl_x;
+			return 1;
+		}
+	}
+
+	if (!offset_jam_hover_active)
+		return 0;
+
+	offset_jam_hover_active = 0;
+	offset_jam_hover_ovl_x = -1;
+	return 1;
+}
+
+static int sample_waveform_handle_mouse(struct key_event *k)
+{
+	song_sample_t *sample;
+	uint32_t pos;
+	int ovl_x;
+
+	if (!offset_jam_active || k->mouse != MOUSE_CLICK)
+		return 0;
+
+	if (k->state != KEY_PRESS || k->mouse_button != MOUSE_BUTTON_LEFT)
+		return 0;
+
+	sample = song_get_sample(current_sample);
+	if (!sample || !sample->data || (sample->flags & CHN_ADLIB))
+		return 0;
+
+	if (!sample_waveform_in_bounds(k))
+		return 0;
+
+	if (offset_jam_count >= OFFSET_JAM_MAX)
+		return 1;
+
+	ovl_x = sample_waveform_mouse_x(k);
+	pos = offset_jam_quantize_pos(sample_waveform_x_to_pos(ovl_x, sample->length));
+	offset_jam_pos[offset_jam_count++] = pos;
+	offset_jam_selected_row = offset_jam_count - 1;
+	offset_jam_update_widget_geometry();
+	status.flags |= NEED_UPDATE;
+	return 1;
+}
+
+static int sample_list_pre_handle_key(struct key_event *k)
+{
+	if (offset_jam_active && sample_waveform_handle_mouse(k))
+		return 1;
+	return 0;
 }
 
 /* --------------------------------------------------------------------- */
@@ -2039,6 +2663,7 @@ void sample_list_load_page(struct page *page)
 	page->title = "Sample List (F3)";
 	page->draw_const = sample_list_draw_const;
 	page->predraw_hook = sample_list_predraw_hook;
+	page->pre_handle_key = sample_list_pre_handle_key;
 	page->handle_key = sample_list_handle_key;
 	page->set_page = sample_list_reposition;
 	page->total_widgets = 20;

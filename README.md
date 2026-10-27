@@ -41,3 +41,7 @@ for platform-specific instructions.
 ## Packaging status
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/schismtracker.svg)](https://repology.org/project/schismtracker/versions)
+```
+killall -9 schismtracker; make -j$(sysctl -n hw.ncpu) dist/SchismTracker.app; open dist/SchismTracker.app --args ~/trax/wipcopy.it
+./configure --enable-sdl2-linking --enable-flac-linking --without-sdl12 --without-sdl3
+```
