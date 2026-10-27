@@ -83,6 +83,8 @@
 |   S8x Set panning position
 |   S90 Disable surround sound
 |   S91 Enable surround sound
+|   S9C Global filter mode
+|   S9D Local filter mode
 |   S9E Play sample forwards
 |   S9F Play sample backwards
 |   SAy Set high value of sample offset yxx00h
