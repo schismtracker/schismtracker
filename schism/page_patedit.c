@@ -827,6 +827,8 @@ static int pattern_selection_system_paste(SCHISM_UNUSED int cb, const void *data
 		break;
 	}
 
+	status.flags |= NEED_UPDATE;
+
 	/* reset */
 	pattern_copyin_behavior = PATTERN_COPYIN_INVALID;
 
