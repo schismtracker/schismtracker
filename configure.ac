@@ -1200,8 +1200,12 @@ AC_DEFUN([SCHISM_CHECK_C11_ATOMICS], [
 		int main(int argc, char **argv)
 		{
 			_Atomic volatile int$1_t x;
+			int$1_t argc_ = argc;
+			int r;
 			atomic_store(&x, 0);
-			return atomic_fetch_add(&x, argc);
+			r |= atomic_fetch_add(&x, argc);
+			r |= atomic_compare_exchange_strong(&x, &argc_, 2);
+			return r;
 		}
 	], [HAVE_C11_$1_ATOMICS], [$1-bit C11 atomics support (atomic_fetch_add)], [C11 $1-bit])
 ])
@@ -1216,7 +1220,11 @@ AC_DEFUN([SCHISM_CHECK_GCC47_ATOMICS], [
 		int main(int argc, char **argv)
 		{
 			volatile int$1_t x = 0;
-			return __atomic_fetch_add(&x, argc, __ATOMIC_SEQ_CST);
+			int$1_t argc_ = argc;
+			int$1_t r = 0;
+			r |= __atomic_fetch_add(&x, argc, __ATOMIC_SEQ_CST);
+			r |= __atomic_compare_exchange(&x, &argc_, &r, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+			return r;
 		}
 	], [HAVE_GCC47_$1_ATOMICS], [$1-bit GCC 4.7 atomics support (__atomic_fetch_add)], [GCC 4.7 $1-bit])
 ])
@@ -1231,7 +1239,10 @@ AC_DEFUN([SCHISM_CHECK_GCC41_ATOMICS], [
 		int main(int argc, char **argv)
 		{
 			volatile int$1_t x = 0;
-			return __sync_fetch_and_add(&x, argc);
+			int r = 0;
+			r |= __sync_fetch_and_add(&x, argc);
+			r |= __sync_bool_compare_and_swap(&x, argc, 2);
+			return r;
 		}
 	], [HAVE_GCC41_$1_ATOMICS], [$1-bit GCC 4.1 atomics support (__sync_fetch_and_add)], [GCC 4.1 $1-bit])
 ])
