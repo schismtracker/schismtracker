@@ -226,7 +226,7 @@ GNUCATM(64, int64_t)
 # define ATM_WIN32(NAME, TYPE, WINTYPE) \
 	int atm_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
 	{ \
-		return InterlockedCompareExchange((volatile WINTYPE *)&atm->x, (WINTYPE)oldval, (WINTYPE)newval) == (WINTYPE)oldval; \
+		return InterlockedCompareExchange((volatile WINTYPE *)&atm->x, (WINTYPE)newval, (WINTYPE)oldval) == (WINTYPE)oldval; \
 	} \
 	\
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
