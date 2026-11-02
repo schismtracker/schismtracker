@@ -1239,6 +1239,26 @@ AC_DEFUN([SCHISM_CHECK_GCC41_ATOMICS], [
 SCHISM_CHECK_GCC41_ATOMICS([32])
 SCHISM_CHECK_GCC41_ATOMICS([64])
 
+# SCHISM_CHECK_WIN32_ATOMICS(SIZE)
+# --------------------------------
+AC_DEFUN([SCHISM_CHECK_WIN32_ATOMICS], [
+	SCHISM_CHECK_ATOMIC([WIN32_$1], [
+		#include <windows.h>
+
+		int main(int argc, char **argv)
+		{
+			volatile LONG$2 x = 0;
+			int r = 0;
+			r |= InterlockedCompareExchange$2(&x, 123, argc);
+			r |= InterlockedExchangeAdd$2(&x, 123);
+			return r;
+		}
+	], [HAVE_WIN32_$1_ATOMICS], [$1-bit Win32 atomics support (InterlockedCompareExchange)], [Win32 $1-bit])
+])
+
+SCHISM_CHECK_WIN32_ATOMICS([32], [])
+SCHISM_CHECK_WIN32_ATOMICS([64], [64])
+
 dnl --------------------------------------------------------------------------
 dnl check for a target. TARGET is what to pass to the compiler, and NAME is
 dnl what to append to SCHISM_ to #define
