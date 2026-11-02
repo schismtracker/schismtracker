@@ -1120,6 +1120,22 @@ AC_DEFUN([SCHISM_CHECK_COMPILE_FLAG], [
 	fi
 ])
 
+# SCHISM_CHECK_LINKER_FLAG(FLAG)
+# ------------------------------
+AC_DEFUN([SCHISM_CHECK_LINKER_FLAG], [
+	AC_MSG_CHECKING([for $1 support])
+	old_LDFLAGS="$LDFLAGS"
+	LDFLAGS="$LDFLAGS $1"
+	AC_LINK_IFELSE(
+		[AC_LANG_PROGRAM([[]], [[return 0;]])],
+		[have_linker_flag=yes],
+		[have_linker_flag=no])
+	AC_MSG_RESULT([$have_linker_flag])
+	if test "x$have_linker_flag" = "xno"; then
+		LDFLAGS="$old_LDFLAGS"
+	fi
+])
+
 dnl Make clang actually error on unknown flags, so we don't spam with
 dnl stupid errors that drown out real problems.
 SCHISM_CHECK_COMPILE_FLAG([-Werror=unknown-warning-option])
@@ -1150,6 +1166,11 @@ dnl feels even more jank than just casting the pointer type in the
 dnl first place.
 dnl
 dnl SCHISM_CHECK_COMPILE_FLAG([-Werror=cast-function-type])
+
+dnl Do not link libatomic by default when using atomic routines.
+dnl This allows us to check for linking errors below, so we can
+dnl use our own atomic implementation around mutexes.
+SCHISM_CHECK_LINKER_FLAG([-fno-link-libatomic])
 
 # SCHISM_CHECK_ATOMIC(NAME, PROGRAM, DEFINE, DEFINEDESC, USERFRIENDLYNAME)
 # ------------------------------------------------------------------------
