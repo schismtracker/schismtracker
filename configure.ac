@@ -273,6 +273,7 @@ AC_PROG_LN_S
 AC_PROG_MKDIR_P
 AC_PROG_FGREP
 AC_PROG_SED
+AC_CHECK_TOOL([OBJDUMP], [objdump])
 AC_CHECK_PROGS([SORT], [gsort sort], [false])
 AS_IF([! "$SORT" -V </dev/null >/dev/null], [AC_MSG_WARN([sort(1) that supports the -V option is required to find dynamic libraries])])
 
@@ -1183,7 +1184,18 @@ AC_DEFUN([SCHISM_CHECK_ATOMIC], [
 		#endif
 
 		$2
-	]])], [haveit=yes], [haveit=no])
+	]])], [
+		haveit=yes
+
+		# mingw-lite embeds -latomic into the default linker options
+		# because... reasons. SO we have to check after the fact whether
+		# it linked to libatomic or not, and punt if it is there. NASTY
+		if test "x$use_win32" = "xyes" && ! test "x$OBJDUMP" = "x"; then
+			if "$OBJDUMP" -p "conftest$EXEEXT" | grep 'DLL Name' | grep 'libatomic' >/dev/null 2>&1; then
+				haveit=no
+			fi
+		fi
+	], [haveit=no])
 	AC_MSG_RESULT([$haveit])
 
 	if test "x$haveit" = "xyes"; then
