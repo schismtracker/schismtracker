@@ -1588,7 +1588,11 @@ do { \
 	}
 #endif
 
-	if (!video_gl.pixel_buffer_object && !video_gl.framebuffer) {
+	if (
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+		!video_gl.pixel_buffer_object &&
+#endif
+		!video_gl.framebuffer) {
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 		if (video_gl.pixel_data_range) {
 			video_gl.framebuffer = video_gl.f.wglAllocateMemoryNV(
@@ -1702,7 +1706,7 @@ SCHISM_HOT void video_opengl_blit(void)
 		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
 			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
 			video_gl.format,
-			video_gl.type, 0);
+			video_gl.type, video_gl.framebuffer);
 	}
 
 	video_gl.f.glCallList(video_gl.displaylist);
