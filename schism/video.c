@@ -760,7 +760,16 @@ static void bgr32_fun_(unsigned int i, unsigned char rgb[3])
 
 static void gl_fun_(unsigned int i, unsigned char rgb[3])
 {
-	video.pal_opengl[i] = bgr32_fun_impl_(i, rgb);
+	/* We write into this as if it were an unsigned char, but
+	 * keeping it as a 32-bit integer otherwise. This means we
+	 * keep the alignment guarantees that vgamem_scanner32
+	 * relies on to Work */
+	unsigned char *x = (unsigned char *)(video.pal_opengl + i);
+
+	x[0] = rgb[0];
+	x[1] = rgb[1];
+	x[2] = rgb[2];
+	x[3] = 0xFF;
 }
 
 void video_colors(unsigned char palette[16][3])
@@ -1167,8 +1176,7 @@ typedef double GLclampd;
 typedef void GLvoid;
 
 /* hm? */
-#define GL_BGRA_EXT                       0x80E1
-#define GL_UNSIGNED_INT_8_8_8_8_REV       0x8367
+#define GL_RGBA 0x1908
 #define GL_COLOR_BUFFER_BIT			0x00004000
 #define GL_UNSIGNED_BYTE			0x1401
 #define GL_RGBA8				0x8058
@@ -1361,7 +1369,8 @@ static struct {
 #endif
 } video_gl = {0};
 
-static int32_t int32_log2(int32_t val) {
+static int32_t int32_log2(int32_t val)
+{
 	int32_t l = 0;
 	while ((val >>= 1) != 0)
 		l++;
@@ -1579,7 +1588,7 @@ do { \
 	video_opengl_reset_interpolation();
 
 	GL_ASSERT(video_gl.f.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
-		0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0));
+		0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
 
 	GL_ASSERT(video_gl.f.glClearColor(0.0, 0.0, 0.0, 1.0));
 	GL_ASSERT(video_gl.f.glClear(GL_COLOR_BUFFER_BIT));
@@ -1634,14 +1643,14 @@ SCHISM_HOT void video_opengl_blit(void)
 		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, video_gl.pbo);
 
 		fb = video_gl.f.glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-		video_blit11(4, fb, VIDEO_GL_PITCH, video.tc_bgr32);
+		video_blit11(4, fb, VIDEO_GL_PITCH, video.pal_opengl);
 		video_gl.f.glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 
 		video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
 		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
 			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-			GL_BGRA_EXT,
-			GL_UNSIGNED_INT_8_8_8_8_REV, 0);
+			GL_RGBA,
+			GL_UNSIGNED_BYTE, 0);
 
 		/* Unbind -- equally as important */
 		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -1652,13 +1661,13 @@ SCHISM_HOT void video_opengl_blit(void)
 			return;
 
 		/* we should probably be using RGBA and not BGRA */
-		video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video.tc_bgr32);
+		video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video.pal_opengl);
 
 		video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
 		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
 			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-			GL_BGRA_EXT,
-			GL_UNSIGNED_INT_8_8_8_8_REV,
+			GL_RGBA,
+			GL_UNSIGNED_BYTE,
 			video_gl.framebuffer);
 	}
 
