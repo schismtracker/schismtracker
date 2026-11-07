@@ -204,7 +204,7 @@ else
 endif
 
 if USE_THREADS
-files_mt = 
+files_mt =
 endif
 
 if USE_SDL3
@@ -616,6 +616,7 @@ schismtracker_SOURCES = \
 	fmt/edl.c			\
 	fmt/f2r.c			\
 	fmt/far.c			\
+	fmt/fnk.c			\
 	fmt/generic.c			\
 	fmt/imf.c			\
 	fmt/iff.c           \
