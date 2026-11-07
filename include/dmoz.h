@@ -56,6 +56,7 @@ enum {
 
 	TYPE_INTERNAL_FLAGS   = 0xF00000,
 	TYPE_HIDDEN           = 0x100000,
+	TYPE_DELETE           = 0x200000, /* Used in the filter as a temp bool value */
 };
 
 /* A brief description of the sort_order field:

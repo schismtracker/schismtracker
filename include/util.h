@@ -144,4 +144,29 @@ void minmax_16_arr(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
 void minmax_32_arr(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
 	size_t stride);
 
+/* I/O queue. The idea is that you have one input structure for each output
+ * structure.
+ *
+ * Note that the design here could be better -- we need a way to maintain
+ * the order of the input queue in the output queue. i.e., we should return
+ * a "cookie" from ioq_pop_input that will later be used to push into the
+ * output queue at the same spot. */
+struct ioq;
+
+struct ioq *ioq_alloc(size_t alloc, size_t insizeof, size_t outsizeof);
+void ioq_free(struct ioq *q);
+int ioq_push_input(struct ioq *q, const void *in);
+int ioq_pop_input(struct ioq *q, void *d);
+int ioq_push_output(struct ioq *q, const void *d);
+int ioq_pop_output(struct ioq *q, void *d);
+
+/* define an ioq with a specific type */
+#define IOQ(PREFIX, INTYPE, OUTTYPE) \
+	static inline SCHISM_ALWAYS_INLINE struct ioq *PREFIX##_alloc(size_t alloc) { return ioq_alloc(alloc, sizeof(INTYPE), sizeof(OUTTYPE)); } \
+	static inline SCHISM_ALWAYS_INLINE void PREFIX##_free(struct ioq *q) { return ioq_free(q); } \
+	static inline SCHISM_ALWAYS_INLINE int PREFIX##_push_input(struct ioq *q, const INTYPE *in) { return ioq_push_input(q, in); } \
+	static inline SCHISM_ALWAYS_INLINE int PREFIX##_pop_input(struct ioq *q, INTYPE *in) { return ioq_pop_input(q, in); } \
+	static inline SCHISM_ALWAYS_INLINE int PREFIX##_push_output(struct ioq *q, const OUTTYPE *out) { return ioq_push_output(q, out); } \
+	static inline SCHISM_ALWAYS_INLINE int PREFIX##_pop_output(struct ioq *q, OUTTYPE *out) { return ioq_pop_output(q, out); }
+
 #endif /* SCHISM_UTIL_H_ */
