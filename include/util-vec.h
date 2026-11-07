@@ -24,6 +24,11 @@
 #ifndef UTIL_VEC_H_
 #define UTIL_VEC_H_
 
+/* final ptr func prototypes (shared between util.c and util-altivec.c) */
+typedef void (*minmax_8_final_spec)(const int8_t *amin, const int8_t *amax, int8_t *pmin, int8_t *pmax, size_t sz, size_t stride);
+typedef void (*minmax_16_final_spec)(const int16_t *amin, const int16_t *amax, int16_t *pmin, int16_t *pmax, size_t sz, size_t stride);
+typedef void (*minmax_32_final_spec)(const int32_t *amin, const int32_t *amax, int32_t *pmin, int32_t *pmax, size_t sz, size_t stride);
+
 #define MINMAX_INTRINSICS_EX(EXTERN, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
 	__attribute__((__target__(#TARGET))) \
 	EXTERN void minmax_##BITS##_##NAME(const int##BITS##_t *buf, size_t len, int##BITS##_t *min, int##BITS##_t *max, size_t stride, \
@@ -82,8 +87,8 @@
 #define MINMAX_INTRINSICS(TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE) \
 	MINMAX_INTRINSICS_EX(static, TARGET, NAME, TYPE, BITS, SIZE, VARS, PREFIX, SUFFIX, PREPROCESS, SET1, LOADU, MIN, MAX, STORE)
 
-void minmax_8_altivec(const int8_t *buf, size_t len, int8_t *min, int8_t *max, size_t stride);
-void minmax_16_altivec(const int16_t *buf, size_t len, int16_t *min, int16_t *max, size_t stride);
+void minmax_8_altivec(const int8_t *buf, size_t len, int8_t *min, int8_t *max, size_t stride, minmax_8_final_spec final);
+void minmax_16_altivec(const int16_t *buf, size_t len, int16_t *min, int16_t *max, size_t stride, minmax_16_final_spec final);
 
 #endif
 
