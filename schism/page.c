@@ -836,6 +836,10 @@ static int handle_key_global(struct key_event * k)
 				status_text_flash("Order list locked");
 			else
 				status_text_flash("Order list unlocked");
+		} else if (k->mod & SCHISM_KEYMOD_SHIFT) {
+			_mp_finish(NULL);
+			if (k->state == KEY_PRESS)
+				set_page(PAGE_PLAYLIST);
 		} else {
 			break;
 		}
@@ -1651,6 +1655,7 @@ void load_pages(void)
 	config_load_page(pages + PAGE_CONFIG);
 	save_module_load_page(pages + PAGE_EXPORT_MODULE, 1);
 	timeinfo_load_page(pages + PAGE_TIME_INFORMATION);
+	playlist_load_page(pages + PAGE_PLAYLIST);
 
 	widgets = pages[PAGE_BLANK].widgets;
 	selected_widget = &(pages[PAGE_BLANK].selected_widget);

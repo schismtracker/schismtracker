@@ -562,9 +562,10 @@ int fmt_it_load_song(song_t *song, slurp_t *fp, uint32_t lflags)
 			slurp_seek(fp, para_ins[n], SEEK_SET);
 			inst = song->instruments[n + 1] = csf_allocate_instrument();
 			
-			if (hdr.cmwt >= 0x0200)
+			if (hdr.cmwt >= 0x0200) {
 				load_it_instrument(NULL, inst, fp);
-			else
+				load_it_instrument_fxext(inst, fp);
+			} else
 				load_it_instrument_old(inst, fp);
 		}
 

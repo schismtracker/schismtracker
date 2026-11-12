@@ -95,6 +95,7 @@
 #define ENV_PANCARRY            0x1000
 #define ENV_PITCHCARRY          0x2000
 #define ENV_MUTE                0x4000
+#define INST_NOTE_FXMAP         0x8000 /* instrument has persisted SCHX note FX map */
 
 #define FX_NONE                0 // .
 #define FX_ARPEGGIO            1 // J
@@ -499,6 +500,8 @@ typedef struct song_instrument {
 	uint32_t panning;
 	uint8_t sample_map[128];
 	uint8_t note_map[128];
+	uint8_t effect_map[128]; /* FX_* values, default FX_NONE (0) */
+	uint8_t param_map[128];  /* default 0 */
 	song_envelope_t vol_env;
 	song_envelope_t pan_env;
 	song_envelope_t pitch_env;
