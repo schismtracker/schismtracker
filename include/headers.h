@@ -55,6 +55,10 @@
 /* Mingw.org */
 # undef _NO_OLDNAMES
 # define _NO_OLDNAMES
+
+/* ehhh? */
+# include <sys/types.h>
+typedef _mode_t mode_t;
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -83,6 +87,10 @@
 #endif
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
+#endif
+
+#ifdef HAVE_STDBIT_H
+# include <stdbit.h> /* C23 */
 #endif
 
 #include <math.h>

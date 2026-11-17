@@ -123,11 +123,25 @@ int msgbox(int style, const char *title, const char *fmt, ...);
 /* fast XOR with a byte value */
 void mem_xor(void *vbuf, size_t len, unsigned char c);
 
+/* min and max point to only ONE item here */
 void minmax_8(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
 	size_t stride);
 void minmax_16(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
 	size_t stride);
 void minmax_32(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
+	size_t stride);
+
+/* array version of minmax functions, for these functions min and max are
+ * actually arrays of size `stride`.
+ *
+ * This will improve performance where the other channels are needed,
+ * because otherwise you would need `stride` iterations over the sample, which
+ * is expensive. */
+void minmax_8_arr(const int8_t *buf, size_t len, int8_t *min, int8_t *max,
+	size_t stride);
+void minmax_16_arr(const int16_t *buf, size_t len, int16_t *min, int16_t *max,
+	size_t stride);
+void minmax_32_arr(const int32_t *buf, size_t len, int32_t *min, int32_t *max,
 	size_t stride);
 
 #endif /* SCHISM_UTIL_H_ */

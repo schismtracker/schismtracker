@@ -226,7 +226,7 @@ GNUCATM(64, int64_t)
 # define ATM_WIN32(NAME, TYPE, WINTYPE) \
 	int atm_cmpxchg(struct atm##NAME *atm, TYPE oldval, TYPE newval) \
 	{ \
-		return InterlockedCompareExchange((volatile WINTYPE *)&atm->x, (WINTYPE)oldval, (WINTYPE)newval) == (WINTYPE)oldval; \
+		return InterlockedCompareExchange((volatile WINTYPE *)&atm->x, (WINTYPE)newval, (WINTYPE)oldval) == (WINTYPE)oldval; \
 	} \
 	\
 	TYPE atm##NAME##_load(struct atm##NAME *atm) \
@@ -244,13 +244,13 @@ GNUCATM(64, int64_t)
 		return InterlockedExchangeAdd((volatile WINTYPE *)&atm->x, x); \
 	}
 
-#if !defined(ATM_DEFINED)
+#if !defined(ATM_DEFINED) && defined(HAVE_WIN32_32_ATOMICS)
 SCHISM_STATIC_ASSERT(sizeof(LONG) == sizeof(int32_t), "LONG must be 32-bit");
 ATM_WIN32(/* nothing */, int32_t, LONG)
 # define ATM_DEFINED
 #endif
 
-#if !defined(ATM64_DEFINED)
+#if !defined(ATM64_DEFINED) && defined(HAVE_WIN32_64_ATOMICS)
 SCHISM_STATIC_ASSERT(sizeof(LONG64) == sizeof(int64_t), "LONGLONG must be 64-bit");
 ATM_WIN32(64, int64_t, LONG64)
 # define ATM64_DEFINED

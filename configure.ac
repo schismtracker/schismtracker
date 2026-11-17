@@ -273,6 +273,7 @@ AC_PROG_LN_S
 AC_PROG_MKDIR_P
 AC_PROG_FGREP
 AC_PROG_SED
+AC_CHECK_TOOL([OBJDUMP], [objdump])
 AC_CHECK_PROGS([SORT], [gsort sort], [false])
 AS_IF([! "$SORT" -V </dev/null >/dev/null], [AC_MSG_WARN([sort(1) that supports the -V option is required to find dynamic libraries])])
 
@@ -351,7 +352,7 @@ AM_CONDITIONAL([NEED_UNSETENV], [test "x$ac_cv_func_unsetenv" = "xno"])
 AM_CONDITIONAL([NEED_GETOPT], [test "x$ac_cv_func_getopt_long" = "xno"])
 
 dnl Headers, typedef crap, et al.
-AC_CHECK_HEADERS(assert.h alloca.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h tgmath.h sys/types.h sal.h)
+AC_CHECK_HEADERS(assert.h alloca.h dirent.h limits.h signal.h unistd.h sys/param.h sys/ioctl.h sys/socket.h sys/soundcard.h poll.h sys/poll.h linux/fb.h sys/kd.h stdint.h inttypes.h tgmath.h sys/types.h sal.h stdbit.h)
 
 AM_CONDITIONAL([USE_OSS], [false])
 if test "x$ac_cv_header_sys_soundcard_h" = "xyes"; then
@@ -387,6 +388,7 @@ AC_TYPE_SIZE_T
 AC_TYPE_MODE_T
 AC_TYPE_SSIZE_T
 AC_STRUCT_TM
+AC_STRUCT_ST_BLKSIZE
 
 dnl need size of void pointer
 AC_CHECK_SIZEOF([void *])
@@ -1119,6 +1121,22 @@ AC_DEFUN([SCHISM_CHECK_COMPILE_FLAG], [
 	fi
 ])
 
+# SCHISM_CHECK_LINKER_FLAG(FLAG)
+# ------------------------------
+AC_DEFUN([SCHISM_CHECK_LINKER_FLAG], [
+	AC_MSG_CHECKING([for $1 support])
+	old_LDFLAGS="$LDFLAGS"
+	LDFLAGS="$LDFLAGS $1"
+	AC_LINK_IFELSE(
+		[AC_LANG_PROGRAM([[]], [[return 0;]])],
+		[have_linker_flag=yes],
+		[have_linker_flag=no])
+	AC_MSG_RESULT([$have_linker_flag])
+	if test "x$have_linker_flag" = "xno"; then
+		LDFLAGS="$old_LDFLAGS"
+	fi
+])
+
 dnl Make clang actually error on unknown flags, so we don't spam with
 dnl stupid errors that drown out real problems.
 SCHISM_CHECK_COMPILE_FLAG([-Werror=unknown-warning-option])
@@ -1150,6 +1168,11 @@ dnl first place.
 dnl
 dnl SCHISM_CHECK_COMPILE_FLAG([-Werror=cast-function-type])
 
+dnl Do not link libatomic by default when using atomic routines.
+dnl This allows us to check for linking errors below, so we can
+dnl use our own atomic implementation around mutexes.
+SCHISM_CHECK_LINKER_FLAG([-fno-link-libatomic])
+
 # SCHISM_CHECK_ATOMIC(NAME, PROGRAM, DEFINE, DEFINEDESC, USERFRIENDLYNAME)
 # ------------------------------------------------------------------------
 AC_DEFUN([SCHISM_CHECK_ATOMIC], [
@@ -1161,7 +1184,18 @@ AC_DEFUN([SCHISM_CHECK_ATOMIC], [
 		#endif
 
 		$2
-	]])], [haveit=yes], [haveit=no])
+	]])], [
+		haveit=yes
+
+		# mingw-lite embeds -latomic into the default linker options
+		# because... reasons. SO we have to check after the fact whether
+		# it linked to libatomic or not, and punt if it is there. NASTY
+		if test "x$use_win32" = "xyes" && ! test "x$OBJDUMP" = "x"; then
+			if "$OBJDUMP" -p "conftest$EXEEXT" | grep 'DLL Name' | grep 'libatomic' >/dev/null 2>&1; then
+				haveit=no
+			fi
+		fi
+	], [haveit=no])
 	AC_MSG_RESULT([$haveit])
 
 	if test "x$haveit" = "xyes"; then
@@ -1178,8 +1212,12 @@ AC_DEFUN([SCHISM_CHECK_C11_ATOMICS], [
 		int main(int argc, char **argv)
 		{
 			_Atomic volatile int$1_t x;
+			int$1_t argc_ = argc;
+			int r;
 			atomic_store(&x, 0);
-			return atomic_fetch_add(&x, argc);
+			r |= atomic_fetch_add(&x, argc);
+			r |= atomic_compare_exchange_strong(&x, &argc_, 2);
+			return r;
 		}
 	], [HAVE_C11_$1_ATOMICS], [$1-bit C11 atomics support (atomic_fetch_add)], [C11 $1-bit])
 ])
@@ -1194,7 +1232,11 @@ AC_DEFUN([SCHISM_CHECK_GCC47_ATOMICS], [
 		int main(int argc, char **argv)
 		{
 			volatile int$1_t x = 0;
-			return __atomic_fetch_add(&x, argc, __ATOMIC_SEQ_CST);
+			int$1_t argc_ = argc;
+			int$1_t r = 0;
+			r |= __atomic_fetch_add(&x, argc, __ATOMIC_SEQ_CST);
+			r |= __atomic_compare_exchange(&x, &argc_, &r, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+			return r;
 		}
 	], [HAVE_GCC47_$1_ATOMICS], [$1-bit GCC 4.7 atomics support (__atomic_fetch_add)], [GCC 4.7 $1-bit])
 ])
@@ -1209,13 +1251,36 @@ AC_DEFUN([SCHISM_CHECK_GCC41_ATOMICS], [
 		int main(int argc, char **argv)
 		{
 			volatile int$1_t x = 0;
-			return __sync_fetch_and_add(&x, argc);
+			int r = 0;
+			r |= __sync_fetch_and_add(&x, argc);
+			r |= __sync_bool_compare_and_swap(&x, argc, 2);
+			return r;
 		}
 	], [HAVE_GCC41_$1_ATOMICS], [$1-bit GCC 4.1 atomics support (__sync_fetch_and_add)], [GCC 4.1 $1-bit])
 ])
 
 SCHISM_CHECK_GCC41_ATOMICS([32])
 SCHISM_CHECK_GCC41_ATOMICS([64])
+
+# SCHISM_CHECK_WIN32_ATOMICS(SIZE)
+# --------------------------------
+AC_DEFUN([SCHISM_CHECK_WIN32_ATOMICS], [
+	SCHISM_CHECK_ATOMIC([WIN32_$1], [
+		#include <windows.h>
+
+		int main(int argc, char **argv)
+		{
+			volatile LONG$2 x = 0;
+			int r = 0;
+			r |= InterlockedCompareExchange$2(&x, 123, argc);
+			r |= InterlockedExchangeAdd$2(&x, 123);
+			return r;
+		}
+	], [HAVE_WIN32_$1_ATOMICS], [$1-bit Win32 atomics support (InterlockedCompareExchange)], [Win32 $1-bit])
+])
+
+SCHISM_CHECK_WIN32_ATOMICS([32], [])
+SCHISM_CHECK_WIN32_ATOMICS([64], [64])
 
 dnl --------------------------------------------------------------------------
 dnl check for a target. TARGET is what to pass to the compiler, and NAME is

@@ -137,7 +137,6 @@ static inline uint64_t bswap_64_schism_internal_(uint64_t x)
 		);
 }
 # define bswap_64(x) bswap_64_schism_internal_(x)
-# define SCHISM_NEED_EXTERN_DEFINE_BSWAP_64
 #endif
 
 #ifndef bswap_32
@@ -152,7 +151,6 @@ static inline uint32_t bswap_32_schism_internal_(uint32_t x)
 		);
 }
 # define bswap_32(x) bswap_32_schism_internal_(x)
-# define SCHISM_NEED_EXTERN_DEFINE_BSWAP_32
 #endif
 
 #ifndef bswap_16
@@ -165,7 +163,6 @@ static inline uint16_t bswap_16_schism_internal_(uint16_t x)
 		);
 }
 # define bswap_16(x) bswap_16_schism_internal_(x)
-# define SCHISM_NEED_EXTERN_DEFINE_BSWAP_16
 #endif
 
 /* define the endian-related byte swapping (taken from libmodplug sndfile.h, glibc, and sdl) */
@@ -428,26 +425,40 @@ uint32_t bnextpow2(uint32_t x)
 }
 
 /* ------------------------------------------------------------------------ */
-/* fast 32-bit log2. */
+/* count leading zeroes */
 
 static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
-uint32_t blog2(uint32_t x)
+uint32_t bclz32(uint32_t x)
 {
 #if SCHISM_GNUC_HAS_BUILTIN(__builtin_clz, 3, 4, 6)
 	/* On x86, this optimizes to the bsr instruction, even as
 	 * far back as gcc 3.4.6, which also happens to be the earliest
 	 * compiler available on Compiler Explorer ;) */
-	return 31 - __builtin_clz(x);
+	return __builtin_clz(x);
+#elif defined(HAVE_STDBIT_H)
+	return stdc_leading_zeros(x);
 #else
-	/* Uh oh, slow! */
-	int n;
+	uint32_t r;
 
-	for (n = 31; n >= 0; n--)
-		if (x & (UINT32_C(1) << n))
-			return n;
+	/* removes an extra conditional from the inner for-loop */
+	if (!x) return 32;
 
-	return 0;
+	/* keep a count of the high bit */
+	for (r = 0; !(x & 0x80000000); x <<= 1, r++)
+		;
+
+	return r;
 #endif
+}
+
+/* ------------------------------------------------------------------------ */
+/* fast 32-bit log2. */
+
+/* easy! */
+static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
+uint32_t blog2(uint32_t x)
+{
+	return 31 - bclz32(x);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -456,8 +467,8 @@ uint32_t blog2(uint32_t x)
 static inline SCHISM_ALWAYS_INLINE SCHISM_CONST
 uint32_t breverse32(uint32_t x)
 {
-	x = (x & 0xFFFF0000) >> 16 | (x & 0x0000FFFF) << 16;
-	x = (x & 0xFF00FF00) >> 8  | (x & 0x00FF00FF) << 8;
+	/* Byteswap first */
+	x = bswap_32(x);
 	x = (x & 0xF0F0F0F0) >> 4  | (x & 0x0F0F0F0F) << 4;
 	x = (x & 0xCCCCCCCC) >> 2  | (x & 0x33333333) << 2;
 	x = (x & 0xAAAAAAAA) >> 1  | (x & 0x55555555) << 1;

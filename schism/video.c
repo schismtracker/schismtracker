@@ -760,7 +760,16 @@ static void bgr32_fun_(unsigned int i, unsigned char rgb[3])
 
 static void gl_fun_(unsigned int i, unsigned char rgb[3])
 {
-	video.pal_opengl[i] = bgr32_fun_impl_(i, rgb);
+	/* We write into this as if it were an unsigned char, but
+	 * keeping it as a 32-bit integer otherwise. This means we
+	 * keep the alignment guarantees that vgamem_scanner32
+	 * relies on to Work */
+	unsigned char *x = (unsigned char *)(video.pal_opengl + i);
+
+	x[0] = rgb[0];
+	x[1] = rgb[1];
+	x[2] = rgb[2];
+	x[3] = 0xFF;
 }
 
 void video_colors(unsigned char palette[16][3])
@@ -1169,6 +1178,7 @@ typedef void GLvoid;
 /* hm? */
 #define GL_BGRA_EXT                       0x80E1
 #define GL_UNSIGNED_INT_8_8_8_8_REV       0x8367
+#define GL_RGBA 0x1908
 #define GL_COLOR_BUFFER_BIT			0x00004000
 #define GL_UNSIGNED_BYTE			0x1401
 #define GL_RGBA8				0x8058
@@ -1351,6 +1361,15 @@ static struct {
 	GLuint displaylist;
 	GLint max_texture_size;
 
+	/* OpenGL version */
+	uint32_t major, minor;
+#define SCHISM_OPENGL_ATLEAST(maj, min) \
+	SCHISM_SEMVER_ATLEAST(maj, min, 0, video_gl.major, video_gl.minor, 0)
+
+	/* These are filled in when the OpenGL version is grabbed */
+	uint32_t *pal;
+	GLenum format, type;
+
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	unsigned int pixel_data_range : 1;
 #endif
@@ -1361,7 +1380,8 @@ static struct {
 #endif
 } video_gl = {0};
 
-static int32_t int32_log2(int32_t val) {
+static int32_t int32_log2(int32_t val)
+{
 	int32_t l = 0;
 	while ((val >>= 1) != 0)
 		l++;
@@ -1480,6 +1500,7 @@ int video_opengl_setup(uint32_t w, uint32_t h,
 	GLfloat tex_width, tex_height;
 	GLsizei texsize;
 	uint32_t x, y;
+	const GLubyte *str;
 
 #define GL_ASSERT(X) \
 do { \
@@ -1504,6 +1525,29 @@ do { \
 
 	if (video_opengl_reload_funcs(&video_gl.f, video_gl.function_load) < 0)
 		return 0;
+
+	str = video_gl.f.glGetString(GL_VERSION);
+	/* Parse OpenGL version */
+	if (str) {
+		if (sscanf(str, "%" SCNu32 ".%" SCNu32, &video_gl.major, &video_gl.minor) != 2)
+			return 0;
+	} else {
+		/* Assume OpenGL 1.0 */
+		video_gl.major = 1;
+		video_gl.minor = 0;
+	}
+
+	if (SCHISM_OPENGL_ATLEAST(1, 2)) {
+		/* Use BGRA and 32-bit unsigned integer format */
+		video_gl.pal = video.tc_bgr32;
+		video_gl.format = GL_BGRA_EXT;
+		video_gl.type = GL_UNSIGNED_INT_8_8_8_8_REV;
+	} else {
+		/* Otherwise do array RGBA (slow..) */
+		video_gl.pal = video.pal_opengl;
+		video_gl.format = GL_RGBA;
+		video_gl.type = GL_UNSIGNED_BYTE;
+	}
 
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 	/* check if nvidia pixel data crap is supported */
@@ -1544,7 +1588,11 @@ do { \
 	}
 #endif
 
-	if (!video_gl.pixel_buffer_object && !video_gl.framebuffer) {
+	if (
+#ifdef SCHISM_GL_EXT_PIXEL_BUFFER_OBJECT
+		!video_gl.pixel_buffer_object &&
+#endif
+		!video_gl.framebuffer) {
 #ifdef SCHISM_NVIDIA_PIXELDATARANGE
 		if (video_gl.pixel_data_range) {
 			video_gl.framebuffer = video_gl.f.wglAllocateMemoryNV(
@@ -1579,7 +1627,7 @@ do { \
 	video_opengl_reset_interpolation();
 
 	GL_ASSERT(video_gl.f.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texsize, texsize,
-		0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, 0));
+		0, GL_RGBA, GL_UNSIGNED_BYTE, 0));
 
 	GL_ASSERT(video_gl.f.glClearColor(0.0, 0.0, 0.0, 1.0));
 	GL_ASSERT(video_gl.f.glClear(GL_COLOR_BUFFER_BIT));
@@ -1634,14 +1682,14 @@ SCHISM_HOT void video_opengl_blit(void)
 		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, video_gl.pbo);
 
 		fb = video_gl.f.glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-		video_blit11(4, fb, VIDEO_GL_PITCH, video.tc_bgr32);
+		video_blit11(4, fb, VIDEO_GL_PITCH, video_gl.pal);
 		video_gl.f.glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 
 		video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
 		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
 			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-			GL_BGRA_EXT,
-			GL_UNSIGNED_INT_8_8_8_8_REV, 0);
+			video_gl.format,
+			video_gl.type, 0);
 
 		/* Unbind -- equally as important */
 		video_gl.f.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -1652,14 +1700,13 @@ SCHISM_HOT void video_opengl_blit(void)
 			return;
 
 		/* we should probably be using RGBA and not BGRA */
-		video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video.tc_bgr32);
+		video_blit11(4, video_gl.framebuffer, VIDEO_GL_PITCH, video_gl.pal);
 
 		video_gl.f.glBindTexture(GL_TEXTURE_2D, video_gl.texture);
 		video_gl.f.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
 			NATIVE_SCREEN_WIDTH, NATIVE_SCREEN_HEIGHT,
-			GL_BGRA_EXT,
-			GL_UNSIGNED_INT_8_8_8_8_REV,
-			video_gl.framebuffer);
+			video_gl.format,
+			video_gl.type, video_gl.framebuffer);
 	}
 
 	video_gl.f.glCallList(video_gl.displaylist);

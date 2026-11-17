@@ -195,6 +195,9 @@ TEST_FUNC(test_song_get_pattern_offset_song_LAST)
 TEST_FUNC(test_song_get_pattern_offset_past_end_of_song)
 
 TEST_FUNC(test_mem_xor)
+TEST_FUNC(test_minmax_8)
+TEST_FUNC(test_minmax_16)
+TEST_FUNC(test_minmax_32)
 
 TEST_FUNC(test_disko_mem)
 

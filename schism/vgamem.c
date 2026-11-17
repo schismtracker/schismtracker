@@ -756,48 +756,65 @@ void draw_vu_meter(int x, int y, int width, int val, int color, int peak)
  * input channels = number of channels in data
 */
 
-/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug */
+/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug
+ *
+ * This may seem a bit ass-backwards at first, but this implementation allows us
+ * to do only one interation over the sample data instead of multiple, which improves
+ * performance quite a lot... */
 #define DRAW_SAMPLE_DATA_VARIANT(bits, doublebits) \
 	static void _draw_sample_data_##bits(struct vgamem_overlay *r, \
 		int##bits##_t *data, uint32_t length, unsigned int inputchans, unsigned int outputchans) \
 	{ \
 		const int32_t nh = r->height / outputchans; \
-		int32_t np = r->height - nh / 2; \
-		uint32_t cc; \
 		uint64_t step; \
+		/* the cost of this alloc should be negligible if the sample is huge,
+		 * and when the sample is small the difference shouldn't even be noticeable */ \
+		SCHISM_VLA_ALLOC(int##bits##_t, minmaxalloc, inputchans*2); \
+		int##bits##_t *min = minmaxalloc; \
+		int##bits##_t *max = minmaxalloc + inputchans; \
+		int x; \
+		uint64_t poshi = 0, poslo = 0; \
 	\
 		length /= inputchans; \
 		step = ((uint64_t)length << 32) / r->width; \
 	\
-		for (cc = 0; cc < outputchans; cc++) { \
-			int x; \
-			uint64_t poshi = 0, poslo = 0; \
-	\
-			for (x = 0; x < r->width; x++) { \
-				uint32_t scanlength; \
-				int##bits##_t min = INT##bits##_MAX, max = INT##bits##_MIN; \
-	\
-				poslo += step; \
-				scanlength = ((poslo + UINT32_C(0xFFFFFFFF)) >> 32); \
-				if (poshi >= length) poshi = length - 1; \
-				if (poshi + scanlength > length) scanlength = length - poshi; \
-				scanlength = MAX(scanlength, 1); \
-	\
-				/* FIXME: this is wrong for outputting mono from stereo (only accounts for left channel) */ \
-				minmax_##bits(data + (poshi * inputchans) + (cc % inputchans), scanlength * inputchans, &min, &max, inputchans); \
+		for (x = 0; x < r->width; x++) { \
+			uint32_t scanlength; \
+			size_t ic; \
+			uint32_t cc; \
+\
+			poslo += step; \
+			scanlength = ((poslo + UINT32_C(0xFFFFFFFF)) >> 32); \
+			if (poshi >= length) poshi = length - 1; \
+			if (poshi + scanlength > length) scanlength = length - poshi; \
+			scanlength = MAX(scanlength, 1); \
+\
+			/* Reset all the values */ \
+			for (ic = 0; ic < inputchans; ic++) { \
+				min[ic] = INT##bits##_MAX; \
+				max[ic] = INT##bits##_MIN; \
+			} \
+\
+			minmax_##bits##_arr(data + (poshi * inputchans), scanlength * inputchans, min, max, inputchans); \
+\
+			for (cc = 0; cc < outputchans; cc++) { \
+				/* FIXME: should figure out how to compact channels */ \
+				int32_t mi, ma; \
+				uint32_t icc = cc % inputchans; \
+				int32_t np = r->height - (nh / 2) - (nh * cc); \
 	\
 				/* BUT IT'S WEB SCALE! */ \
-				min = rshift_signed((int##doublebits##_t)min * nh, bits); \
-				max = rshift_signed((int##doublebits##_t)max * nh, bits); \
+				mi = rshift_signed((int##doublebits##_t)min[icc] * nh, bits); \
+				ma = rshift_signed((int##doublebits##_t)max[icc] * nh, bits); \
 	\
-				vgamem_ovl_drawline(r, x, np - 1 - max, x, np - 1 - min, SAMPLE_DATA_COLOR); \
-	\
-				poshi += (poslo >> 32); \
-				poslo &= UINT32_C(0xFFFFFFFF); \
+				vgamem_ovl_drawline(r, x, np - 1 - ma, x, np - 1 - mi, SAMPLE_DATA_COLOR); \
 			} \
-	\
-			np -= nh; \
+\
+			poshi += (poslo >> 32); \
+			poslo &= UINT32_C(0xFFFFFFFF); \
 		} \
+	\
+		SCHISM_VLA_FREE(minmaxalloc); \
 	}
 
 DRAW_SAMPLE_DATA_VARIANT(8, 16)

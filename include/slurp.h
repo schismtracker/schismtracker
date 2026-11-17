@@ -26,6 +26,11 @@
 
 #include "headers.h"
 
+/* toggle this to buffer anything coming out of slurp()
+ * this DOES NOT get applied to any of the "wrap" functions, such as
+ * slurp_memstream() or slurp_stdio(). */
+#define SLURP_BUFFERED 1
+
 /* --------------------------------------------------------------------- */
 
 enum {
@@ -126,6 +131,19 @@ struct slurp_struct_ {
 		struct {
 			void *handle;
 		} win32;
+
+#ifdef SLURP_BUFFERED
+		struct {
+			char *bufptr;
+			size_t bufcnt;
+			char *buf;
+			size_t bufsz;
+
+			int64_t off;
+
+			slurp_t *fp;
+		} buffered;
+#endif
 	} internal;
 };
 
