@@ -71,6 +71,7 @@ ffs... "if"?!) Still, it's better than STM. The only reason this is first is bec
 SCRM magic lies within the 669 message field, and the 669 check is much more complex (and thus more likely
 to be right). */
 READ_INFO(669) LOAD_SONG(669)
+READ_INFO(fnk) LOAD_SONG(fnk)
 
 /* Since so many programs have added noncompatible extensions to the mod format, there are about 30 strings to
 compare against for the magic. Also, there are special cases for WOW files, which even share the same magic
