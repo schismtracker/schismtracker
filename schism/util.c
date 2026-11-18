@@ -310,9 +310,9 @@ void mem_xor(void *vbuf, size_t len, unsigned char c)
  * for a 16-bit sample, SSE2 is about four times as fast as plain C.
  * AVX2 is about twice as fast as SSE2. */
 
-#if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0)
+#include "util-vec.h"
 
-# include "util-vec.h"
+#if SCHISM_GNUC_HAS_ATTRIBUTE(__target__, 4, 4, 0)
 
 # if (defined(__x86_64__) || defined(__i386__)) && !defined(SCHISM_XBOX) /* XBOX is buggy for some reason */
 #  include <immintrin.h>
