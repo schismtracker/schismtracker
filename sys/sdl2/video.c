@@ -890,6 +890,10 @@ static int sdl2_video_refresh_rate(float *r)
 	if (sdl2_GetWindowDisplayMode(video.window, &m) < 0)
 		return -1;
 
+	/* like SDL 3, this is 0 if refresh rate is unknown */
+	if (!m.refresh_rate)
+		return -1;
+
 	*r = m.refresh_rate;
 	return 0;
 }
