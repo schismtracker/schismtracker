@@ -28,7 +28,7 @@ on:
 
 jobs:
   osx:
-    runs-on: macos-14
+    runs-on: macos-26
     env:
       SDL_VERSION: 2.32.10
       SDL_SHA256: 5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165
@@ -129,10 +129,12 @@ jobs:
           curl -L "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.5/MacOSX10.5.tar.bz2" | tar -xvf - -C "$HOME/ppc/SDKs"
           popd
 
-      - name: 'Install PowerPC cross compile binaries into Xcode'
+      - name: 'Install PowerPC cross compile binaries'
         run: |
-          mkdir "$(xcrun xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc"
-          cp "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "$(xcrun xcode-select --print-path)/Toolchains/XcodeDefault.xctoolchain/usr/libexec/as/ppc/as"
+          # Annoying, thanks ioi for this
+          mkdir -p "$RUNNER_TEMP/ppc-bin"
+          ln -sf "$HOME/ppc/usr/libexec/gcc/darwin/ppc/as" "$RUNNER_TEMP/ppc-bin/as"
+          ln -sf "$HOME/ppc/usr/bin/ld" "$RUNNER_TEMP/ppc-bin/as"
 
       - name: 'Checkout'
         uses: actions/checkout@v4
@@ -213,7 +215,7 @@ jobs:
           export PATH="$PATH:$HOME/ppc/usr/bin"
           mkdir build_powerpc
           cd build_powerpc
-          ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix"
+          ../configure CC="powerpc-apple-darwin10-gcc-4.2.1 -B$RUNNER_TEMP/ppc-bin/ -mcpu=G3" CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" || cat config.log
           make
           make install
           popd
@@ -261,7 +263,7 @@ jobs:
           export PATH="$PATH:$HOME/ppc/usr/bin"
           mkdir build_powerpc
           cd build_powerpc
-          ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples
+          ../configure CC="powerpc-apple-darwin10-gcc-4.2.1 -B$RUNNER_TEMP/ppc-bin/ -mcpu=G3" CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --disable-cpplibs --disable-programs --disable-examples
           make
           make install
           popd
@@ -304,7 +306,7 @@ jobs:
           pushd utf8proc-$UTF8PROC_VERSION
           patch -p1 < ../.github/patches/utf8proc/2-fix-prefix.patch
           export PATH="$PATH:$HOME/ppc/usr/bin"
-          make CC=powerpc-apple-darwin10-gcc-4.2.1 CFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4 -O2" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk"
+          make CC="powerpc-apple-darwin10-gcc-4.2.1 -B$RUNNER_TEMP/ppc-bin/ -mcpu=G3" CFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4 -O2" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib -L$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk"
           make install
           patch -p1 -R < ../.github/patches/utf8proc/2-fix-prefix.patch
           popd
@@ -338,8 +340,8 @@ jobs:
       - name: 'Build Schism'
         run: |
           autoreconf -I"$HOME/x86_64prefix/share/aclocal" -i
-          (export PATH="$PATH:$HOME/ppc/usr/bin" && export PKG_CONFIG_PATH="$HOME/ppcprefix/lib/pkgconfig" && mkdir build_powerpc && cd build_powerpc && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" CFLAGS="-mcpu=G3 -O2 -ftree-vectorize" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk -static-libgcc $HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/gcc/powerpc-apple-darwin10/4.2.1/libgcc.a" SDL12_CFLAGS="-I$HOME/ppcprefix/include/SDL" SDL12_LIBS="-L$HOME/ppcprefix/lib -lSDL" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --with-flac --with-sdl12 --enable-flac-linking --enable-sdl12-linking --without-sdl2 && make && strip -S schismtracker) &
-          (export PATH="$PATH:$HOME/ppc/usr/bin" && export PKG_CONFIG_PATH="$HOME/ppcprefix/lib/pkgconfig" && mkdir build_ppc7400 && cd build_ppc7400 && ../configure CC=powerpc-apple-darwin10-gcc-4.2.1 CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" CFLAGS="-mcpu=G4 -O2 -ftree-vectorize" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk -static-libgcc $HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/gcc/powerpc-apple-darwin10/4.2.1/libgcc.a" SDL12_CFLAGS="-I$HOME/ppcprefix/include/SDL" SDL12_LIBS="-L$HOME/ppcprefix/lib -lSDL" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --with-flac --with-sdl12 --enable-flac-linking --enable-sdl12-linking --without-sdl2 && make && strip -S schismtracker) &
+          (export PATH="$PATH:$HOME/ppc/usr/bin" && export PKG_CONFIG_PATH="$HOME/ppcprefix/lib/pkgconfig" && mkdir build_powerpc && cd build_powerpc && ../configure CC="powerpc-apple-darwin10-gcc-4.2.1 -B$RUNNER_TEMP/ppc-bin/ -mcpu=G3" CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" CFLAGS="-mcpu=G3 -O2 -ftree-vectorize" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk -static-libgcc $HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/gcc/powerpc-apple-darwin10/4.2.1/libgcc.a" SDL12_CFLAGS="-I$HOME/ppcprefix/include/SDL" SDL12_LIBS="-L$HOME/ppcprefix/lib -lSDL" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --with-flac --with-sdl12 --enable-flac-linking --enable-sdl12-linking --without-sdl2 && make && strip -S schismtracker) &
+          (export PATH="$PATH:$HOME/ppc/usr/bin" && export PKG_CONFIG_PATH="$HOME/ppcprefix/lib/pkgconfig" && mkdir build_ppc7400 && cd build_ppc7400 && ../configure CC="powerpc-apple-darwin10-gcc-4.2.1 -B$RUNNER_TEMP/ppc-bin/ -mcpu=G3" CPP=powerpc-apple-darwin10-cpp-4.2.1 OBJC=powerpc-apple-darwin10-gcc-4.2.1 CXX=powerpc-apple-darwin10-g++-4.2.1 CPPFLAGS="-I$HOME/ppc/SDKs/MacOSX10.4u.sdk/usr/include/gcc/darwin/3.3 -isysroot $HOME/ppc/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" CFLAGS="-mcpu=G4 -O2 -ftree-vectorize" LDFLAGS="-F$HOME/ppc/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/ppc/SDKs/MacOSX10.4u.sdk -static-libgcc $HOME/ppc/SDKs/MacOSX10.5.sdk/usr/lib/gcc/powerpc-apple-darwin10/4.2.1/libgcc.a" SDL12_CFLAGS="-I$HOME/ppcprefix/include/SDL" SDL12_LIBS="-L$HOME/ppcprefix/lib -lSDL" --host=powerpc-apple-darwin10 --prefix="$HOME/ppcprefix" --with-flac --with-sdl12 --enable-flac-linking --enable-sdl12-linking --without-sdl2 && make && strip -S schismtracker) &
           (export MACOSX_DEPLOYMENT_TARGET="10.7" && export PKG_CONFIG_PATH="$HOME/x86_64prefix/lib/pkgconfig" && mkdir build_x86_64 && cd build_x86_64 && ../configure CPPFLAGS="-arch x86_64 -isysroot $HOME/x86_64/SDKs/MacOSX10.11.sdk" CFLAGS="-arch x86_64" CXXFLAGS="-arch x86_64" LDFLAGS="-arch x86_64 -F$HOME/x86_64/SDKs/MacOSX10.11.sdk/System/Library/Frameworks -L/usr/lib -L/usr/lib/system -Wl,-syslibroot,$HOME/x86_64/SDKs/MacOSX10.11.sdk" --host=x86_64-apple-darwin13 --prefix="$HOME/x86_64prefix" --with-sdl-prefix="$HOME/x86_64prefix" --with-flac --without-sdl12 --enable-flac-linking --enable-sdl2-linking && make && strip -S schismtracker) &
           (export MACOSX_DEPLOYMENT_TARGET="11.0" && export PKG_CONFIG_PATH="$HOME/arm64prefix/lib/pkgconfig" && mkdir build_arm64 && cd build_arm64 && ../configure CPPFLAGS="-arch arm64 -isysroot $HOME/arm64/SDKs/MacOSX11.0.sdk" OBJCFLAGS="-arch arm64" CFLAGS="-arch arm64" CXXFLAGS="-arch arm64" LDFLAGS="-arch arm64" --host=aarch64-apple-darwin20 --prefix="$HOME/arm64prefix" --with-sdl-prefix="$HOME/arm64prefix" --with-flac --without-sdl12 --enable-flac-linking --enable-sdl2-linking && make && strip -S schismtracker) &
           wait
@@ -419,8 +421,6 @@ jobs:
           { host: macos-15-intel, compiler: '16.2' },
           { host: macos-15-intel, compiler: '16.1' },
           { host: macos-15-intel, compiler: '16.0' },
-          { host: macos-14, compiler: '15.4' },
-          { host: macos-14, compiler: '15.3' },
         ]
     concurrency:
       group: ${{github.ref}}-${{github.workflow}}-${{matrix.sys.host}}-${{matrix.sys.compiler}}${{matrix.threads.name}}
