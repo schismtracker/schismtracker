@@ -639,15 +639,12 @@ static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_
 	/* need to handle going backwards */
 	if (lenwhole < 0) {
 		/* wew */
-		buf -= lenwhole * ((channel->flags & CHN_16BIT) ? 2 : 1);
 		buflen = -lenwhole;
+		buf -= buflen * ((channel->flags & CHN_16BIT) ? 2 : 1);
 	} else {
 		buflen = lenwhole;
 	}
 
-	/* NOTE: This logic is wrong -- technically we need to apply it separately
-	 * for both stereo channels. This achieves the correct result most of the
-	 * time though, or something close enough, so I don't care. */
 	if (channel->flags & CHN_16BIT) {
 		/* this was macroized because it got really long. so there are variable
 		 * names that don't make sense, "min16" is actually just BITS width. */
@@ -660,8 +657,6 @@ static void fake_vu_meter(song_voice_t *channel, uint32_t smpcount, struct song_
 	buflen *= (BITS >> 3); \
 \
 	if (channel->flags & CHN_STEREO) { \
-		int##BITS##_t min16r, max16r; \
-\
 		minmax_##BITS##_arr((int##BITS##_t *)buf, buflen, min16, max16, 2); \
 \
 		minl = min16[0] << (23 - BITS); \
